@@ -5,7 +5,7 @@
 
 Create conda environment with 
 
-	conda create -n pt-cartpole python=3.8 matplotlib pyqt pandas tqdm scipy ipython memory_profiler
+	conda create -n CartPoleSimulation python=3.8 matplotlib pyqt pandas tqdm scipy ipython memory_profiler
 
 
 Choose right installation command for Pytorch
