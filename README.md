@@ -4,9 +4,9 @@
 ## Installation:
 
 Create conda environment with 
-'''
-conda create -n pt-cartpole python=3.8 matplotlib pyqt pandas tqdm scipy ipython memory_profiler
-'''
+
+	conda create -n pt-cartpole python=3.8 matplotlib pyqt pandas tqdm scipy ipython memory_profiler
+
 
 Choose right installation command for Pytorch
 https://pytorch.org/get-started/locally/
@@ -44,5 +44,5 @@ Run Test.py to evaluate an RNN predicting future states of a random CartPole exp
 Both Train.py and Test.py generate data from data generated on the fly from random CartPole experiments. You do not have to provide preprepared data.
 
 
-# Next step TODO:
-	Summary window (summary function already ready)
+## Next step TODO:
+Summary window (summary function already ready)
