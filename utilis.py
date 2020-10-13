@@ -169,8 +169,8 @@ def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
     MyCart.angleD = np.random.uniform(low=-15.5 * (np.pi / 180.0),
                                       high=15.5 * (np.pi / 180.0))
 
-    MyCart.ueff = np.random.uniform(low=-0.9 * MyCart.umax,
-                                    high=0.9 * MyCart.umax)
+    MyCart.u = np.random.uniform(low=-0.9 * MyCart.umax,
+                                 high=0.9 * MyCart.umax)
 
     # Target position at time 0 (should be always 0)
     MyCart.PositionTarget = MyCart.random_track_f(MyCart.time_total)  # = 0
@@ -215,7 +215,7 @@ def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
 
         # Save current cart state, control input and target position to a corresponding list
         states.append(state)
-        u_effs.append(MyCart.ueff)
+        u_effs.append(MyCart.u)
         target_positions.append(MyCart.PositionTarget)
 
     # After generating experiment finished, return states, control input and target_positions history

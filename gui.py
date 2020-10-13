@@ -105,12 +105,15 @@ class MainWindow(QMainWindow):
         # Radiobuttons to toggle the mode of operation
         lr = QVBoxLayout()
         self.rb_manual = QRadioButton('Manual Stabilization')
-        self.rb_PID = QRadioButton('LQR-control with adjustable target position')
+        self.rb_LQR = QRadioButton('LQR-control with adjustable target position')
+        self.rb_do_mpc = QRadioButton('do-mpc-control with adjustable target position')
         self.rb_manual.toggled.connect(self.RadioButtons)
-        self.rb_PID.toggled.connect(self.RadioButtons)
+        self.rb_LQR.toggled.connect(self.RadioButtons)
+        self.rb_do_mpc.toggled.connect(self.RadioButtons)
         lr.addStretch(1)
         lr.addWidget(self.rb_manual)
-        lr.addWidget(self.rb_PID)
+        lr.addWidget(self.rb_LQR)
+        lr.addWidget(self.rb_do_mpc)
         lr.addStretch(1)
         self.rb_manual.setChecked(True)
 
@@ -125,18 +128,20 @@ class MainWindow(QMainWindow):
         # Time(user time, not necesarily time of the Cart (i.e. used in sinmulation)),
         # Speed, Angle and slider value
         ld = QHBoxLayout()
-        self.labt = QLabel("Time (s): ")
+        self.labTime = QLabel("Time (s): ")
         self.timer = QTimer()
         self.timer.setInterval(100)
         self.timer.timeout.connect(self.recurring_timer)
         self.timer.start()
-        self.labs = QLabel('Speed (m/s):')
-        self.laba = QLabel('Angle (deg):')
-        self.labsl = QLabel('Slider:')
-        ld.addWidget(self.labt)
-        ld.addWidget(self.labs)
-        ld.addWidget(self.laba)
-        ld.addWidget(self.labsl)
+        self.labSpeed = QLabel('Speed (m/s):')
+        self.labAngle = QLabel('Angle (deg):')
+        self.labMotor = QLabel('')
+        self.labTargetPosition = QLabel('')
+        ld.addWidget(self.labTime)
+        ld.addWidget(self.labSpeed)
+        ld.addWidget(self.labAngle)
+        ld.addWidget(self.labMotor)
+        ld.addWidget(self.labTargetPosition)
         layout.addLayout(ld)
 
         # Buttons "START/STOP", "RESET", "QUIT"
@@ -297,12 +302,13 @@ class MainWindow(QMainWindow):
     # A thread redrawing labels (except for timer, which has its own function) of GUI every 0.1 s
     def thread_labels(self):
         while (self.run_thread_labels):
-            self.labs.setText("Speed (m/s): " + str(around(self.MyCart.CartPositionD, 2)))
-            self.laba.setText("Angle (deg): " + str(around(self.MyCart.angle * 360 / (2 * pi), 2)))
+            self.labSpeed.setText("Speed (m/s): " + str(around(self.MyCart.s.CartPositionD, 2)))
+            self.labAngle.setText("Angle (deg): " + str(around(self.MyCart.s.angle * 360 / (2 * pi), 2)))
+            self.labMotor.setText("Motor power (Q): {}".format(around(self.MyCart.Q, 2)))
             if self.MyCart.mode == 0:
-                self.labsl.setText("Motor power: " + str(around(self.MyCart.slider_value, 2)))
+                self.labTargetPosition.setText("")
             elif self.MyCart.mode == 1:
-                self.labsl.setText("Target position (m): " + str(around(self.MyCart.slider_value, 2)))
+                self.labTargetPosition.setText("Target position (m): " + str(around(self.MyCart.slider_value, 2)))
             sleep(0.1)
 
     # Actions to be taken when start/stop button is clicked
@@ -380,16 +386,20 @@ class MainWindow(QMainWindow):
             self.counter += 1
             # The updates are done smoother if the label is updated here
             # and not in the separate thread
-            self.labt.setText("Time (s): " + str(float(self.counter) / 10.0))
+            self.labTime.setText("Time (s): " + str(float(self.counter) / 10.0))
 
     # Action to be taken while a radio button is clicked
-    # Toggle a mode of simulation: manual or PID
+    # Toggle a mode of simulation: manual or LQR
     def RadioButtons(self):
         # Change the mode variable depending on the Radiobutton state
         if self.rb_manual.isChecked():
             self.MyCart.mode = 0
-        elif self.rb_PID.isChecked():
+        elif self.rb_LQR.isChecked():
             self.MyCart.mode = 1
+            self.MyCart.controller = self.MyCart.controller_lqr
+        elif self.rb_do_mpc.isChecked():
+            self.MyCart.mode = 2
+            self.MyCart.controller = self.MyCart.controller_do_mpc
 
         # Reset the state of GUI and of the Cart instance after the mode has changed
         self.reset_variables()
