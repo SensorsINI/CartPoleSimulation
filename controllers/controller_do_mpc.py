@@ -72,6 +72,8 @@ class controller_do_mpc:
 
         Q = self.model.set_variable(var_type='_u', var_name='Q')
 
+        PositionTarget = self.model.set_variable('_tvp', 'PositionTarget')
+
         self.model.set_rhs('s.CartPosition', s.CartPositionD)
         self.model.set_rhs('s.angle', s.angleD)
 
@@ -94,7 +96,9 @@ class controller_do_mpc:
         # Positive means that during the procedure the distance to target increased, negative that it decreased
         # Idea good, but implementation does not work - need to implement s.CartPositionInitial as a time varying parameter
         # distance_difference = ((s.CartPosition-PositionTarget)**2) - ((CartPositionInitial-PositionTarget)**2)
-        distance_difference = ((s.CartPosition - PositionTarget) ** 2)
+        # distance_difference = ((s.CartPosition - PositionTarget) ** 2)
+
+        distance_difference = ((s.CartPosition - self.model.tvp['PositionTarget']) ** 2)
 
         self.model.set_expression('E_kin_cart', E_kin_cart)
         self.model.set_expression('E_kin_pol', E_kin_pol)
@@ -108,28 +112,37 @@ class controller_do_mpc:
 
         setup_mpc = {
             'n_horizon': 20,
-            't_step': 0.02,
+            't_step': 0.2,
             'n_robust': 0,
             'store_full_solution': True,
         }
         self.mpc.set_param(**setup_mpc)
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'mumps'})
 
-        # mterm = 0.05*self.model.aux['E_kin'] - self.model.aux['E_pot']
-        # lterm = -self.model.aux['E_pot'] + 10 * (
-        #             (self.model.x['s.CartPosition'] - PositionTarget) / 100.0) ** 2  # stage cost
-
-        lterm = - self.model.aux['E_pot']
-
-        # lterm = 0.01*self.model.aux['E_kin'] - self.model.aux['E_pot'] + 0.1 * (
-        #             (self.model.x['s.CartPosition'] - PositionTarget) / 100.0) ** 2
-        mterm = 5*self.model.aux['E_kin_pol'] - 5*self.model.aux['E_pot'] + 0.01 * distance_difference
+        lterm = - self.model.aux['E_pot'] + 0.02 * distance_difference
+        mterm = 5*self.model.aux['E_kin_pol'] - 5*self.model.aux['E_pot']  + 5*self.model.aux['E_kin_cart']
 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
         self.mpc.set_rterm(Q=0.1)
 
         self.mpc.bounds['lower', '_u', 'Q'] = -1.0
         self.mpc.bounds['upper', '_u', 'Q'] = 1.0
+
+        self.tvp_template = self.mpc.get_tvp_template()
+
+        # # When to switch setpoint:
+        # t_switch = 40  # seconds
+        # ind_switch = t_switch // setup_mpc['t_step']
+        #
+        # def tvp_fun(t_ind):
+        #     ind = t_ind // setup_mpc['t_step']
+        #     if ind <= ind_switch:
+        #         tvp_template['_tvp', :, 'PositionTarget'] = -20
+        #     else:
+        #         tvp_template['_tvp', :, 'PositionTarget'] = 20
+        #     return tvp_template
+
+        self.mpc.set_tvp_fun(self.tvp_fun)
 
         self.mpc.setup()
 
@@ -145,8 +158,11 @@ class controller_do_mpc:
 
         self.mpc.set_initial_guess()
 
+    def tvp_fun(self, t_ind):
+        return self.tvp_template
 
-    def step(self, state):
+
+    def step(self, state, PositionTarget):
 
         s = deepcopy(state)
 
@@ -156,6 +172,7 @@ class controller_do_mpc:
         self.x0['s.angle'] = s.angle
         self.x0['s.angleD'] = s.angleD
 
+        self.tvp_template['_tvp', :, 'PositionTarget'] = PositionTarget
 
         Q = self.mpc.make_step(self.x0)
 

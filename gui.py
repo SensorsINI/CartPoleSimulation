@@ -21,6 +21,8 @@ from numpy import pi, around, array
 # related to CartPole which are not related to PyQt5 GUI
 from CartClass import Cart
 
+from globals import *
+
 
 # Window displaying summary (matplotlib plots) of an experiment with CartPole after clicking Stop button
 # (if experiment was previously running)
@@ -67,7 +69,7 @@ class MainWindow(QMainWindow):
 
         ## Initialization of variables
         # Time in simulation
-        self.dt_fix = 0.0001  # This is fixed timestep value
+        self.dt_fix = dt_globals  # This is fixed timestep value
         self.dt_real = self.dt_fix
         self.dt = 0.0  # It is NOT the fixed timestep value. It is just a value for the first timestep
 
@@ -77,7 +79,7 @@ class MainWindow(QMainWindow):
 
         self.counter = 0
         self.real_time = 1
-        self.save_history = True
+        self.save_history = False
         self.saved = 0
         self.printing_summary = 1
         self.Q_thread_enabled = False
@@ -284,6 +286,9 @@ class MainWindow(QMainWindow):
                 self.dt = self.dt_real
             else:
                 self.dt = self.dt_fix
+
+            # print(' \n \nReal time dt: {}ms'.format(self.dt_real*1000.0))
+            # print('Fix time dt: {}ms \n \n'.format(self.dt_fix * 1000.0))
 
             start = timeit.default_timer()
 

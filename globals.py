@@ -4,7 +4,7 @@ import numpy as np
 save_history_globals = True
 
 # Variables used for physical simulation
-dt_globals = 0.001
+dt_globals = 0.020
 m_globals = 2.0  # mass of pend, kg
 M_globals = 1.0  # mass of cart, kg
 L_globals = 1.0  # half length of pend, m

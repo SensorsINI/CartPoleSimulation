@@ -245,7 +245,7 @@ class Cart:
         elif self.mode == 2:  # in this case slider gives a target position, do-mpc regulator
 
             tic = timeit.default_timer()
-            self.Q = self.controller.step(self.s)
+            self.Q = self.controller.step(self.s, self.PositionTarget)
             toc = timeit.default_timer()
 
             print("Time to find control input = {} ms".format((toc - tic) * 1000.0))
@@ -361,6 +361,9 @@ class Cart:
             self.slider_max = self.Q_max
         elif self.mode == 1:
             self.slider_max = self.HalfLength
+        elif self.mode == 2:
+            self.slider_max = self.HalfLength
+
 
         # Delete all elements of the Figure
         AxCart.clear()
