@@ -29,14 +29,26 @@ import timeit
 from controllers.controller_lqr import controller_lqr
 from controllers.controller_do_mpc import controller_do_mpc
 
-from math import fmod
-
 # Interpolate function to create smooth random track
 from scipy.interpolate import interp1d
 
 from globals import *
 
 from types import SimpleNamespace
+
+from math import fmod
+
+def normalize_angle_rad(angle):
+    Modulo = fmod(angle, 2*np.pi)  # positive modulo
+    if Modulo < -np.pi:
+        angle = Modulo+2*np.pi
+    elif Modulo > np.pi:
+        angle = Modulo-2*np.pi
+    else:
+        angle = Modulo
+    return angle
+
+
 
 # Set the font parameters for matplotlib figures
 font = {'size': 22}
@@ -80,6 +92,7 @@ class Cart:
         self.PositionTarget = 0.0
 
         # Other variables controlling flow or initial state of the program
+        self.Q_thread_enabled = False  # If True, control input is computed asynchronously to the simulation in a separate thread
         self.mode = 0
         self.Q_max = 1.0
         # Set the maximal allowed value of the slider dependant on the mode of simulation
@@ -276,10 +289,8 @@ class Cart:
         self.Equations_of_motion()
 
         # Normalize angle
-        # self.s.angle = fmod((self.s.angle + np.pi), np.pi)
-        # if angle > 180:
-        #     angle -= 360
 
+        self.s.angle = normalize_angle_rad(self.s.angle)
 
         # In case in the next step the wheel of the cart
         # went beyond the track
@@ -288,7 +299,8 @@ class Cart:
             self.s.CartPositionD = -self.s.CartPositionD
 
         # Determine the dimensionales [-1,1] value of the motor power Q
-        self.Update_Q()
+        if not self.Q_thread_enabled:
+            self.Update_Q()
 
         self.u = Q2u(self.Q, self.p)
 

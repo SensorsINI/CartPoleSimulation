@@ -67,7 +67,8 @@ class MainWindow(QMainWindow):
 
         ## Initialization of variables
         # Time in simulation
-        self.dt_fix = 0.002  # This is fixed timestep value
+        self.dt_fix = 0.0001  # This is fixed timestep value
+        self.dt_real = self.dt_fix
         self.dt = 0.0  # It is NOT the fixed timestep value. It is just a value for the first timestep
 
         # Stop threads if False
@@ -79,6 +80,7 @@ class MainWindow(QMainWindow):
         self.save_history = True
         self.saved = 0
         self.printing_summary = 1
+        self.Q_thread_enabled = False
 
         # Create Cart object
 
@@ -128,7 +130,7 @@ class MainWindow(QMainWindow):
         # Time(user time, not necesarily time of the Cart (i.e. used in sinmulation)),
         # Speed, Angle and slider value
         ld = QHBoxLayout()
-        self.labTime = QLabel("Time (s): ")
+        self.labTime = QLabel("User's time (s): ")
         self.timer = QTimer()
         self.timer.setInterval(100)
         self.timer.timeout.connect(self.recurring_timer)
@@ -143,6 +145,15 @@ class MainWindow(QMainWindow):
         ld.addWidget(self.labMotor)
         ld.addWidget(self.labTargetPosition)
         layout.addLayout(ld)
+
+
+        # Second row of labels
+        ld2 = QHBoxLayout()
+        self.labTimeSim = QLabel('Simulation Time (s):')
+        ld2.addWidget(self.labTimeSim)
+        self.labSpeedUp = QLabel('Speed-up:')
+        ld2.addWidget(self.labSpeedUp)
+        layout.addLayout(ld2)
 
         # Buttons "START/STOP", "RESET", "QUIT"
         bss = QPushButton("START!/STOP!")
@@ -267,9 +278,10 @@ class MainWindow(QMainWindow):
 
             # Measuring real-time timestep
             stop = timeit.default_timer()
+            self.dt_real = stop - start
 
             if self.real_time == 1:
-                self.dt = stop - start
+                self.dt = self.dt_real
             else:
                 self.dt = self.dt_fix
 
@@ -299,6 +311,11 @@ class MainWindow(QMainWindow):
         # plot_summary = True
         # if self.save_history and plot_summary:
 
+    # We define a separate threat for the controller:
+    def thread_control_input(self):
+        while self.run_thread_calculations:
+            self.MyCart.Update_Q()
+
     # A thread redrawing labels (except for timer, which has its own function) of GUI every 0.1 s
     def thread_labels(self):
         while (self.run_thread_labels):
@@ -309,6 +326,14 @@ class MainWindow(QMainWindow):
                 self.labTargetPosition.setText("")
             elif self.MyCart.mode == 1:
                 self.labTargetPosition.setText("Target position (m): " + str(around(self.MyCart.slider_value, 2)))
+
+            self.labTimeSim.setText('Simulation time (s): {:.2f}'.format(self.MyCart.time_total))
+
+            if self.real_time:
+                speed_up = 1.0
+            else:
+                speed_up = 0.95*speed_up + 0.05*(self.dt_fix/self.dt_real)
+            self.labSpeedUp.setText('Speed-up (average): x{:.2f}'.format(speed_up))
             sleep(0.1)
 
     # Actions to be taken when start/stop button is clicked
@@ -334,6 +359,13 @@ class MainWindow(QMainWindow):
             worker_calculations = Worker(self.thread_calculations)
             # Execute
             self.threadpool.start(worker_calculations)
+
+            if self.Q_thread_enabled:
+                self.MyCart.Q_thread_enabled = self.Q_thread_enabled
+                worker_control_input = Worker(self.thread_control_input)
+                self.threadpool.start(worker_control_input)
+            else:
+                self.MyCart.Q_thread_enabled = self.Q_thread_enabled
 
     # The acctions which has to be taken to properly terminate the application
     # The method is evoked after QUIT button is pressed

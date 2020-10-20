@@ -16,6 +16,7 @@ from types import SimpleNamespace
 from copy import deepcopy
 
 
+
 class controller_do_mpc:
     def __init__(self,
                  store_results=False,
@@ -26,7 +27,7 @@ class controller_do_mpc:
                  CartPosition_init=0.0,
                  CartPositionD_init=0.0,
                  angle_init=0.0,
-                 angleD_init=0.0
+                 angleD_init=0.0,
                  ):
         self.store_results = store_results
         self.obstacles = obstacles
@@ -49,7 +50,7 @@ class controller_do_mpc:
         p.g = g_globals  # gravity, m/s^2
         p.k = k_globals  # Dimensionless factor, for moment of inertia of the pend (with L being half if the length)
 
-        PositionTarget = 0.0
+        PositionTarget = -20.0
 
         # State of the cart
         s = SimpleNamespace()  # s like state
@@ -79,33 +80,50 @@ class controller_do_mpc:
         self.model.set_rhs('s.CartPositionD', CartPositionD_next)
         self.model.set_rhs('s.angleD', angleD_next)
 
+
         # TODO resolve problem of u_eff vs. Q
         # Optimally I would use in the equations only u_eff Q beeing the input only for slider.
 
         # Expressions for kinetic and potential energy
 
         # Simplified, normalized expressions for E_kin and E_pot as a port of cost function
-        E_kin = (s.CartPositionD/p.v_max)**2+(s.angleD/(2*np.pi))**2
+        E_kin_cart = (s.CartPositionD/p.v_max)**2
+        E_kin_pol = (s.angleD/(2*np.pi))**2
         E_pot = np.cos(s.angle)
 
-        self.model.set_expression('E_kin', E_kin)
+        # Positive means that during the procedure the distance to target increased, negative that it decreased
+        # Idea good, but implementation does not work - need to implement s.CartPositionInitial as a time varying parameter
+        # distance_difference = ((s.CartPosition-PositionTarget)**2) - ((CartPositionInitial-PositionTarget)**2)
+        distance_difference = ((s.CartPosition - PositionTarget) ** 2)
+
+        self.model.set_expression('E_kin_cart', E_kin_cart)
+        self.model.set_expression('E_kin_pol', E_kin_pol)
         self.model.set_expression('E_pot', E_pot)
+        self.model.set_expression('distance_difference', distance_difference)
+
 
         self.model.setup()
 
         self.mpc = do_mpc.controller.MPC(self.model)
 
         setup_mpc = {
-            'n_horizon': 5,
-            't_step': 0.01,
+            'n_horizon': 20,
+            't_step': 0.02,
             'n_robust': 0,
             'store_full_solution': True,
         }
         self.mpc.set_param(**setup_mpc)
+        self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'mumps'})
 
-        mterm = 0.05*self.model.aux['E_kin'] - self.model.aux['E_pot']
-        lterm = -self.model.aux['E_pot'] + 10 * (
-                    (self.model.x['s.CartPosition'] - PositionTarget) / 100.0) ** 2  # stage cost
+        # mterm = 0.05*self.model.aux['E_kin'] - self.model.aux['E_pot']
+        # lterm = -self.model.aux['E_pot'] + 10 * (
+        #             (self.model.x['s.CartPosition'] - PositionTarget) / 100.0) ** 2  # stage cost
+
+        lterm = - self.model.aux['E_pot']
+
+        # lterm = 0.01*self.model.aux['E_kin'] - self.model.aux['E_pot'] + 0.1 * (
+        #             (self.model.x['s.CartPosition'] - PositionTarget) / 100.0) ** 2
+        mterm = 5*self.model.aux['E_kin_pol'] - 5*self.model.aux['E_pot'] + 0.01 * distance_difference
 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
         self.mpc.set_rterm(Q=0.1)
@@ -122,6 +140,7 @@ class controller_do_mpc:
         self.x0['s.angle'] = angle_init
         self.x0['s.angleD'] = angleD_init
 
+
         self.mpc.x0 = self.x0
 
         self.mpc.set_initial_guess()
@@ -136,6 +155,8 @@ class controller_do_mpc:
 
         self.x0['s.angle'] = s.angle
         self.x0['s.angleD'] = s.angleD
+
+
         Q = self.mpc.make_step(self.x0)
 
         return Q.item()
