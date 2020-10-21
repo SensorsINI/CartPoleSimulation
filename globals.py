@@ -22,6 +22,8 @@ k_globals = 4.0 / 3.0  # Dimensionless factor, for moment of inertia of the pend
 N_globals = 5  # Complexity of the random trace, number of random points used for interpolation
 random_length_globals = 5e4  # Number of points in the random length trece
 
+mode_globals = 2
+
 # def cartpole_dyncamic(CartPosition,):
 
 def cartpole_integration(s, dt):

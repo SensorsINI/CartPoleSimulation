@@ -111,15 +111,15 @@ class MainWindow(QMainWindow):
         self.rb_manual = QRadioButton('Manual Stabilization')
         self.rb_LQR = QRadioButton('LQR-control with adjustable target position')
         self.rb_do_mpc = QRadioButton('do-mpc-control with adjustable target position')
-        self.rb_manual.toggled.connect(self.RadioButtons)
-        self.rb_LQR.toggled.connect(self.RadioButtons)
-        self.rb_do_mpc.toggled.connect(self.RadioButtons)
+        self.rbs = [self.rb_manual, self.rb_LQR, self.rb_do_mpc]
+
         lr.addStretch(1)
-        lr.addWidget(self.rb_manual)
-        lr.addWidget(self.rb_LQR)
-        lr.addWidget(self.rb_do_mpc)
+        for rb in self.rbs:
+            rb.toggled.connect(self.RadioButtons)
+            lr.addWidget(rb)
         lr.addStretch(1)
-        self.rb_manual.setChecked(True)
+        # self.rb_manual.setChecked(True)
+        self.rbs[self.MyCart.mode].setChecked(True)
 
         # Create main part of the layout for Figures and radiobuttons
         # And add it to the whole layout
@@ -326,7 +326,7 @@ class MainWindow(QMainWindow):
         while (self.run_thread_labels):
             self.labSpeed.setText("Speed (m/s): " + str(around(self.MyCart.s.CartPositionD, 2)))
             self.labAngle.setText("Angle (deg): " + str(around(self.MyCart.s.angle * 360 / (2 * pi), 2)))
-            self.labMotor.setText("Motor power (Q): {}".format(around(self.MyCart.Q, 2)))
+            self.labMotor.setText("Motor power (Q): {:.3f}".format(around(self.MyCart.Q, 2)))
             if self.MyCart.mode == 0:
                 self.labTargetPosition.setText("")
             elif self.MyCart.mode == 1:
@@ -430,13 +430,11 @@ class MainWindow(QMainWindow):
     def RadioButtons(self):
         # Change the mode variable depending on the Radiobutton state
         if self.rb_manual.isChecked():
-            self.MyCart.mode = 0
+            self.MyCart.set_mode(new_mode=0)
         elif self.rb_LQR.isChecked():
-            self.MyCart.mode = 1
-            self.MyCart.controller = self.MyCart.controller_lqr
+            self.MyCart.set_mode(new_mode=1)
         elif self.rb_do_mpc.isChecked():
-            self.MyCart.mode = 2
-            self.MyCart.controller = self.MyCart.controller_do_mpc
+            self.MyCart.set_mode(new_mode=2)
 
         # Reset the state of GUI and of the Cart instance after the mode has changed
         self.reset_variables()

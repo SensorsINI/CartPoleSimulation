@@ -18,12 +18,12 @@ def args():
     parser = argparse.ArgumentParser(description='Train a GRU network.')
 
 
-    parser.add_argument('--dt',             default=2.0,        type=float,  help='Time interval of a time step in ms')
-    parser.add_argument('--warm_up_len',    default=256,         type=int,    help='Number of timesteps for a warm-up sequence')
-    parser.add_argument('--exp_len_train',  default=256+256+1,   type=int,    help='Number of timesteps for in a full experiment (warm-up+interative phase+1)')
+    parser.add_argument('--dt',             default=10.0,        type=float,  help='Time interval of a time step in ms')
+    parser.add_argument('--warm_up_len',    default=32,         type=int,    help='Number of timesteps for a warm-up sequence')
+    parser.add_argument('--exp_len_train',  default=32+32+1,   type=int,    help='Number of timesteps for in a full experiment (warm-up+interative phase+1)')
     parser.add_argument('--exp_len_test',   default=2e3,        type=int,    help='Number of timesteps for in a full experiment test phase')
-    parser.add_argument('--epoch_len',      default=2e4,        type=int,    help='How many sine waves are fed in NN during one epoch of training')
-    parser.add_argument('--num_epochs',     default=10,         type=int,    help='Number of epochs of training')
+    parser.add_argument('--epoch_len',      default=2e3,        type=int,    help='How many sine waves are fed in NN during one epoch of training')
+    parser.add_argument('--num_epochs',     default=3,         type=int,    help='Number of epochs of training')
     parser.add_argument('--batch_size',     default=128,         type=int,    help='Size of a batch')
     parser.add_argument('--epochs_per_win', default=15,         type=int,    help='Size of a batch')
     

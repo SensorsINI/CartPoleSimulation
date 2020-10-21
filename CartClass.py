@@ -38,17 +38,7 @@ from types import SimpleNamespace
 
 from math import fmod
 
-def normalize_angle_rad(angle):
-    Modulo = fmod(angle, 2*np.pi)  # positive modulo
-    if Modulo < -np.pi:
-        angle = Modulo+2*np.pi
-    elif Modulo > np.pi:
-        angle = Modulo-2*np.pi
-    else:
-        angle = Modulo
-    return angle
-
-
+from utilis import normalize_angle_rad
 
 # Set the font parameters for matplotlib figures
 font = {'size': 22}
@@ -75,7 +65,9 @@ class Cart:
 
                  # Variables for random trace generation
                  N=N_globals,  # Complexity of the random trace, number of random points used for interpolation
-                 random_length=random_length_globals  # Number of points in the random length trece
+                 random_length=random_length_globals,  # Number of points in the random length trece
+
+                 mode_init = mode_globals  # In which mode the Cart should be initialized
                  ):
 
         # State of the cart
@@ -93,13 +85,8 @@ class Cart:
 
         # Other variables controlling flow or initial state of the program
         self.Q_thread_enabled = False  # If True, control input is computed asynchronously to the simulation in a separate thread
-        self.mode = 0
         self.Q_max = 1.0
-        # Set the maximal allowed value of the slider dependant on the mode of simulation
-        if self.mode == 0:
-            self.slider_max = self.Q_max
-        elif self.mode == 1 or self.mode == 2:
-            self.slider_max = self.HalfLength
+
         self.slider_value = 0.0
         self.dt = dt
         self.time_total = 0.0
@@ -202,6 +189,9 @@ class Cart:
         self.Slider = Rectangle((0.0, 0.0), self.slider_value, 1.0)
         self.t2 = transforms.Affine2D().rotate(0.0)  # An abstract container for the transform rotating the mast
 
+        # Set starting mode of operation
+        self.set_mode(new_mode=mode_init)
+
     def Generate_Random_Trace_Function(self):
         # t_pre = arange(0, self.random_length)*self.dt
         self.t_max_pre = (self.random_length - 1) * self.dt
@@ -233,41 +223,32 @@ class Cart:
     # Determine the dimensionales [-1,1] value of the motor power Q
     def Update_Q(self):
 
-        if self.mode == 1:  # in this case slider gives a target position, lqr regulator
-            tic = timeit.default_timer()
-            state = array(
-                [[self.s.CartPosition - self.PositionTarget], [self.s.CartPositionD], [self.s.angle], [self.s.angleD]])
-            self.Q = self.controller.step(state)
-            toc = timeit.default_timer()
-
-            print("Time to find control input = {} ms".format((toc - tic) * 1000.0))
-
-        elif self.mode == 2:  # in this case slider gives a target position, do-mpc regulator
-
-            tic = timeit.default_timer()
-            self.Q = self.controller.step(self.s, self.PositionTarget)
-            toc = timeit.default_timer()
-
-            print("Time to find control input = {} ms".format((toc - tic) * 1000.0))
-
-            if self.Q > 1.0:
-                print('Q to big! ' + str(self.Q))
-            elif self.Q < -1.0:
-                print('Q to small! ' + str(self.Q))
-
-        elif self.mode == 0:  # in this case slider corresponds already to the power of the motor
+        if self.mode == 0:  # in this case slider corresponds already to the power of the motor
             self.Q = self.slider_value
+
+        else:  # in this case slider gives a target position, lqr regulator
+            # mode == 1 -> lqr controller
+            # mode == 2 -> mpc controller
+            # tic = timeit.default_timer()
+            self.Q = self.controller.step(self.s, self.PositionTarget)
+            # toc = timeit.default_timer()
+
+            # print("Time to find control input = {} ms".format((toc - tic) * 1000.0))
+
+            # if self.Q > 1.0:
+            #     print('Q to big! ' + str(self.Q))
+            # elif self.Q < -1.0:
+            #     print('Q to small! ' + str(self.Q))
+
 
 
     # This method changes the internal state of the CartPole
     # from a state at time t to a state at t+dt   
-    def update_state(self, slider=None, mode=None, dt=None, save_history=True):
+    def update_state(self, slider=None, dt=None, save_history=True):
 
         # Optionally update slider, mode and dt values
         if slider:
             self.slider_value = slider
-        if mode:
-            self.mode = mode
         if dt:
             self.dt = dt
         self.save_history = save_history
@@ -280,10 +261,10 @@ class Cart:
                 self.PositionTarget = -0.8 * self.HalfLength
             self.slider_value = self.PositionTarget
         else:
-            if self.mode == 1 or self.mode == 2:
-                self.PositionTarget = self.slider_value
-            elif self.mode == 0:
+            if self.mode == 0:
                 self.PositionTarget = 0.0
+            else:
+                self.PositionTarget = self.slider_value
 
         # Calculate the next state
         self.Equations_of_motion()
@@ -355,15 +336,6 @@ class Cart:
     # This method draws elements and set properties of the CartPole figure
     # which do not change at every frame of the animation
     def draw_constant_elements(self, fig, AxCart, AxSlider):
-
-        # Get the appropriate max of slider depending on the mode of operation
-        if self.mode == 0:
-            self.slider_max = self.Q_max
-        elif self.mode == 1:
-            self.slider_max = self.HalfLength
-        elif self.mode == 2:
-            self.slider_max = self.HalfLength
-
 
         # Delete all elements of the Figure
         AxCart.clear()
@@ -469,3 +441,18 @@ class Cart:
             writer = csv.writer(outfile)
             writer.writerow(self.dict_history.keys())
             writer.writerows(zip(*self.dict_history.values()))
+
+    def set_mode(self, new_mode=0):
+
+        if new_mode == 0:
+            self.mode = 0
+            self.controller = None
+            self.slider_max = self.Q_max
+        elif new_mode == 1:
+            self.mode = 1
+            self.controller = self.controller_lqr
+            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
+        elif new_mode == 2:
+            self.mode = 2
+            self.controller = self.controller_do_mpc
+            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider

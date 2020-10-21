@@ -5,7 +5,7 @@ Created on Fri Jun 19 08:28:34 2020
 @author: Marcin
 """
 
-from CartClass import Cart
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -15,6 +15,19 @@ from IPython.display import Image
 
 import matplotlib.pyplot as plt
 
+from math import fmod
+
+from globals import *
+
+def normalize_angle_rad(angle):
+    Modulo = fmod(angle, 2*np.pi)  # positive modulo
+    if Modulo < -np.pi:
+        angle = Modulo+2*np.pi
+    elif Modulo > np.pi:
+        angle = Modulo-2*np.pi
+    else:
+        angle = Modulo
+    return angle
 
 def get_device():
     """
@@ -143,7 +156,7 @@ def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
     """
 
     # Set CartPole in the right (automatic control) mode
-    MyCart.mode = 1  # 1 - you are controlling with LQR
+    MyCart.set_mode(1)  # 1 - you are controlling with LQR, 2- with do-mpc
 
     # Initialize Variables
     states = []
@@ -160,17 +173,17 @@ def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
 
     MyCart.time_total = 0.0
 
-    MyCart.CartPosition = np.random.uniform(low=-MyCart.HalfLength / 2.0,
+    MyCart.s.CartPosition = np.random.uniform(low=-MyCart.HalfLength / 2.0,
                                             high=MyCart.HalfLength / 2.0)
-    MyCart.CartPositionD = np.random.uniform(low=-10.0,
+    MyCart.s.CartPositionD = np.random.uniform(low=-10.0,
                                              high=10.0)
-    MyCart.angle = np.random.uniform(low=-17.5 * (np.pi / 180.0),
+    MyCart.s.angle = np.random.uniform(low=-17.5 * (np.pi / 180.0),
                                      high=17.5 * (np.pi / 180.0))
-    MyCart.angleD = np.random.uniform(low=-15.5 * (np.pi / 180.0),
+    MyCart.s.angleD = np.random.uniform(low=-15.5 * (np.pi / 180.0),
                                       high=15.5 * (np.pi / 180.0))
 
-    MyCart.u = np.random.uniform(low=-0.9 * MyCart.umax,
-                                 high=0.9 * MyCart.umax)
+    MyCart.u = np.random.uniform(low=-0.9 * MyCart.p.u_max,
+                                 high=0.9 * MyCart.p.u_max)
 
     # Target position at time 0 (should be always 0)
     MyCart.PositionTarget = MyCart.random_track_f(MyCart.time_total)  # = 0
@@ -194,11 +207,18 @@ def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
         # for this new time_step
         MyCart.Equations_of_motion()
 
+        # Normalize angle
+
+        MyCart.s.angle = normalize_angle_rad(MyCart.s.angle)
+
+        if (abs(MyCart.s.CartPosition) + MyCart.WheelToMiddle) > MyCart.HalfLength:
+            MyCart.s.CartPositionD = -MyCart.s.CartPositionD
+
         # Determine the dimensionales [-1,1] value of the motor power Q
         MyCart.Update_Q()
 
         # Calculate the force created by the motor
-        MyCart.Update_ueff()
+        MyCart.u = Q2u(MyCart.Q, MyCart.p)
 
         # Get the new value of desired cart position and constrain it
         MyCart.PositionTarget = MyCart.random_track_f(MyCart.time_total)
@@ -208,10 +228,10 @@ def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
             MyCart.PositionTarget = -0.8 * MyCart.HalfLength
 
         # Save all the new cart state variables you just updated
-        state = (MyCart.CartPosition,
-                 MyCart.CartPositionD,
-                 MyCart.angle,
-                 MyCart.angleD)
+        state = (MyCart.s.CartPosition,
+                 MyCart.s.CartPositionD,
+                 MyCart.s.angle,
+                 MyCart.s.angleD)
 
         # Save current cart state, control input and target position to a corresponding list
         states.append(state)
