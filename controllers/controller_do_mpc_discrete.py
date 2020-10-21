@@ -9,7 +9,7 @@ from copy import deepcopy
 
 
 
-class controller_do_mpc:
+class controller_do_mpc_discrete:
     def __init__(self,
                  CartPosition_init=0.0,
                  CartPositionD_init=0.0,

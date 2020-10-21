@@ -111,7 +111,8 @@ class MainWindow(QMainWindow):
         self.rb_manual = QRadioButton('Manual Stabilization')
         self.rb_LQR = QRadioButton('LQR-control with adjustable target position')
         self.rb_do_mpc = QRadioButton('do-mpc-control with adjustable target position')
-        self.rbs = [self.rb_manual, self.rb_LQR, self.rb_do_mpc]
+        self.rb_do_mpc_discrete = QRadioButton('do-mpc-discrete-control with adjustable target position')
+        self.rbs = [self.rb_manual, self.rb_LQR, self.rb_do_mpc, self.rb_do_mpc_discrete]
 
         lr.addStretch(1)
         for rb in self.rbs:
@@ -329,7 +330,7 @@ class MainWindow(QMainWindow):
             self.labMotor.setText("Motor power (Q): {:.3f}".format(around(self.MyCart.Q, 2)))
             if self.MyCart.mode == 0:
                 self.labTargetPosition.setText("")
-            elif self.MyCart.mode == 1:
+            else:
                 self.labTargetPosition.setText("Target position (m): " + str(around(self.MyCart.slider_value, 2)))
 
             self.labTimeSim.setText('Simulation time (s): {:.2f}'.format(self.MyCart.time_total))

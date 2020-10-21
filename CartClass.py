@@ -28,6 +28,8 @@ import timeit
 
 from controllers.controller_lqr import controller_lqr
 from controllers.controller_do_mpc import controller_do_mpc
+from controllers.controller_do_mpc_discrete import controller_do_mpc_discrete
+
 
 # Interpolate function to create smooth random track
 from scipy.interpolate import interp1d
@@ -140,7 +142,9 @@ class Cart:
 
         self.controller_lqr = controller_lqr(self.Jacobian_UP, self.B, self.Q_matrix, self.R_matrix)
         self.controller_do_mpc = controller_do_mpc()
+        self.controller_do_mpc_discrete = controller_do_mpc_discrete()
         self.controller = None
+
 
         # Variables for pre-generated random trace
 
@@ -455,4 +459,8 @@ class Cart:
         elif new_mode == 2:
             self.mode = 2
             self.controller = self.controller_do_mpc
+            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
+        elif new_mode == 3:
+            self.mode = 3
+            self.controller = self.controller_do_mpc_discrete
             self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
