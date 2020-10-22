@@ -2,7 +2,7 @@
 
 import do_mpc
 
-from globals import *
+from src.globals import *
 from types import SimpleNamespace
 
 from copy import deepcopy
@@ -11,8 +11,8 @@ from copy import deepcopy
 
 class controller_do_mpc:
     def __init__(self,
-                 CartPosition_init=0.0,
-                 CartPositionD_init=0.0,
+                 position_init=0.0,
+                 positionD_init=0.0,
                  angle_init=0.0,
                  angleD_init=0.0,
                  ):
@@ -39,9 +39,9 @@ class controller_do_mpc:
 
         # State of the cart
         s = SimpleNamespace()  # s like state
-        s.CartPosition = 0.0
-        s.CartPositionD = 0.0
-        s.CartPositionDD = 0.0
+        s.position = 0.0
+        s.positionD = 0.0
+        s.positionDD = 0.0
         s.angle = 0.0
         s.angleD = 0.0
         s.angleDD = 0.0
@@ -49,22 +49,22 @@ class controller_do_mpc:
         model_type = 'continuous'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
 
-        s.CartPosition = self.model.set_variable(var_type='_x', var_name='s.CartPosition', shape=(1, 1))
-        s.CartPositionD = self.model.set_variable(var_type='_x', var_name='s.CartPositionD', shape=(1, 1))
+        s.position = self.model.set_variable(var_type='_x', var_name='s.position', shape=(1, 1))
+        s.positionD = self.model.set_variable(var_type='_x', var_name='s.positionD', shape=(1, 1))
 
         s.angle = self.model.set_variable(var_type='_x', var_name='s.angle', shape=(1, 1))
         s.angleD = self.model.set_variable(var_type='_x', var_name='s.angleD', shape=(1, 1))
 
         Q = self.model.set_variable(var_type='_u', var_name='Q')
 
-        PositionTarget = self.model.set_variable('_tvp', 'PositionTarget')
+        PositionTarget = self.model.set_variable('_tvp', 'target_position')
 
-        self.model.set_rhs('s.CartPosition', s.CartPositionD)
+        self.model.set_rhs('s.position', s.positionD)
         self.model.set_rhs('s.angle', s.angleD)
 
-        angleD_next, CartPositionD_next = cartpole_ode(p, s, Q2u(Q,p))
+        angleD_next, positionD_next = cartpole_ode(p, s, Q2u(Q,p))
 
-        self.model.set_rhs('s.CartPositionD', CartPositionD_next)
+        self.model.set_rhs('s.positionD', positionD_next)
         self.model.set_rhs('s.angleD', angleD_next)
 
 
@@ -74,16 +74,16 @@ class controller_do_mpc:
         # Expressions for kinetic and potential energy
 
         # Simplified, normalized expressions for E_kin and E_pot as a port of cost function
-        E_kin_cart = (s.CartPositionD/p.v_max)**2
+        E_kin_cart = (s.positionD / p.v_max) ** 2
         E_kin_pol = (s.angleD/(2*np.pi))**2
         E_pot = np.cos(s.angle)
 
         # Positive means that during the procedure the distance to target increased, negative that it decreased
         # Idea good, but implementation does not work - need to implement s.CartPositionInitial as a time varying parameter
-        # distance_difference = ((s.CartPosition-PositionTarget)**2) - ((CartPositionInitial-PositionTarget)**2)
-        # distance_difference = ((s.CartPosition - PositionTarget) ** 2)
+        # distance_difference = ((s.position-target_position)**2) - ((CartPositionInitial-target_position)**2)
+        # distance_difference = ((s.position - target_position) ** 2)
 
-        distance_difference = ((s.CartPosition - self.model.tvp['PositionTarget']) ** 2)
+        distance_difference = ((s.position - self.model.tvp['target_position']) ** 2)
 
         self.model.set_expression('E_kin_cart', E_kin_cart)
         self.model.set_expression('E_kin_pol', E_kin_pol)
@@ -121,8 +121,8 @@ class controller_do_mpc:
 
         # Set initial state
         self.x0 = self.mpc.x0
-        self.x0['s.CartPosition'] = CartPosition_init
-        self.x0['s.CartPositionD'] = CartPositionD_init
+        self.x0['s.position'] = position_init
+        self.x0['s.positionD'] = positionD_init
         self.x0['s.angle'] = angle_init
         self.x0['s.angleD'] = angleD_init
 
@@ -135,17 +135,17 @@ class controller_do_mpc:
         return self.tvp_template
 
 
-    def step(self, state, PositionTarget):
+    def step(self, state, target_position):
 
         s = deepcopy(state)
 
-        self.x0['s.CartPosition'] = s.CartPosition
-        self.x0['s.CartPositionD'] = s.CartPositionD
+        self.x0['s.position'] = s.position
+        self.x0['s.positionD'] = s.positionD
 
         self.x0['s.angle'] = s.angle
         self.x0['s.angleD'] = s.angleD
 
-        self.tvp_template['_tvp', :, 'PositionTarget'] = PositionTarget
+        self.tvp_template['_tvp', :, 'target_position'] = target_position
 
         Q = self.mpc.make_step(self.x0)
 

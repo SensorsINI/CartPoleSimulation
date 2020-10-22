@@ -46,7 +46,7 @@ class controller_lqr:
         s = deepcopy(state)
 
         state = np.array(
-            [[s.CartPosition - PositionTarget], [s.CartPositionD], [s.angle], [s.angleD]])
+            [[s.position - PositionTarget], [s.positionD], [s.angle], [s.angleD]])
 
         Q = np.asscalar(np.dot(-self.K, state))
         return Q

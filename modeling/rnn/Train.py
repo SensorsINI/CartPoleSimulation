@@ -13,17 +13,14 @@ from torch.utils import data
 import torch.optim as optim
 import torch.utils.data.dataloader
 from tqdm import tqdm
-import random as rnd
-import numpy as np
 
 import collections
 
-from memory_profiler import profile
 import timeit
 
-from utilis import get_device, Sequence, Dataset, plot_results
-import ParseArgs
-from CartClass import Cart
+from modeling.rnn.utilis_rnn import get_device, Sequence, Dataset, plot_results
+from modeling.rnn import ParseArgs
+from src.CartClass import Cart
 
 # Check if GPU is available. If yes device='cuda:0' if not device='cpu'
 device = get_device()
@@ -43,7 +40,7 @@ def train_network():
 
     # Make folders if not yet exist
     try:
-        os.makedirs('save')
+        os.makedirs('../../save')
     except:
         pass
 

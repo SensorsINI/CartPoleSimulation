@@ -2,7 +2,6 @@
 from PyQt5.QtWidgets import QMainWindow, QRadioButton, QApplication, QVBoxLayout,\
                                         QHBoxLayout, QLabel, QPushButton, QWidget, QCheckBox
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool, QTimer, Qt
-from PyQt5.QtGui import QIcon
 # Import functions to measure time intervals and to pause a thread for a given time
 from time import sleep
 import timeit
@@ -13,15 +12,14 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib import animation
 import matplotlib.pyplot as plt
-import matplotlib
 # Import function from numpy library
 from numpy import pi, around, array
 
 # Import Cart class - the class keeping all the parameters and methods
 # related to CartPole which are not related to PyQt5 GUI
-from CartClass import Cart
+from src.CartClass import Cart
 
-from globals import *
+from src.globals import *
 
 
 # Window displaying summary (matplotlib plots) of an experiment with CartPole after clicking Stop button
@@ -78,8 +76,8 @@ class MainWindow(QMainWindow):
         self.run_thread_labels = True
 
         self.counter = 0
-        self.real_time = 1
-        self.save_history = False
+        self.real_time = real_time_globals
+        self.save_history = save_history_globals
         self.saved = 0
         self.printing_summary = 1
         self.Q_thread_enabled = False
@@ -176,7 +174,8 @@ class MainWindow(QMainWindow):
         # TODO to decide if to save the simulation history
         # TODO to decide if to plot simulation history
         cb = QCheckBox('Real time simulation', self)
-        cb.toggle()
+        if self.real_time:
+            cb.toggle()
         cb.stateChanged.connect(self.real_time_simulation_f)
         layout.addWidget(cb)
 
@@ -238,35 +237,37 @@ class MainWindow(QMainWindow):
 
         # Plot angle error
         axs[0].set_ylabel("Angle (deg)", fontsize=18)
-        axs[0].plot(array(self.MyCart.dict_history['time']), array(self.MyCart.dict_history['angleErr']) * 180.0 / pi,
+        axs[0].plot(array(self.MyCart.dict_history['time']), array(self.MyCart.dict_history['s.angle']) * 180.0 / pi,
                     'b', markersize=12, label='Ground Truth')
         axs[0].tick_params(axis='both', which='major', labelsize=16)
 
         # Plot position
         axs[1].set_ylabel("position (m)", fontsize=18)
-        axs[1].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['position'], 'g', markersize=12,
+        axs[1].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['s.position'], 'g', markersize=12,
                     label='Ground Truth')
         axs[1].tick_params(axis='both', which='major', labelsize=16)
 
         # Plot motor input command
         axs[2].set_ylabel("motor (N)", fontsize=18)
-        axs[2].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['motor'], 'r', markersize=12,
+        axs[2].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['u'], 'r', markersize=12,
                     label='motor')
         axs[2].tick_params(axis='both', which='major', labelsize=16)
 
         # Plot target position
         axs[3].set_ylabel("position target", fontsize=18)
-        axs[3].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['PositionTarget'], 'k')
+        axs[3].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['target_position'], 'k')
         axs[3].tick_params(axis='both', which='major', labelsize=16)
 
         axs[3].set_xlabel('Time (s)', fontsize=18)
 
+        plt.show()
+
         print('Max state:')
         print('[x,v,theta, omega]')
-        max_state = (max(abs(array(self.MyCart.dict_history['position']))),
-                     max(abs(array(self.MyCart.dict_history['positionD']))),
-                     (180 / pi) * max(abs(array(self.MyCart.dict_history['angleErr']))),
-                     (180 / pi) * max(abs(array(self.MyCart.dict_history['angleD']))))
+        max_state = (max(abs(array(self.MyCart.dict_history['s.position']))),
+                     max(abs(array(self.MyCart.dict_history['s.positionD']))),
+                     (180 / pi) * max(abs(array(self.MyCart.dict_history['s.angle']))),
+                     (180 / pi) * max(abs(array(self.MyCart.dict_history['s.angleD']))))
         print(max_state)
 
     # This method initiate calculation of simulation and iterative updates of Cart state
@@ -325,7 +326,7 @@ class MainWindow(QMainWindow):
     # A thread redrawing labels (except for timer, which has its own function) of GUI every 0.1 s
     def thread_labels(self):
         while (self.run_thread_labels):
-            self.labSpeed.setText("Speed (m/s): " + str(around(self.MyCart.s.CartPositionD, 2)))
+            self.labSpeed.setText("Speed (m/s): " + str(around(self.MyCart.s.positionD, 2)))
             self.labAngle.setText("Angle (deg): " + str(around(self.MyCart.s.angle * 360 / (2 * pi), 2)))
             self.labMotor.setText("Motor power (Q): {:.3f}".format(around(self.MyCart.Q, 2)))
             if self.MyCart.mode == 0:
@@ -335,6 +336,7 @@ class MainWindow(QMainWindow):
 
             self.labTimeSim.setText('Simulation time (s): {:.2f}'.format(self.MyCart.time_total))
 
+            speed_up = 1.0
             if self.real_time:
                 speed_up = 1.0
             else:

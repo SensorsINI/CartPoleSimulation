@@ -1,7 +1,9 @@
 import numpy as np
 
 # Variables controlling flow of the program
+mode_globals = 2
 save_history_globals = True
+real_time_globals = False
 
 # Variables used for physical simulation
 dt_globals = 0.020
@@ -19,22 +21,20 @@ g_globals = 9.81  # gravity, m/s^2
 k_globals = 4.0 / 3.0  # Dimensionless factor, for moment of inertia of the pend (with L being half if the length)
 
 # Variables for random trace generation
-N_globals = 5  # Complexity of the random trace, number of random points used for interpolation
-random_length_globals = 5e4  # Number of points in the random length trece
+N_globals = 10  # Complexity of the random trace, number of random points used for interpolation
+random_length_globals = 5e2  # Number of points in the random length trece
 
-mode_globals = 2
-
-# def cartpole_dyncamic(CartPosition,):
+# def cartpole_dyncamic(position,):
 
 def cartpole_integration(s, dt):
 
-    CartPosition = s.CartPosition + s.CartPositionD * dt
-    CartPositionD = s.CartPositionD + s.CartPositionDD * dt
+    position = s.position + s.positionD * dt
+    positionD = s.positionD + s.positionDD * dt
 
     angle = s.angle + s.angleD * dt
     angleD = s.angleD + s.angleDD * dt
 
-    return CartPosition, CartPositionD, angle, angleD
+    return position, positionD, angle, angleD
 
 def cartpole_ode(p, s, u):
     ca = np.cos(s.angle)
@@ -42,17 +42,17 @@ def cartpole_ode(p, s, u):
     A = (p.k + 1) * (p.M + p.m) - p.m * (ca ** 2)
 
     angleDD = (p.g * (p.m + p.M) * sa -
-                 ((p.J_fric * (p.m + p.M) * s.angleD) / (p.L * p.m)) -
-                 ca * (p.m * p.L * (s.angleD ** 2) * sa + p.M_fric * s.CartPositionD) +
-                 ca * u) / (A * p.L)
-    CartPositionDD = (
-                        p.m * p.g * sa * ca -
-                        ((p.J_fric * s.angleD * ca) / (p.L)) -
-                        (p.k + 1) * (p.m * p.L * (s.angleD ** 2) * sa + p.M_fric * s.CartPositionD) +
-                        (p.k + 1) * u
+               ((p.J_fric * (p.m + p.M) * s.angleD) / (p.L * p.m)) -
+               ca * (p.m * p.L * (s.angleD ** 2) * sa + p.M_fric * s.positionD) +
+               ca * u) / (A * p.L)
+    positionDD = (
+                             p.m * p.g * sa * ca -
+                             ((p.J_fric * s.angleD * ca) / (p.L)) -
+                             (p.k + 1) * (p.m * p.L * (s.angleD ** 2) * sa + p.M_fric * s.positionD) +
+                             (p.k + 1) * u
                         ) / A
 
-    return angleDD, CartPositionDD
+    return angleDD, positionDD
 
 
 def Q2u(Q, p):
