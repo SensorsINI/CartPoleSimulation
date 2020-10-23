@@ -1,6 +1,7 @@
 # Import functions from PyQt5 module (creating GUI)
-from PyQt5.QtWidgets import QMainWindow, QRadioButton, QApplication, QVBoxLayout,\
-                                        QHBoxLayout, QLabel, QPushButton, QWidget, QCheckBox
+from PyQt5.QtWidgets import QMainWindow, QRadioButton, QApplication, QVBoxLayout, \
+    QHBoxLayout, QLabel, QPushButton, QWidget, QCheckBox, \
+    QLineEdit
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool, QTimer, Qt
 # Import functions to measure time intervals and to pause a thread for a given time
 from time import sleep
@@ -78,6 +79,7 @@ class MainWindow(QMainWindow):
         self.counter = 0
         self.real_time = real_time_globals
         self.save_history = save_history_globals
+        self.load_pregenerated = load_pregenerated_globals
         self.saved = 0
         self.printing_summary = 1
         self.Q_thread_enabled = False
@@ -147,7 +149,6 @@ class MainWindow(QMainWindow):
         ld.addWidget(self.labTargetPosition)
         layout.addLayout(ld)
 
-
         # Second row of labels
         ld2 = QHBoxLayout()
         self.labTimeSim = QLabel('Simulation Time (s):')
@@ -169,15 +170,39 @@ class MainWindow(QMainWindow):
         lb.addWidget(bt)
         layout.addLayout(lb)
 
+        # Textbox to add provide a file name
+        l_text = QHBoxLayout()
+        textbox_title = QLabel('CSV file name:')
+        self.textbox = QLineEdit()
+        l_text.addWidget(textbox_title)
+        l_text.addWidget(self.textbox)
+        layout.addLayout(l_text)
+
         # Checkboxs:
         # to swich between real time and constant dt simulation
-        # TODO to decide if to save the simulation history
         # TODO to decide if to plot simulation history
-        cb = QCheckBox('Real time simulation', self)
+
+        l_cb = QHBoxLayout()
+
+        cb_real_time = QCheckBox('Real time simulation', self)
         if self.real_time:
-            cb.toggle()
-        cb.stateChanged.connect(self.real_time_simulation_f)
-        layout.addWidget(cb)
+            cb_real_time.toggle()
+        cb_real_time.stateChanged.connect(self.real_time_f)
+        l_cb.addWidget(cb_real_time)
+
+        cb_save_history = QCheckBox('Save results', self)
+        if self.save_history:
+            cb_save_history.toggle()
+        cb_save_history.stateChanged.connect(self.cb_save_history_f)
+        l_cb.addWidget(cb_save_history)
+
+        cb_load_pregenerated = QCheckBox('Load pregenerated data', self)
+        if self.load_pregenerated:
+            cb_load_pregenerated.toggle()
+        cb_load_pregenerated.stateChanged.connect(self.cb_load_pregenerated_f)
+        l_cb.addWidget(cb_load_pregenerated)
+
+        layout.addLayout(l_cb)
 
         # Create an instance of a GUI window
         w = QWidget()
@@ -312,7 +337,8 @@ class MainWindow(QMainWindow):
         # print('Welcome')
         # Save simulation history if user chose to do so at the end of the simulation
         if self.save_history:
-            self.MyCart.save_history_csv()
+            csv_name = self.textbox.text()
+            self.MyCart.save_history_csv(csv_name=csv_name)
             self.saved = 1
 
         # plot_summary = True
@@ -340,7 +366,7 @@ class MainWindow(QMainWindow):
             if self.real_time:
                 speed_up = 1.0
             else:
-                speed_up = 0.95*speed_up + 0.05*(self.dt_fix/self.dt_real)
+                speed_up = 0.95 * speed_up + 0.05 * (self.dt_fix / self.dt_real)
             self.labSpeedUp.setText('Speed-up (average): x{:.2f}'.format(speed_up))
             sleep(0.1)
 
@@ -445,11 +471,25 @@ class MainWindow(QMainWindow):
         self.canvas.draw()
 
     # Action toggling between real time and fix time step mode
-    def real_time_simulation_f(self, state):
+    def real_time_f(self, state):
         if state == Qt.Checked:
             self.real_time = 1
         else:
             self.real_time = 0
+
+    # Action toggling between saving and not saving simulation results
+    def cb_save_history_f(self, state):
+        if state == Qt.Checked:
+            self.save_history = 1
+        else:
+            self.save_history = 0
+
+    # Action toggling between loading (and/for replaying) pregenerated data and performing new experiment
+    def cb_load_pregenerated_f(self, state):
+        if state == Qt.Checked:
+            self.load_pregenerated = 1
+        else:
+            self.load_pregenerated = 0
 
     # A function redrawing the changing elements of the Figure
     # This animation runs always when the GUI is open

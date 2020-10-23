@@ -4,6 +4,7 @@ import numpy as np
 mode_globals = 2
 save_history_globals = True
 real_time_globals = False
+load_pregenerated_globals = False
 
 # Variables used for physical simulation
 dt_globals = 0.020
@@ -22,7 +23,7 @@ k_globals = 4.0 / 3.0  # Dimensionless factor, for moment of inertia of the pend
 
 # Variables for random trace generation
 N_globals = 10  # Complexity of the random trace, number of random points used for interpolation
-random_length_globals = 5e2  # Number of points in the random length trece
+random_length_globals = 1e2  # Number of points in the random length trece
 
 # def cartpole_dyncamic(position,):
 

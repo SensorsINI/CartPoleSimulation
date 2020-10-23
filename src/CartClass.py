@@ -441,7 +441,7 @@ class Cart:
                              'target_position': [self.target_position]}
 
     # This method saves the dictionary keeping the history of simulation to a .csv file
-    def save_history_csv(self):
+    def save_history_csv(self, csv_name=None):
 
         # Augment dict
         self.dict_history['s.angle.sin'] = [around(np.sin(x), 4) for x in self.dict_history['s.angle']]
@@ -454,8 +454,27 @@ class Cart:
             pass
 
         # Set path where to save the data
+        if csv_name is None or csv_name == '':
+            logpath = './data/' + 'CP_' + self.controller_name + str(datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')) + '.csv'
+        else:
+            logpath = './data/' + csv_name
+            if csv_name[-4:] != '.csv':
+                logpath += '.csv'
 
-        logpath = './data/' + 'CP_'+ self.controller_name + str(datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')) + '.csv'
+            # If such file exists, add index to the end (do not overwrite)
+            net_index = 1
+            logpath_new = logpath
+            while True:
+                if os.path.isfile(logpath_new):
+                    logpath_new = logpath[:-4]
+                else:
+                    logpath = logpath_new
+                    break
+                logpath_new = logpath_new + '-' + str(net_index) + '.csv'
+                net_index += 1
+
+
+
         # Write the .csv file
         with open(logpath, "w") as outfile:
             writer = csv.writer(outfile)
