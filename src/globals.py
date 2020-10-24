@@ -1,13 +1,20 @@
 import numpy as np
 
+
 # Variables controlling flow of the program
 mode_globals = 2
 save_history_globals = True
-real_time_globals = False
 load_pregenerated_globals = False
 
 # Variables used for physical simulation
-dt_globals = 0.020
+dt_main_simulation_globals = 0.020
+speedup_globals = 1.0
+
+# MPC
+dt_mpc_simulation_globals = 0.20
+mpc_horizon_globals = 20
+
+# Parameters of the CartPole
 m_globals = 2.0  # mass of pend, kg
 M_globals = 1.0  # mass of cart, kg
 L_globals = 1.0  # half length of pend, m

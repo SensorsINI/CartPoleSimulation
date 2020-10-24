@@ -35,8 +35,6 @@ class controller_do_mpc:
         p.g = g_globals  # gravity, m/s^2
         p.k = k_globals  # Dimensionless factor, for moment of inertia of the pend (with L being half if the length)
 
-        PositionTarget = -20.0
-
         # State of the cart
         s = SimpleNamespace()  # s like state
         s.position = 0.0
@@ -57,7 +55,7 @@ class controller_do_mpc:
 
         Q = self.model.set_variable(var_type='_u', var_name='Q')
 
-        PositionTarget = self.model.set_variable('_tvp', 'target_position')
+        target_position = self.model.set_variable('_tvp', 'target_position')
 
         self.model.set_rhs('s.position', s.positionD)
         self.model.set_rhs('s.angle', s.angleD)
@@ -67,23 +65,12 @@ class controller_do_mpc:
         self.model.set_rhs('s.positionD', positionD_next)
         self.model.set_rhs('s.angleD', angleD_next)
 
-
-        # TODO resolve problem of u_eff vs. Q
-        # Optimally I would use in the equations only u_eff Q beeing the input only for slider.
-
-        # Expressions for kinetic and potential energy
-
         # Simplified, normalized expressions for E_kin and E_pot as a port of cost function
         E_kin_cart = (s.positionD / p.v_max) ** 2
         E_kin_pol = (s.angleD/(2*np.pi))**2
         E_pot = np.cos(s.angle)
 
-        # Positive means that during the procedure the distance to target increased, negative that it decreased
-        # Idea good, but implementation does not work - need to implement s.CartPositionInitial as a time varying parameter
-        # distance_difference = ((s.position-target_position)**2) - ((CartPositionInitial-target_position)**2)
-        # distance_difference = ((s.position - target_position) ** 2)
-
-        distance_difference = ((s.position - self.model.tvp['target_position']) ** 2)
+        distance_difference = ((s.position - target_position) ** 2)
 
         self.model.set_expression('E_kin_cart', E_kin_cart)
         self.model.set_expression('E_kin_pol', E_kin_pol)
@@ -96,16 +83,16 @@ class controller_do_mpc:
         self.mpc = do_mpc.controller.MPC(self.model)
 
         setup_mpc = {
-            'n_horizon': 20,
-            't_step': 0.2,
+            'n_horizon': mpc_horizon_globals,
+            't_step': dt_mpc_simulation_globals,
             'n_robust': 0,
-            'store_full_solution': True,
+            'store_full_solution': False,
         }
         self.mpc.set_param(**setup_mpc)
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'mumps'})
 
         lterm = - self.model.aux['E_pot'] + 0.02 * distance_difference
-        mterm = 5*self.model.aux['E_kin_pol'] - 5*self.model.aux['E_pot']  + 5*self.model.aux['E_kin_cart']
+        mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
         self.mpc.set_rterm(Q=0.1)
@@ -116,6 +103,10 @@ class controller_do_mpc:
         self.tvp_template = self.mpc.get_tvp_template()
 
         self.mpc.set_tvp_fun(self.tvp_fun)
+
+        # Suppress IPOPT outputs
+        suppress_ipopt = {'ipopt.print_level': 0, 'ipopt.sb': 'yes', 'print_time': 0}
+        self.mpc.set_param(nlpsol_opts=suppress_ipopt)
 
         self.mpc.setup()
 
@@ -150,5 +141,3 @@ class controller_do_mpc:
         Q = self.mpc.make_step(self.x0)
 
         return Q.item()
-
-

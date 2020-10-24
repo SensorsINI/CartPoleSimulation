@@ -52,7 +52,7 @@ class Cart:
                  save_history=save_history_globals,
 
                  # Variables used for physical simulation
-                 dt=dt_globals,
+                 dt=dt_main_simulation_globals,
                  m=m_globals,  # mass of pend, kg
                  M=M_globals,  # mass of cart, kg
                  L=L_globals,  # half length of pend, m
@@ -340,8 +340,6 @@ class Cart:
         self.s.angleDD = 0.0
 
         self.u = 0.0
-
-        self.dt = dt_globals
 
         self.slider_value = 0.0
 
