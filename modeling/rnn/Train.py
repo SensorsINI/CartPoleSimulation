@@ -56,8 +56,27 @@ def train_network():
     train_generator = data.DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False)
     dev_generator = data.DataLoader(dataset=dev_set, batch_size=512, shuffle=False)
 
-    # Create RNN instance
-    net = Sequence(args)
+    # Network architecture:
+    '''
+    FIXME: I am just using the code structure from l2race. Have to check if the input/output/command and states are properly addressed
+    '''
+
+    rnn_name = args.rnn_name
+    inputs_list = args.inputs_list
+    outputs_list = args.outputs_list
+
+    load_rnn = args.load_rnn  # If specified this is the name of pretrained RNN which should be loaded
+    path_save = args.path_save
+
+    net, rnn_name, inputs_list, outputs_list \
+        = create_rnn_instance(rnn_name, inputs_list, outputs_list, load_rnn, path_save, device)
+
+    # Create log for this RNN and determine its full name
+    '''
+    FIXME: Right now I did not include plot functions. 
+    '''
+    rnn_full_name = create_log_file(rnn_name, inputs_list, outputs_list, path_save)
+
 
     # If a pretrained model exists load the parameters from disc and into RNN instance
     # Also evaluate the performance of this pretrained network
@@ -107,6 +126,10 @@ def train_network():
     # Select Loss Function
     criterion = nn.MSELoss()  # Mean square error loss function
 
+
+    '''
+    FIXME: We have a function to Initialize weight and biases. Can we use that?
+    '''
     # Initialize weights and biases
     for name, param in net.named_parameters():
         print(name)
@@ -310,7 +333,7 @@ def train_network():
         if dev_loss <= min_dev_loss:
             epoch_saved = epoch
             min_dev_loss = dev_loss
-            torch.save(net.state_dict(), args.savepath)
+            torch.save(net.state_dict(), args.path_save + rnn_full_name + '.pt', _use_new_zipfile_serialization=False)
             print('>>> saving best model from epoch {}'.format(epoch))
         else:
             print('>>> We keep model from epoch {}'.format(epoch_saved))
