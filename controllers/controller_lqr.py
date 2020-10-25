@@ -2,6 +2,7 @@
 import scipy
 import numpy as np
 
+from copy import deepcopy
 
 class controller_lqr:
     def __init__(self, A, B, Q, R):
@@ -40,6 +41,12 @@ class controller_lqr:
         self.X = X
         self.eigVals = eigVals
 
-    def step(self, state):
+    def step(self, state, PositionTarget):
+
+        s = deepcopy(state)
+
+        state = np.array(
+            [[s.position - PositionTarget], [s.positionD], [s.angle], [s.angleD]])
+
         Q = np.asscalar(np.dot(-self.K, state))
         return Q

@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jun 19 08:28:34 2020
-
-@author: Marcin
-"""
-
-from CartClass import Cart
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils import data
@@ -14,7 +5,9 @@ from torch.utils import data
 from IPython.display import Image
 
 import matplotlib.pyplot as plt
+import numpy as np
 
+from src.utilis import Generate_Experiment
 
 def get_device():
     """
@@ -131,95 +124,6 @@ class Sequence(nn.Module):
         if not train:
             self.outputs = torch.stack(self.outputs, 1)
             return self.outputs
-
-
-def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
-    """
-    This function runs a random CartPole experiment
-    and returns the history of CartPole states, control inputs and desired cart position
-    :param MyCart: instance of CartPole containing CartPole dynamics
-    :param exp_len: How many time steps should the experiment have
-                (default: 64+640+1 this format is used as it can )
-    """
-
-    # Set CartPole in the right (automatic control) mode
-    MyCart.mode = 1  # 1 - you are controlling with LQR
-
-    # Initialize Variables
-    states = []
-    u_effs = []
-    target_positions = []
-
-    # Generate new random function returning desired target position of the cart
-    MyCart.dt = dt
-    MyCart.random_length = exp_len
-    MyCart.N = 10  # Complexity of generated target position track
-    MyCart.Generate_Random_Trace_Function()
-
-    # Randomly set the initial state
-
-    MyCart.time_total = 0.0
-
-    MyCart.CartPosition = np.random.uniform(low=-MyCart.HalfLength / 2.0,
-                                            high=MyCart.HalfLength / 2.0)
-    MyCart.CartPositionD = np.random.uniform(low=-10.0,
-                                             high=10.0)
-    MyCart.angle = np.random.uniform(low=-17.5 * (np.pi / 180.0),
-                                     high=17.5 * (np.pi / 180.0))
-    MyCart.angleD = np.random.uniform(low=-15.5 * (np.pi / 180.0),
-                                      high=15.5 * (np.pi / 180.0))
-
-    MyCart.u = np.random.uniform(low=-0.9 * MyCart.umax,
-                                 high=0.9 * MyCart.umax)
-
-    # Target position at time 0 (should be always 0)
-    MyCart.PositionTarget = MyCart.random_track_f(MyCart.time_total)  # = 0
-    # Constrain target position
-    if MyCart.PositionTarget > 0.8 * MyCart.HalfLength:
-        MyCart.PositionTarget = 0.8 * MyCart.HalfLength
-    elif MyCart.PositionTarget < -0.8 * MyCart.HalfLength:
-        MyCart.PositionTarget = -0.8 * MyCart.HalfLength
-
-    # Run the CartPole experiment for number of time
-    for i in range(int(exp_len)):
-
-        # Start by incrementing total time
-        MyCart.time_total = i * MyCart.dt
-        # Print an error message if it runs already to long (should stop before)
-        if MyCart.time_total > MyCart.t_max_pre:
-            MyCart.time_total = MyCart.t_max_pre
-            print('ERROR: It seems the experiment is running too long...')
-
-        # Calculate acceleration, angular acceleration, velocity, angular velocity, position and angle
-        # for this new time_step
-        MyCart.Equations_of_motion()
-
-        # Determine the dimensionales [-1,1] value of the motor power Q
-        MyCart.Update_Q()
-
-        # Calculate the force created by the motor
-        MyCart.Update_ueff()
-
-        # Get the new value of desired cart position and constrain it
-        MyCart.PositionTarget = MyCart.random_track_f(MyCart.time_total)
-        if MyCart.PositionTarget > 0.8 * MyCart.HalfLength:
-            MyCart.PositionTarget = 0.8 * MyCart.HalfLength
-        elif MyCart.PositionTarget < -0.8 * MyCart.HalfLength:
-            MyCart.PositionTarget = -0.8 * MyCart.HalfLength
-
-        # Save all the new cart state variables you just updated
-        state = (MyCart.CartPosition,
-                 MyCart.CartPositionD,
-                 MyCart.angle,
-                 MyCart.angleD)
-
-        # Save current cart state, control input and target position to a corresponding list
-        states.append(state)
-        u_effs.append(MyCart.u)
-        target_positions.append(MyCart.PositionTarget)
-
-    # After generating experiment finished, return states, control input and target_positions history
-    return states, u_effs, target_positions
 
 
 class Dataset(data.Dataset):
@@ -393,7 +297,7 @@ def plot_results(net, args, MyCart):
 
     # # Plot target position
     # axs[5].set_ylabel("position target", fontsize=18)
-    # axs[5].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['PositionTarget'], 'k')
+    # axs[5].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['target_position'], 'k')
     # axs[5].tick_params(axis='both', which='major', labelsize=16)
 
     axs[4].set_xlabel('Time (s)', fontsize=18)

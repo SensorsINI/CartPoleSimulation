@@ -9,7 +9,7 @@ from copy import deepcopy
 
 
 
-class controller_do_mpc:
+class controller_do_mpc_discrete:
     def __init__(self,
                  position_init=0.0,
                  positionD_init=0.0,
@@ -103,10 +103,6 @@ class controller_do_mpc:
         self.tvp_template = self.mpc.get_tvp_template()
 
         self.mpc.set_tvp_fun(self.tvp_fun)
-
-        # Suppress IPOPT outputs
-        suppress_ipopt = {'ipopt.print_level': 0, 'ipopt.sb': 'yes', 'print_time': 0}
-        self.mpc.set_param(nlpsol_opts=suppress_ipopt)
 
         self.mpc.setup()
 

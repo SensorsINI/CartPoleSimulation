@@ -1,8 +1,8 @@
 # Import functions from PyQt5 module (creating GUI)
-from PyQt5.QtWidgets import QMainWindow, QRadioButton, QApplication, QVBoxLayout,\
-                                        QHBoxLayout, QLabel, QPushButton, QWidget, QCheckBox
+from PyQt5.QtWidgets import QMainWindow, QRadioButton, QApplication, QVBoxLayout, \
+    QHBoxLayout, QLabel, QPushButton, QWidget, QCheckBox, \
+    QLineEdit, QMessageBox
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool, QTimer, Qt
-from PyQt5.QtGui import QIcon
 # Import functions to measure time intervals and to pause a thread for a given time
 from time import sleep
 import timeit
@@ -13,13 +13,16 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib import animation
 import matplotlib.pyplot as plt
-import matplotlib
 # Import function from numpy library
-from numpy import pi, around, array
+from numpy import pi, around, array, inf
 
 # Import Cart class - the class keeping all the parameters and methods
 # related to CartPole which are not related to PyQt5 GUI
-from CartClass import Cart
+from src.CartClass import Cart
+
+from src.globals import *
+from src.utilis import *
+
 
 
 # Window displaying summary (matplotlib plots) of an experiment with CartPole after clicking Stop button
@@ -65,20 +68,20 @@ class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
-        ## Initialization of variables
-        # Time in simulation
-        self.dt_fix = 0.002  # This is fixed timestep value
-        self.dt = 0.0  # It is NOT the fixed timestep value. It is just a value for the first timestep
-
         # Stop threads if False
         self.run_thread_calculations = False
         self.run_thread_labels = True
 
         self.counter = 0
-        self.real_time = 1
-        self.save_history = True
+        self.save_history = save_history_globals
+        self.load_pregenerated = load_pregenerated_globals
         self.saved = 0
         self.printing_summary = 1
+        self.Q_thread_enabled = False
+
+        self.dt_main_simulation = dt_main_simulation_globals
+        self.speedup = speedup_globals
+        self.looper = loop_timer(dt_target=(self.dt_main_simulation/self.speedup))
 
         # Create Cart object
 
@@ -107,15 +110,16 @@ class MainWindow(QMainWindow):
         self.rb_manual = QRadioButton('Manual Stabilization')
         self.rb_LQR = QRadioButton('LQR-control with adjustable target position')
         self.rb_do_mpc = QRadioButton('do-mpc-control with adjustable target position')
-        self.rb_manual.toggled.connect(self.RadioButtons)
-        self.rb_LQR.toggled.connect(self.RadioButtons)
-        self.rb_do_mpc.toggled.connect(self.RadioButtons)
+        self.rb_do_mpc_discrete = QRadioButton('do-mpc-discrete-control with adjustable target position')
+        self.rbs = [self.rb_manual, self.rb_LQR, self.rb_do_mpc, self.rb_do_mpc_discrete]
+
         lr.addStretch(1)
-        lr.addWidget(self.rb_manual)
-        lr.addWidget(self.rb_LQR)
-        lr.addWidget(self.rb_do_mpc)
+        for rb in self.rbs:
+            rb.toggled.connect(self.RadioButtons)
+            lr.addWidget(rb)
         lr.addStretch(1)
-        self.rb_manual.setChecked(True)
+        # self.rb_manual.setChecked(True)
+        self.rbs[self.MyCart.mode].setChecked(True)
 
         # Create main part of the layout for Figures and radiobuttons
         # And add it to the whole layout
@@ -128,7 +132,7 @@ class MainWindow(QMainWindow):
         # Time(user time, not necesarily time of the Cart (i.e. used in sinmulation)),
         # Speed, Angle and slider value
         ld = QHBoxLayout()
-        self.labTime = QLabel("Time (s): ")
+        self.labTime = QLabel("User's time (s): ")
         self.timer = QTimer()
         self.timer.setInterval(100)
         self.timer.timeout.connect(self.recurring_timer)
@@ -144,6 +148,14 @@ class MainWindow(QMainWindow):
         ld.addWidget(self.labTargetPosition)
         layout.addLayout(ld)
 
+        # Second row of labels
+        ld2 = QHBoxLayout()
+        self.labTimeSim = QLabel('Simulation Time (s):')
+        ld2.addWidget(self.labTimeSim)
+        self.labSpeedUp = QLabel('Speed-up (measured):')
+        ld2.addWidget(self.labSpeedUp)
+        layout.addLayout(ld2)
+
         # Buttons "START/STOP", "RESET", "QUIT"
         bss = QPushButton("START!/STOP!")
         bss.pressed.connect(self.play)
@@ -157,14 +169,47 @@ class MainWindow(QMainWindow):
         lb.addWidget(bt)
         layout.addLayout(lb)
 
+        # Textbox to add provide a file name
+        l_text = QHBoxLayout()
+        textbox_title = QLabel('CSV file name:')
+        self.textbox = QLineEdit()
+        l_text.addWidget(textbox_title)
+        l_text.addWidget(self.textbox)
+        layout.addLayout(l_text)
+
         # Checkboxs:
-        # to swich between real time and constant dt simulation
-        # TODO to decide if to save the simulation history
         # TODO to decide if to plot simulation history
-        cb = QCheckBox('Real time simulation', self)
-        cb.toggle()
-        cb.stateChanged.connect(self.real_time_simulation_f)
-        layout.addWidget(cb)
+        # TODO change real-time checkbox to textbox speedup
+        l_cb = QHBoxLayout()
+
+        l_text_speedup = QHBoxLayout()
+        tx_speedup_title = QLabel('Speed-up (target):')
+        self.tx_speedup = QLineEdit()
+        l_text_speedup.addWidget(tx_speedup_title)
+        l_text_speedup.addWidget(self.tx_speedup)
+        self.tx_speedup.setText(str(self.speedup))
+        l_cb.addLayout(l_text_speedup)
+
+        self.wrong_speedup_msg = QMessageBox()
+        self.wrong_speedup_msg.setWindowTitle("Speed-up value problem")
+        self.wrong_speedup_msg.setIcon(QMessageBox.Critical)
+
+
+        cb_save_history = QCheckBox('Save results', self)
+        if self.save_history:
+            cb_save_history.toggle()
+        cb_save_history.stateChanged.connect(self.cb_save_history_f)
+        l_cb.addWidget(cb_save_history)
+
+        cb_load_pregenerated = QCheckBox('Load pregenerated data', self)
+        if self.load_pregenerated:
+            cb_load_pregenerated.toggle()
+        cb_load_pregenerated.stateChanged.connect(self.cb_load_pregenerated_f)
+        l_cb.addWidget(cb_load_pregenerated)
+
+        l_cb.addStretch(1)
+
+        layout.addLayout(l_cb)
 
         # Create an instance of a GUI window
         w = QWidget()
@@ -204,6 +249,30 @@ class MainWindow(QMainWindow):
             if event.inaxes == self.fig.AxSlider:
                 self.MyCart.update_slider(mouse_position=event.xdata)
 
+    def get_speedup(self):
+        speedup = self.tx_speedup.text()
+        if speedup == '':
+            self.speedup = inf
+            return True
+        else:
+            try:
+                speedup = float(speedup)
+            except ValueError:
+                self.wrong_speedup_msg.setText(
+                    'You have provided the input for speed-up which is not convertible to a number')
+                x = self.wrong_speedup_msg.exec_()
+                return False
+            if speedup == 0.0:
+                self.wrong_speedup_msg.setText(
+                    'You cannot run an experiment with 0 speed-up (stopped time flow)')
+                x = self.wrong_speedup_msg.exec_()
+                return False
+            else:
+                self.speedup = speedup
+                return True
+
+
+
     # Method resetting variables
     def reset_variables(self):
         self.MyCart.reset_state()
@@ -216,6 +285,7 @@ class MainWindow(QMainWindow):
         except:
             pass
         self.saved = 0
+        self.looper.first_call_done = False
 
     # Method printing the parameters of the CartPole over time during the experiment
     def show_summary(self):
@@ -224,35 +294,37 @@ class MainWindow(QMainWindow):
 
         # Plot angle error
         axs[0].set_ylabel("Angle (deg)", fontsize=18)
-        axs[0].plot(array(self.MyCart.dict_history['time']), array(self.MyCart.dict_history['angleErr']) * 180.0 / pi,
+        axs[0].plot(array(self.MyCart.dict_history['time']), array(self.MyCart.dict_history['s.angle']) * 180.0 / pi,
                     'b', markersize=12, label='Ground Truth')
         axs[0].tick_params(axis='both', which='major', labelsize=16)
 
         # Plot position
         axs[1].set_ylabel("position (m)", fontsize=18)
-        axs[1].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['position'], 'g', markersize=12,
+        axs[1].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['s.position'], 'g', markersize=12,
                     label='Ground Truth')
         axs[1].tick_params(axis='both', which='major', labelsize=16)
 
         # Plot motor input command
         axs[2].set_ylabel("motor (N)", fontsize=18)
-        axs[2].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['motor'], 'r', markersize=12,
+        axs[2].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['u'], 'r', markersize=12,
                     label='motor')
         axs[2].tick_params(axis='both', which='major', labelsize=16)
 
         # Plot target position
         axs[3].set_ylabel("position target", fontsize=18)
-        axs[3].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['PositionTarget'], 'k')
+        axs[3].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['target_position'], 'k')
         axs[3].tick_params(axis='both', which='major', labelsize=16)
 
         axs[3].set_xlabel('Time (s)', fontsize=18)
 
+        plt.show()
+
         print('Max state:')
         print('[x,v,theta, omega]')
-        max_state = (max(abs(array(self.MyCart.dict_history['position']))),
-                     max(abs(array(self.MyCart.dict_history['positionD']))),
-                     (180 / pi) * max(abs(array(self.MyCart.dict_history['angleErr']))),
-                     (180 / pi) * max(abs(array(self.MyCart.dict_history['angleD']))))
+        max_state = (max(abs(array(self.MyCart.dict_history['s.position']))),
+                     max(abs(array(self.MyCart.dict_history['s.positionD']))),
+                     (180 / pi) * max(abs(array(self.MyCart.dict_history['s.angle']))),
+                     (180 / pi) * max(abs(array(self.MyCart.dict_history['s.angleD']))))
         print(max_state)
 
     # This method initiate calculation of simulation and iterative updates of Cart state
@@ -261,27 +333,11 @@ class MainWindow(QMainWindow):
     # and initiate saving to a .csv file
     def thread_calculations(self):
 
-        start = timeit.default_timer()
-
+        self.looper.start_loop()
         while (self.run_thread_calculations):
 
-            # Measuring real-time timestep
-            stop = timeit.default_timer()
-
-            if self.real_time == 1:
-                self.dt = stop - start
-            else:
-                self.dt = self.dt_fix
-
-            start = timeit.default_timer()
-
             # Calculations of the Cart state in the next timestep
-            self.MyCart.update_state(dt=self.dt)
-
-            # Finish simulation if angle bigger than 90 deg.
-            # if abs(self.MyCart.angle)>pi/2:
-            #     self.run_thread_calculations = 0
-            #     break
+            self.MyCart.update_state(dt=self.dt_main_simulation)
 
             # Ensure that the animation drawing function can access MyCart at this moment
             QApplication.processEvents()
@@ -290,25 +346,39 @@ class MainWindow(QMainWindow):
                 # print('Terminating!')
                 self.run_thread_calculations = 0
 
+            self.looper.sleep_leftover_time()
+
         # print('Welcome')
         # Save simulation history if user chose to do so at the end of the simulation
         if self.save_history:
-            self.MyCart.save_history_csv()
+            csv_name = self.textbox.text()
+            self.MyCart.save_history_csv(csv_name=csv_name)
             self.saved = 1
 
         # plot_summary = True
         # if self.save_history and plot_summary:
 
+    # We define a separate threat for the controller:
+    def thread_control_input(self):
+        while self.run_thread_calculations:
+            self.MyCart.Update_Q()
+
     # A thread redrawing labels (except for timer, which has its own function) of GUI every 0.1 s
     def thread_labels(self):
         while (self.run_thread_labels):
-            self.labSpeed.setText("Speed (m/s): " + str(around(self.MyCart.s.CartPositionD, 2)))
+            self.labSpeed.setText("Speed (m/s): " + str(around(self.MyCart.s.positionD, 2)))
             self.labAngle.setText("Angle (deg): " + str(around(self.MyCart.s.angle * 360 / (2 * pi), 2)))
-            self.labMotor.setText("Motor power (Q): {}".format(around(self.MyCart.Q, 2)))
+            self.labMotor.setText("Motor power (Q): {:.3f}".format(around(self.MyCart.Q, 2)))
             if self.MyCart.mode == 0:
                 self.labTargetPosition.setText("")
-            elif self.MyCart.mode == 1:
+            else:
                 self.labTargetPosition.setText("Target position (m): " + str(around(self.MyCart.slider_value, 2)))
+
+            self.labTimeSim.setText('Simulation time (s): {:.2f}'.format(self.MyCart.time_total))
+
+            self.labSpeedUp.setText('Speed-up (measured): x{:.2f}'
+                                    .format(self.dt_main_simulation/np.mean(self.looper.circ_buffer_dt_real)))
+
             sleep(0.1)
 
     # Actions to be taken when start/stop button is clicked
@@ -329,11 +399,21 @@ class MainWindow(QMainWindow):
             self.canvas.draw()
 
         elif self.run_thread_calculations == 0:
-            self.run_thread_calculations = 1
-            # Pass the function to execute
-            worker_calculations = Worker(self.thread_calculations)
-            # Execute
-            self.threadpool.start(worker_calculations)
+            speedup_updated = self.get_speedup()
+            if speedup_updated:
+                self.looper.dt_target = self.dt_main_simulation/self.speedup
+                self.run_thread_calculations = 1
+                # Pass the function to execute
+                worker_calculations = Worker(self.thread_calculations)
+                # Execute
+                self.threadpool.start(worker_calculations)
+
+                if self.Q_thread_enabled:
+                    self.MyCart.Q_thread_enabled = self.Q_thread_enabled
+                    worker_control_input = Worker(self.thread_control_input)
+                    self.threadpool.start(worker_control_input)
+                else:
+                    self.MyCart.Q_thread_enabled = self.Q_thread_enabled
 
     # The acctions which has to be taken to properly terminate the application
     # The method is evoked after QUIT button is pressed
@@ -393,25 +473,30 @@ class MainWindow(QMainWindow):
     def RadioButtons(self):
         # Change the mode variable depending on the Radiobutton state
         if self.rb_manual.isChecked():
-            self.MyCart.mode = 0
+            self.MyCart.set_mode(new_mode=0)
         elif self.rb_LQR.isChecked():
-            self.MyCart.mode = 1
-            self.MyCart.controller = self.MyCart.controller_lqr
+            self.MyCart.set_mode(new_mode=1)
         elif self.rb_do_mpc.isChecked():
-            self.MyCart.mode = 2
-            self.MyCart.controller = self.MyCart.controller_do_mpc
+            self.MyCart.set_mode(new_mode=2)
 
         # Reset the state of GUI and of the Cart instance after the mode has changed
         self.reset_variables()
         self.MyCart.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
         self.canvas.draw()
 
-    # Action toggling between real time and fix time step mode
-    def real_time_simulation_f(self, state):
+    # Action toggling between saving and not saving simulation results
+    def cb_save_history_f(self, state):
         if state == Qt.Checked:
-            self.real_time = 1
+            self.save_history = 1
         else:
-            self.real_time = 0
+            self.save_history = 0
+
+    # Action toggling between loading (and/for replaying) pregenerated data and performing new experiment
+    def cb_load_pregenerated_f(self, state):
+        if state == Qt.Checked:
+            self.load_pregenerated = 1
+        else:
+            self.load_pregenerated = 0
 
     # A function redrawing the changing elements of the Figure
     # This animation runs always when the GUI is open
