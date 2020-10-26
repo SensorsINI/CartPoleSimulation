@@ -18,9 +18,11 @@ import collections
 
 import timeit
 
-from modeling.rnn.utilis_rnn import get_device, Sequence, Dataset, plot_results
 from modeling.rnn import ParseArgs
 from src.CartClass import Cart
+
+# Custom functions
+from modeling.rnn.utilis_rnn import *
 
 # Check if GPU is available. If yes device='cuda:0' if not device='cpu'
 device = get_device()

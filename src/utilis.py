@@ -174,7 +174,7 @@ def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
 
     # Randomly set the initial state
 
-    MyCart.time_total = 0.0
+    MyCart.time = 0.0
 
     MyCart.s.position = np.random.uniform(low=-MyCart.HalfLength / 2.0,
                                           high=MyCart.HalfLength / 2.0)
@@ -189,7 +189,7 @@ def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
                                  high=0.9 * MyCart.p.u_max)
 
     # Target position at time 0 (should be always 0)
-    MyCart.target_position = MyCart.random_track_f(MyCart.time_total)  # = 0
+    MyCart.target_position = MyCart.random_track_f(MyCart.time)  # = 0
     # Constrain target position
     if MyCart.target_position > 0.8 * MyCart.HalfLength:
         MyCart.target_position = 0.8 * MyCart.HalfLength
@@ -200,10 +200,10 @@ def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
     for i in range(int(exp_len)):
 
         # Start by incrementing total time
-        MyCart.time_total = i * MyCart.dt
+        MyCart.time = i * MyCart.dt
         # Print an error message if it runs already to long (should stop before)
-        if MyCart.time_total > MyCart.t_max_pre:
-            MyCart.time_total = MyCart.t_max_pre
+        if MyCart.time > MyCart.t_max_pre:
+            MyCart.time = MyCart.t_max_pre
             print('ERROR: It seems the experiment is running too long...')
 
         # Calculate acceleration, angular acceleration, velocity, angular velocity, position and angle
@@ -224,7 +224,7 @@ def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
         MyCart.u = Q2u(MyCart.Q, MyCart.p)
 
         # Get the new value of desired cart position and constrain it
-        MyCart.target_position = MyCart.random_track_f(MyCart.time_total)
+        MyCart.target_position = MyCart.random_track_f(MyCart.time)
         if MyCart.target_position > 0.8 * MyCart.HalfLength:
             MyCart.target_position = 0.8 * MyCart.HalfLength
         elif MyCart.target_position < -0.8 * MyCart.HalfLength:

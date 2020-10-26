@@ -16,13 +16,15 @@ import matplotlib.pyplot as plt
 # Import function from numpy library
 from numpy import pi, around, array, inf
 
+import numpy as np
+import pandas as pd
+
 # Import Cart class - the class keeping all the parameters and methods
 # related to CartPole which are not related to PyQt5 GUI
 from src.CartClass import Cart
 
 from src.globals import *
 from src.utilis import *
-
 
 
 # Window displaying summary (matplotlib plots) of an experiment with CartPole after clicking Stop button
@@ -75,14 +77,14 @@ class MainWindow(QMainWindow):
 
         self.counter = 0
         self.save_history = save_history_globals
-        self.load_pregenerated = load_pregenerated_globals
+        self.load_recording = load_recording_globals
         self.saved = 0
         self.printing_summary = 1
         self.Q_thread_enabled = False
 
         self.dt_main_simulation = dt_main_simulation_globals
         self.speedup = speedup_globals
-        self.looper = loop_timer(dt_target=(self.dt_main_simulation/self.speedup))
+        self.looper = loop_timer(dt_target=(self.dt_main_simulation / self.speedup))
 
         # Create Cart object
 
@@ -195,32 +197,24 @@ class MainWindow(QMainWindow):
         self.wrong_speedup_msg.setWindowTitle("Speed-up value problem")
         self.wrong_speedup_msg.setIcon(QMessageBox.Critical)
 
+        self.cb_load_recorded_data = QCheckBox('Load recorded data', self)
+        if self.load_recording:
+            self.cb_load_recorded_data.toggle()
+        self.cb_load_recorded_data.toggled.connect(self.cb_load_recorded_data_f)
+        l_cb.addWidget(self.cb_load_recorded_data)
 
         self.cb_save_history = QCheckBox('Save results', self)
         if self.save_history:
             self.cb_save_history.toggle()
-        self.cb_save_history.stateChanged.connect(self.cb_save_history_f)
+        self.cb_save_history.toggled.connect(self.cb_save_history_f)
         l_cb.addWidget(self.cb_save_history)
-
-        self.cb_load_pregenerated = QCheckBox('Load pregenerated data', self)
-        if self.load_pregenerated:
-            self.cb_load_pregenerated.toggle()
-        self.cb_load_pregenerated.toggled.connect(self.cb_load_pregenerated_f)
-        l_cb.addWidget(self.cb_load_pregenerated)
 
         self.load_generate_conflict_msg = QMessageBox()
         self.load_generate_conflict_msg.setWindowTitle("Load-generate conflict")
         self.load_generate_conflict_msg.setIcon(QMessageBox.Critical)
         self.load_generate_conflict_msg.setText(
-            'You cannot use "GENERATE TRACE" button \nwith "load pregenerated data" box checked.')
+            'You cannot use "GENERATE TRACE" button \nwith "load recorded data" box checked.')
 
-        # self.load_enable_runtime_msg = QMessageBox()
-        # self.load_enable_runtime_msg.setWindowTitle("Load-generate conflict")
-        # self.load_enable_runtime_msg.setIcon(QMessageBox.Critical)
-        # self.load_enable_runtime_msg.setText(
-        #     'You cannot change the "load pregenerated data" mode\n'
-        #     'while an experiment is running/replaying. \n'
-        #     'Please stop the current experiment first.')
 
         l_cb.addStretch(1)
 
@@ -264,7 +258,6 @@ class MainWindow(QMainWindow):
             if event.inaxes == self.fig.AxSlider:
                 self.MyCart.update_slider(mouse_position=event.xdata)
 
-
     def get_speedup(self):
         speedup = self.tx_speedup.text()
         if speedup == '':
@@ -286,8 +279,6 @@ class MainWindow(QMainWindow):
             else:
                 self.speedup = speedup
                 return True
-
-
 
     # Method resetting variables
     def reset_variables(self):
@@ -358,7 +349,7 @@ class MainWindow(QMainWindow):
             # Ensure that the animation drawing function can access MyCart at this moment
             QApplication.processEvents()
 
-            if self.MyCart.use_pregenerated_target_position == True and self.MyCart.time_total >= self.MyCart.t_max_pre:
+            if self.MyCart.use_pregenerated_target_position == True and self.MyCart.time >= self.MyCart.t_max_pre:
                 # print('Terminating!')
                 self.run_thread_calculations = 0
 
@@ -390,19 +381,19 @@ class MainWindow(QMainWindow):
             else:
                 self.labTargetPosition.setText("Target position (m): " + str(around(self.MyCart.slider_value, 2)))
 
-            self.labTimeSim.setText('Simulation time (s): {:.2f}'.format(self.MyCart.time_total))
+            self.labTimeSim.setText('Simulation time (s): {:.2f}'.format(self.MyCart.time))
 
             mean_dt_real = np.mean(self.looper.circ_buffer_dt_real)
             if mean_dt_real > 0:
                 self.labSpeedUp.setText('Speed-up (measured): x{:.2f}'
-                                        .format(self.dt_main_simulation/mean_dt_real))
+                                        .format(self.dt_main_simulation / mean_dt_real))
 
             sleep(0.1)
 
     # Actions to be taken when start/stop button is clicked
     def play(self):
-        if self.load_pregenerated:
-            pass
+        if self.load_recording:
+            self.replay()
         else:
             if self.run_thread_calculations == 1:
                 self.run_thread_calculations = 0
@@ -418,15 +409,15 @@ class MainWindow(QMainWindow):
                 # Draw figures
                 self.MyCart.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
                 self.canvas.draw()
-                self.cb_load_pregenerated.setEnabled(True)
+                self.cb_load_recorded_data.setEnabled(True)
                 self.cb_save_history.setEnabled(True)
 
             elif self.run_thread_calculations == 0:
                 self.cb_save_history.setEnabled(False)
-                self.cb_load_pregenerated.setEnabled(False)
+                self.cb_load_recorded_data.setEnabled(False)
                 speedup_updated = self.get_speedup()
                 if speedup_updated:
-                    self.looper.dt_target = self.dt_main_simulation/self.speedup
+                    self.looper.dt_target = self.dt_main_simulation / self.speedup
                     self.run_thread_calculations = 1
                     # Pass the function to execute
                     worker_calculations = Worker(self.thread_calculations)
@@ -439,6 +430,45 @@ class MainWindow(QMainWindow):
                         self.threadpool.start(worker_control_input)
                     else:
                         self.MyCart.Q_thread_enabled = self.Q_thread_enabled
+
+    def replay(self):
+
+        # Check what is in the csv textbox
+        csv_name = self.textbox.text()
+        history_pd = self.MyCart.load_history_csv(csv_name=csv_name)
+        # Shift dt by one up
+        history_pd['dt'] = history_pd['dt'].shift(-1)
+        history_pd = history_pd[:-1]
+
+        # Check speedup which user provided with GUI
+        speedup = self.get_speedup()
+
+        # Define loop timer for now with arbitrary dt
+        replay_looper = loop_timer(dt_target=0.0)
+
+        # Start looper
+        replay_looper.start_loop()
+        for index, row in history_pd.iterrows():
+            self.MyCart.s.position = row['s.position']
+            self.MyCart.s.position = self.MyCart.s.position + 0.1
+            self.MyCart.s.positionD = row['s.positionD']
+            self.MyCart.s.angle = row['s.angle']
+            self.MyCart.time = row['time']
+            self.MyCart.dt = row['dt']/1000.0
+            self.MyCart.u = row['u']
+            self.MyCart.target_position = row['target_position']
+
+            dt_target = (self.MyCart.dt / speedup)
+            replay_looper.dt_target = dt_target
+
+            replay_looper.sleep_leftover_time()
+
+        self.reset_variables()
+        # Load either last one if empty or the one with given name
+        # You need just a position of the cart, angle and target position (slider)
+        # Use looper to wait?
+        # Use speed-up also in this mode
+        # ...
 
     # The acctions which has to be taken to properly terminate the application
     # The method is evoked after QUIT button is pressed
@@ -457,10 +487,10 @@ class MainWindow(QMainWindow):
         QApplication.quit()
 
     def generate_trace(self):
-        if self.load_pregenerated:
+        if self.load_recording:
             x = self.load_generate_conflict_msg.exec_()
             return
-        self.cb_load_pregenerated.setEnabled(False)
+        self.cb_load_recorded_data.setEnabled(False)
         self.cb_save_history.setEnabled(False)
         self.MyCart.Generate_Random_Trace_Function()
         if self.run_thread_calculations == 1:
@@ -487,7 +517,7 @@ class MainWindow(QMainWindow):
             # Draw figures
             self.MyCart.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
             self.canvas.draw()
-            self.cb_load_pregenerated.setEnabled(True)
+            self.cb_load_recorded_data.setEnabled(True)
             self.cb_save_history.setEnabled(True)
 
     # Function to measure the time of simulation as experienced by user
@@ -518,18 +548,23 @@ class MainWindow(QMainWindow):
 
     # Action toggling between saving and not saving simulation results
     def cb_save_history_f(self, state):
-        if state == Qt.Checked:
+
+        if state:
             self.save_history = 1
         else:
             self.save_history = 0
 
-    # Action toggling between loading (and/for replaying) pregenerated data and performing new experiment
-    def cb_load_pregenerated_f(self, state):
+        print('save history is now {}'.format(self.save_history))
 
-        if state == Qt.Checked:
-            self.load_pregenerated = 1
+    # Action toggling between loading (and/for replaying) recorded data and performing new experiment
+    def cb_load_recorded_data_f(self, state):
+
+        if state:
+            self.load_recording = 1
         else:
-            self.load_pregenerated = 0
+            self.load_recording = 0
+
+        print('load recording is now {}'.format(self.load_recording))
 
     # A function redrawing the changing elements of the Figure
     # This animation runs always when the GUI is open

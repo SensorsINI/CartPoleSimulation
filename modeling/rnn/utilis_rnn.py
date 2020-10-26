@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from src.utilis import Generate_Experiment
+import collections
+import os
 
 def get_device():
     """
@@ -196,35 +198,12 @@ class Sequence(nn.Module):
     """"
     Our RNN class.
     """
-    #FIXME: I am not able to clearly figure out the commands_list and state_variable_list for cartpole
-    commands_list = ['dt', 'target_position']
-    state_variables_list = ['time', 's.position', 's.positionD', 's.positionDD', 's.angle', 's.angleD', 's.angleDD']
-
 
     def __init__(self, rnn_name, inputs_list, outputs_list):
         super(Sequence, self).__init__()
         """Initialization of an RNN instance
         We assume that inputs may be both commands and state variables, whereas outputs are always state variables
         """
-
-        self.command_inputs = []
-        self.states_inputs = []
-        for rnn_input in inputs_list:
-            if rnn_input in Sequence.commands_list:
-                self.command_inputs.append(rnn_input)
-            elif rnn_input in Sequence.state_variables_list:
-                self.states_inputs.append(rnn_input)
-            else:
-                s = 'A requested input {} to RNN is neither a command nor a state variable of l2race car model' \
-                    .format(rnn_input)
-                raise ValueError(s)
-
-        # Check if requested outputs are fine
-        for rnn_output in outputs_list:
-            if (rnn_output not in Sequence.state_variables_list) and (rnn_output not in Sequence.commands_list):
-                s = 'A requested output {} of RNN is neither a command nor a state variable of l2race car model' \
-                    .format(rnn_output)
-                raise ValueError(s)
 
         # Check if GPU is available. If yes device='cuda:0' if not device='cpu'
         self.device = get_device()
@@ -287,18 +266,8 @@ class Sequence(nn.Module):
 
         print('Constructed a neural network of type {}, with {} hidden layers with sizes {} respectively.'
               .format(self.rnn_type, len(self.h_size), ', '.join(map(str, self.h_size))))
-        print('The inputs are (in this order):')
-        print('Input state variables: {}'.format(', '.join(map(str, self.states_inputs))))
-        print('Input commands: {}'.format(', '.join(map(str, self.command_inputs))))
+        print('The inputs are (in this order): {}'.format(', '.join(map(str, inputs_list))))
         print('The outputs are (in this order): {}'.format(', '.join(map(str, outputs_list))))
-
-
-            #
-            # # Concatenate the previous prediction and current control input to the input to RNN for a new time step
-            # if real_time:
-            #     input_t = torch.cat((self.output, rnn_input_commands.squeeze(0)), 1)
-            # else:
-            #     input_t = torch.cat((self.output, rnn_input_commands[self.sample_counter, :]), 1)
 
 
     def reset(self):

@@ -4,7 +4,7 @@ import numpy as np
 # Variables controlling flow of the program
 mode_globals = 2
 save_history_globals = True
-load_pregenerated_globals = False
+load_recording_globals = False
 
 # Variables used for physical simulation
 dt_main_simulation_globals = 0.020
