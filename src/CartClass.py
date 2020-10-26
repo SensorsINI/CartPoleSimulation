@@ -94,7 +94,7 @@ class Cart:
         self.reset_dict_history()
         self.save_history = save_history
         self.random_trace_generated = False
-        self.play_pregenerated = False
+        self.use_pregenerated_target_position = False
 
         # Physical parameters of the cart
         self.p = SimpleNamespace()  # p like parameters
@@ -266,7 +266,7 @@ class Cart:
             self.dt = dt
         self.save_history = save_history
 
-        if self.play_pregenerated == True:
+        if self.use_pregenerated_target_position == True:
             self.target_position = self.random_track_f(self.time_total)
             if self.target_position > 0.8 * self.HalfLength:
                 self.target_position = 0.8 * self.HalfLength

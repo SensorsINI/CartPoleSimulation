@@ -71,6 +71,7 @@ class MainWindow(QMainWindow):
         # Stop threads if False
         self.run_thread_calculations = False
         self.run_thread_labels = True
+        self.run_replay = False
 
         self.counter = 0
         self.save_history = save_history_globals
@@ -195,17 +196,31 @@ class MainWindow(QMainWindow):
         self.wrong_speedup_msg.setIcon(QMessageBox.Critical)
 
 
-        cb_save_history = QCheckBox('Save results', self)
+        self.cb_save_history = QCheckBox('Save results', self)
         if self.save_history:
-            cb_save_history.toggle()
-        cb_save_history.stateChanged.connect(self.cb_save_history_f)
-        l_cb.addWidget(cb_save_history)
+            self.cb_save_history.toggle()
+        self.cb_save_history.stateChanged.connect(self.cb_save_history_f)
+        l_cb.addWidget(self.cb_save_history)
 
-        cb_load_pregenerated = QCheckBox('Load pregenerated data', self)
+        self.cb_load_pregenerated = QCheckBox('Load pregenerated data', self)
         if self.load_pregenerated:
-            cb_load_pregenerated.toggle()
-        cb_load_pregenerated.stateChanged.connect(self.cb_load_pregenerated_f)
-        l_cb.addWidget(cb_load_pregenerated)
+            self.cb_load_pregenerated.toggle()
+        self.cb_load_pregenerated.toggled.connect(self.cb_load_pregenerated_f)
+        l_cb.addWidget(self.cb_load_pregenerated)
+
+        self.load_generate_conflict_msg = QMessageBox()
+        self.load_generate_conflict_msg.setWindowTitle("Load-generate conflict")
+        self.load_generate_conflict_msg.setIcon(QMessageBox.Critical)
+        self.load_generate_conflict_msg.setText(
+            'You cannot use "GENERATE TRACE" button \nwith "load pregenerated data" box checked.')
+
+        # self.load_enable_runtime_msg = QMessageBox()
+        # self.load_enable_runtime_msg.setWindowTitle("Load-generate conflict")
+        # self.load_enable_runtime_msg.setIcon(QMessageBox.Critical)
+        # self.load_enable_runtime_msg.setText(
+        #     'You cannot change the "load pregenerated data" mode\n'
+        #     'while an experiment is running/replaying. \n'
+        #     'Please stop the current experiment first.')
 
         l_cb.addStretch(1)
 
@@ -248,6 +263,7 @@ class MainWindow(QMainWindow):
         else:
             if event.inaxes == self.fig.AxSlider:
                 self.MyCart.update_slider(mouse_position=event.xdata)
+
 
     def get_speedup(self):
         speedup = self.tx_speedup.text()
@@ -342,7 +358,7 @@ class MainWindow(QMainWindow):
             # Ensure that the animation drawing function can access MyCart at this moment
             QApplication.processEvents()
 
-            if self.MyCart.play_pregenerated == True and self.MyCart.time_total >= self.MyCart.t_max_pre:
+            if self.MyCart.use_pregenerated_target_position == True and self.MyCart.time_total >= self.MyCart.t_max_pre:
                 # print('Terminating!')
                 self.run_thread_calculations = 0
 
@@ -376,44 +392,53 @@ class MainWindow(QMainWindow):
 
             self.labTimeSim.setText('Simulation time (s): {:.2f}'.format(self.MyCart.time_total))
 
-            self.labSpeedUp.setText('Speed-up (measured): x{:.2f}'
-                                    .format(self.dt_main_simulation/np.mean(self.looper.circ_buffer_dt_real)))
+            mean_dt_real = np.mean(self.looper.circ_buffer_dt_real)
+            if mean_dt_real > 0:
+                self.labSpeedUp.setText('Speed-up (measured): x{:.2f}'
+                                        .format(self.dt_main_simulation/mean_dt_real))
 
             sleep(0.1)
 
     # Actions to be taken when start/stop button is clicked
     def play(self):
-        if self.run_thread_calculations == 1:
-            self.run_thread_calculations = 0
-            # If user is saving data wait till data is saved
-            if self.save_history:
-                while (self.saved == 0):
-                    sleep(0.001)
+        if self.load_pregenerated:
+            pass
+        else:
+            if self.run_thread_calculations == 1:
+                self.run_thread_calculations = 0
+                # If user is saving data wait till data is saved
+                if self.save_history:
+                    while (self.saved == 0):
+                        sleep(0.001)
 
-            self.MyCart.play_pregenerated = False
-            self.show_summary()
-            # Reset variables and redraw the figures
-            self.reset_variables()
-            # Draw figures
-            self.MyCart.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
-            self.canvas.draw()
+                self.MyCart.use_pregenerated_target_position = False
+                self.show_summary()
+                # Reset variables and redraw the figures
+                self.reset_variables()
+                # Draw figures
+                self.MyCart.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
+                self.canvas.draw()
+                self.cb_load_pregenerated.setEnabled(True)
+                self.cb_save_history.setEnabled(True)
 
-        elif self.run_thread_calculations == 0:
-            speedup_updated = self.get_speedup()
-            if speedup_updated:
-                self.looper.dt_target = self.dt_main_simulation/self.speedup
-                self.run_thread_calculations = 1
-                # Pass the function to execute
-                worker_calculations = Worker(self.thread_calculations)
-                # Execute
-                self.threadpool.start(worker_calculations)
+            elif self.run_thread_calculations == 0:
+                self.cb_save_history.setEnabled(False)
+                self.cb_load_pregenerated.setEnabled(False)
+                speedup_updated = self.get_speedup()
+                if speedup_updated:
+                    self.looper.dt_target = self.dt_main_simulation/self.speedup
+                    self.run_thread_calculations = 1
+                    # Pass the function to execute
+                    worker_calculations = Worker(self.thread_calculations)
+                    # Execute
+                    self.threadpool.start(worker_calculations)
 
-                if self.Q_thread_enabled:
-                    self.MyCart.Q_thread_enabled = self.Q_thread_enabled
-                    worker_control_input = Worker(self.thread_control_input)
-                    self.threadpool.start(worker_control_input)
-                else:
-                    self.MyCart.Q_thread_enabled = self.Q_thread_enabled
+                    if self.Q_thread_enabled:
+                        self.MyCart.Q_thread_enabled = self.Q_thread_enabled
+                        worker_control_input = Worker(self.thread_control_input)
+                        self.threadpool.start(worker_control_input)
+                    else:
+                        self.MyCart.Q_thread_enabled = self.Q_thread_enabled
 
     # The acctions which has to be taken to properly terminate the application
     # The method is evoked after QUIT button is pressed
@@ -432,11 +457,16 @@ class MainWindow(QMainWindow):
         QApplication.quit()
 
     def generate_trace(self):
+        if self.load_pregenerated:
+            x = self.load_generate_conflict_msg.exec_()
+            return
+        self.cb_load_pregenerated.setEnabled(False)
+        self.cb_save_history.setEnabled(False)
         self.MyCart.Generate_Random_Trace_Function()
         if self.run_thread_calculations == 1:
             print('First reset the previous run')
         else:
-            self.MyCart.play_pregenerated = True
+            self.MyCart.use_pregenerated_target_position = True
             self.run_thread_calculations = 1
             # Pass the function to execute
             worker_calculations = Worker(self.thread_calculations)
@@ -450,13 +480,15 @@ class MainWindow(QMainWindow):
                     QApplication.processEvents()
                     sleep(0.001)
 
-            self.MyCart.play_pregenerated = False
+            self.MyCart.use_pregenerated_target_position = False
             self.show_summary()
             # Reset variables and redraw the figures
             self.reset_variables()
             # Draw figures
             self.MyCart.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
             self.canvas.draw()
+            self.cb_load_pregenerated.setEnabled(True)
+            self.cb_save_history.setEnabled(True)
 
     # Function to measure the time of simulation as experienced by user
     # It corresponds to the time of simulation according to equations only if real time mode is on
@@ -493,6 +525,7 @@ class MainWindow(QMainWindow):
 
     # Action toggling between loading (and/for replaying) pregenerated data and performing new experiment
     def cb_load_pregenerated_f(self, state):
+
         if state == Qt.Checked:
             self.load_pregenerated = 1
         else:

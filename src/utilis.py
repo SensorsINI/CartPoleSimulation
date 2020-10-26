@@ -15,25 +15,28 @@ from time import sleep
 from collections import deque
 
 import warnings
+
+
 # warnings.warn("Warning...........Message")
 
 
 def normalize_angle_rad(angle):
-    Modulo = fmod(angle, 2*np.pi)  # positive modulo
+    Modulo = fmod(angle, 2 * np.pi)  # positive modulo
     if Modulo < -np.pi:
-        angle = Modulo+2*np.pi
+        angle = Modulo + 2 * np.pi
     elif Modulo > np.pi:
-        angle = Modulo-2*np.pi
+        angle = Modulo - 2 * np.pi
     else:
         angle = Modulo
     return angle
+
 
 class loop_timer():
     """ Simple game loop timer that sleeps for leftover time (if any) at end of each iteration"""
     LOG_INTERVAL_SEC = 10
     NUM_SAMPLES = 1000
 
-    def __init__(self, rate_hz: float = None, dt_target: float = None, do_diagnostics = True) -> None:
+    def __init__(self, rate_hz: float = None, dt_target: float = None, do_diagnostics: bool = False) -> None:
         """ Make a new loop_timer, specifying the target frame rate in Hz or time interval dt_target in seconds
 
         :param rate_hz: the target loop rate in Hz. The rate can be changed anytime by modifying rate_hz.
@@ -59,9 +62,9 @@ class loop_timer():
 
         self.do_diagnostics = do_diagnostics
         self.last_log_time = 0
-        self.circ_buffer_dt = deque(maxlen=self.NUM_SAMPLES)
-        self.circ_buffer_leftover = deque(maxlen=self.NUM_SAMPLES)
-        self.circ_buffer_dt_real = deque(maxlen=50)
+        self.circ_buffer_dt = deque(iterable=np.zeros(self.NUM_SAMPLES), maxlen=self.NUM_SAMPLES)
+        self.circ_buffer_leftover = deque(iterable=np.zeros(self.NUM_SAMPLES), maxlen=self.NUM_SAMPLES)
+        self.circ_buffer_dt_real = deque(iterable=np.zeros(50), maxlen=50)
 
     @property
     def rate_hz(self):
@@ -77,7 +80,7 @@ class loop_timer():
             self._rate_hz = None
         elif new_rate > 0.0:
             self._rate_hz = float(new_rate)
-            self._dt_target = 1.0/new_rate
+            self._dt_target = 1.0 / new_rate
         else:
             raise Exception('{} is not valid target rate!'.format(new_rate))
 
@@ -87,13 +90,17 @@ class loop_timer():
             self._dt_target = None
         elif new_dt > 0.0:
             self._dt_target = float(new_dt)
-            self._rate_hz = 1.0/new_dt
+            self._rate_hz = 1.0 / new_dt
+        elif new_dt == 0:
+            self._dt_target = float(new_dt)
+            self._rate_hz = np.inf
         else:
             raise Exception('{} is not valid target dt!'.format(new_dt))
 
     def start_loop(self):
         """ should be called to initialize the timer just before the entering the first loop"""
         self.last_iteration_start_time = timer()
+        self.last_log_time = self.last_iteration_start_time
         self.first_call_done = True
 
     def sleep_leftover_time(self):
@@ -106,7 +113,7 @@ class loop_timer():
             raise Exception('Loop timer was not initialized properly')
 
         dt = (now - self.last_iteration_start_time)
-        leftover_time = self.dt_target-dt
+        leftover_time = self.dt_target - dt
         if leftover_time > 0:
             sleep(leftover_time)
             dt_real = self.dt_target
@@ -121,18 +128,25 @@ class loop_timer():
 
         # Main functionality ends here. Lines below are just for diagnostics
         if self.do_diagnostics:
-            if now-self.last_log_time > self.LOG_INTERVAL_SEC:
+            if now - self.last_log_time > self.LOG_INTERVAL_SEC:
                 self.last_log_time = now
                 if leftover_time > 0:
-                    print('loop_timer slept for {:.3f}ms leftover time for desired loop interval {:.3f}ms'
+                    print('Loop_timer slept for {:.3f} ms leftover time for desired loop interval {:.3f} ms.'
                           .format(leftover_time * 1000, self.dt_target * 1000))
                 else:
-                    warnings.warn('time ran over by {:.3f}ms compared with allowed time {:.3f}ms'
-                          .format(self.rate_hz, -leftover_time * 1000, self.dt_target * 1000))
-                print('Average leftover time is {:.3f} and its variance {:.3f}'.format(np.mean(self.circ_buffer_leftover)*1000,
-                                                                                       np.std(self.circ_buffer_leftover)*1000))
-                print('Average total time of calculations is {:.3f} and its variance {:.3f}'.format(np.mean(self.circ_buffer_dt) * 1000,
-                                                                                       np.std(self.circ_buffer_dt) * 1000))
+                    if self.dt_target == 0.0:
+                        warnings.warn('\nYou target the maximal simulation speed, '
+                                      'the average time for simulation step is {:.3f} ms.\n'
+                                      .format(-leftover_time * 1000))
+                    else:
+                        warnings.warn('\nTime ran over by {:.3f}ms the allowed time of {:.3f} ms.\n'
+                                      .format(-leftover_time * 1000, self.dt_target * 1000))
+                print('Average leftover time is {:.3f} ms and its variance {:.3f} ms'
+                      .format(np.mean(self.circ_buffer_leftover) * 1000,
+                              np.std(self.circ_buffer_leftover) * 1000))
+                print('Average total time of calculations is {:.3f} ms and its variance {:.3f} ms'
+                      .format(np.mean(self.circ_buffer_dt) * 1000,
+                              np.std(self.circ_buffer_dt) * 1000))
 
 
 def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
@@ -167,9 +181,9 @@ def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
     MyCart.s.positionD = np.random.uniform(low=-10.0,
                                            high=10.0)
     MyCart.s.angle = np.random.uniform(low=-17.5 * (np.pi / 180.0),
-                                     high=17.5 * (np.pi / 180.0))
+                                       high=17.5 * (np.pi / 180.0))
     MyCart.s.angleD = np.random.uniform(low=-15.5 * (np.pi / 180.0),
-                                      high=15.5 * (np.pi / 180.0))
+                                        high=15.5 * (np.pi / 180.0))
 
     MyCart.u = np.random.uniform(low=-0.9 * MyCart.p.u_max,
                                  high=0.9 * MyCart.p.u_max)
