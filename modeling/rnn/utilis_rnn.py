@@ -20,28 +20,263 @@ def get_device():
     return device
 
 
+# Print parameter count
+# https://stackoverflow.com/questions/49201236/check-the-total-number-of-parameters-in-a-pytorch-model
+def print_parameter_count(net):
+    pytorch_total_params = sum(p.numel() for p in net.parameters())
+    pytorch_trainable_params = sum(p.numel() for p in net.parameters() if p.requires_grad)
+    print('::: # network all parameters: ' + str(pytorch_total_params))
+    print('::: # network trainable parameters: ' + str(pytorch_trainable_params))
+    print('')
+
+
+def load_pretrained_rnn(net, pt_path, device):
+    """
+    A function loading parameters (weights and biases) from a previous training to a net RNN instance
+    :param net: An instance of RNN
+    :param pt_path: path to .pt file storing weights and biases
+    :return: No return. Modifies net in place.
+    """
+    pre_trained_model = torch.load(pt_path, map_location=device)
+    print("Loading Model: ", pt_path)
+    print('')
+
+    pre_trained_model = list(pre_trained_model.items())
+    new_state_dict = collections.OrderedDict()
+    count = 0
+    num_param_key = len(pre_trained_model)
+    for key, value in net.state_dict().items():
+        if count >= num_param_key:
+            break
+        layer_name, weights = pre_trained_model[count]
+        new_state_dict[key] = weights
+        print("Pre-trained Layer: %s - Loaded into new layer: %s" % (layer_name, key))
+        count += 1
+    print('')
+    net.load_state_dict(new_state_dict)
+
+
+# Initialize weights and biases - should be only applied if no pretrained net loaded
+def initialize_weights_and_biases(net):
+    print('Initialize weights and biases')
+    for name, param in net.named_parameters():
+        print('Initialize {}'.format(name))
+        if 'gru' in name:
+            if 'weight' in name:
+                nn.init.orthogonal_(param)
+        if 'linear' in name:
+            if 'weight' in name:
+                nn.init.orthogonal_(param)
+                # nn.init.xavier_uniform_(param)
+        if 'bias' in name:  # all biases
+            nn.init.constant_(param, 0)
+    print('')
+
+
+def create_rnn_instance(rnn_name=None, inputs_list=None, outputs_list=None, load_rnn=None, path_save=None, device=None):
+    if load_rnn is not None and load_rnn != 'last':
+        # 1) Find csv with this name if exists load name, inputs and outputs list
+        #       if it does not exist raise error
+        # 2) Create corresponding net
+        # 3) Load parameters from corresponding pt file
+
+        filename = load_rnn
+        print('Loading a pretrained RNN with the full name: {}'.format(filename))
+        print('')
+        txt_filename = filename + '.txt'
+        pt_filename = filename + '.pt'
+        txt_path = path_save + txt_filename
+        pt_path = path_save + pt_filename
+
+        if not os.path.isfile(txt_path):
+            raise ValueError(
+                'The corresponding .txt file is missing (information about inputs and outputs) at the location {}'.format(
+                    txt_path))
+        if not os.path.isfile(pt_path):
+            raise ValueError(
+                'The corresponding .pt file is missing (information about weights and biases) at the location {}'.format(
+                    pt_path))
+
+        f = open(txt_path, 'r')
+        lines = f.readlines()
+        rnn_name = lines[1].rstrip("\n")
+        inputs_list = lines[7].rstrip("\n").split(sep=', ')
+        outputs_list = lines[10].rstrip("\n").split(sep=', ')
+        f.close()
+
+        print('Inputs to the loaded RNN: {}'.format(', '.join(map(str, inputs_list))))
+        print('Outputs from the loaded RNN: {}'.format(', '.join(map(str, outputs_list))))
+        print('')
+
+        # Construct the requested RNN
+        net = Sequence(rnn_name=rnn_name, inputs_list=inputs_list, outputs_list=outputs_list)
+
+        # Load the parameters
+        load_pretrained_rnn(net, pt_path, device)
+
+    elif load_rnn == 'last':
+        files_found = False
+        while(not files_found):
+            try:
+                import glob
+                list_of_files = glob.glob(path_save + '/*.txt')
+                txt_path = max(list_of_files, key=os.path.getctime)
+            except FileNotFoundError:
+                raise ValueError('No information about any pretrained network found at {}'.format(path_save))
+
+            f = open(txt_path, 'r')
+            lines = f.readlines()
+            rnn_name = lines[1].rstrip("\n")
+            pre_rnn_full_name = lines[4].rstrip("\n")
+            inputs_list = lines[7].rstrip("\n").split(sep=', ')
+            outputs_list = lines[10].rstrip("\n").split(sep=', ')
+            f.close()
+
+            pt_path = path_save + pre_rnn_full_name + '.pt'
+            if not os.path.isfile(pt_path):
+                    print('The .pt file is missing (information about weights and biases) at the location {}'.format(
+                        pt_path))
+                    print('I delete the corresponding .txt file and try to search again')
+                    print('')
+                    os.remove(txt_path)
+            else:
+                files_found = True
+
+
+        print('Full name of the loaded RNN is {}'.format(pre_rnn_full_name))
+        print('Inputs to the loaded RNN: {}'.format(', '.join(map(str, inputs_list))))
+        print('Outputs from the loaded RNN: {}'.format(', '.join(map(str, outputs_list))))
+        print('')
+
+        # Construct the requested RNN
+        net = Sequence(rnn_name=rnn_name, inputs_list=inputs_list, outputs_list=outputs_list)
+
+        # Load the parameters
+        load_pretrained_rnn(net, pt_path, device)
+
+
+    else:  # args.load_rnn is None
+        print('No pretrained network specified. I will train a network from scratch.')
+        print('')
+        # Construct the requested RNN
+        net = Sequence(rnn_name=rnn_name, inputs_list=inputs_list, outputs_list=outputs_list)
+        initialize_weights_and_biases(net)
+
+    return net, rnn_name, inputs_list, outputs_list
+
+
+def create_log_file(rnn_name, inputs_list, outputs_list, path_save):
+    rnn_full_name = rnn_name[:4] + str(len(inputs_list)) + 'IN-' + rnn_name[4:] + '-' + str(len(outputs_list)) + 'OUT'
+
+    net_index = 0
+    while True:
+
+        txt_path = path_save + rnn_full_name + '-' + str(net_index) + '.txt'
+        if os.path.isfile(txt_path):
+            pass
+        else:
+            rnn_full_name += '-' + str(net_index)
+            f = open(txt_path, 'w')
+            f.write('RNN NAME: \n' + rnn_name + '\n\n')
+            f.write('RNN FULL NAME: \n' + rnn_full_name + '\n\n')
+            f.write('INPUTS: \n' + ', '.join(map(str, inputs_list)) + '\n\n')
+            f.write('OUTPUTS: \n' + ', '.join(map(str, outputs_list)) + '\n\n')
+            f.close()
+            break
+
+        net_index += 1
+
+    print('Full name given to the currently trained network is {}.'.format(rnn_full_name))
+    print('')
+    return rnn_full_name
+
+
+#FIXME: To tailor this sequence class according to the commands and state_variables of cartpole
 class Sequence(nn.Module):
     """"
     Our RNN class.
     """
+    #FIXME: I am not able to clearly figure out the commands_list and state_variable_list for cartpole
+    commands_list = ['dt', 'target_position']
+    state_variables_list = ['time', 's.position', 's.positionD', 's.positionDD', 's.angle', 's.angleD', 's.angleDD']
 
-    def __init__(self, args):
+
+    def __init__(self, rnn_name, inputs_list, outputs_list):
         super(Sequence, self).__init__()
-        """Initialization of an RNN instance"""
+        """Initialization of an RNN instance
+        We assume that inputs may be both commands and state variables, whereas outputs are always state variables
+        """
+
+        self.command_inputs = []
+        self.states_inputs = []
+        for rnn_input in inputs_list:
+            if rnn_input in Sequence.commands_list:
+                self.command_inputs.append(rnn_input)
+            elif rnn_input in Sequence.state_variables_list:
+                self.states_inputs.append(rnn_input)
+            else:
+                s = 'A requested input {} to RNN is neither a command nor a state variable of l2race car model' \
+                    .format(rnn_input)
+                raise ValueError(s)
+
+        # Check if requested outputs are fine
+        for rnn_output in outputs_list:
+            if (rnn_output not in Sequence.state_variables_list) and (rnn_output not in Sequence.commands_list):
+                s = 'A requested output {} of RNN is neither a command nor a state variable of l2race car model' \
+                    .format(rnn_output)
+                raise ValueError(s)
 
         # Check if GPU is available. If yes device='cuda:0' if not device='cpu'
         self.device = get_device()
-        # Save args (default of from terminal line)
-        self.args = args
-        # Initialize RNN layers
-        self.gru1 = nn.GRUCell(5, args.h1_size)  # RNN accepts 5 inputs: CartPole state (4) and control input at time t
-        self.gru2 = nn.GRUCell(args.h1_size, args.h2_size)
-        self.linear = nn.Linear(args.h2_size, 4)  # RNN out
+
+        # Get the information about network architecture from the network name
+        # Split the names into "LSTM/GRU", "128H1", "64H2" etc.
+        names = rnn_name.split('-')
+        layers = ['H1', 'H2', 'H3', 'H4', 'H5']
+        self.h_size = []  # Hidden layers sizes
+        for name in names:
+            for index, layer in enumerate(layers):
+                if layer in name:
+                    # assign the variable with name obtained from list layers.
+                    self.h_size.append(int(name[:-2]))
+
+        if not self.h_size:
+            raise ValueError('You have to provide the size of at least one hidden layer in rnn name')
+
+        if 'GRU' in names:
+            self.rnn_type = 'GRU'
+        elif 'LSTM' in names:
+            self.rnn_type = 'LSTM'
+        else:
+            self.rnn_type = 'RNN-Basic'
+
+        # Construct network
+
+        if self.rnn_type == 'GRU':
+            self.rnn_cell = [nn.GRUCell(len(inputs_list), self.h_size[0]).to(get_device())]
+            for i in range(len(self.h_size) - 1):
+                self.rnn_cell.append(nn.GRUCell(self.h_size[i], self.h_size[i + 1]).to(get_device()))
+        elif self.rnn_type == 'LSTM':
+            self.rnn_cell = [nn.LSTMCell(len(inputs_list), self.h_size[0]).to(get_device())]
+            for i in range(len(self.h_size) - 1):
+                self.rnn_cell.append(nn.LSTMCell(self.h_size[i], self.h_size[i + 1]).to(get_device()))
+        else:
+            self.rnn_cell = [nn.RNNCell(len(inputs_list), self.h_size[0]).to(get_device())]
+            for i in range(len(self.h_size) - 1):
+                self.rnn_cell.append(nn.RNNCell(self.h_size[i], self.h_size[i + 1]).to(get_device()))
+
+        self.linear = nn.Linear(self.h_size[-1], len(outputs_list))  # RNN out
+
+        self.layers = nn.ModuleList([])
+        for cell in self.rnn_cell:
+            self.layers.append(cell)
+        self.layers.append(self.linear)
+
         # Count data samples (=time steps)
         self.sample_counter = 0
         # Declaration of the variables keeping internal state of GRU hidden layers
-        self.h_t = None
-        self.h_t2 = None
+        self.h = [None] * len(self.h_size)
+        self.c = [None] * len(self.h_size)  # Internal state cell - only matters for LSTM
         # Variable keeping the most recent output of RNN
         self.output = None
         # List storing the history of RNN outputs
@@ -50,81 +285,80 @@ class Sequence(nn.Module):
         # Send the whole RNN to GPU if available, otherwise send it to CPU
         self.to(self.device)
 
-    def forward(self, predict_len: int, input, terminate=False):
-        """
-        Predicts future CartPole states IN "CLOSED LOOP"
-        (at every time step prediction for the next time step is done based on CartPole state
-        resulting from the previous prediction; only control input is provided from the ground truth at every step)
-        """
-        # From input to RNN (CartPole state + control input) get control input
-        u_effs = input[:, :, -1]
-        # For number of time steps given in predict_len predict the state of the CartPole
-        # At every time step RNN get as its input the ground truth value of control input
-        # BUT instead of the ground truth value of CartPole state
-        # it gets the result of the prediction for the last time step
-        for i in range(predict_len):
-            # Concatenate the previous prediction and current control input to the input to RNN for a new time step
-            input_t = torch.cat((self.output, u_effs[self.sample_counter, :].unsqueeze(1)), 1)
-            # Propagate input through RNN layers
-            self.h_t = self.gru1(input_t, self.h_t)
-            self.h_t2 = self.gru2(self.h_t, self.h_t2)
-            self.output = self.linear(self.h_t2)
-            # Append the output to the outputs history list
-            self.outputs += [self.output]
-            # Count number of samples
-            self.sample_counter = self.sample_counter + 1
+        print('Constructed a neural network of type {}, with {} hidden layers with sizes {} respectively.'
+              .format(self.rnn_type, len(self.h_size), ', '.join(map(str, self.h_size))))
+        print('The inputs are (in this order):')
+        print('Input state variables: {}'.format(', '.join(map(str, self.states_inputs))))
+        print('Input commands: {}'.format(', '.join(map(str, self.command_inputs))))
+        print('The outputs are (in this order): {}'.format(', '.join(map(str, outputs_list))))
 
-        # if terminate=True transform outputs history list to a Pytorch tensor and return it
-        # Otherwise store the outputs internally as a list in the RNN instance
-        if terminate:
-            self.outputs = torch.stack(self.outputs, 1)
-            return self.outputs
+
+            #
+            # # Concatenate the previous prediction and current control input to the input to RNN for a new time step
+            # if real_time:
+            #     input_t = torch.cat((self.output, rnn_input_commands.squeeze(0)), 1)
+            # else:
+            #     input_t = torch.cat((self.output, rnn_input_commands[self.sample_counter, :]), 1)
+
 
     def reset(self):
         """
         Reset the network (not the weights!)
         """
         self.sample_counter = 0
-        self.h_t = None
-        self.h_t2 = None
+        self.h = [None] * len(self.h_size)
+        self.c = [None] * len(self.h_size)
         self.output = None
         self.outputs = []
 
-    def initialize_sequence(self, input, train=True):
+    def forward(self, rnn_input):
 
         """
         Predicts future CartPole states IN "OPEN LOOP"
         (at every time step prediction for the next time step is done based on the true CartPole state)
         """
 
-        # If in training mode we will only run this function during the first several (args.warm_up_len) data samples
-        # Otherwise we run it for the whole input
-        if train:
-            starting_input = input[:self.args.warm_up_len, :, :]
-        else:
-            starting_input = input
 
-        # Initialize hidden layers
-        self.h_t = torch.zeros(starting_input.size(1), self.args.h1_size, dtype=torch.float).to(self.device)
-        self.h_t2 = torch.zeros(starting_input.size(1), self.args.h2_size, dtype=torch.float).to(self.device)
+        # Initialize hidden layers - this change at every call as the batch size may vary
+        for i in range(len(self.h_size)):
+            self.h[i] = torch.zeros(rnn_input.size(1), self.h_size[i], dtype=torch.float).to(self.device)
+            self.c[i] = torch.zeros(rnn_input.size(1), self.h_size[i], dtype=torch.float).to(self.device)
 
         # The for loop takes the consecutive time steps from input plugs them into RNN and save the outputs into a list
         # THE NETWORK GETS ALWAYS THE GROUND TRUTH, THE REAL STATE OF THE CARTPOLE, AS ITS INPUT
         # IT PREDICTS THE STATE OF THE CARTPOLE ONE TIME STEP AHEAD BASED ON TRUE STATE NOW
-        for i, input_t in enumerate(starting_input.chunk(starting_input.size(0), dim=0)):
-            self.h_t = self.gru1(input_t.squeeze(0), self.h_t)
-            self.h_t2 = self.gru2(self.h_t, self.h_t2)
-            self.output = self.linear(self.h_t2)
+        for iteration, input_t in enumerate(rnn_input.chunk(rnn_input.size(0), dim=0)):
+
+            # Propagate input through RNN layers
+            if self.rnn_type == 'LSTM':
+                self.h[0], self.c[0] = self.layers[0](input_t.squeeze(0), (self.h[0], self.c[0]))
+                for i in range(len(self.h_size) - 1):
+                    self.h[i + 1], self.c[i + 1] = self.layers[i + 1](self.h[i], (self.h[i + 1], self.c[i + 1]))
+            else:
+                self.h[0] = self.layers[0](input_t.squeeze(0), self.h[0])
+                for i in range(len(self.h_size) - 1):
+                    self.h[i + 1] = self.layers[i + 1](self.h[i], self.h[i + 1])
+            self.output = self.layers[-1](self.h[-1])
+
             self.outputs += [self.output]
             self.sample_counter = self.sample_counter + 1
 
         # In the train mode we want to continue appending the outputs by calling forward function
         # The outputs will be saved internally in the network instance as a list
         # Otherwise we want to transform outputs list to a tensor and return it
-        if not train:
-            self.outputs = torch.stack(self.outputs, 1)
-            return self.outputs
+        return self.output
 
+    def return_outputs_history(self):
+        return torch.stack(self.outputs, 1)
+
+
+
+
+def norm(x):
+    m = np.mean(x)
+    s = np.std(x)
+    y = (x - m) / s
+    return y
 
 class Dataset(data.Dataset):
     """
