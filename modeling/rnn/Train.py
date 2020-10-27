@@ -98,7 +98,7 @@ def train_network():
     # print('Number of samples in validation set: {}'.format(dev_set.number_of_samples))
     # print('')
 
-    plot_results(net, args, MyCart)
+    # plot_results(net, args, MyCart)
 
     # Create PyTorch dataloaders for train and dev set
     train_generator = data.DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True,
@@ -323,7 +323,7 @@ def train_network():
             print('')
 
         plot_string = 'This is the network after {} training epoch'.format(epoch + 1)
-        plot_results(net, args, MyCart)
+        # plot_results(net, args, MyCart)
         # Evaluate the performance of the current network
         # by checking its predictions on a randomly generated CartPole experiment
         # plot_results(net, args, val_file)

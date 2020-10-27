@@ -393,7 +393,10 @@ class MainWindow(QMainWindow):
     # Actions to be taken when start/stop button is clicked
     def play(self):
         if self.load_recording:
-            self.replay()
+            worker_replay = Worker(self.thread_replay)
+            # Execute
+            self.threadpool.start(worker_replay)
+
         else:
             if self.run_thread_calculations == 1:
                 self.run_thread_calculations = 0
@@ -431,7 +434,7 @@ class MainWindow(QMainWindow):
                     else:
                         self.MyCart.Q_thread_enabled = self.Q_thread_enabled
 
-    def replay(self):
+    def thread_replay(self):
 
         # Check what is in the csv textbox
         csv_name = self.textbox.text()
