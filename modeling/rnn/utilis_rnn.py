@@ -13,6 +13,8 @@ import os
 
 import random as rnd
 
+import copy
+
 def get_device():
     """
     Small function to correctly send data to GPU or CPU depending what is available
@@ -335,205 +337,365 @@ class Sequence(nn.Module):
 
 
 
-def norm(x):
-    m = np.mean(x)
-    s = np.std(x)
-    y = (x - m) / s
-    return y
 
-class Dataset(data.Dataset):
-    """
-    This is a Dataset class providing a proper data format for Pytorch applications
-    It inherits from the standard Pytorch dataset class
-    """
+import pandas as pd
 
-    def __init__(self, MyCart, args, train=True, inputs_list=None, outputs_list=None):
-        """Initialization"""
+def load_data(args, filepath=None, inputs_list=None, outputs_list=None):
 
-        self.MyCart = MyCart
+    if filepath is None:
+        filepath = args.val_file_name
 
-        # Take data set of different size for training and testing of RNN
-        if train:
-            self.exp_len = args.exp_len_train
-        else:
-            self.exp_len = args.exp_len_test
+    if inputs_list is None:
+        inputs_list = args.inputs_list
 
-        # Recalculate simulation time step from milliseconds to seconds
-        self.dt = args.dt / 1000.0  # s
-        self.epoch_len = args.epoch_len
+    if outputs_list is None:
+        outputs_list = args.outputs_list
 
-        if inputs_list is None:
-            inputs_list = args.inputs_list
+    if type(filepath) == list:
+        filepaths = filepath
+    else:
+        filepaths = [filepath]
 
-        if outputs_list is None:
-            outputs_list = args.outputs_list
+    all_features = []
+    all_targets = []
 
-        self.inputs_list = inputs_list
-        self.outputs_list = outputs_list
+    for one_filepath in filepaths:
+        # Load dataframe
+        print('loading data from ' + str(one_filepath))
+        print('')
+        df = pd.read_csv(one_filepath, comment='#')
 
-    def __len__(self):
-        """
-        Total number of samples.
-        In this implementation it is meaningless however needs to be preserved due to Pytorch requirements
-        """
+        if args.cheat_dt:
+            df['dt'] = df['dt'].shift(-1)
+            df = df[:-1]
 
-        return int(self.epoch_len)
+        # Get Raw Data
+        inputs = copy.deepcopy(df)
+        outputs = copy.deepcopy(df)
 
-    def __getitem__(self, idx):
-        """
-        When called this function generate a random CartPole experiment
-        and returns its recording in a form suitable to be used to train/test RNN
-        (inputs list to RNN in features array and expected outputs from RNN )
-        :param idx: Normally this parameter let you choose the element of the Dataset.
-        In this case every time __getitem__ is called a new random experiment is generated.
-        One still need this argument due to construction of Pytorch Dataset class on which this class is based.
-        idx can be any integer <epoch_len without any impact on what this function returns.
-        We recommend to call __getitem__ method of mydataset instance always with mydataset[0]
-        """
+        inputs.drop(inputs.tail(1).index, inplace=True) # Drop last row
+        outputs.drop(outputs.head(1).index, inplace=True)
+        inputs.reset_index(inplace=True)  # Reset index
+        outputs.reset_index(inplace=True)
 
-        # Generate_Experiment function returns:
-        #   states: position of the cart, angle of the pole, etc...
-        #   u_effs: control input to the cart
-        #   target_positions: The desired position of the cart
-        data = Generate_Experiment(MyCart=self.MyCart,  # MyCart contain CartPole dynamics
-                                                               exp_len=self.exp_len,
-                                                               # How many data points should be generated
-                                                               dt=self.dt)  # Simulation time step size
-
-        features = data[self.inputs_list]
-        targets = data[self.outputs_list]
-
-        features = features.to_numpy()
-        targets = targets.to_numpy()
+        inputs = inputs[inputs_list]
+        outputs = outputs[outputs_list]
 
 
-        # "features" is the array of inputs to the RNN, it consists of states of the CartPole and control input
-        # "targets" is the array of CartPole states one time step ahead of "features" at the same index.
-        # "targets[i]" is what we expect our network to predict given features[i]
-        # features = np.hstack((np.array(states), np.array([u_effs]).T))
-        features = torch.from_numpy(features[:-1, :]).float()
+        features = np.array(inputs)
+        targets = np.array(outputs)
+        all_features.append(features)
+        all_targets.append(targets)
 
-        # targets = np.array(states)
-        targets = torch.from_numpy(targets[1:, :]).float()
-
+    if type(filepath) == list:
+        return all_features, all_targets
+    else:
         return features, targets
 
 
-def plot_results(net, args, MyCart):
-    """
-    This function accepts RNN instance, arguments and CartPole instance.
-    It runs one random experiment with CartPole,
-    inputs the data into RNN and check how well RNN predicts CartPole state one time step ahead of time
-    """
-    # Reset the internal state of RNN cells, clear the output memory, etc.
-    net.reset()
+class Dataset(data.Dataset):
+    def __init__(self, df, labels, args, seq_len=None):
+        'Initialization'
+        self.data = df
+        self.labels = labels
+        self.args = args
 
-    # Generates ab CartPole  experiment and save its data
-    test_set = Dataset(MyCart, args, train=False)  # Only experiment length is different for train=True/False
+        self.seq_len = None
+        self.df_lengths = []
+        self.df_lengths_cs = []
+        self.number_of_samples = 0
 
-    # Format the experiment data
-    # test_set[0] means that we take one random experiment, first on the list
-    # The data will be however anyway generated on the fly and is in general not reproducible
-    # TODO: Make data reproducable: set seed or find another solution
-    features, targets = test_set[0]
+        self.reset_seq_len(seq_len=seq_len)
 
-    # Add empty dimension to fit the requirements of RNN input shape
-    # (in fact we add dimension for batches - for testing we use only one batch)
-    features = features.unsqueeze(0)
 
-    # Convert Pytorch tensors to numpy matrices to inspect them - just for debugging purpose.
-    # Variable explorers of IDEs are often not compatible with Pytorch format
-    # features_np = features.detach().numpy()
-    # targets_np = targets.detach().numpy()
+    def reset_seq_len(self, seq_len=None):
+        """
+        This method should be used if the user wants to change the seq_len without creating new Dataset
+        Please remember that one can reset it again to come back to old configuration
+        :param seq_len: Gives new user defined seq_len. Call empty to come back to default.
+        """
+        if seq_len is None:
+            self.seq_len = self.args.seq_len  # Sequence length
+        else:
+            self.seq_len = seq_len
 
-    # Further modifying the input and output form to fit RNN requirements
-    # If GPU available we send features to GPU
-    if torch.cuda.is_available():
-        features = features.float().cuda().transpose(0, 1)
-        targets = targets.float()
-    else:
-        features = features.float().transpose(0, 1)
-        targets = targets.float()
+        self.df_lengths = []
+        self.df_lengths_cs = []
+        if type(self.data) == list:
+            for data_set in self.data:
+                self.df_lengths.append(data_set.shape[0] - self.seq_len)
+                if not self.df_lengths_cs:
+                    self.df_lengths_cs.append(self.df_lengths[0])
+                else:
+                    self.df_lengths_cs.append(self.df_lengths_cs[-1]+self.df_lengths[-1])
+            self.number_of_samples = self.df_lengths_cs[-1]
 
-    # From features we extract control input and save it as a separate vector on the cpu
-    u_effs = features[:, :, -1].cpu()
-    # We shift it by one time step and double the last entry to keep the size unchanged
-    u_effs = u_effs[1:]
-    u_effs = np.append(u_effs, u_effs[-1])
+        else:
+            self.number_of_samples = self.data.shape[0] - self.seq_len
 
-    # Set the RNN in evaluation mode
-    net = net.eval()
-    # During several first time steps we let hidden layers adapt to the input data
-    # train=False says that all the input should be used for initialization
-    # -> we predict always only one time step ahead of time based on ground truth data
-    predictions = net(features)
 
-    # reformat the output of RNN to a form suitable for plotting the results
-    # y_pred are prediction from RNN
-    y_pred = predictions.squeeze().cpu().detach().numpy()
-    # y_target are expected prediction from RNN, ground truth
-    y_target = targets.squeeze().cpu().detach().numpy()
 
-    # Get the time axes
-    t = np.arange(0, y_target.shape[0]) * args.dt
+    def __len__(self):
+        'Total number of samples'
+        return self.number_of_samples
 
-    # Get position over time
-    xp = y_pred[args.warm_up_len:, 0]
-    xt = y_target[:, 0]
+    def __getitem__(self, idx):
+        if type(self.data) == list:
+            idx_data_set = next(i for i, v in enumerate(self.df_lengths_cs) if v > idx)
+            if idx_data_set == 0:
+                pass
+            else:
+                idx -= self.df_lengths_cs[idx_data_set-1]
+            return self.data[idx_data_set][idx:idx + self.seq_len, :], self.labels[idx_data_set][idx:idx + self.seq_len]
+        else:
+            return self.data[idx:idx + self.seq_len, :], self.labels[idx:idx + self.seq_len]
 
-    # Get velocity over time
-    vp = y_pred[args.warm_up_len:, 1]
-    vt = y_target[:, 1]
 
-    # get angle theta of the Pole
-    tp = y_pred[args.warm_up_len:, 2] * 180.0 / np.pi  # t like theta
-    tt = y_target[:, 2] * 180.0 / np.pi
 
-    # Get angular velocity omega of the Pole
-    op = y_pred[args.warm_up_len:, 3] * 180.0 / np.pi  # o like omega
-    ot = y_target[:, 3] * 180.0 / np.pi
 
-    # Create a figure instance
-    fig, axs = plt.subplots(5, 1, figsize=(18, 14), sharex=True)  # share x axis so zoom zooms all plots
 
-    # %matplotlib inline
-    # Plot position
-    axs[0].set_ylabel("Position (m)", fontsize=18)
-    axs[0].plot(t, xt, 'k:', markersize=12, label='Ground Truth')
-    axs[0].plot(t[args.warm_up_len:], xp, 'b', markersize=12, label='Predicted position')
-    axs[0].tick_params(axis='both', which='major', labelsize=16)
 
-    # Plot velocity
-    axs[1].set_ylabel("Velocity (m/s)", fontsize=18)
-    axs[1].plot(t, vt, 'k:', markersize=12, label='Ground Truth')
-    axs[1].plot(t[args.warm_up_len:], vp, 'g', markersize=12, label='Predicted velocity')
-    axs[1].tick_params(axis='both', which='major', labelsize=16)
 
-    # Plot angle
-    axs[2].set_ylabel("Angle (deg)", fontsize=18)
-    axs[2].plot(t, tt, 'k:', markersize=12, label='Ground Truth')
-    axs[2].plot(t[args.warm_up_len:], tp, 'c', markersize=12, label='Predicted angle')
-    axs[2].tick_params(axis='both', which='major', labelsize=16)
 
-    # Plot angular velocity
-    axs[3].set_ylabel("Angular velocity (deg/s)", fontsize=18)
-    axs[3].plot(t, ot, 'k:', markersize=12, label='Ground Truth')
-    axs[3].plot(t[args.warm_up_len:], op, 'm', markersize=12, label='Predicted velocity')
-    axs[3].tick_params(axis='both', which='major', labelsize=16)
 
-    # Plot motor input command
-    axs[4].set_ylabel("motor (N)", fontsize=18)
-    axs[4].plot(t, u_effs, 'r', markersize=12, label='motor')
-    axs[4].tick_params(axis='both', which='major', labelsize=16)
 
-    # # Plot target position
-    # axs[5].set_ylabel("position target", fontsize=18)
-    # axs[5].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['target_position'], 'k')
-    # axs[5].tick_params(axis='both', which='major', labelsize=16)
-
-    axs[4].set_xlabel('Time (s)', fontsize=18)
-
-    plt.show()
-    # Save figure to png
-    fig.savefig('my_figure.png')
-    Image('my_figure.png')
+#
+#
+# def plot_results(net,
+#                  args,
+#                  dataset=None,
+#                  filepath=None,
+#                  inputs_list=None,
+#                  outputs_list=None,
+#                  closed_loop_list=None,
+#                  seq_len=None,
+#                  warm_up_len=None,
+#                  closed_loop_enabled=False,
+#                  comment='',
+#                  rnn_full_name=None,
+#                  save=False,
+#                  close_loop_idx=150):
+#     """
+#     This function accepts RNN instance, arguments and CartPole instance.
+#     It runs one random experiment with CartPole,
+#     inputs the data into RNN and check how well RNN predicts CartPole state one time step ahead of time
+#     """
+#
+#     if filepath is None:
+#         filepath = args.val_file_name
+#         if type(filepath) == list:
+#             filepath = filepath[0]
+#
+#     if warm_up_len is None:
+#         warm_up_len = args.warm_up_len
+#
+#     if seq_len is None:
+#         seq_len = args.seq_len
+#
+#     if inputs_list is None:
+#         inputs_list = args.inputs_list
+#         if inputs_list is None:
+#             raise ValueError('RNN inputs not provided!')
+#
+#     if outputs_list is None:
+#         outputs_list = args.outputs_list
+#         if outputs_list is None:
+#             raise ValueError('RNN outputs not provided!')
+#
+#     if closed_loop_enabled and (closed_loop_list is None):
+#         closed_loop_list = args.close_loop_for
+#         if closed_loop_list is None:
+#             raise ValueError('RNN closed-loop-inputs not provided!')
+#
+#     normalization_info = NORMALIZATION_INFO
+#
+#     # Here in contrary to ghoast car implementation I have
+#     # rnn_input[name] /= normalization_info.iloc[0][column]
+#     # and not
+#     # rnn_input.iloc[0][column] /= normalization_info.iloc[0][column]
+#     # It is because rnn_input is just row (type = Series) and not the whole DataFrame (type = DataFrame)
+#
+#     def denormalize_output(output_series):
+#         for name in output_series.index:
+#             if normalization_info.iloc[0][name] is not None:
+#                 output_series[name] *= normalization_info.iloc[0][name]
+#         return output_series
+#
+#
+#     # Reset the internal state of RNN cells, clear the output memory, etc.
+#     net.reset()
+#     net.eval()
+#     device = get_device()
+#
+#     if dataset is None:
+#         dev_features, dev_targets = load_data(args, filepath, inputs_list=inputs_list, outputs_list=outputs_list)
+#         dev_set = Dataset(dev_features, dev_targets, args, seq_len=seq_len)
+#     else:
+#         dev_set = copy.deepcopy(dataset)
+#         dev_set.reset_seq_len(seq_len=seq_len)
+#
+#     # Format the experiment data
+#     features, targets = dev_set[0]
+#
+#     features_pd = pd.DataFrame(data=features, columns=inputs_list)
+#     targets_pd = pd.DataFrame(data=targets, columns=outputs_list).apply(denormalize_output, axis=1)
+#     rnn_outputs = pd.DataFrame(columns=outputs_list)
+#     rnn_output = None
+#
+#     warm_up_idx = 0
+#     rnn_input_0 = copy.deepcopy(features_pd.iloc[0])
+#     # Does not bring anything. Why? 0-state shouldn't have zero internal state due to biases...
+#     while warm_up_idx < warm_up_len:
+#         rnn_input = rnn_input_0
+#         rnn_input = np.squeeze(rnn_input.to_numpy())
+#         rnn_input = torch.from_numpy(rnn_input).float().unsqueeze(0).unsqueeze(0).to(device)
+#         net(rnn_input=rnn_input)
+#         warm_up_idx += 1
+#     net.outputs = []
+#     net.sample_counter = 0
+#
+#     close_the_loop = False
+#     idx_cl = 0
+#
+#     for index, row in features_pd.iterrows():
+#         rnn_input = copy.deepcopy(row)
+#         if idx_cl == close_loop_idx:
+#             close_the_loop = True
+#         if closed_loop_enabled and close_the_loop and (rnn_output is not None):
+#             rnn_input[closed_loop_list] = normalized_rnn_output[closed_loop_list]
+#         rnn_input = np.squeeze(rnn_input.to_numpy())
+#         rnn_input = torch.from_numpy(rnn_input).float().unsqueeze(0).unsqueeze(0).to(device)
+#         normalized_rnn_output = net(rnn_input=rnn_input)
+#         normalized_rnn_output = list(np.squeeze(normalized_rnn_output.detach().cpu().numpy()))
+#         normalized_rnn_output = pd.Series(data=normalized_rnn_output, index=outputs_list)
+#         rnn_output = copy.deepcopy(normalized_rnn_output)
+#         denormalize_output(rnn_output)
+#         rnn_outputs = rnn_outputs.append(rnn_output, ignore_index=True)
+#         idx_cl += 1
+#
+#
+#     # If RNN was given sin and cos of body angle calculate back the body angle
+#     if ('body_angle.cos' in rnn_outputs) and ('body_angle.sin' in rnn_outputs) and ('body_angle_deg' not in rnn_outputs):
+#         rnn_outputs['body_angle_deg'] = rnn_outputs.apply(SinCos2Angle_wrapper, axis=1)
+#     if ('body_angle.cos' in targets_pd) and ('body_angle.sin' in targets_pd) and ('body_angle_deg' not in targets_pd):
+#         targets_pd['body_angle_deg'] = targets_pd.apply(SinCos2Angle_wrapper, axis=1)
+#
+#     # Get the time or # samples axes
+#     experiment_length  = seq_len
+#
+#     if 'time' in features_pd.columns:
+#         t = features_pd['time'].to_numpy()
+#         time_axis = t
+#         time_axis_string = 'Time [s]'
+#     elif 'dt' in features_pd.columns:
+#         dt = features_pd['dt'].to_numpy()
+#         t = np.cumsum(dt)
+#         time_axis = t
+#         time_axis_string = 'Time [s]'
+#     else:
+#         samples = np.arange(0, experiment_length)
+#         time_axis = samples
+#         time_axis_string = 'Sample number'
+#
+#     number_of_plots = 0
+#
+#     if ('position_m.x' in targets_pd) and ('position_m.x' in rnn_outputs) and ('position_m.y' in targets_pd) and ('position_m.y' in rnn_outputs):
+#         x_target = targets_pd['position_m.x'].to_numpy()
+#         y_target = targets_pd['position_m.y'].to_numpy()
+#         x_output = rnn_outputs['position_m.x'].to_numpy()
+#         y_output = rnn_outputs['position_m.y'].to_numpy()
+#         number_of_plots += 1
+#
+#     if ('body_angle_deg' in targets_pd) and ('body_angle_deg' in rnn_outputs):
+#         body_angle_target = targets_pd['body_angle_deg'].to_numpy()
+#         body_angle_output = rnn_outputs['body_angle_deg'].to_numpy()
+#         number_of_plots += 1
+#
+#     if ('velocity_m_per_sec.x' in targets_pd) and ('velocity_m_per_sec.x' in rnn_outputs) and ('velocity_m_per_sec.y' in targets_pd) and ('velocity_m_per_sec.y' in rnn_outputs):
+#         vel_x_target = targets_pd['velocity_m_per_sec.x'].to_numpy()
+#         vel_y_target = targets_pd['velocity_m_per_sec.y'].to_numpy()
+#         vel_x_output = rnn_outputs['velocity_m_per_sec.x'].to_numpy()
+#         vel_y_output = rnn_outputs['velocity_m_per_sec.y'].to_numpy()
+#         speed_target = np.sqrt((vel_x_target**2)+(vel_y_target**2))
+#         speed_output = np.sqrt((vel_x_output ** 2) + (vel_y_output ** 2))
+#         number_of_plots += 1
+#
+#     # Create a figure instance
+#     fig, axs = plt.subplots(number_of_plots, 1, figsize=(18, 10)) #, sharex=True)  # share x axis so zoom zooms all plots
+#     plt.subplots_adjust(hspace=0.4)
+#     start_idx = 0
+#     axs[0].set_title(comment, fontsize=20)
+#
+#     axs[0].set_ylabel("Position y (m)", fontsize=18)
+#     axs[0].plot(x_target, pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target, 'k:', markersize=12, label='Ground Truth')
+#     axs[0].plot(x_output, pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output, 'b', markersize=12, label='Predicted position')
+#
+#     axs[0].plot(x_target[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target[start_idx], 'g.', markersize=16, label='Start')
+#     axs[0].plot(x_output[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output[start_idx], 'g.', markersize=16)
+#     axs[0].plot(x_target[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target[-1], 'r.', markersize=16, label='End')
+#     axs[0].plot(x_output[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output[-1], 'r.', markersize=16)
+#     if closed_loop_enabled:
+#         axs[0].plot(x_target[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target[close_loop_idx], '.', color='darkorange', markersize=16, label='connect output->input')
+#         axs[0].plot(x_output[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output[close_loop_idx], '.', color='darkorange', markersize=16)
+#
+#     axs[0].tick_params(axis='both', which='major', labelsize=16)
+#
+#     axs[0].set_xlabel('Position x (m)', fontsize=18)
+#     axs[0].legend()
+#
+#
+#
+#     axs[1].set_ylabel("Body angle (deg)", fontsize=18)
+#     axs[1].plot(time_axis, body_angle_target, 'k:', markersize=12, label='Ground Truth')
+#     axs[1].plot(time_axis, body_angle_output, 'b', markersize=12, label='Predicted speed')
+#
+#     axs[1].plot(time_axis[start_idx], body_angle_target[start_idx], 'g.', markersize=16, label='Start')
+#     axs[1].plot(time_axis[start_idx], body_angle_output[start_idx], 'g.', markersize=16)
+#     axs[1].plot(time_axis[-1], body_angle_target[-1], 'r.', markersize=16, label='End')
+#     axs[1].plot(time_axis[-1], body_angle_output[-1], 'r.', markersize=16)
+#     if closed_loop_enabled:
+#         axs[1].plot(time_axis[close_loop_idx], body_angle_target[close_loop_idx], '.', color='darkorange', markersize=16, label='Connect output->input')
+#         axs[1].plot(time_axis[close_loop_idx], body_angle_output[close_loop_idx], '.', color='darkorange', markersize=16)
+#
+#     axs[1].tick_params(axis='both', which='major', labelsize=16)
+#
+#     axs[1].set_xlabel(time_axis_string, fontsize=18)
+#
+#     axs[1].legend()
+#
+#
+#     axs[2].set_ylabel("Speed (m/s)", fontsize=18)
+#     axs[2].plot(time_axis, speed_target, 'k:', markersize=12, label='Ground Truth')
+#     axs[2].plot(time_axis, speed_output, 'b', markersize=12, label='Predicted speed')
+#
+#     axs[2].plot(time_axis[start_idx], speed_target[start_idx], 'g.', markersize=16, label='Start')
+#     axs[2].plot(time_axis[start_idx], speed_output[start_idx], 'g.', markersize=16)
+#     axs[2].plot(time_axis[-1], speed_target[-1], 'r.', markersize=16, label='End')
+#     axs[2].plot(time_axis[-1], speed_output[-1], 'r.', markersize=16)
+#     if closed_loop_enabled:
+#         axs[2].plot(time_axis[close_loop_idx], speed_target[close_loop_idx], '.', color='darkorange', markersize=16, label='Connect output->input')
+#         axs[2].plot(time_axis[close_loop_idx], speed_output[close_loop_idx], '.', color='darkorange', markersize=16)
+#
+#     axs[2].tick_params(axis='both', which='major', labelsize=16)
+#
+#     axs[2].set_xlabel(time_axis_string, fontsize=18)
+#     axs[2].legend()
+#
+#     plt.ioff()
+#     # plt.show()
+#     plt.pause(1)
+#
+#     # Make name settable and with time-date stemp
+#     # Save figure to png
+#     if save:
+#         # Make folders if not yet exist
+#         try:
+#             os.makedirs('save_plots')
+#         except FileExistsError:
+#             pass
+#         dateTimeObj = datetime.now()
+#         timestampStr = dateTimeObj.strftime("%d%b%Y_%H%M%S")
+#         if rnn_full_name is not None:
+#             fig.savefig('./save_plots/'+rnn_full_name+'.png')
+#         else:
+#             fig.savefig('./save_plots/'+timestampStr + '.png')
