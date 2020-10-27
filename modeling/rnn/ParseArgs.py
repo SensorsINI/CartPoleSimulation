@@ -60,7 +60,7 @@ def args():
     parser.add_argument('--seq_len', default=5, type=int, help='Number of timesteps in a sequence')
 
     # Training parameters
-    parser.add_argument('--num_epochs', default=5, type=int, help='Number of epochs of training')
+    parser.add_argument('--num_epochs', default=10, type=int, help='Number of epochs of training')
     parser.add_argument('--batch_size', default=64, type=int, help='Size of a batch')
     parser.add_argument('--seed', default=1873, type=int, help='Set seed for reproducibility')
     parser.add_argument('--lr', default=1.0e-3, type=float, help='Learning rate')

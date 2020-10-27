@@ -95,7 +95,7 @@ def train_network():
     print('')
 
 
-    plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=5,
+    plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=256,
                  comment='This is the network at the beginning of the training',
                  inputs_list=inputs_list, outputs_list=outputs_list, rnn_full_name=rnn_full_name
                  ,save=True)
@@ -323,7 +323,7 @@ def train_network():
             print('')
 
         plot_string = 'This is the network after {} training epoch'.format(epoch + 1)
-        plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=5,
+        plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=256,
                      comment='This is the network after the training',
                      inputs_list=inputs_list, outputs_list=outputs_list, rnn_full_name=rnn_full_name
                      , save=True)
