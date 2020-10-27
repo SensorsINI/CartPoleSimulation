@@ -28,6 +28,10 @@ def args():
     parser.add_argument('--dt', default=10.0, type=float, help='Time interval of a time step in ms. Used only if data is generated online')
     parser.add_argument('--warm_up_len',    default=32,         type=int,    help='Number of timesteps for a warm-up sequence')
     parser.add_argument('--exp_len_train',  default=32+32+1,   type=int,    help='Number of timesteps for in a full experiment (warm-up+interative phase+1)')
+
+    #FIXME: seq_len was not defined before. I guess exp_len_train is analogous to seq_len in l2race. @Marcin pl confirm.
+    parser.add_argument('--seq_len', default=32 + 32 + 1, type=int, help='As in l2race')
+
     parser.add_argument('--exp_len_test',   default=2e3,        type=int,    help='Number of timesteps for in a full experiment test phase')
     parser.add_argument('--epoch_len',      default=2e3,        type=int,    help='How many sine waves are fed in NN during one epoch of training')
     parser.add_argument('--num_epochs',     default=3,         type=int,    help='Number of epochs of training')
@@ -59,7 +63,8 @@ def args():
                              'e.g. GRU-8IN-64H1-64H2-3OUT-1')
 
     args = parser.parse_args()
-
-    args.outputs_list = sorted(args.inputs_list)
-    args.outputs_list = sorted(args.outputs_list)
+    if args.inputs_list is not None:
+        args.inputs_list = sorted(args.inputs_list)
+    if args.outputs_list is not None:
+        args.outputs_list = sorted(args.outputs_list)
     return args  
