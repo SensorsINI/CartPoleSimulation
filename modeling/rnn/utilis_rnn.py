@@ -624,21 +624,42 @@ def plot_results(net,
     axs[0].set_title(comment, fontsize=20)
 
     axs[0].set_ylabel("Position", fontsize=18)
-    axs[0].plot(x_target, pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target, 'k:', markersize=12, label='Ground Truth')
-    axs[0].plot(x_output, pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output, 'b', markersize=12, label='Predicted position')
+    axs[0].plot(time_axis, pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target, 'k:', markersize=12, label='Ground Truth')
+    axs[0].plot(time_axis, pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output, 'b', markersize=12, label='Predicted position')
 
-    axs[0].plot(x_target[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target[start_idx], 'g.', markersize=16, label='Start')
-    axs[0].plot(x_output[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output[start_idx], 'g.', markersize=16)
-    axs[0].plot(x_target[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target[-1], 'r.', markersize=16, label='End')
-    axs[0].plot(x_output[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output[-1], 'r.', markersize=16)
+    axs[0].plot(time_axis[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target[start_idx], 'g.', markersize=16, label='Start')
+    axs[0].plot(time_axis[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output[start_idx], 'g.', markersize=16)
+    axs[0].plot(time_axis[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target[-1], 'r.', markersize=16, label='End')
+    axs[0].plot(time_axis[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output[-1], 'r.', markersize=16)
     if closed_loop_enabled:
-        axs[0].plot(x_target[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target[close_loop_idx], '.', color='darkorange', markersize=16, label='connect output->input')
-        axs[0].plot(x_output[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output[close_loop_idx], '.', color='darkorange', markersize=16)
+        axs[0].plot(time_axis[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target[close_loop_idx], '.', color='darkorange', markersize=16, label='connect output->input')
+        axs[0].plot(time_axis[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output[close_loop_idx], '.', color='darkorange', markersize=16)
 
     axs[0].tick_params(axis='both', which='major', labelsize=16)
 
-    axs[0].set_xlabel('Angle', fontsize=18)
+    axs[0].set_xlabel('Time', fontsize=18)
     axs[0].legend()
+
+    axs[1].set_ylabel("Angle", fontsize=18)
+    axs[1].plot(time_axis, pixels2meters(SCREEN_HEIGHT_PIXELS) - y_target, 'k:', markersize=12, label='Ground Truth')
+    axs[1].plot(time_axis, pixels2meters(SCREEN_HEIGHT_PIXELS) - y_output, 'b', markersize=12,
+                label='Predicted position')
+
+    axs[1].plot(time_axis[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS) - y_target[start_idx], 'g.', markersize=16,
+                label='Start')
+    axs[1].plot(time_axis[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS) - y_output[start_idx], 'g.', markersize=16)
+    axs[1].plot(time_axis[-1], pixels2meters(SCREEN_HEIGHT_PIXELS) - y_target[-1], 'r.', markersize=16, label='End')
+    axs[1].plot(time_axis[-1], pixels2meters(SCREEN_HEIGHT_PIXELS) - y_output[-1], 'r.', markersize=16)
+    if closed_loop_enabled:
+        axs[1].plot(time_axis[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS) - y_target[close_loop_idx], '.',
+                    color='darkorange', markersize=16, label='connect output->input')
+        axs[1].plot(time_axis[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS) - y_output[close_loop_idx], '.',
+                    color='darkorange', markersize=16)
+
+    axs[1].tick_params(axis='both', which='major', labelsize=16)
+
+    axs[1].set_xlabel('Time', fontsize=18)
+    axs[1].legend()
 #
 #
 #

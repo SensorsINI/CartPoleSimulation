@@ -20,7 +20,7 @@ VAL_file_name = './data/data_rnn-3.csv'
 FIXME: To tailor input list, output list and closed loop list according to cartpole
 angleD_next, positionD_next = cartpole_ode(p, s, Q2u(Q,p))
 '''
-RNN_name = 'GRU-256H1-256H2'
+RNN_name = 'GRU-256H1-128H2'
 inputs_list = ['target_position','s.position', 's.positionD', 's.angle', 's.angleD', 'u'] #FIXME : This is definately incorrect
 outputs_list = ['s.angle', 's.position']
 closed_loop_list = ['s.position', 's.positionD', 's.positionDD', 's.angle', 's.angleD', 's.angleDD']
