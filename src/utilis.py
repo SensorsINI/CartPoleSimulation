@@ -198,7 +198,7 @@ def Generate_Experiment(MyCart, exp_len=random_length_globals, dt=dt_main_simula
     MyCart.target_position = MyCart.random_track_f(MyCart.time)  # = 0
 
     # Run the CartPole experiment for number of time
-    for i in tqdm(int(exp_len)-1):
+    for i in tqdm(range(int(exp_len)-1)):
 
         # Print an error message if it runs already to long (should stop before)
         if MyCart.time > MyCart.t_max_pre:

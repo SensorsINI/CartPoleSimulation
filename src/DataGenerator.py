@@ -16,6 +16,7 @@ MyCart = Cart()
 
 for i in range(number_of_experiments):
     print(i)
+    sleep(0.1)
     Generate_Experiment(MyCart,
                         mode=mode,
                         exp_len=length_of_experiment,

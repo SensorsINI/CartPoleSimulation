@@ -26,14 +26,11 @@ import numpy as np
 # from memory_profiler import profile
 
 import re
-import time
-
-from src.CartClass import Cart
 
 # Custom functions
 from modeling.rnn.utilis_rnn import *
-
-from modeling.rnn.ParseArgs import *
+# Parameters of RNN
+from modeling.rnn.ParseArgs import args
 
 print('')
 
@@ -52,9 +49,6 @@ def train_network():
     # Start measuring time - to evaluate performance of the training function
     start = timeit.default_timer()
 
-    # Create CartPole instance (keeps the dynamical equations describing CartPole and simulation methods)
-    MyCart = Cart()
-
     # Set seeds
     set_seed(args)
 
@@ -68,7 +62,7 @@ def train_network():
     lr = args.lr  # learning rate
     batch_size = args.batch_size  # Mini-batch size
     num_epochs = args.num_epochs  # Number of epochs to train the network
-    seq_len = args.exp_len_train
+    seq_len = args.seq_len
 
     # Network architecture:
     rnn_name = args.rnn_name
@@ -89,16 +83,19 @@ def train_network():
     # Create Dataset
     ########################################################
 
-    # Create PyTorch Dataset
-    train_set = Daftaset(MyCart, args)  # for training
-    dev_set = Dataset(MyCart, args)  # for evaluation of training results
+    train_features, train_targets = load_data(args, args.train_file_name, inputs_list, outputs_list)
+    dev_features, dev_targets = load_data(args, args.val_file_name, inputs_list, outputs_list)
 
-    # print('Number of samples in training set: {}'.format(train_set.number_of_samples))
-    # print('The training sets sizes are: {}'.format(train_set.df_lengths))
-    # print('Number of samples in validation set: {}'.format(dev_set.number_of_samples))
-    # print('')
+    train_set = Dataset(train_features, train_targets, args)
+    dev_set = Dataset(dev_features, dev_targets, args)
+    print('Number of samples in training set: {}'.format(train_set.number_of_samples))
+    print('The training sets sizes are: {}'.format(train_set.df_lengths))
+    print('Number of samples in validation set: {}'.format(dev_set.number_of_samples))
+    print('')
 
-    # plot_results(net, args, MyCart)
+    plot_results(net=net, args=args, dataset=dev_set, filepath='../../data/oval_easy_12_rounds.csv', seq_len=400,
+                 comment='This is the network at the beginning of the training',
+                 inputs_list=inputs_list, outputs_list=outputs_list, rnn_full_name=rnn_full_name)
 
     # Create PyTorch dataloaders for train and dev set
     train_generator = data.DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True,
@@ -323,7 +320,11 @@ def train_network():
             print('')
 
         plot_string = 'This is the network after {} training epoch'.format(epoch + 1)
-        # plot_results(net, args, MyCart)
+        plot_results(net=net, args=args,
+                     dataset=dev_set,
+                     filepath='../../data/oval_easy_12_rounds.csv', seq_len=600,
+                     comment=plot_string,
+                     inputs_list=inputs_list, outputs_list=outputs_list, rnn_full_name=rnn_full_name)
         # Evaluate the performance of the current network
         # by checking its predictions on a randomly generated CartPole experiment
         # plot_results(net, args, val_file)
