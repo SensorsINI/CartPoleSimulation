@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.utils import data
-
+from datetime import datetime
 from IPython.display import Image
 
 import matplotlib.pyplot as plt
@@ -450,130 +450,122 @@ class Dataset(data.Dataset):
         else:
             return self.data[idx:idx + self.seq_len, :], self.labels[idx:idx + self.seq_len]
 
+def plot_results(net,
+                 args,
+                 dataset=None,
+                 filepath=None,
+                 inputs_list=None,
+                 outputs_list=None,
+                 closed_loop_list=None,
+                 seq_len=None,
+                 warm_up_len=None,
+                 closed_loop_enabled=False,
+                 comment='',
+                 rnn_full_name=None,
+                 save=False,
+                 close_loop_idx=150):
+    """
+    This function accepts RNN instance, arguments and CartPole instance.
+    It runs one random experiment with CartPole,
+    inputs the data into RNN and check how well RNN predicts CartPole state one time step ahead of time
+    """
 
+    if filepath is None:
+        filepath = args.val_file_name
+        if type(filepath) == list:
+            filepath = filepath[0]
 
+    if warm_up_len is None:
+        warm_up_len = args.warm_up_len
 
+    if seq_len is None:
+        seq_len = args.seq_len
 
+    if inputs_list is None:
+        inputs_list = args.inputs_list
+        if inputs_list is None:
+            raise ValueError('RNN inputs not provided!')
 
+    if outputs_list is None:
+        outputs_list = args.outputs_list
+        if outputs_list is None:
+            raise ValueError('RNN outputs not provided!')
 
+    if closed_loop_enabled and (closed_loop_list is None):
+        closed_loop_list = args.close_loop_for
+        if closed_loop_list is None:
+            raise ValueError('RNN closed-loop-inputs not provided!')
 
+    # normalization_info = NORMALIZATION_INFO
 
-
-#
-#
-# def plot_results(net,
-#                  args,
-#                  dataset=None,
-#                  filepath=None,
-#                  inputs_list=None,
-#                  outputs_list=None,
-#                  closed_loop_list=None,
-#                  seq_len=None,
-#                  warm_up_len=None,
-#                  closed_loop_enabled=False,
-#                  comment='',
-#                  rnn_full_name=None,
-#                  save=False,
-#                  close_loop_idx=150):
-#     """
-#     This function accepts RNN instance, arguments and CartPole instance.
-#     It runs one random experiment with CartPole,
-#     inputs the data into RNN and check how well RNN predicts CartPole state one time step ahead of time
-#     """
-#
-#     if filepath is None:
-#         filepath = args.val_file_name
-#         if type(filepath) == list:
-#             filepath = filepath[0]
-#
-#     if warm_up_len is None:
-#         warm_up_len = args.warm_up_len
-#
-#     if seq_len is None:
-#         seq_len = args.seq_len
-#
-#     if inputs_list is None:
-#         inputs_list = args.inputs_list
-#         if inputs_list is None:
-#             raise ValueError('RNN inputs not provided!')
-#
-#     if outputs_list is None:
-#         outputs_list = args.outputs_list
-#         if outputs_list is None:
-#             raise ValueError('RNN outputs not provided!')
-#
-#     if closed_loop_enabled and (closed_loop_list is None):
-#         closed_loop_list = args.close_loop_for
-#         if closed_loop_list is None:
-#             raise ValueError('RNN closed-loop-inputs not provided!')
-#
-#     normalization_info = NORMALIZATION_INFO
-#
 #     # Here in contrary to ghoast car implementation I have
 #     # rnn_input[name] /= normalization_info.iloc[0][column]
 #     # and not
 #     # rnn_input.iloc[0][column] /= normalization_info.iloc[0][column]
 #     # It is because rnn_input is just row (type = Series) and not the whole DataFrame (type = DataFrame)
 #
-#     def denormalize_output(output_series):
-#         for name in output_series.index:
-#             if normalization_info.iloc[0][name] is not None:
-#                 output_series[name] *= normalization_info.iloc[0][name]
-#         return output_series
-#
+    # def denormalize_output(output_series):
+    #     for name in output_series.index:
+    #         if normalization_info.iloc[0][name] is not None:
+    #             output_series[name] *= normalization_info.iloc[0][name]
+    #     return output_series
+
 #
 #     # Reset the internal state of RNN cells, clear the output memory, etc.
-#     net.reset()
-#     net.eval()
-#     device = get_device()
+    net.reset()
+    net.eval()
+    device = get_device()
 #
-#     if dataset is None:
-#         dev_features, dev_targets = load_data(args, filepath, inputs_list=inputs_list, outputs_list=outputs_list)
-#         dev_set = Dataset(dev_features, dev_targets, args, seq_len=seq_len)
-#     else:
-#         dev_set = copy.deepcopy(dataset)
-#         dev_set.reset_seq_len(seq_len=seq_len)
+    if dataset is None:
+        dev_features, dev_targets = load_data(args, filepath, inputs_list=inputs_list, outputs_list=outputs_list)
+        dev_set = Dataset(dev_features, dev_targets, args, seq_len=seq_len)
+    else:
+        dev_set = copy.deepcopy(dataset)
+        dev_set.reset_seq_len(seq_len=seq_len)
+
+    # Format the experiment data
+    features, targets = dev_set[0]
 #
-#     # Format the experiment data
-#     features, targets = dev_set[0]
+    features_pd = pd.DataFrame(data=features, columns=inputs_list)
+    targets_pd = pd.DataFrame(data=targets, columns=outputs_list)
+    #FIXME: Add denormalization by uncommenting the next line
+    # targets_pd = pd.DataFrame(data=targets, columns=outputs_list).apply(denormalize_output, axis=1)
+    rnn_outputs = pd.DataFrame(columns=outputs_list)
+    rnn_output = None
 #
-#     features_pd = pd.DataFrame(data=features, columns=inputs_list)
-#     targets_pd = pd.DataFrame(data=targets, columns=outputs_list).apply(denormalize_output, axis=1)
-#     rnn_outputs = pd.DataFrame(columns=outputs_list)
-#     rnn_output = None
-#
-#     warm_up_idx = 0
-#     rnn_input_0 = copy.deepcopy(features_pd.iloc[0])
-#     # Does not bring anything. Why? 0-state shouldn't have zero internal state due to biases...
-#     while warm_up_idx < warm_up_len:
-#         rnn_input = rnn_input_0
-#         rnn_input = np.squeeze(rnn_input.to_numpy())
-#         rnn_input = torch.from_numpy(rnn_input).float().unsqueeze(0).unsqueeze(0).to(device)
-#         net(rnn_input=rnn_input)
-#         warm_up_idx += 1
-#     net.outputs = []
-#     net.sample_counter = 0
-#
-#     close_the_loop = False
-#     idx_cl = 0
-#
-#     for index, row in features_pd.iterrows():
-#         rnn_input = copy.deepcopy(row)
-#         if idx_cl == close_loop_idx:
-#             close_the_loop = True
-#         if closed_loop_enabled and close_the_loop and (rnn_output is not None):
-#             rnn_input[closed_loop_list] = normalized_rnn_output[closed_loop_list]
-#         rnn_input = np.squeeze(rnn_input.to_numpy())
-#         rnn_input = torch.from_numpy(rnn_input).float().unsqueeze(0).unsqueeze(0).to(device)
-#         normalized_rnn_output = net(rnn_input=rnn_input)
-#         normalized_rnn_output = list(np.squeeze(normalized_rnn_output.detach().cpu().numpy()))
-#         normalized_rnn_output = pd.Series(data=normalized_rnn_output, index=outputs_list)
-#         rnn_output = copy.deepcopy(normalized_rnn_output)
-#         denormalize_output(rnn_output)
-#         rnn_outputs = rnn_outputs.append(rnn_output, ignore_index=True)
-#         idx_cl += 1
-#
-#
+    warm_up_idx = 0
+    rnn_input_0 = copy.deepcopy(features_pd.iloc[0])
+    # Does not bring anything. Why? 0-state shouldn't have zero internal state due to biases...
+    while warm_up_idx < warm_up_len:
+        rnn_input = rnn_input_0
+        rnn_input = np.squeeze(rnn_input.to_numpy())
+        rnn_input = torch.from_numpy(rnn_input).float().unsqueeze(0).unsqueeze(0).to(device)
+        net(rnn_input=rnn_input)
+        warm_up_idx += 1
+    net.outputs = []
+    net.sample_counter = 0
+
+    close_the_loop = False
+    idx_cl = 0
+
+    for index, row in features_pd.iterrows():
+        rnn_input = copy.deepcopy(row)
+        if idx_cl == close_loop_idx:
+            close_the_loop = True
+        if closed_loop_enabled and close_the_loop and (rnn_output is not None):
+            rnn_input[closed_loop_list] = normalized_rnn_output[closed_loop_list]
+        rnn_input = np.squeeze(rnn_input.to_numpy())
+        rnn_input = torch.from_numpy(rnn_input).float().unsqueeze(0).unsqueeze(0).to(device)
+        normalized_rnn_output = net(rnn_input=rnn_input)
+        normalized_rnn_output = list(np.squeeze(normalized_rnn_output.detach().cpu().numpy()))
+        normalized_rnn_output = pd.Series(data=normalized_rnn_output, index=outputs_list)
+        rnn_output = copy.deepcopy(normalized_rnn_output)
+        #FIXME : Enable denormalization
+        # denormalize_output(rnn_output)
+        rnn_outputs = rnn_outputs.append(rnn_output, ignore_index=True)
+        idx_cl += 1
+
+
 #     # If RNN was given sin and cos of body angle calculate back the body angle
 #     if ('body_angle.cos' in rnn_outputs) and ('body_angle.sin' in rnn_outputs) and ('body_angle_deg' not in rnn_outputs):
 #         rnn_outputs['body_angle_deg'] = rnn_outputs.apply(SinCos2Angle_wrapper, axis=1)
@@ -581,30 +573,35 @@ class Dataset(data.Dataset):
 #         targets_pd['body_angle_deg'] = targets_pd.apply(SinCos2Angle_wrapper, axis=1)
 #
 #     # Get the time or # samples axes
-#     experiment_length  = seq_len
+    experiment_length  = seq_len
 #
-#     if 'time' in features_pd.columns:
-#         t = features_pd['time'].to_numpy()
-#         time_axis = t
-#         time_axis_string = 'Time [s]'
-#     elif 'dt' in features_pd.columns:
-#         dt = features_pd['dt'].to_numpy()
-#         t = np.cumsum(dt)
-#         time_axis = t
-#         time_axis_string = 'Time [s]'
-#     else:
-#         samples = np.arange(0, experiment_length)
-#         time_axis = samples
-#         time_axis_string = 'Sample number'
-#
-#     number_of_plots = 0
-#
-#     if ('position_m.x' in targets_pd) and ('position_m.x' in rnn_outputs) and ('position_m.y' in targets_pd) and ('position_m.y' in rnn_outputs):
-#         x_target = targets_pd['position_m.x'].to_numpy()
-#         y_target = targets_pd['position_m.y'].to_numpy()
-#         x_output = rnn_outputs['position_m.x'].to_numpy()
-#         y_output = rnn_outputs['position_m.y'].to_numpy()
-#         number_of_plots += 1
+    if 'time' in features_pd.columns:
+        t = features_pd['time'].to_numpy()
+        time_axis = t
+        time_axis_string = 'Time [s]'
+    elif 'dt' in features_pd.columns:
+        dt = features_pd['dt'].to_numpy()
+        t = np.cumsum(dt)
+        time_axis = t
+        time_axis_string = 'Time [s]'
+    else:
+        samples = np.arange(0, experiment_length)
+        time_axis = samples
+        time_axis_string = 'Sample number'
+
+    number_of_plots = 0
+
+
+
+    if ('s.angle' in targets_pd) and ('s.angle' in rnn_outputs) and ('s.position' in targets_pd) and ('s.position' in rnn_outputs):
+        x_target = targets_pd['s.angle'].to_numpy()
+        y_target = targets_pd['s.position'].to_numpy()
+        x_output = rnn_outputs['s.angle'].to_numpy()
+        y_output = rnn_outputs['s.position'].to_numpy()
+        number_of_plots += 1
+
+    #FIXME: For number of plots = 1, TypeError: 'AxesSubplot' object is not subscriptable
+    number_of_plots=2
 #
 #     if ('body_angle_deg' in targets_pd) and ('body_angle_deg' in rnn_outputs):
 #         body_angle_target = targets_pd['body_angle_deg'].to_numpy()
@@ -621,27 +618,27 @@ class Dataset(data.Dataset):
 #         number_of_plots += 1
 #
 #     # Create a figure instance
-#     fig, axs = plt.subplots(number_of_plots, 1, figsize=(18, 10)) #, sharex=True)  # share x axis so zoom zooms all plots
-#     plt.subplots_adjust(hspace=0.4)
-#     start_idx = 0
-#     axs[0].set_title(comment, fontsize=20)
-#
-#     axs[0].set_ylabel("Position y (m)", fontsize=18)
-#     axs[0].plot(x_target, pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target, 'k:', markersize=12, label='Ground Truth')
-#     axs[0].plot(x_output, pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output, 'b', markersize=12, label='Predicted position')
-#
-#     axs[0].plot(x_target[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target[start_idx], 'g.', markersize=16, label='Start')
-#     axs[0].plot(x_output[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output[start_idx], 'g.', markersize=16)
-#     axs[0].plot(x_target[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target[-1], 'r.', markersize=16, label='End')
-#     axs[0].plot(x_output[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output[-1], 'r.', markersize=16)
-#     if closed_loop_enabled:
-#         axs[0].plot(x_target[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target[close_loop_idx], '.', color='darkorange', markersize=16, label='connect output->input')
-#         axs[0].plot(x_output[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output[close_loop_idx], '.', color='darkorange', markersize=16)
-#
-#     axs[0].tick_params(axis='both', which='major', labelsize=16)
-#
-#     axs[0].set_xlabel('Position x (m)', fontsize=18)
-#     axs[0].legend()
+    fig, axs = plt.subplots(number_of_plots, 1, figsize=(18, 10)) #, sharex=True)  # share x axis so zoom zooms all plots
+    plt.subplots_adjust(hspace=0.4)
+    start_idx = 0
+    axs[0].set_title(comment, fontsize=20)
+
+    axs[0].set_ylabel("Position", fontsize=18)
+    axs[0].plot(x_target, pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target, 'k:', markersize=12, label='Ground Truth')
+    axs[0].plot(x_output, pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output, 'b', markersize=12, label='Predicted position')
+
+    axs[0].plot(x_target[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target[start_idx], 'g.', markersize=16, label='Start')
+    axs[0].plot(x_output[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output[start_idx], 'g.', markersize=16)
+    axs[0].plot(x_target[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target[-1], 'r.', markersize=16, label='End')
+    axs[0].plot(x_output[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output[-1], 'r.', markersize=16)
+    if closed_loop_enabled:
+        axs[0].plot(x_target[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_target[close_loop_idx], '.', color='darkorange', markersize=16, label='connect output->input')
+        axs[0].plot(x_output[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-y_output[close_loop_idx], '.', color='darkorange', markersize=16)
+
+    axs[0].tick_params(axis='both', which='major', labelsize=16)
+
+    axs[0].set_xlabel('Angle', fontsize=18)
+    axs[0].legend()
 #
 #
 #
@@ -687,15 +684,44 @@ class Dataset(data.Dataset):
 #
 #     # Make name settable and with time-date stemp
 #     # Save figure to png
-#     if save:
-#         # Make folders if not yet exist
-#         try:
-#             os.makedirs('save_plots')
-#         except FileExistsError:
-#             pass
-#         dateTimeObj = datetime.now()
-#         timestampStr = dateTimeObj.strftime("%d%b%Y_%H%M%S")
-#         if rnn_full_name is not None:
-#             fig.savefig('./save_plots/'+rnn_full_name+'.png')
-#         else:
-#             fig.savefig('./save_plots/'+timestampStr + '.png')
+    if save:
+        # Make folders if not yet exist
+        try:
+            os.makedirs('save_plots')
+        except FileExistsError:
+            pass
+        dateTimeObj = datetime.now()
+        timestampStr = dateTimeObj.strftime("%d%b%Y_%H%M%S")
+        if rnn_full_name is not None:
+            fig.savefig('./save_plots/'+rnn_full_name+'.png')
+        else:
+            fig.savefig('./save_plots/'+timestampStr + '.png')
+
+
+
+#FIXME: The M_PER_PIXEL was imported from globals in case of l2race. I am hardcoding it for now
+M_PER_PIXEL = 0.10
+SCREEN_HEIGHT_PIXELS=768
+SCREEN_WIDTH_PIXELS=1024
+
+def pixels2meters(x_map: float):
+    """
+    The function converts a value in the map units (pixels) to the physical units (meters).
+    It is suitable to convert position, velocity or acceleration.
+    :param x_map: value in map units (pixels, not necessarily integer)
+    :return x_track: Value converted to physical units (meters)
+    """
+    x_track = x_map * M_PER_PIXEL
+    return x_track
+
+
+def meters2pixels(x_track: float):
+    """
+    The function converts a value in the map units (pixels) to the physical units (meters).
+    In contrast to get_position_on_map() it DOES NOT round the results down to nearest integer.
+    It is suitable to convert position, velocity or acceleration.
+    :param x_track: Value converted to physical units (meters)
+    :return x_map: Value in map units (pixels, not necessarily integer!)
+    """
+    x_map = x_track / M_PER_PIXEL
+    return x_map

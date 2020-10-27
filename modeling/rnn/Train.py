@@ -50,8 +50,6 @@ def train_network():
     # Start measuring time - to evaluate performance of the training function
     start = timeit.default_timer()
 
-
-
     # Set seeds
     set_seed(args)
 
@@ -96,9 +94,11 @@ def train_network():
     print('Number of samples in validation set: {}'.format(dev_set.number_of_samples))
     print('')
 
-    # plot_results(net=net, args=args, dataset=dev_set, filepath='../../data/oval_easy_12_rounds.csv', seq_len=400,
-    #              comment='This is the network at the beginning of the training',
-    #              inputs_list=inputs_list, outputs_list=outputs_list, rnn_full_name=rnn_full_name)
+
+    plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=5,
+                 comment='This is the network at the beginning of the training',
+                 inputs_list=inputs_list, outputs_list=outputs_list, rnn_full_name=rnn_full_name
+                 ,save=True)
 
     # Create PyTorch dataloaders for train and dev set
     train_generator = data.DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True,
@@ -323,11 +323,10 @@ def train_network():
             print('')
 
         plot_string = 'This is the network after {} training epoch'.format(epoch + 1)
-        # plot_results(net=net, args=args,
-        #              dataset=dev_set,
-        #              filepath='../../data/oval_easy_12_rounds.csv', seq_len=600,
-        #              comment=plot_string,
-        #              inputs_list=inputs_list, outputs_list=outputs_list, rnn_full_name=rnn_full_name)
+        plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=5,
+                     comment='This is the network after the training',
+                     inputs_list=inputs_list, outputs_list=outputs_list, rnn_full_name=rnn_full_name
+                     , save=True)
         # Evaluate the performance of the current network
         # by checking its predictions on a randomly generated CartPole experiment
         # plot_results(net, args, val_file)
