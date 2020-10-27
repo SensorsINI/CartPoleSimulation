@@ -18,6 +18,8 @@ import warnings
 
 import pandas as pd
 
+from tqdm import tqdm
+
 
 # warnings.warn("Warning...........Message")
 
@@ -151,7 +153,7 @@ class loop_timer():
                               np.std(self.circ_buffer_dt) * 1000))
 
 
-def Generate_Experiment(MyCart, exp_len=random_length_globals, dt=dt_main_simulation_globals, track_complexity=N_globals):
+def Generate_Experiment(MyCart, exp_len=random_length_globals, dt=dt_main_simulation_globals, track_complexity=N_globals, csv=None, mode=1):
     """
     This function runs a random CartPole experiment
     and returns the history of CartPole states, control inputs and desired cart position
@@ -163,7 +165,7 @@ def Generate_Experiment(MyCart, exp_len=random_length_globals, dt=dt_main_simula
 
 
     # Set CartPole in the right (automatic control) mode
-    MyCart.set_mode(1)  # 1 - you are controlling with LQR, 2- with do-mpc
+    MyCart.set_mode(mode)  # 1 - you are controlling with LQR, 2- with do-mpc
     MyCart.save_data = 1
     MyCart.use_pregenerated_target_position = 1
 
@@ -196,7 +198,7 @@ def Generate_Experiment(MyCart, exp_len=random_length_globals, dt=dt_main_simula
     MyCart.target_position = MyCart.random_track_f(MyCart.time)  # = 0
 
     # Run the CartPole experiment for number of time
-    for i in range(int(exp_len)-1):
+    for i in tqdm(int(exp_len)-1):
 
         # Print an error message if it runs already to long (should stop before)
         if MyCart.time > MyCart.t_max_pre:
@@ -204,11 +206,14 @@ def Generate_Experiment(MyCart, exp_len=random_length_globals, dt=dt_main_simula
 
         MyCart.update_state()
 
+    MyCart.augment_dict_history()
 
     data = pd.DataFrame(MyCart.dict_history)
+
+    if csv is not None:
+        MyCart.save_history_csv(csv_name=csv)
 
     MyCart.reset_dict_history()
     MyCart.reset_state()
 
-    # After generating experiment finished, return states, control input and target_positions history
     return data

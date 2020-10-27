@@ -359,6 +359,7 @@ class MainWindow(QMainWindow):
         # Save simulation history if user chose to do so at the end of the simulation
         if self.save_history:
             csv_name = self.textbox.text()
+            self.MyCart.augment_dict_history()
             self.MyCart.save_history_csv(csv_name=csv_name)
             self.saved = 1
 

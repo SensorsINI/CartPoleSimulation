@@ -443,12 +443,13 @@ class Cart:
                              'Q': [self.Q],
                              'target_position': [self.target_position]}
 
-    # This method saves the dictionary keeping the history of simulation to a .csv file
-    def save_history_csv(self, csv_name=None):
-
+    def augment_dict_history(self):
         # Augment dict
         self.dict_history['s.angle.sin'] = [around(np.sin(x), 4) for x in self.dict_history['s.angle']]
         self.dict_history['s.angle.cos'] = [around(np.cos(x), 4) for x in self.dict_history['s.angle']]
+
+    # This method saves the dictionary keeping the history of simulation to a .csv file
+    def save_history_csv(self, csv_name=None):
 
         # Make folder to save data (if not yet existing)
         try:

@@ -90,7 +90,7 @@ def train_network():
     ########################################################
 
     # Create PyTorch Dataset
-    train_set = Dataset(MyCart, args)  # for training
+    train_set = Daftaset(MyCart, args)  # for training
     dev_set = Dataset(MyCart, args)  # for evaluation of training results
 
     # print('Number of samples in training set: {}'.format(train_set.number_of_samples))
