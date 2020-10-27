@@ -444,7 +444,7 @@ class MainWindow(QMainWindow):
         history_pd = history_pd[:-1]
 
         # Check speedup which user provided with GUI
-        speedup = self.get_speedup()
+        self.get_speedup()
 
         # Define loop timer for now with arbitrary dt
         replay_looper = loop_timer(dt_target=0.0)
@@ -461,8 +461,9 @@ class MainWindow(QMainWindow):
             self.MyCart.u = row['u']
             self.MyCart.target_position = row['target_position']
 
-            dt_target = (self.MyCart.dt / speedup)
+            dt_target = (self.MyCart.dt / self.speedup)
             replay_looper.dt_target = dt_target
+            # print(replay_looper.dt_target)
 
             replay_looper.sleep_leftover_time()
 
