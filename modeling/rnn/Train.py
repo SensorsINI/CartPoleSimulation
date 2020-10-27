@@ -4,65 +4,73 @@ Created on Fri Jun 19 06:21:32 2020
 
 @author: Marcin
 """
-import torch
 
 import os
-import time
-import torch.nn as nn
-from torch.utils import data
-import torch.optim as optim
-import torch.utils.data.dataloader
-from tqdm import tqdm
-
-import collections
-
 import timeit
 
-from modeling.rnn import ParseArgs
+# Various
+import torch.optim as optim
+import torch.utils.data.dataloader
+from torch.optim import lr_scheduler
+from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
+import torch.nn as nn
+import matplotlib.pyplot as plt
+from itertools import product
+import numpy as np
+# from ax.plot.contour import plot_contour
+# from ax.plot.trace import optimization_trace_single_method
+# from ax.service.managed_loop import optimize
+# from ax.utils.notebook.plotting import render, init_notebook_plotting
+# from ax.utils.tutorials.cnn_utils import load_mnist, train, evaluate, CNN
+# from memory_profiler import profile
+
+import re
+import time
+
 from src.CartClass import Cart
 
 # Custom functions
 from modeling.rnn.utilis_rnn import *
 
-# Check if GPU is available. If yes device='cuda:0' if not device='cpu'
+from modeling.rnn.ParseArgs import *
+
+print('')
+
 device = get_device()
 
-args = ParseArgs.args()
+args = args()
 print(args.__dict__)
+
 
 # Uncomment the @profile(precision=4) to get the report on memory usage after the training
 # Warning! It may affect performance. I would discourage you to use it for long training tasks
 # @profile(precision=4)
 def train_network():
+    print('')
+    print('')
     # Start measuring time - to evaluate performance of the training function
     start = timeit.default_timer()
 
     # Create CartPole instance (keeps the dynamical equations describing CartPole and simulation methods)
     MyCart = Cart()
 
+    # Set seeds
+    set_seed(args)
+
     # Make folders if not yet exist
     try:
-        os.makedirs('../../save')
-    except:
+        os.makedirs('save')
+    except FileExistsError:
         pass
 
+    # Save relevant arguments from args and set hardcoded arguments
     lr = args.lr  # learning rate
     batch_size = args.batch_size  # Mini-batch size
     num_epochs = args.num_epochs  # Number of epochs to train the network
-
-    # Create PyTorch Dataset
-    train_set = Dataset(MyCart, args)  # for training
-    dev_set = Dataset(MyCart, args)  # for evaluation of training results
-
-    # Create PyTorch dataloaders for train and dev set
-    train_generator = data.DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False)
-    dev_generator = data.DataLoader(dataset=dev_set, batch_size=512, shuffle=False)
+    seq_len = args.exp_len_train
 
     # Network architecture:
-    '''
-    FIXME: I am just using the code structure from l2race. Have to check if the input/output/command and states are properly addressed
-    '''
-
     rnn_name = args.rnn_name
     inputs_list = args.inputs_list
     outputs_list = args.outputs_list
@@ -70,85 +78,57 @@ def train_network():
     load_rnn = args.load_rnn  # If specified this is the name of pretrained RNN which should be loaded
     path_save = args.path_save
 
+    # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
     net, rnn_name, inputs_list, outputs_list \
         = create_rnn_instance(rnn_name, inputs_list, outputs_list, load_rnn, path_save, device)
 
     # Create log for this RNN and determine its full name
-    '''
-    FIXME: Right now I did not include plot functions. 
-    '''
     rnn_full_name = create_log_file(rnn_name, inputs_list, outputs_list, path_save)
 
+    ########################################################
+    # Create Dataset
+    ########################################################
 
-    # If a pretrained model exists load the parameters from disc and into RNN instance
-    # Also evaluate the performance of this pretrained network
-    # by checking its predictions on a randomly generated CartPole experiment
-    try:
-        pre_trained_model = torch.load(args.savepathPre, map_location=torch.device('cpu'))
-        print("Loading Model: ", args.savepathPre)
+    # Create PyTorch Dataset
+    train_set = Dataset(MyCart, args)  # for training
+    dev_set = Dataset(MyCart, args)  # for evaluation of training results
 
-        pre_trained_model = list(pre_trained_model.items())
-        new_state_dict = collections.OrderedDict()
-        count = 0
-        num_param_key = len(pre_trained_model)
-        for key, value in net.state_dict().items():
-            if count >= num_param_key:
-                break
-            layer_name, weights = pre_trained_model[count]
-            new_state_dict[key] = weights
-            print("Pre-trained Layer: %s - Loaded into new layer: %s" % (layer_name, key))
-            count += 1
-        net.load_state_dict(new_state_dict)
-        # Evaluate the performance of this pretrained network
-        # by checking its predictions on a randomly generated CartPole experiment
-        plot_results(net, args, MyCart)
+    # print('Number of samples in training set: {}'.format(train_set.number_of_samples))
+    # print('The training sets sizes are: {}'.format(train_set.df_lengths))
+    # print('Number of samples in validation set: {}'.format(dev_set.number_of_samples))
+    # print('')
 
-    except:
-        print('No pretrained model available')
+    plot_results(net, args, MyCart)
 
-    # Move network to GPU
-    # TODO: Check it. It shouldn't harm, but I think this line is redundant.
-    #  RNN is moved to cuda at initialization if GPU available.
-    if torch.cuda.is_available():
-        print("Go cuda!")
-        net = net.cuda()
+    # Create PyTorch dataloaders for train and dev set
+    train_generator = data.DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True,
+                                      num_workers=args.num_workers)
+    dev_generator = data.DataLoader(dataset=dev_set, batch_size=512, shuffle=False, num_workers=args.num_workers)
 
     # Print parameter count
-    params = 0
-    for param in list(net.parameters()):
-        sizes = 1
-        for el in param.size():
-            sizes = sizes * el
-        params += sizes
-    print('::: # network parameters: ' + str(params))
+    print_parameter_count(net)  # Seems not to function well
 
     # Select Optimizer
     optimizer = optim.Adam(net.parameters(), amsgrad=True, lr=lr)
 
+    # TODO: Verify if scheduler is working. Try tweaking parameters of below scheduler and try cyclic lr scheduler
+
+    # scheduler = lr_scheduler.CyclicLR(optimizer, base_lr=lr, max_lr=0.1)
+    scheduler = lr_scheduler.StepLR(optimizer, step_size=200, gamma=0.5)
+
     # Select Loss Function
     criterion = nn.MSELoss()  # Mean square error loss function
-
-
     '''
-    FIXME: We have a function to Initialize weight and biases. Can we use that?
+    Init Tensorboard
     '''
-    # Initialize weights and biases
-    for name, param in net.named_parameters():
-        print(name)
-        if 'gru' in name:
-            if 'weight' in name:
-                nn.init.orthogonal_(param)
-        if 'linear' in name:
-            if 'weight' in name:
-                nn.init.orthogonal_(param)
-                # nn.init.xavier_uniform_(param)
-        if 'bias' in name:  # all biases
-            nn.init.constant_(param, 0)
-
+    comment = f' batch_size={batch_size} lr={lr} seq_len={seq_len}'
+    tb = SummaryWriter(comment=comment)
     ########################################################
     # Training
     ########################################################
     print("Starting training...")
+    print('')
+    time.sleep(0.001)
 
     # Create dictionary to store training history
     dict_history = {}
@@ -161,36 +141,10 @@ def train_network():
     dict_history['test_loss'] = []
     dev_gain = 1
 
-    # Save time to evaluate performance of the training function
-    start_time = time.time()
-
-    # Maximal window over which we want to train RNN - look below for explanation of training process
-    win_max = (num_epochs - 1) // args.epochs_per_win
     # The epoch_saved variable will indicate from which epoch is the last RNN model,
     # which was good enough to be saved
     epoch_saved = -1
     for epoch in range(num_epochs):
-
-        # With consecutive epochs, when our RNN gets better and better
-        # we want to have longer and longer prediction window
-        # The schema for training is following:
-        # (1) we start with net.initialize_sequence(batch)
-        #       in this operation we run RNN in "open loop",
-        #       i.e. the inputs are always ground truth (experiment recording)
-        #       and outputs are not plugged back into RNN.
-        #       The aim of this operation is to let the internal states of RNN cells adjust to data
-        # (2) we close the loop
-        #       and let the RNN predict the future CartPole states over next win * args.warm_up_len time steps.
-        #       In this operation the output of the RNN is plugged back to its input for the next time step
-        #       Only control input is taken at every time step from ground truth
-        #       We do it with the forward function with terminate=False
-        # (3) we reset the memory of all gradients with  optimizer.zero_grad()
-        # (4) we continue making prediction for another args.warm_up_len time steps in closed loop,
-        #       again with forward function,
-        #       this time we return outputs (terminate=True) and save gradients
-        # (5) we calculate loss based on the prediction OF THESE LAST args.warm_up_len time_steps
-        #       and accordingly update the weights of RNN model
-        win = (epoch // args.epochs_per_win)  # window number over which to optimize the results
 
         ###########################################################################################################
         # Training - Iterate batches
@@ -214,26 +168,27 @@ def train_network():
             if torch.cuda.is_available():
                 batch = batch.float().cuda().transpose(0, 1)
                 labels = labels.float().cuda()
-
             else:
                 batch = batch.float().transpose(0, 1)
                 labels = labels.float()
 
+            # # Reset memory of gradients
+            # optimizer.zero_grad()
+
             # Warm-up (open loop prediction) to settle the internal state of RNN hidden layers
-            net.initialize_sequence(batch)
-            # Predict in closed loop - we are not interested in these results yet
-            net(win * args.warm_up_len, batch)
+            net(rnn_input=batch[:args.warm_up_len, :, :])
 
             # Reset memory of gradients
             optimizer.zero_grad()
 
             # Forward propagation - These are the results from which we calculate the update to RNN weights
             # GRU Input size must be (seq_len, batch, input_size)
-            out = net(args.warm_up_len, batch, terminate=True)
+            net(rnn_input=batch[args.warm_up_len:, :, :])
+            out = net.return_outputs_history()
 
             # Get loss
-            loss = criterion(out[:, (win + 1) * args.warm_up_len:(win + 2) * args.warm_up_len],
-                             labels[:, (win + 1) * args.warm_up_len:(win + 2) * args.warm_up_len])
+            loss = criterion(out[:, args.warm_up_len:, :],
+                             labels[:, args.warm_up_len:, :])
 
             # Backward propagation
             loss.backward()
@@ -243,7 +198,7 @@ def train_network():
 
             # Update parameters
             optimizer.step()
-
+            scheduler.step()
             # Update variables for loss calculation
             batch_loss = loss.detach()
             train_loss += batch_loss  # Accumulate loss
@@ -274,21 +229,16 @@ def train_network():
                 batch = batch.float().transpose(0, 1)
                 labels = labels.float()
 
-            # Convert Pytorch tensors to numpy matrices to inspect them - just for debugging purpose.
-            # Variable explorers of IDEs are often not compatible with Pytorch format
-            # np_batch = batch.numpy()
-            # np_label = labels.numpy()
-
             # Warm-up (open loop prediction) to settle the internal state of RNN hidden layers
-            net.initialize_sequence(batch)
-            # Forward propagation
-            # GRU Input size must be (look_back_len, batch, input_size)
-            out = net((win_max + 1) * args.warm_up_len, batch, terminate=True)
+            net(rnn_input=batch)
+            out = net.return_outputs_history()
+
+
             # Get loss
             # For evaluation we always calculate loss over the whole maximal prediction period
             # This allow us to compare RNN models from different epochs
-            loss = criterion(out[:, args.warm_up_len:(win_max + 2) * args.warm_up_len],
-                             labels[:, args.warm_up_len:(win_max + 2) * args.warm_up_len])
+            loss = criterion(out[:, args.warm_up_len: args.seq_len],
+                             labels[:, args.warm_up_len: args.seq_len])
 
             # Update variables for loss calculation
             batch_loss = loss.detach()
@@ -298,15 +248,44 @@ def train_network():
         # Reset the network (internal states of hidden layers and output history not the weights!)
         net.reset()
         # Get current learning rate
-        # TODO: I think now the learning rate do not change during traing, or it is not a right way to get this info.
+        # TODO(Fixed. It does changes now): I think now the learning rate do not change during traing, or it is not a right way to get this info.
+
         for param_group in optimizer.param_groups:
             lr_curr = param_group['lr']
 
+        '''
+        Add data for tensorboard
+        TODO : Add network graph and I/O to tensorboard
+        '''
+        # tb.add_graph(net)
+        tb.add_scalar('Train Loss', train_loss / train_batches, epoch)
+        tb.add_scalar('Dev Loss', dev_loss / dev_batches, epoch)
+
+        # Add the first sample of batch to tensorboard. Prediction is represented by Dotted line
+        # TODO: Concatenate such graphs. But they are not continous
+        for i in range(labels.shape[2]):
+            time_label = np.arange(0, labels.shape[1], 1)
+            time_out = np.arange(0, out.shape[1], 1)
+            true_data = labels[1, :, i]
+            predicted_data = out[1, :, i]
+            fig_tb = plt.figure(5)
+            plt.plot(time_label, true_data.detach().cpu())
+            plt.plot(time_out, predicted_data.detach().cpu(), linestyle='dashed')
+            tb.add_figure(tag=str(args.outputs_list[i]), figure=fig_tb, global_step=epoch)
+
+        for name, param in net.named_parameters():
+            tb.add_histogram(name, param, epoch)
+            tb.add_histogram(f'{name}.grad', param.grad, epoch)
+        tb.close()
+
         # Write the summary information about the training for the just completed epoch to a dictionary
+
         dict_history['epoch'].append(epoch)
         dict_history['lr'].append(lr_curr)
-        dict_history['train_loss'].append(train_loss.detach().cpu().numpy() / train_batches)
-        dict_history['dev_loss'].append(dev_loss.detach().cpu().numpy() / dev_batches)
+        dict_history['train_loss'].append(
+            train_loss.detach().cpu().numpy() / train_batches / (args.seq_len - args.warm_up_len))
+        dict_history['dev_loss'].append(
+            dev_loss.detach().cpu().numpy() / dev_batches / (args.seq_len - args.warm_up_len))
 
         # Get relative loss gain for network evaluation
         if epoch >= 1:
@@ -324,6 +303,7 @@ def train_network():
                                      dict_history['train_loss'][epoch],
                                      dict_history['dev_loss'][epoch],
                                      dict_history['dev_gain'][epoch] * 100))
+        print('')
 
         # Save the best model with the lowest dev loss
         # Always save the model from epoch 0
@@ -337,11 +317,16 @@ def train_network():
             min_dev_loss = dev_loss
             torch.save(net.state_dict(), args.path_save + rnn_full_name + '.pt', _use_new_zipfile_serialization=False)
             print('>>> saving best model from epoch {}'.format(epoch))
+            print('')
         else:
             print('>>> We keep model from epoch {}'.format(epoch_saved))
+            print('')
+
+        plot_string = 'This is the network after {} training epoch'.format(epoch + 1)
+        plot_results(net, args, MyCart)
         # Evaluate the performance of the current network
         # by checking its predictions on a randomly generated CartPole experiment
-        plot_results(net, args, MyCart)
+        # plot_results(net, args, val_file)
 
     # When finished the training print the final message
     print("Training Completed...                                               ")
@@ -356,5 +341,33 @@ def train_network():
 
 
 if __name__ == '__main__':
+    parameters = dict(
+        lr=[.1, .01]
+        , batch_size=[100, 200, 300, 400]
+        , seq_len=[512 + 512 + 1]
+    )
+    param_values = [v for v in parameters.values()]
+
+    # for lr, batch_size, seq_len in product(*param_values):
+    #     args.lr = lr
+    #     args.batch_size = batch_size
+    #     args.seq_len = seq_len
+    #     time_to_accomplish = train_network()
+    #     print('Total time of training the network: ' + str(time_to_accomplish))
+
+    # def train_evaluate(parameterization):
+    #     time_to_accomplish, min_dev_loss = train_network()
+    #     return min_dev_loss
+    # best_parameters, values, experiment, model = optimize(
+    #     parameters=[
+    #         {"name": "args.lr", "type": "range", "bounds": [1e-6, 0.4], "log_scale": True},
+    #         {"name": "args.batch_size", "type": "range", "bounds": [100, 400]},
+    #         {"name": "args.seq_len", "type": "range", "bounds": [500, 700]},
+    #     ],
+    #     evaluation_function=train_evaluate,
+    #     objective_name='Validation Loss',
+    #     minimize=True
+    # )
+
     time_to_accomplish = train_network()
     print('Total time of training the network: ' + str(time_to_accomplish))

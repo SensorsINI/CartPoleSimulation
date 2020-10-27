@@ -11,6 +11,8 @@ from src.utilis import Generate_Experiment
 import collections
 import os
 
+import random as rnd
+
 def get_device():
     """
     Small function to correctly send data to GPU or CPU depending what is available
@@ -20,6 +22,16 @@ def get_device():
     else:
         device = torch.device('cpu')
     return device
+
+
+# Set seeds everywhere required to make results reproducible
+def set_seed(args):
+    seed = args.seed
+    rnd.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
 
 
 # Print parameter count
@@ -335,7 +347,7 @@ class Dataset(data.Dataset):
     It inherits from the standard Pytorch dataset class
     """
 
-    def __init__(self, MyCart, args, train=True):
+    def __init__(self, MyCart, args, train=True, inputs_list=None, outputs_list=None):
         """Initialization"""
 
         self.MyCart = MyCart
@@ -349,6 +361,15 @@ class Dataset(data.Dataset):
         # Recalculate simulation time step from milliseconds to seconds
         self.dt = args.dt / 1000.0  # s
         self.epoch_len = args.epoch_len
+
+        if inputs_list is None:
+            inputs_list = args.inputs_list
+
+        if outputs_list is None:
+            outputs_list = args.outputs_list
+
+        self.inputs_list = inputs_list
+        self.outputs_list = outputs_list
 
     def __len__(self):
         """
@@ -374,18 +395,25 @@ class Dataset(data.Dataset):
         #   states: position of the cart, angle of the pole, etc...
         #   u_effs: control input to the cart
         #   target_positions: The desired position of the cart
-        states, u_effs, target_positions = Generate_Experiment(MyCart=self.MyCart,  # MyCart contain CartPole dynamics
+        data = Generate_Experiment(MyCart=self.MyCart,  # MyCart contain CartPole dynamics
                                                                exp_len=self.exp_len,
                                                                # How many data points should be generated
                                                                dt=self.dt)  # Simulation time step size
 
+        features = data[self.inputs_list]
+        targets = data[self.outputs_list]
+
+        features = features.to_numpy()
+        targets = targets.to_numpy()
+
+
         # "features" is the array of inputs to the RNN, it consists of states of the CartPole and control input
         # "targets" is the array of CartPole states one time step ahead of "features" at the same index.
         # "targets[i]" is what we expect our network to predict given features[i]
-        features = np.hstack((np.array(states), np.array([u_effs]).T))
+        # features = np.hstack((np.array(states), np.array([u_effs]).T))
         features = torch.from_numpy(features[:-1, :]).float()
 
-        targets = np.array(states)
+        # targets = np.array(states)
         targets = torch.from_numpy(targets[1:, :]).float()
 
         return features, targets
@@ -438,7 +466,7 @@ def plot_results(net, args, MyCart):
     # During several first time steps we let hidden layers adapt to the input data
     # train=False says that all the input should be used for initialization
     # -> we predict always only one time step ahead of time based on ground truth data
-    predictions = net.initialize_sequence(features, train=False)
+    predictions = net(features)
 
     # reformat the output of RNN to a form suitable for plotting the results
     # y_pred are prediction from RNN

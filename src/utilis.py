@@ -16,6 +16,8 @@ from collections import deque
 
 import warnings
 
+import pandas as pd
+
 
 # warnings.warn("Warning...........Message")
 
@@ -149,7 +151,7 @@ class loop_timer():
                               np.std(self.circ_buffer_dt) * 1000))
 
 
-def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
+def Generate_Experiment(MyCart, exp_len=random_length_globals, dt=dt_main_simulation_globals, track_complexity=N_globals):
     """
     This function runs a random CartPole experiment
     and returns the history of CartPole states, control inputs and desired cart position
@@ -158,18 +160,20 @@ def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
                 (default: 64+640+1 this format is used as it can )
     """
 
+
+
     # Set CartPole in the right (automatic control) mode
     MyCart.set_mode(1)  # 1 - you are controlling with LQR, 2- with do-mpc
+    MyCart.save_data = 1
+    MyCart.use_pregenerated_target_position = 1
 
-    # Initialize Variables
-    states = []
-    u_effs = []
-    target_positions = []
+    MyCart.reset_dict_history()
+    MyCart.reset_state()
 
     # Generate new random function returning desired target position of the cart
     MyCart.dt = dt
     MyCart.random_length = exp_len
-    MyCart.N = 10  # Complexity of generated target position track
+    MyCart.N = track_complexity  # Complexity of generated target position track
     MyCart.Generate_Random_Trace_Function()
 
     # Randomly set the initial state
@@ -190,56 +194,21 @@ def Generate_Experiment(MyCart, exp_len=64 + 640 + 1, dt=0.002):
 
     # Target position at time 0 (should be always 0)
     MyCart.target_position = MyCart.random_track_f(MyCart.time)  # = 0
-    # Constrain target position
-    if MyCart.target_position > 0.8 * MyCart.HalfLength:
-        MyCart.target_position = 0.8 * MyCart.HalfLength
-    elif MyCart.target_position < -0.8 * MyCart.HalfLength:
-        MyCart.target_position = -0.8 * MyCart.HalfLength
 
     # Run the CartPole experiment for number of time
-    for i in range(int(exp_len)):
+    for i in range(int(exp_len)-1):
 
-        # Start by incrementing total time
-        MyCart.time = i * MyCart.dt
         # Print an error message if it runs already to long (should stop before)
         if MyCart.time > MyCart.t_max_pre:
-            MyCart.time = MyCart.t_max_pre
-            print('ERROR: It seems the experiment is running too long...')
+            raise Exception('ERROR: It seems the experiment is running too long...')
 
-        # Calculate acceleration, angular acceleration, velocity, angular velocity, position and angle
-        # for this new time_step
-        MyCart.Equations_of_motion()
+        MyCart.update_state()
 
-        # Normalize angle
 
-        MyCart.s.angle = normalize_angle_rad(MyCart.s.angle)
+    data = pd.DataFrame(MyCart.dict_history)
 
-        if (abs(MyCart.s.position) + MyCart.WheelToMiddle) > MyCart.HalfLength:
-            MyCart.s.positionD = -MyCart.s.positionD
-
-        # Determine the dimensionales [-1,1] value of the motor power Q
-        MyCart.Update_Q()
-
-        # Calculate the force created by the motor
-        MyCart.u = Q2u(MyCart.Q, MyCart.p)
-
-        # Get the new value of desired cart position and constrain it
-        MyCart.target_position = MyCart.random_track_f(MyCart.time)
-        if MyCart.target_position > 0.8 * MyCart.HalfLength:
-            MyCart.target_position = 0.8 * MyCart.HalfLength
-        elif MyCart.target_position < -0.8 * MyCart.HalfLength:
-            MyCart.target_position = -0.8 * MyCart.HalfLength
-
-        # Save all the new cart state variables you just updated
-        state = (MyCart.s.position,
-                 MyCart.s.positionD,
-                 MyCart.s.angle,
-                 MyCart.s.angleD)
-
-        # Save current cart state, control input and target position to a corresponding list
-        states.append(state)
-        u_effs.append(MyCart.u)
-        target_positions.append(MyCart.target_position)
+    MyCart.reset_dict_history()
+    MyCart.reset_state()
 
     # After generating experiment finished, return states, control input and target_positions history
-    return states, u_effs, target_positions
+    return data

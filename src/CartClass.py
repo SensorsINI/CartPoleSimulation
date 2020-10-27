@@ -494,8 +494,16 @@ class Cart:
             writer.writerow(self.dict_history.keys())
             writer.writerows(zip(*self.dict_history.values()))
 
+    def get_history(self):
 
-    def load_history_csv(self, csv_name=None, visualisation_only = True):
+        # Augment dict
+        self.dict_history['s.angle.sin'] = [around(np.sin(x), 4) for x in self.dict_history['s.angle']]
+        self.dict_history['s.angle.cos'] = [around(np.cos(x), 4) for x in self.dict_history['s.angle']]
+
+        return pd.DataFrame(self.dict_history)
+
+
+    def load_history_csv(self, csv_name=None, visualisation_only=True):
         # Set path where to save the data
         if csv_name is None or csv_name == '':
             # get the latest file
@@ -503,7 +511,7 @@ class Cart:
                 list_of_files = glob.glob('./data/' + '/*.csv')
                 file_path = max(list_of_files, key=os.path.getctime)
             except FileNotFoundError:
-                print('Cannot replay: No race recording found in data folder ' + './data/')
+                print('Cannot load: No experiment recording found in data folder ' + './data/')
                 return False
         else:
             filename = csv_name
@@ -515,16 +523,16 @@ class Cart:
                 file_path = os.path.join('data', filename)
                 if not os.path.isfile(file_path):
                     print(
-                        'Cannot replay: There is no race recording file with name {} at local folder or in {}'.format(
+                        'Cannot load: There is no experiment recording file with name {} at local folder or in {}'.format(
                             filename, './data/'))
                     return False
 
         # Get race recording
-        print('Replaying file {}'.format(file_path))
+        print('Loading file {}'.format(file_path))
         try:
             data: pd.DataFrame = pd.read_csv(file_path, comment='#')  # skip comment lines starting with #
         except Exception as e:
-            print('Cannot replay: Caught {} trying to read CSV file {}'.format(e, file_path))
+            print('Cannot load: Caught {} trying to read CSV file {}'.format(e, file_path))
             return False
 
         if visualisation_only:
