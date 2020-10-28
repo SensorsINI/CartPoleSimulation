@@ -591,7 +591,46 @@ def plot_results(net,
 
     number_of_plots = 0
 
+'''
+I will write some pseudocode to make the plotting generalized. (@Marcin can you help me make this functional?)
 
+
+target_data, predicted_data = dictionary of size len(rnn_output) or len(target_pd)(whichever is lesser)
+for targets in rnn_outputs:
+    if (target present in targets_pd)
+        target_data[index] = targets_pd[index].to_numpy()
+        predicted_data[index] = rnn_outputs[index].to_numpy()
+
+number_of_plots = len(target_data)
+
+fig, axs = plt.subplots(number_of_plots, 1, figsize=(18, 10)) #, sharex=True)  # share x axis so zoom zooms all plots
+    plt.subplots_adjust(hspace=0.4)
+    start_idx = 0
+    for plot_idx in range(number_of_plots)
+    
+        x_target = target_data[plot_idx]
+        x_output = predicted_data[plot_idx]
+        
+        axs[plot_idx].set_title(comment, fontsize=20)
+    
+        axs[plot_idx].set_ylabel({TODO:Somehow take this from the labels e.g. 's.angle'}, fontsize=18)
+        
+        axs[plot_idx].plot(time_axis, pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target, 'k:', markersize=12, label='Ground Truth')
+        axs[plot_idx].plot(time_axis, pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output, 'b', markersize=12, label='Predicted position')
+    
+        axs[plot_idx].plot(time_axis[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target[start_idx], 'g.', markersize=16, label='Start')
+        axs[plot_idx].plot(time_axis[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output[start_idx], 'g.', markersize=16)
+        axs[plot_idx].plot(time_axis[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target[-1], 'r.', markersize=16, label='End')
+        axs[plot_idx].plot(time_axis[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output[-1], 'r.', markersize=16)
+        if closed_loop_enabled:
+            axs[plot_idx].plot(time_axis[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target[close_loop_idx], '.', color='darkorange', markersize=16, label='connect output->input')
+            axs[plot_idx].plot(time_axis[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output[close_loop_idx], '.', color='darkorange', markersize=16)
+    
+        axs[plot_idx].tick_params(axis='both', which='major', labelsize=16)
+    
+        axs[plot_idx].set_xlabel('Time', fontsize=18)
+        axs[plot_idx].legend()
+'''
 
     if ('s.angle' in targets_pd) and ('s.angle' in rnn_outputs) and ('s.position' in targets_pd) and ('s.position' in rnn_outputs):
         x_target = targets_pd['s.angle'].to_numpy()
