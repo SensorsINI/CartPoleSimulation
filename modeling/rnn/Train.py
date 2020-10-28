@@ -318,15 +318,16 @@ def train_network():
             torch.save(net.state_dict(), args.path_save + rnn_full_name + '.pt', _use_new_zipfile_serialization=False)
             print('>>> saving best model from epoch {}'.format(epoch))
             print('')
+
+            plot_string = 'This is the network after {} training epoch'.format(epoch + 1)
+            plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=256,
+                         comment=plot_string,
+                         inputs_list=inputs_list, outputs_list=outputs_list, rnn_full_name=rnn_full_name
+                         , save=True)
         else:
             print('>>> We keep model from epoch {}'.format(epoch_saved))
             print('')
 
-        plot_string = 'This is the network after {} training epoch'.format(epoch + 1)
-        plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=256,
-                     comment='This is the network after the training',
-                     inputs_list=inputs_list, outputs_list=outputs_list, rnn_full_name=rnn_full_name
-                     , save=True)
         # Evaluate the performance of the current network
         # by checking its predictions on a randomly generated CartPole experiment
         # plot_results(net, args, val_file)
