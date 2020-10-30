@@ -15,6 +15,8 @@ import random as rnd
 
 import copy
 
+from modeling.rnn.utilis_rnn_specific import *
+
 def get_device():
     """
     Small function to correctly send data to GPU or CPU depending what is available
@@ -358,6 +360,7 @@ def load_data(args, filepath=None, inputs_list=None, outputs_list=None):
 
     all_features = []
     all_targets = []
+    all_time_axes = []
 
     for one_filepath in filepaths:
         # Load dataframe
@@ -366,8 +369,22 @@ def load_data(args, filepath=None, inputs_list=None, outputs_list=None):
         df = pd.read_csv(one_filepath, comment='#')
 
         if args.cheat_dt:
-            df['dt'] = df['dt'].shift(-1)
-            df = df[:-1]
+            if 'dt' in df:
+                df['dt'] = df['dt'].shift(-1)
+                df = df[:-1]
+
+
+        if 'time' in df.columns:
+            t = df['time']
+        elif 'dt' in df.columns:
+            dt = df['dt']
+            t = dt.cumsum()
+            t.rename('time', inplace=True)
+        else:
+            t = pd.Series([])
+            t.rename('time', inplace=True)
+
+        time_axis = t
 
         # Get Raw Data
         inputs = copy.deepcopy(df)
@@ -381,20 +398,40 @@ def load_data(args, filepath=None, inputs_list=None, outputs_list=None):
         inputs = inputs[inputs_list]
         outputs = outputs[outputs_list]
 
+        # # We try to operate on pandas now, to keep the columns names
+        # features = np.array(inputs)
+        # targets = np.array(outputs)
 
-        features = np.array(inputs)
-        targets = np.array(outputs)
+        features = inputs
+        targets = outputs
+
         all_features.append(features)
         all_targets.append(targets)
+        all_time_axes.append(time_axis)
 
     if type(filepath) == list:
-        return all_features, all_targets
+        return all_features, all_targets, all_time_axes
     else:
-        return features, targets
+        return features, targets, time_axis
+
+# This way of doing normalization is fine for long data sets and (relatively) short sequence lengths
+# The points from the edges of the datasets count too little
+def calculate_normalization(df):
+    if 'time' in df.columns:
+        df.drop('time',
+                axis='columns', inplace=True)
+
+    df_mean = df.std(axis=0)
+    df_std = df.mean(axis=0)
+
+    df_norm_info = pd.concat([df_mean, df_std])
+
+
+
 
 
 class Dataset(data.Dataset):
-    def __init__(self, df, labels, args, seq_len=None):
+    def __init__(self, df, labels, args, time_axes=None, seq_len=None):
         'Initialization'
         self.data = df
         self.labels = labels
@@ -404,6 +441,8 @@ class Dataset(data.Dataset):
         self.df_lengths = []
         self.df_lengths_cs = []
         self.number_of_samples = 0
+
+        self.time_axes = time_axes
 
         self.reset_seq_len(seq_len=seq_len)
 
@@ -433,26 +472,55 @@ class Dataset(data.Dataset):
         else:
             self.number_of_samples = self.data.shape[0] - self.seq_len
 
-
-
     def __len__(self):
         'Total number of samples'
         return self.number_of_samples
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx, get_time_axis=False):
         if type(self.data) == list:
             idx_data_set = next(i for i, v in enumerate(self.df_lengths_cs) if v > idx)
             if idx_data_set == 0:
                 pass
             else:
                 idx -= self.df_lengths_cs[idx_data_set-1]
-            return self.data[idx_data_set][idx:idx + self.seq_len, :], self.labels[idx_data_set][idx:idx + self.seq_len]
+            if get_time_axis:
+                try:
+                    time_axis = self.time_axes[idx_data_set].to_numpy()[idx:idx + self.seq_len + 1]
+                except IndexError:
+                    time_axis = []
+                return self.data[idx_data_set].to_numpy()[idx:idx + self.seq_len, :],\
+                       self.labels[idx_data_set].to_numpy()[idx:idx + self.seq_len], \
+                       time_axis
+
+            else:
+                return self.data[idx_data_set].to_numpy()[idx:idx + self.seq_len, :],\
+                       self.labels[idx_data_set].to_numpy()[idx:idx + self.seq_len]
         else:
-            return self.data[idx:idx + self.seq_len, :], self.labels[idx:idx + self.seq_len]
+            if get_time_axis:
+                try:
+                    time_axis = self.time_axes.to_numpy()[idx:idx + self.seq_len + 1]
+                except IndexError:
+                    time_axis = []
+                return self.data.to_numpy()[idx:idx + self.seq_len, :],\
+                       self.labels.to_numpy()[idx:idx + self.seq_len], \
+                       time_axis
+            else:
+                return self.data.to_numpy()[idx:idx + self.seq_len, :],\
+                       self.labels.to_numpy()[idx:idx + self.seq_len]
+
+    def get_experiment(self, idx=None):
+        if self.time_axes is None:
+            raise Exception('No time information available!')
+        if idx is None:
+            idx = np.random.randint(0, self.number_of_samples)
+        return self.__getitem__(idx, get_time_axis=True)
+
+
 
 def plot_results(net,
                  args,
                  dataset=None,
+                 time_axes=None,
                  filepath=None,
                  inputs_list=None,
                  outputs_list=None,
@@ -496,43 +564,28 @@ def plot_results(net,
         if closed_loop_list is None:
             raise ValueError('RNN closed-loop-inputs not provided!')
 
-    # normalization_info = NORMALIZATION_INFO
-
-#     # Here in contrary to ghoast car implementation I have
-#     # rnn_input[name] /= normalization_info.iloc[0][column]
-#     # and not
-#     # rnn_input.iloc[0][column] /= normalization_info.iloc[0][column]
-#     # It is because rnn_input is just row (type = Series) and not the whole DataFrame (type = DataFrame)
-#
-    # def denormalize_output(output_series):
-    #     for name in output_series.index:
-    #         if normalization_info.iloc[0][name] is not None:
-    #             output_series[name] *= normalization_info.iloc[0][name]
-    #     return output_series
-
-#
-#     # Reset the internal state of RNN cells, clear the output memory, etc.
     net.reset()
     net.eval()
     device = get_device()
-#
-    if dataset is None:
-        dev_features, dev_targets = load_data(args, filepath, inputs_list=inputs_list, outputs_list=outputs_list)
-        dev_set = Dataset(dev_features, dev_targets, args, seq_len=seq_len)
+
+    if dataset is None or time_axes is None:
+        dev_features, dev_targets, time_axes = load_data(args, filepath, inputs_list=inputs_list, outputs_list=outputs_list)
+        dev_set = Dataset(dev_features, dev_targets, args, time_axes=time_axes, seq_len=seq_len)
     else:
         dev_set = copy.deepcopy(dataset)
         dev_set.reset_seq_len(seq_len=seq_len)
 
     # Format the experiment data
-    features, targets = dev_set[0]
-#
+    features, targets, time_axis = dev_set.get_experiment(1) # Put number in brackets to get the same idx at every run
+
     features_pd = pd.DataFrame(data=features, columns=inputs_list)
     targets_pd = pd.DataFrame(data=targets, columns=outputs_list)
+
     #FIXME: Add denormalization by uncommenting the next line
     # targets_pd = pd.DataFrame(data=targets, columns=outputs_list).apply(denormalize_output, axis=1)
     rnn_outputs = pd.DataFrame(columns=outputs_list)
     rnn_output = None
-#
+
     warm_up_idx = 0
     rnn_input_0 = copy.deepcopy(features_pd.iloc[0])
     # Does not bring anything. Why? 0-state shouldn't have zero internal state due to biases...
@@ -565,186 +618,10 @@ def plot_results(net,
         rnn_outputs = rnn_outputs.append(rnn_output, ignore_index=True)
         idx_cl += 1
 
+    fig, axs = plot_results_specific(targets_pd, rnn_outputs, time_axis, comment, closed_loop_enabled, close_loop_idx)
 
-#     # If RNN was given sin and cos of body angle calculate back the body angle
-#     if ('body_angle.cos' in rnn_outputs) and ('body_angle.sin' in rnn_outputs) and ('body_angle_deg' not in rnn_outputs):
-#         rnn_outputs['body_angle_deg'] = rnn_outputs.apply(SinCos2Angle_wrapper, axis=1)
-#     if ('body_angle.cos' in targets_pd) and ('body_angle.sin' in targets_pd) and ('body_angle_deg' not in targets_pd):
-#         targets_pd['body_angle_deg'] = targets_pd.apply(SinCos2Angle_wrapper, axis=1)
-#
-#     # Get the time or # samples axes
-    experiment_length  = seq_len
-#
-    if 'time' in features_pd.columns:
-        t = features_pd['time'].to_numpy()
-        time_axis = t
-        time_axis_string = 'Time [s]'
-    elif 'dt' in features_pd.columns:
-        dt = features_pd['dt'].to_numpy()
-        t = np.cumsum(dt)
-        time_axis = t
-        time_axis_string = 'Time [s]'
-    else:
-        samples = np.arange(0, experiment_length)
-        time_axis = samples
-        time_axis_string = 'Sample number'
+    plt.show()
 
-    number_of_plots = 0
-
-    if ('s.angle' in targets_pd) and ('s.angle' in rnn_outputs) and ('s.position' in targets_pd) and ('s.position' in rnn_outputs):
-        x_target = targets_pd['s.angle'].to_numpy()
-        y_target = targets_pd['s.position'].to_numpy()
-        x_output = rnn_outputs['s.angle'].to_numpy()
-        y_output = rnn_outputs['s.position'].to_numpy()
-        number_of_plots += 2
-
-#
-#     if ('body_angle_deg' in targets_pd) and ('body_angle_deg' in rnn_outputs):
-#         body_angle_target = targets_pd['body_angle_deg'].to_numpy()
-#         body_angle_output = rnn_outputs['body_angle_deg'].to_numpy()
-#         number_of_plots += 1
-#
-#     if ('velocity_m_per_sec.x' in targets_pd) and ('velocity_m_per_sec.x' in rnn_outputs) and ('velocity_m_per_sec.y' in targets_pd) and ('velocity_m_per_sec.y' in rnn_outputs):
-#         vel_x_target = targets_pd['velocity_m_per_sec.x'].to_numpy()
-#         vel_y_target = targets_pd['velocity_m_per_sec.y'].to_numpy()
-#         vel_x_output = rnn_outputs['velocity_m_per_sec.x'].to_numpy()
-#         vel_y_output = rnn_outputs['velocity_m_per_sec.y'].to_numpy()
-#         speed_target = np.sqrt((vel_x_target**2)+(vel_y_target**2))
-#         speed_output = np.sqrt((vel_x_output ** 2) + (vel_y_output ** 2))
-#         number_of_plots += 1
-#
-#     # Create a figure instance
-    fig, axs = plt.subplots(number_of_plots, 1, figsize=(18, 10)) #, sharex=True)  # share x axis so zoom zooms all plots
-    plt.subplots_adjust(hspace=0.4)
-    start_idx = 0
-    axs[0].set_title(comment, fontsize=20)
-
-    axs[0].set_ylabel("Position", fontsize=18)
-    axs[0].plot(time_axis, pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target, 'k:', markersize=12, label='Ground Truth')
-    axs[0].plot(time_axis, pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output, 'b', markersize=12, label='Predicted position')
-
-    axs[0].plot(time_axis[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target[start_idx], 'g.', markersize=16, label='Start')
-    axs[0].plot(time_axis[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output[start_idx], 'g.', markersize=16)
-    axs[0].plot(time_axis[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target[-1], 'r.', markersize=16, label='End')
-    axs[0].plot(time_axis[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output[-1], 'r.', markersize=16)
-    if closed_loop_enabled:
-        axs[0].plot(time_axis[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target[close_loop_idx], '.', color='darkorange', markersize=16, label='connect output->input')
-        axs[0].plot(time_axis[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output[close_loop_idx], '.', color='darkorange', markersize=16)
-
-    axs[0].tick_params(axis='both', which='major', labelsize=16)
-
-    axs[0].set_xlabel('Time', fontsize=18)
-    axs[0].legend()
-
-    axs[1].set_ylabel("Angle", fontsize=18)
-    axs[1].plot(time_axis, pixels2meters(SCREEN_HEIGHT_PIXELS) - y_target, 'k:', markersize=12, label='Ground Truth')
-    axs[1].plot(time_axis, pixels2meters(SCREEN_HEIGHT_PIXELS) - y_output, 'b', markersize=12,
-                label='Predicted position')
-
-    axs[1].plot(time_axis[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS) - y_target[start_idx], 'g.', markersize=16,
-                label='Start')
-    axs[1].plot(time_axis[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS) - y_output[start_idx], 'g.', markersize=16)
-    axs[1].plot(time_axis[-1], pixels2meters(SCREEN_HEIGHT_PIXELS) - y_target[-1], 'r.', markersize=16, label='End')
-    axs[1].plot(time_axis[-1], pixels2meters(SCREEN_HEIGHT_PIXELS) - y_output[-1], 'r.', markersize=16)
-    if closed_loop_enabled:
-        axs[1].plot(time_axis[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS) - y_target[close_loop_idx], '.',
-                    color='darkorange', markersize=16, label='connect output->input')
-        axs[1].plot(time_axis[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS) - y_output[close_loop_idx], '.',
-                    color='darkorange', markersize=16)
-
-    axs[1].tick_params(axis='both', which='major', labelsize=16)
-
-    axs[1].set_xlabel('Time', fontsize=18)
-    axs[1].legend()
-#
-
-    #
-    # I will write some pseudocode to make the plotting generalized. (@Marcin can you help me make this functional?)
-    #
-    #
-    # target_data, predicted_data = dictionary of size len(rnn_output) or len(target_pd)(whichever is lesser)
-    # for targets in rnn_outputs:
-    #     if (target present in targets_pd)
-    #         target_data[index] = targets_pd[index].to_numpy()
-    #         predicted_data[index] = rnn_outputs[index].to_numpy()
-    #
-    # number_of_plots = len(target_data)
-    #
-    # fig, axs = plt.subplots(number_of_plots, 1, figsize=(18, 10)) #, sharex=True)  # share x axis so zoom zooms all plots
-    #     plt.subplots_adjust(hspace=0.4)
-    #     start_idx = 0
-    #     for plot_idx in range(number_of_plots)
-    #
-    #         x_target = target_data[plot_idx]
-    #         x_output = predicted_data[plot_idx]
-    #
-    #         axs[plot_idx].set_title(comment, fontsize=20)
-    #
-    #         axs[plot_idx].set_ylabel({TODO:Somehow take this from the labels e.g. 's.angle'}, fontsize=18)
-    #
-    #         axs[plot_idx].plot(time_axis, pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target, 'k:', markersize=12, label='Ground Truth')
-    #         axs[plot_idx].plot(time_axis, pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output, 'b', markersize=12, label='Predicted position')
-    #
-    #         axs[plot_idx].plot(time_axis[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target[start_idx], 'g.', markersize=16, label='Start')
-    #         axs[plot_idx].plot(time_axis[start_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output[start_idx], 'g.', markersize=16)
-    #         axs[plot_idx].plot(time_axis[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target[-1], 'r.', markersize=16, label='End')
-    #         axs[plot_idx].plot(time_axis[-1], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output[-1], 'r.', markersize=16)
-    #         if closed_loop_enabled:
-    #             axs[plot_idx].plot(time_axis[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_target[close_loop_idx], '.', color='darkorange', markersize=16, label='connect output->input')
-    #             axs[plot_idx].plot(time_axis[close_loop_idx], pixels2meters(SCREEN_HEIGHT_PIXELS)-x_output[close_loop_idx], '.', color='darkorange', markersize=16)
-    #
-    #         axs[plot_idx].tick_params(axis='both', which='major', labelsize=16)
-    #
-    #         axs[plot_idx].set_xlabel('Time', fontsize=18)
-    #         axs[plot_idx].legend()
-    #
-
-
-
-
-#
-#     axs[1].set_ylabel("Body angle (deg)", fontsize=18)
-#     axs[1].plot(time_axis, body_angle_target, 'k:', markersize=12, label='Ground Truth')
-#     axs[1].plot(time_axis, body_angle_output, 'b', markersize=12, label='Predicted speed')
-#
-#     axs[1].plot(time_axis[start_idx], body_angle_target[start_idx], 'g.', markersize=16, label='Start')
-#     axs[1].plot(time_axis[start_idx], body_angle_output[start_idx], 'g.', markersize=16)
-#     axs[1].plot(time_axis[-1], body_angle_target[-1], 'r.', markersize=16, label='End')
-#     axs[1].plot(time_axis[-1], body_angle_output[-1], 'r.', markersize=16)
-#     if closed_loop_enabled:
-#         axs[1].plot(time_axis[close_loop_idx], body_angle_target[close_loop_idx], '.', color='darkorange', markersize=16, label='Connect output->input')
-#         axs[1].plot(time_axis[close_loop_idx], body_angle_output[close_loop_idx], '.', color='darkorange', markersize=16)
-#
-#     axs[1].tick_params(axis='both', which='major', labelsize=16)
-#
-#     axs[1].set_xlabel(time_axis_string, fontsize=18)
-#
-#     axs[1].legend()
-#
-#
-#     axs[2].set_ylabel("Speed (m/s)", fontsize=18)
-#     axs[2].plot(time_axis, speed_target, 'k:', markersize=12, label='Ground Truth')
-#     axs[2].plot(time_axis, speed_output, 'b', markersize=12, label='Predicted speed')
-#
-#     axs[2].plot(time_axis[start_idx], speed_target[start_idx], 'g.', markersize=16, label='Start')
-#     axs[2].plot(time_axis[start_idx], speed_output[start_idx], 'g.', markersize=16)
-#     axs[2].plot(time_axis[-1], speed_target[-1], 'r.', markersize=16, label='End')
-#     axs[2].plot(time_axis[-1], speed_output[-1], 'r.', markersize=16)
-#     if closed_loop_enabled:
-#         axs[2].plot(time_axis[close_loop_idx], speed_target[close_loop_idx], '.', color='darkorange', markersize=16, label='Connect output->input')
-#         axs[2].plot(time_axis[close_loop_idx], speed_output[close_loop_idx], '.', color='darkorange', markersize=16)
-#
-#     axs[2].tick_params(axis='both', which='major', labelsize=16)
-#
-#     axs[2].set_xlabel(time_axis_string, fontsize=18)
-#     axs[2].legend()
-#
-#     plt.ioff()
-#     # plt.show()
-#     plt.pause(1)
-#
-#     # Make name settable and with time-date stemp
-#     # Save figure to png
     if save:
         # Make folders if not yet exist
         try:
@@ -759,29 +636,3 @@ def plot_results(net,
             fig.savefig('./save_plots/'+timestampStr + '.png')
 
 
-#FIXME: The M_PER_PIXEL was imported from globals in case of l2race. I am hardcoding it for now
-M_PER_PIXEL = 0.10
-SCREEN_HEIGHT_PIXELS=768
-SCREEN_WIDTH_PIXELS=1024
-
-def pixels2meters(x_map: float):
-    """
-    The function converts a value in the map units (pixels) to the physical units (meters).
-    It is suitable to convert position, velocity or acceleration.
-    :param x_map: value in map units (pixels, not necessarily integer)
-    :return x_track: Value converted to physical units (meters)
-    """
-    x_track = x_map * M_PER_PIXEL
-    return x_track
-
-
-def meters2pixels(x_track: float):
-    """
-    The function converts a value in the map units (pixels) to the physical units (meters).
-    In contrast to get_position_on_map() it DOES NOT round the results down to nearest integer.
-    It is suitable to convert position, velocity or acceleration.
-    :param x_track: Value converted to physical units (meters)
-    :return x_map: Value in map units (pixels, not necessarily integer!)
-    """
-    x_map = x_track / M_PER_PIXEL
-    return x_map

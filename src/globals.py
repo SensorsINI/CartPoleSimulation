@@ -1,6 +1,5 @@
 import numpy as np
 
-
 # Variables controlling flow of the program
 mode_globals = 2
 save_history_globals = True
@@ -68,3 +67,37 @@ def Q2u(Q, p):
     return u
 
 
+def cartpole_next_state(p, s, u, dt_total, fine_dt=None, fine_N=None):
+    """
+    This function returns the "next state" of cartpole.
+    Given a state it calculates the state after time dt_total assuming constant control input
+    """
+
+    if fine_dt is None and fine_N is None:
+        raise Exception('You need to provide either fine_dt or fine_N. One of these two.')
+        return
+    elif fine_dt is not None and fine_N is not None:
+        raise Exception('You need to provide either fine_dt or fine_N. Not both.')
+        return
+
+    if fine_dt is not None:
+        fine_N = np.ceil(dt_total/fine_dt)
+        fine_dt = dt_total/float(fine_N)
+
+    if fine_N is not None:
+        fine_dt = dt_total/float(fine_N)
+
+    s_next = s
+
+    for _ in range(fine_N):
+        position, positionD, angle, angleD = cartpole_integration(s_next, fine_dt)
+        angleDD, positionDD = cartpole_ode(p, s_next, u)
+
+        s_next.position = position
+        s_next.positionD = positionD
+        s_next.positionDD = positionDD
+        s_next.angle = angle
+        s_next.angleD = angleD
+        s_next.angleDD = angleDD
+
+    return s_next

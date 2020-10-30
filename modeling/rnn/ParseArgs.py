@@ -20,7 +20,7 @@ VAL_file_name = './data/data_rnn-3.csv'
 FIXME: To tailor input list, output list and closed loop list according to cartpole
 angleD_next, positionD_next = cartpole_ode(p, s, Q2u(Q,p))
 '''
-RNN_name = 'GRU-256H1-128H2'
+RNN_name = 'GRU-64H1-64H2'
 inputs_list = ['target_position','s.position', 's.positionD', 's.angle', 's.angleD', 'u'] #FIXME : This is definately incorrect
 outputs_list = ['s.angle', 's.position']
 closed_loop_list = ['s.position', 's.positionD', 's.positionDD', 's.angle', 's.angleD', 's.angleDD']
@@ -60,7 +60,7 @@ def args():
     parser.add_argument('--seq_len', default=5, type=int, help='Number of timesteps in a sequence')
 
     # Training parameters
-    parser.add_argument('--num_epochs', default=10, type=int, help='Number of epochs of training')
+    parser.add_argument('--num_epochs', default=3, type=int, help='Number of epochs of training')
     parser.add_argument('--batch_size', default=64, type=int, help='Size of a batch')
     parser.add_argument('--seed', default=1873, type=int, help='Set seed for reproducibility')
     parser.add_argument('--lr', default=1.0e-3, type=float, help='Learning rate')

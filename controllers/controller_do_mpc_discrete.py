@@ -44,7 +44,9 @@ class controller_do_mpc_discrete:
         s.angleD = 0.0
         s.angleDD = 0.0
 
-        model_type = 'continuous'  # either 'discrete' or 'continuous'
+        # Next state of the cart
+
+        model_type = 'discrete'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
 
         s.position = self.model.set_variable(var_type='_x', var_name='s.position', shape=(1, 1))
@@ -57,13 +59,12 @@ class controller_do_mpc_discrete:
 
         target_position = self.model.set_variable('_tvp', 'target_position')
 
-        self.model.set_rhs('s.position', s.positionD)
-        self.model.set_rhs('s.angle', s.angleD)
+        s_next = cartpole_next_state(p, s, u=Q2u(Q, p), dt_total=dt_main_simulation_globals, fine_N=1)
 
-        angleD_next, positionD_next = cartpole_ode(p, s, Q2u(Q,p))
-
-        self.model.set_rhs('s.positionD', positionD_next)
-        self.model.set_rhs('s.angleD', angleD_next)
+        self.model.set_rhs('s.position', s_next.position)
+        self.model.set_rhs('s.angle', s_next.angle)
+        self.model.set_rhs('s.positionD', s_next.positionD)
+        self.model.set_rhs('s.angleD', s_next.angleD)
 
         # Simplified, normalized expressions for E_kin and E_pot as a port of cost function
         E_kin_cart = (s.positionD / p.v_max) ** 2
@@ -87,6 +88,7 @@ class controller_do_mpc_discrete:
             't_step': dt_mpc_simulation_globals,
             'n_robust': 0,
             'store_full_solution': False,
+            'state_discretization': 'discrete',
         }
         self.mpc.set_param(**setup_mpc)
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'mumps'})
@@ -123,6 +125,7 @@ class controller_do_mpc_discrete:
 
 
     def step(self, state, target_position):
+        print('Loaded mpc discrete')
 
         s = deepcopy(state)
 

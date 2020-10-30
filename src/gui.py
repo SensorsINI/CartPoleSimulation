@@ -393,6 +393,7 @@ class MainWindow(QMainWindow):
 
     # Actions to be taken when start/stop button is clicked
     def play(self):
+        print('Mode {}'.format(self.MyCart.mode))
         if self.load_recording:
             worker_replay = Worker(self.thread_replay)
             # Execute

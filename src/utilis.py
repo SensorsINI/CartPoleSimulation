@@ -168,12 +168,11 @@ def Generate_Experiment(MyCart, exp_len=random_length_globals, dt=dt_main_simula
     MyCart.set_mode(mode)  # 1 - you are controlling with LQR, 2- with do-mpc
     MyCart.save_data = 1
     MyCart.use_pregenerated_target_position = 1
+    MyCart.dt = dt
 
-    MyCart.reset_dict_history()
     MyCart.reset_state()
 
     # Generate new random function returning desired target position of the cart
-    MyCart.dt = dt
     MyCart.random_length = exp_len
     MyCart.N = track_complexity  # Complexity of generated target position track
     MyCart.Generate_Random_Trace_Function()
@@ -196,6 +195,8 @@ def Generate_Experiment(MyCart, exp_len=random_length_globals, dt=dt_main_simula
 
     # Target position at time 0 (should be always 0)
     MyCart.target_position = MyCart.random_track_f(MyCart.time)  # = 0
+
+    MyCart.reset_dict_history()
 
     # Run the CartPole experiment for number of time
     for i in tqdm(range(int(exp_len)-1)):

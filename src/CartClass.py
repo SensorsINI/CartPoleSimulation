@@ -431,8 +431,8 @@ class Cart:
 
     # This method resets the dictionary keeping the history of simulation
     def reset_dict_history(self):
-        self.dict_history = {'time': [0.0],
-                             'dt': [0.0],
+        self.dict_history = {'time': [self.time],
+                             'dt': [self.dt],
                              's.position': [self.s.position],
                              's.positionD': [self.s.positionD],
                              's.positionDD': [self.s.positionDD],

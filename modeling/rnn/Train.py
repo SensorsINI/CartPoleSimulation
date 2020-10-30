@@ -84,21 +84,31 @@ def train_network():
     # Create Dataset
     ########################################################
 
-    train_features, train_targets = load_data(args, args.train_file_name, inputs_list, outputs_list)
-    dev_features, dev_targets = load_data(args, args.val_file_name, inputs_list, outputs_list)
+    train_features,\
+    train_targets,\
+    _ = load_data(args, args.train_file_name, inputs_list, outputs_list)
+    # normalization_df =  calculate_normalization(train_features, rnn_full_name)
+    dev_features,\
+    dev_targets,\
+    time_axes_dev = load_data(args, args.val_file_name, inputs_list, outputs_list)
+
+    # train_features_norm = normalize(train_features, normalization_df)
+    # train_targets_norm = normalize(train_targets, normalization_df)
+    # dev_features = normalize(dev_targets, normalization_df)
+    # dev_targets = normalize(dev_targets, normalization_df)
 
     train_set = Dataset(train_features, train_targets, args)
-    dev_set = Dataset(dev_features, dev_targets, args)
+    dev_set = Dataset(dev_features, dev_targets, args, time_axes=time_axes_dev)
     print('Number of samples in training set: {}'.format(train_set.number_of_samples))
     print('The training sets sizes are: {}'.format(train_set.df_lengths))
     print('Number of samples in validation set: {}'.format(dev_set.number_of_samples))
     print('')
 
 
-    plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=1024,
-                 comment='This is the network at the beginning of the training',
-                 inputs_list=inputs_list, outputs_list=outputs_list, rnn_full_name=rnn_full_name
-                 ,save=True)
+    # plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=1024,
+    #              comment='This is the network at the beginning of the training',
+    #              inputs_list=inputs_list, outputs_list=outputs_list, rnn_full_name=rnn_full_name,
+    #              save=True)
 
     # Create PyTorch dataloaders for train and dev set
     train_generator = data.DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True,

@@ -4,8 +4,8 @@ from src.utilis import *
 
 from tqdm import tqdm
 csv = 'data_rnn'
-number_of_experiments = 10
-length_of_experiment = 1e3
+number_of_experiments = 1
+length_of_experiment = 1e4
 
 dt_main_simulation = dt_main_simulation_globals
 track_relative_complexity = 0.5  # randomly placed points/s
