@@ -127,7 +127,8 @@ def train_network():
     # TODO: Verify if scheduler is working. Try tweaking parameters of below scheduler and try cyclic lr scheduler
 
     # scheduler = lr_scheduler.CyclicLR(optimizer, base_lr=lr, max_lr=0.1)
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=200, gamma=0.5)
+    # scheduler = lr_scheduler.StepLR(optimizer, step_size=200, gamma=0.5)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min',patience=1, verbose=True)
 
     # Select Loss Function
     criterion = nn.MSELoss()  # Mean square error loss function
@@ -211,7 +212,7 @@ def train_network():
 
             # Update parameters
             optimizer.step()
-            scheduler.step()
+            # scheduler.step()
             # Update variables for loss calculation
             batch_loss = loss.detach()
             train_loss += batch_loss  # Accumulate loss
@@ -266,6 +267,7 @@ def train_network():
         for param_group in optimizer.param_groups:
             lr_curr = param_group['lr']
 
+        scheduler.step(dev_loss)
         '''
         Add data for tensorboard
         TODO : Add network graph and I/O to tensorboard
