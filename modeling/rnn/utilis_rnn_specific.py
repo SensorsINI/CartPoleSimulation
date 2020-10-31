@@ -16,9 +16,9 @@ def plot_results_specific(targets_pd, rnn_outputs, time_axis, comment, closed_lo
 
     if ('s.angle' in targets_pd) and ('s.angle' in rnn_outputs) and ('s.position' in targets_pd) and (
             's.position' in rnn_outputs):
-        angle_target = targets_pd['s.angle'].to_numpy()
+        angle_target = np.rad2deg(targets_pd['s.angle'].to_numpy())
         position_target = targets_pd['s.position'].to_numpy()
-        angle_output = rnn_outputs['s.angle'].to_numpy()
+        angle_output = np.rad2deg(rnn_outputs['s.angle'].to_numpy())
         position_output = rnn_outputs['s.position'].to_numpy()
 
 
@@ -44,10 +44,10 @@ def plot_results_specific(targets_pd, rnn_outputs, time_axis, comment, closed_lo
     axs[0].legend()
 
 
-    axs[1].set_ylabel("Angle", fontsize=18)
+    axs[1].set_ylabel("Angle (deg)", fontsize=18)
     axs[1].plot(time_axis, angle_target, 'k:', markersize=12, label='Ground Truth')
     axs[1].plot(time_axis, angle_output, 'b', markersize=12,
-                label='Predicted position')
+                label='Predicted angle')
 
     axs[1].plot(time_axis[start_idx], angle_target[start_idx], 'g.', markersize=16,
                 label='Start')

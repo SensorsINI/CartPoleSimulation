@@ -17,6 +17,9 @@ import copy
 
 from modeling.rnn.utilis_rnn_specific import *
 
+from tqdm import tqdm
+
+
 def get_device():
     """
     Small function to correctly send data to GPU or CPU depending what is available
@@ -128,13 +131,14 @@ def create_rnn_instance(rnn_name=None, inputs_list=None, outputs_list=None, load
 
         # Construct the requested RNN
         net = Sequence(rnn_name=rnn_name, inputs_list=inputs_list, outputs_list=outputs_list)
+        net.rnn_full_name = load_rnn
 
         # Load the parameters
         load_pretrained_rnn(net, pt_path, device)
 
     elif load_rnn == 'last':
         files_found = False
-        while(not files_found):
+        while (not files_found):
             try:
                 import glob
                 list_of_files = glob.glob(path_save + '/*.txt')
@@ -152,14 +156,13 @@ def create_rnn_instance(rnn_name=None, inputs_list=None, outputs_list=None, load
 
             pt_path = path_save + pre_rnn_full_name + '.pt'
             if not os.path.isfile(pt_path):
-                    print('The .pt file is missing (information about weights and biases) at the location {}'.format(
-                        pt_path))
-                    print('I delete the corresponding .txt file and try to search again')
-                    print('')
-                    os.remove(txt_path)
+                print('The .pt file is missing (information about weights and biases) at the location {}'.format(
+                    pt_path))
+                print('I delete the corresponding .txt file and try to search again')
+                print('')
+                os.remove(txt_path)
             else:
                 files_found = True
-
 
         print('Full name of the loaded RNN is {}'.format(pre_rnn_full_name))
         print('Inputs to the loaded RNN: {}'.format(', '.join(map(str, inputs_list))))
@@ -168,6 +171,7 @@ def create_rnn_instance(rnn_name=None, inputs_list=None, outputs_list=None, load
 
         # Construct the requested RNN
         net = Sequence(rnn_name=rnn_name, inputs_list=inputs_list, outputs_list=outputs_list)
+        net.rnn_full_name = pre_rnn_full_name
 
         # Load the parameters
         load_pretrained_rnn(net, pt_path, device)
@@ -209,7 +213,7 @@ def create_log_file(rnn_name, inputs_list, outputs_list, path_save):
     return rnn_full_name
 
 
-#FIXME: To tailor this sequence class according to the commands and state_variables of cartpole
+# FIXME: To tailor this sequence class according to the commands and state_variables of cartpole
 class Sequence(nn.Module):
     """"
     Our RNN class.
@@ -223,6 +227,9 @@ class Sequence(nn.Module):
 
         # Check if GPU is available. If yes device='cuda:0' if not device='cpu'
         self.device = get_device()
+
+        self.rnn_name = rnn_name
+        self.rnn_full_name = None
 
         # Get the information about network architecture from the network name
         # Split the names into "LSTM/GRU", "128H1", "64H2" etc.
@@ -285,7 +292,6 @@ class Sequence(nn.Module):
         print('The inputs are (in this order): {}'.format(', '.join(map(str, inputs_list))))
         print('The outputs are (in this order): {}'.format(', '.join(map(str, outputs_list))))
 
-
     def reset(self):
         """
         Reset the network (not the weights!)
@@ -302,7 +308,6 @@ class Sequence(nn.Module):
         Predicts future CartPole states IN "OPEN LOOP"
         (at every time step prediction for the next time step is done based on the true CartPole state)
         """
-
 
         # Initialize hidden layers - this change at every call as the batch size may vary
         for i in range(len(self.h_size)):
@@ -337,13 +342,10 @@ class Sequence(nn.Module):
         return torch.stack(self.outputs, 1)
 
 
-
-
-
 import pandas as pd
 
-def load_data(args, filepath=None, inputs_list=None, outputs_list=None):
 
+def load_data(args, filepath=None, inputs_list=None, outputs_list=None):
     if filepath is None:
         filepath = args.val_file_name
 
@@ -373,7 +375,6 @@ def load_data(args, filepath=None, inputs_list=None, outputs_list=None):
                 df['dt'] = df['dt'].shift(-1)
                 df = df[:-1]
 
-
         if 'time' in df.columns:
             t = df['time']
         elif 'dt' in df.columns:
@@ -390,7 +391,7 @@ def load_data(args, filepath=None, inputs_list=None, outputs_list=None):
         inputs = copy.deepcopy(df)
         outputs = copy.deepcopy(df)
 
-        inputs.drop(inputs.tail(1).index, inplace=True) # Drop last row
+        inputs.drop(inputs.tail(1).index, inplace=True)  # Drop last row
         outputs.drop(outputs.head(1).index, inplace=True)
         inputs.reset_index(inplace=True)  # Reset index
         outputs.reset_index(inplace=True)
@@ -414,20 +415,91 @@ def load_data(args, filepath=None, inputs_list=None, outputs_list=None):
     else:
         return features, targets, time_axis
 
+
 # This way of doing normalization is fine for long data sets and (relatively) short sequence lengths
 # The points from the edges of the datasets count too little
-def calculate_normalization(df):
-    if 'time' in df.columns:
-        df.drop('time',
-                axis='columns', inplace=True)
+def calculate_normalization_info(df, path_save, rnn_full_name):
+    if type(df) is list:
+        df_total = pd.concat(df)
+    else:
+        df_total = df
 
-    df_mean = df.std(axis=0)
-    df_std = df.mean(axis=0)
+    if 'time' in df_total.columns:
+        df_total.drop('time',
+                      axis='columns', inplace=True)
 
-    df_norm_info = pd.concat([df_mean, df_std])
+    df_mean = df_total.mean(axis=0)
+    df_std = df_total.std(axis=0)
+    df_max = df_total.max(axis=0)
+    df_min = df_total.min(axis=0)
+    frame = {'mean': df_mean, 'std': df_std, 'max': df_max, 'min': df_min}
+    df_norm_info = pd.DataFrame(frame).transpose()
+
+    df_norm_info.to_csv(path_save + rnn_full_name + '-norm' + '.csv')
+
+    # Plot historgrams to make the firs check about gaussian assumption
+    # for feature in df_total.columns:
+    #     plt.hist(df_total[feature].to_numpy(), 50, density=True, facecolor='g', alpha=0.75)
+    #     plt.title(feature)
+    #     plt.show()
+
+    return df_norm_info
 
 
+def load_normalization_info(path_save, rnn_full_name):
+    return pd.read_csv(path_save + rnn_full_name + '-norm' + '.csv', index_col=0)
 
+
+def normalize_df(dfs, normalization_info, normalization_type='minmax_sym'):
+    if normalization_type == 'gaussian':
+        def normalize_feature(col):
+            col_mean = normalization_info.loc['mean', col.name]
+            col_std = normalization_info.loc['std', col.name]
+            return (col - col_mean) / col_std
+    elif normalization_type == 'minmax_pos':
+        def normalize_feature(col):
+            col_min = normalization_info.loc['min', col.name]
+            col_max = normalization_info.loc['max', col.name]
+            return (col - col_min) / (col_max - col_min)
+    elif normalization_type == 'minmax_sym':
+        def normalize_feature(col):
+            col_min = normalization_info.loc['min', col.name]
+            col_max = normalization_info.loc['max', col.name]
+            return -1.0 + 2.0 * (col - col_min) / (col_max - col_min)
+
+    if type(dfs) is list:
+        for i in range(len(dfs)):
+            dfs[i] = dfs[i].apply(normalize_feature, axis=0)
+    else:
+        dfs = dfs.apply(normalize_feature, axis=0)
+
+    return dfs
+
+
+def denormalize_df(dfs, normalization_info, normalization_type='minmax_sym'):
+    if normalization_type == 'gaussian':
+        def denormalize_feature(col):
+            col_mean = normalization_info.loc['mean', col.name]
+            col_std = normalization_info.loc['std', col.name]
+            return col * col_std + col_mean
+    elif normalization_type == 'minmax_pos':
+        def denormalize_feature(col):
+            col_min = normalization_info.loc['min', col.name]
+            col_max = normalization_info.loc['max', col.name]
+            return col * (col_max - col_min) + col_min
+    elif normalization_type == 'minmax_sym':
+        def denormalize_feature(col):
+            col_min = normalization_info.loc['min', col.name]
+            col_max = normalization_info.loc['max', col.name]
+            return ((col + 1.0) / 2.0) * (col_max - col_min) + col_min
+
+    if type(dfs) is list:
+        for i in range(len(dfs)):
+            dfs[i] = dfs[i].apply(denormalize_feature, axis=0)
+    else:
+        dfs = dfs.apply(denormalize_feature, axis=0)
+
+    return dfs
 
 
 class Dataset(data.Dataset):
@@ -445,7 +517,6 @@ class Dataset(data.Dataset):
         self.time_axes = time_axes
 
         self.reset_seq_len(seq_len=seq_len)
-
 
     def reset_seq_len(self, seq_len=None):
         """
@@ -466,7 +537,7 @@ class Dataset(data.Dataset):
                 if not self.df_lengths_cs:
                     self.df_lengths_cs.append(self.df_lengths[0])
                 else:
-                    self.df_lengths_cs.append(self.df_lengths_cs[-1]+self.df_lengths[-1])
+                    self.df_lengths_cs.append(self.df_lengths_cs[-1] + self.df_lengths[-1])
             self.number_of_samples = self.df_lengths_cs[-1]
 
         else:
@@ -482,18 +553,18 @@ class Dataset(data.Dataset):
             if idx_data_set == 0:
                 pass
             else:
-                idx -= self.df_lengths_cs[idx_data_set-1]
+                idx -= self.df_lengths_cs[idx_data_set - 1]
             if get_time_axis:
                 try:
                     time_axis = self.time_axes[idx_data_set].to_numpy()[idx:idx + self.seq_len + 1]
                 except IndexError:
                     time_axis = []
-                return self.data[idx_data_set].to_numpy()[idx:idx + self.seq_len, :],\
+                return self.data[idx_data_set].to_numpy()[idx:idx + self.seq_len, :], \
                        self.labels[idx_data_set].to_numpy()[idx:idx + self.seq_len], \
                        time_axis
 
             else:
-                return self.data[idx_data_set].to_numpy()[idx:idx + self.seq_len, :],\
+                return self.data[idx_data_set].to_numpy()[idx:idx + self.seq_len, :], \
                        self.labels[idx_data_set].to_numpy()[idx:idx + self.seq_len]
         else:
             if get_time_axis:
@@ -501,11 +572,11 @@ class Dataset(data.Dataset):
                     time_axis = self.time_axes.to_numpy()[idx:idx + self.seq_len + 1]
                 except IndexError:
                     time_axis = []
-                return self.data.to_numpy()[idx:idx + self.seq_len, :],\
+                return self.data.to_numpy()[idx:idx + self.seq_len, :], \
                        self.labels.to_numpy()[idx:idx + self.seq_len], \
                        time_axis
             else:
-                return self.data.to_numpy()[idx:idx + self.seq_len, :],\
+                return self.data.to_numpy()[idx:idx + self.seq_len, :], \
                        self.labels.to_numpy()[idx:idx + self.seq_len]
 
     def get_experiment(self, idx=None):
@@ -516,10 +587,10 @@ class Dataset(data.Dataset):
         return self.__getitem__(idx, get_time_axis=True)
 
 
-
 def plot_results(net,
                  args,
                  dataset=None,
+                 normalization_info = None,
                  time_axes=None,
                  filepath=None,
                  inputs_list=None,
@@ -531,12 +602,14 @@ def plot_results(net,
                  comment='',
                  rnn_full_name=None,
                  save=False,
-                 close_loop_idx=150):
+                 close_loop_idx=512):
     """
     This function accepts RNN instance, arguments and CartPole instance.
     It runs one random experiment with CartPole,
     inputs the data into RNN and check how well RNN predicts CartPole state one time step ahead of time
     """
+
+    rnn_full_name = net.rnn_full_name
 
     if filepath is None:
         filepath = args.val_file_name
@@ -568,23 +641,27 @@ def plot_results(net,
     net.eval()
     device = get_device()
 
+    if normalization_info is None:
+        normalization_info = load_normalization_info(args.path_save, rnn_full_name)
+
     if dataset is None or time_axes is None:
-        dev_features, dev_targets, time_axes = load_data(args, filepath, inputs_list=inputs_list, outputs_list=outputs_list)
-        dev_set = Dataset(dev_features, dev_targets, args, time_axes=time_axes, seq_len=seq_len)
+        dev_features, dev_targets, time_axes = load_data(args, filepath, inputs_list=inputs_list,
+                                                         outputs_list=outputs_list)
+        dev_features_norm = normalize_df(dev_features, normalization_info)
+        dev_targets_norm = normalize_df(dev_targets, normalization_info)
+        dev_set = Dataset(dev_features_norm, dev_targets_norm, args, time_axes=time_axes, seq_len=seq_len)
+        del dev_features, dev_targets
     else:
         dev_set = copy.deepcopy(dataset)
         dev_set.reset_seq_len(seq_len=seq_len)
 
     # Format the experiment data
-    features, targets, time_axis = dev_set.get_experiment(1) # Put number in brackets to get the same idx at every run
+    features, targets, time_axis = dev_set.get_experiment(1)  # Put number in brackets to get the same idx at every run
 
     features_pd = pd.DataFrame(data=features, columns=inputs_list)
     targets_pd = pd.DataFrame(data=targets, columns=outputs_list)
 
-    #FIXME: Add denormalization by uncommenting the next line
-    # targets_pd = pd.DataFrame(data=targets, columns=outputs_list).apply(denormalize_output, axis=1)
     rnn_outputs = pd.DataFrame(columns=outputs_list)
-    rnn_output = None
 
     warm_up_idx = 0
     rnn_input_0 = copy.deepcopy(features_pd.iloc[0])
@@ -598,27 +675,26 @@ def plot_results(net,
     net.outputs = []
     net.sample_counter = 0
 
-    close_the_loop = False
     idx_cl = 0
+    close_the_loop = False
 
     for index, row in features_pd.iterrows():
-        rnn_input = copy.deepcopy(row)
+        rnn_input = pd.DataFrame(copy.deepcopy(row)).transpose().reset_index(drop=True)
         if idx_cl == close_loop_idx:
             close_the_loop = True
-        if closed_loop_enabled and close_the_loop and (rnn_output is not None):
+        if closed_loop_enabled and close_the_loop and (normalized_rnn_output is not None):
             rnn_input[closed_loop_list] = normalized_rnn_output[closed_loop_list]
         rnn_input = np.squeeze(rnn_input.to_numpy())
         rnn_input = torch.from_numpy(rnn_input).float().unsqueeze(0).unsqueeze(0).to(device)
         normalized_rnn_output = net(rnn_input=rnn_input)
         normalized_rnn_output = list(np.squeeze(normalized_rnn_output.detach().cpu().numpy()))
-        normalized_rnn_output = pd.Series(data=normalized_rnn_output, index=outputs_list)
-        rnn_output = copy.deepcopy(normalized_rnn_output)
-        #FIXME : Enable denormalization
-        # denormalize_output(rnn_output)
-        rnn_outputs = rnn_outputs.append(rnn_output, ignore_index=True)
+        normalized_rnn_output = copy.deepcopy(pd.DataFrame(data=[normalized_rnn_output], columns=outputs_list))
+        rnn_outputs = rnn_outputs.append(copy.deepcopy(normalized_rnn_output), ignore_index=True)
         idx_cl += 1
 
-    fig, axs = plot_results_specific(targets_pd, rnn_outputs, time_axis, comment, closed_loop_enabled, close_loop_idx)
+    targets_pd_denorm = denormalize_df(targets_pd, normalization_info)
+    rnn_outputs_denorm = denormalize_df(rnn_outputs, normalization_info)
+    fig, axs = plot_results_specific(targets_pd_denorm, rnn_outputs_denorm, time_axis, comment, closed_loop_enabled, close_loop_idx)
 
     plt.show()
 
@@ -631,8 +707,6 @@ def plot_results(net,
         dateTimeObj = datetime.now()
         timestampStr = dateTimeObj.strftime("%d%b%Y_%H%M%S")
         if rnn_full_name is not None:
-            fig.savefig('./save_plots/'+rnn_full_name+timestampStr+'.png')
+            fig.savefig('./save_plots/' + rnn_full_name + timestampStr + '.png')
         else:
-            fig.savefig('./save_plots/'+timestampStr + '.png')
-
-
+            fig.savefig('./save_plots/' + timestampStr + '.png')

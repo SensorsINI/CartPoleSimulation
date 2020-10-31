@@ -12,15 +12,15 @@ import torch.utils.data.dataloader
 
 import collections
 
-from modeling.rnn.utilis_rnn import get_device, Sequence, plot_results
-from modeling.rnn import ParseArgs
-from src.CartClass import Cart
+from modeling.rnn.utilis_rnn import *
+# Parameters of RNN
+from modeling.rnn.ParseArgs import args as my_args
 
 # Check if GPU is available. If yes device='cuda:0' if not device='cpu'
 device = get_device()
 
 # Get arguments as default or from terminal line
-args = ParseArgs.args()
+args = my_args()
 # Print the arguments
 print(args.__dict__)
 
@@ -32,31 +32,22 @@ def test_network():
     The actual work of evaluation prediction results is done in plot_results function
     """
 
-    # Create CartPole instance (keeps the dynamical equations describing CartPole and simulation methods)
-    MyCart = Cart()
-    # Create instance of RNN
-    net = Sequence(args)
+    # Network architecture:
+    rnn_name = args.rnn_name
+    inputs_list = args.inputs_list
+    outputs_list = args.outputs_list
 
-    # If a pretrained model exists load the parameters from disc
-    pre_trained_model = torch.load(args.savepathPre, map_location=torch.device('cpu'))
-    print("Loading Model: ", args.savepathPre)
+    load_rnn = args.load_rnn  # If specified this is the name of pretrained RNN which should be loaded
+    path_save = args.path_save
 
-    # Load the parameters into created RNN instance
-    pre_trained_model = list(pre_trained_model.items())
-    new_state_dict = collections.OrderedDict()
-    count = 0
-    num_param_key = len(pre_trained_model)
-    for key, value in net.state_dict().items():
-        if count >= num_param_key:
-            break
-        layer_name, weights = pre_trained_model[count]
-        new_state_dict[key] = weights
-        print("Pre-trained Layer: %s - Loaded into new layer: %s" % (layer_name, key))
-        count += 1
-    net.load_state_dict(new_state_dict)
-
-    # Generate a random experiment with CartPole and compare the the true CartPole state with prediction of RNN
-    plot_results(net, args, MyCart)
+    # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
+    net, rnn_name, inputs_list, outputs_list\
+        = create_rnn_instance(rnn_name, inputs_list, outputs_list, load_rnn, path_save, device)
+    title = 'Testing RNN: {}'.format(rnn_name)
+    plot_results(net=net, args=args, dataset=None, filepath='./data/data_rnn-3.csv', seq_len=1024,
+                 comment=title,
+                 inputs_list=inputs_list, outputs_list=outputs_list, save=True,
+                 closed_loop_enabled=True)
 
 
 if __name__ == '__main__':
