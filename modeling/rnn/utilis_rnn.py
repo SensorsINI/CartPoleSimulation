@@ -345,7 +345,7 @@ class Sequence(nn.Module):
 import pandas as pd
 
 
-def load_data(args, filepath=None, inputs_list=None, outputs_list=None):
+def load_data(args, filepath=None, inputs_list=None, outputs_list=None, norm_inf=False, rnn_full_name=None):
     if filepath is None:
         filepath = args.val_file_name
 
@@ -360,6 +360,7 @@ def load_data(args, filepath=None, inputs_list=None, outputs_list=None):
     else:
         filepaths = [filepath]
 
+    all_dfs = []  # saved separately to get normalization
     all_features = []
     all_targets = []
     all_time_axes = []
@@ -375,6 +376,8 @@ def load_data(args, filepath=None, inputs_list=None, outputs_list=None):
                 df['dt'] = df['dt'].shift(-1)
                 df = df[:-1]
 
+        all_dfs.append(df)
+
         if 'time' in df.columns:
             t = df['time']
         elif 'dt' in df.columns:
@@ -386,29 +389,30 @@ def load_data(args, filepath=None, inputs_list=None, outputs_list=None):
             t.rename('time', inplace=True)
 
         time_axis = t
+        all_time_axes.append(time_axis)
+
+    if norm_inf:
+        if rnn_full_name is None:
+            raise Exception('rnn_full_name (information where to stort notmalization info) not provided!')
+        calculate_normalization_info(all_dfs, args.path_save, rnn_full_name)
+
+    for df in all_dfs:
 
         # Get Raw Data
-        inputs = copy.deepcopy(df)
-        outputs = copy.deepcopy(df)
+        features = copy.deepcopy(df)
+        targets = copy.deepcopy(df)
 
-        inputs.drop(inputs.tail(1).index, inplace=True)  # Drop last row
-        outputs.drop(outputs.head(1).index, inplace=True)
-        inputs.reset_index(inplace=True)  # Reset index
-        outputs.reset_index(inplace=True)
+        features.drop(features.tail(1).index, inplace=True)  # Drop last row
+        targets.drop(targets.head(1).index, inplace=True)
+        features.reset_index(inplace=True)  # Reset index
+        targets.reset_index(inplace=True)
 
-        inputs = inputs[inputs_list]
-        outputs = outputs[outputs_list]
-
-        # # We try to operate on pandas now, to keep the columns names
-        # features = np.array(inputs)
-        # targets = np.array(outputs)
-
-        features = inputs
-        targets = outputs
+        features = features[inputs_list]
+        targets = targets[outputs_list]
 
         all_features.append(features)
         all_targets.append(targets)
-        all_time_axes.append(time_axis)
+
 
     if type(filepath) == list:
         return all_features, all_targets, all_time_axes
@@ -687,7 +691,7 @@ def plot_results(net,
         rnn_input = np.squeeze(rnn_input.to_numpy())
         rnn_input = torch.from_numpy(rnn_input).float().unsqueeze(0).unsqueeze(0).to(device)
         normalized_rnn_output = net(rnn_input=rnn_input)
-        normalized_rnn_output = list(np.squeeze(normalized_rnn_output.detach().cpu().numpy()))
+        normalized_rnn_output = np.squeeze(normalized_rnn_output.detach().cpu().numpy()).tolist()
         normalized_rnn_output = copy.deepcopy(pd.DataFrame(data=[normalized_rnn_output], columns=outputs_list))
         rnn_outputs = rnn_outputs.append(copy.deepcopy(normalized_rnn_output), ignore_index=True)
         idx_cl += 1

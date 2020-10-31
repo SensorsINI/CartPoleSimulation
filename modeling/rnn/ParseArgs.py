@@ -10,7 +10,8 @@ Created on Fri Jun 19 08:29:29 2020
 import argparse
 
 path_save = './save/'
-TRAIN_file_name = ['./data/data_rnn.csv',
+TRAIN_file_name = [#'./data/data_rnn_big.csv',
+                   './data/data_rnn.csv',
                    './data/data_rnn-1.csv',
                    './data/data_rnn-2.csv'
                    ]
@@ -24,6 +25,10 @@ RNN_name = 'GRU-64H1-64H2'
 inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'u']
 outputs_list = ['s.angle', 's.position']
 closed_loop_list = ['s.position', 's.angle']
+
+# inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'target_position']
+# outputs_list = ['Q']
+# closed_loop_list = []
 
 def args():
     parser = argparse.ArgumentParser(description='Train a GRU network.')

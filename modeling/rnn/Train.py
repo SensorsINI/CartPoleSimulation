@@ -87,8 +87,10 @@ def train_network():
 
     train_features,\
     train_targets,\
-    _ = load_data(args, args.train_file_name, inputs_list, outputs_list)
-    normalization_info =  calculate_normalization_info(train_features, path_save, rnn_full_name)
+    _ = load_data(args, args.train_file_name, inputs_list, outputs_list, norm_inf=True, rnn_full_name=rnn_full_name)
+
+
+    normalization_info =  load_normalization_info(path_save, rnn_full_name)
     dev_features,\
     dev_targets,\
     time_axes_dev = load_data(args, args.val_file_name, inputs_list, outputs_list)
