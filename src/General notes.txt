@@ -1,0 +1,1 @@
+Calculating sin and cos at every iteration adds up to 20 us

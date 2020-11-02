@@ -95,6 +95,7 @@ class Cart:
         self.slider_value = 0.0
         self.dt = dt
         self.time = 0.0
+        self.rounding_decimals = 5
         self.dict_history = {}
         self.reset_dict_history()
         self.save_history = save_history
@@ -310,19 +311,22 @@ class Cart:
         # It is saved first internally to a dictionary in the Cart instance
         if self.save_history:
             # Saving simulation data
-            self.dict_history['time'].append(around(self.time, 5))
-            self.dict_history['dt'].append(around(self.dt * 1000.0, 3))
-            self.dict_history['s.position'].append(around(self.s.position, 3))
-            self.dict_history['s.positionD'].append(around(self.s.positionD, 4))
-            self.dict_history['s.positionDD'].append(around(self.s.positionDD, 4))
-            self.dict_history['s.angle'].append(around(self.s.angle, 4))
-            self.dict_history['s.angleD'].append(around(self.s.angleD, 4))
-            self.dict_history['s.angleDD'].append(around(self.s.angleDD, 4))
-            self.dict_history['u'].append(around(self.u, 4))
-            self.dict_history['Q'].append(around(self.Q, 4))
+            self.dict_history['time'].append(around(self.time, self.rounding_decimals))
+            self.dict_history['dt'].append(around(self.dt, self.rounding_decimals))
+            self.dict_history['s.position'].append(around(self.s.position, self.rounding_decimals))
+            self.dict_history['s.positionD'].append(around(self.s.positionD, self.rounding_decimals))
+            self.dict_history['s.positionDD'].append(around(self.s.positionDD, self.rounding_decimals))
+            self.dict_history['s.angle'].append(around(self.s.angle, self.rounding_decimals))
+            self.dict_history['s.angleD'].append(around(self.s.angleD, self.rounding_decimals))
+            self.dict_history['s.angleDD'].append(around(self.s.angleDD, self.rounding_decimals))
+            self.dict_history['u'].append(around(self.u, self.rounding_decimals))
+            self.dict_history['Q'].append(around(self.Q, self.rounding_decimals))
             # The target_position is not always meaningful
             # If it is not meaningful all values in this column are set to 0
-            self.dict_history['target_position'].append(around(self.target_position, 4))
+            self.dict_history['target_position'].append(around(self.target_position, self.rounding_decimals))
+
+            self.dict_history['s.angle.sin'].append(around(np.sin(self.s.angle), self.rounding_decimals))
+            self.dict_history['s.angle.cos'].append(around(np.cos(self.s.angle), self.rounding_decimals))
 
         # Return the state of the CartPole
         return self.s.position, self.s.positionD, self.s.positionDD, \
@@ -431,22 +435,21 @@ class Cart:
 
     # This method resets the dictionary keeping the history of simulation
     def reset_dict_history(self):
-        self.dict_history = {'time': [self.time],
-                             'dt': [self.dt],
-                             's.position': [self.s.position],
-                             's.positionD': [self.s.positionD],
-                             's.positionDD': [self.s.positionDD],
-                             's.angle': [self.s.angle],
-                             's.angleD': [self.s.angleD],
-                             's.angleDD': [self.s.angleDD],
-                             'u': [self.u],
-                             'Q': [self.Q],
-                             'target_position': [self.target_position]}
+        self.dict_history = {'time': [around(self.time, self.rounding_decimals)],
+                             'dt': [around(self.dt, self.rounding_decimals)],
+                             's.position': [around(self.s.position, self.rounding_decimals)],
+                             's.positionD': [around(self.s.positionD, self.rounding_decimals)],
+                             's.positionDD': [around(self.s.positionDD, self.rounding_decimals)],
+                             's.angle': [around(self.s.angle, self.rounding_decimals)],
+                             's.angleD': [around(self.s.angleD, self.rounding_decimals)],
+                             's.angleDD': [around(self.s.angleDD, self.rounding_decimals)],
+                             'u': [around(self.u, self.rounding_decimals)],
+                             'Q': [around(self.Q, self.rounding_decimals)],
+                             'target_position': [around(self.target_position, self.rounding_decimals)],
+                             's.angle.sin': [around(np.sin(self.s.angle), self.rounding_decimals)],
+                             's.angle.cos': [around(np.cos(self.s.angle), self.rounding_decimals)]}
 
-    def augment_dict_history(self):
-        # Augment dict
-        self.dict_history['s.angle.sin'] = [around(np.sin(x), 4) for x in self.dict_history['s.angle']]
-        self.dict_history['s.angle.cos'] = [around(np.cos(x), 4) for x in self.dict_history['s.angle']]
+
 
     # This method saves the dictionary keeping the history of simulation to a .csv file
     def save_history_csv(self, csv_name=None):
@@ -494,14 +497,6 @@ class Cart:
             writer.writerow(['# Data:'])
             writer.writerow(self.dict_history.keys())
             writer.writerows(zip(*self.dict_history.values()))
-
-    def get_history(self):
-
-        # Augment dict
-        self.dict_history['s.angle.sin'] = [around(np.sin(x), 4) for x in self.dict_history['s.angle']]
-        self.dict_history['s.angle.cos'] = [around(np.cos(x), 4) for x in self.dict_history['s.angle']]
-
-        return pd.DataFrame(self.dict_history)
 
 
     def load_history_csv(self, csv_name=None, visualisation_only=True):

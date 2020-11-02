@@ -207,8 +207,6 @@ def Generate_Experiment(MyCart, exp_len=random_length_globals, dt=dt_main_simula
 
         MyCart.update_state()
 
-    MyCart.augment_dict_history()
-
     data = pd.DataFrame(MyCart.dict_history)
 
     if csv is not None:
