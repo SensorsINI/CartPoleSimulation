@@ -87,6 +87,8 @@ class controller_do_mpc:
             't_step': dt_mpc_simulation_globals,
             'n_robust': 0,
             'store_full_solution': False,
+            'store_lagr_multiplier': False,
+            'store_solver_stats': []
         }
         self.mpc.set_param(**setup_mpc)
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'mumps'})
@@ -126,9 +128,7 @@ class controller_do_mpc:
         return self.tvp_template
 
 
-    def step(self, state, target_position):
-
-        s = deepcopy(state)
+    def step(self, s, target_position):
 
         self.x0['s.position'] = s.position
         self.x0['s.positionD'] = s.positionD

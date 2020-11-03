@@ -1,1 +1,9 @@
 Calculating sin and cos at every iteration adds up to 20 us
+
+For 5e3 points:
+Online:
+1159.6523 MiB   0.0000 MiB       return data
+time to generate data: 117,906.614929 ms
+Offline
+1159.8867 MiB   0.0000 MiB       return data
+time to generate data: 111,538.62813299999 ms

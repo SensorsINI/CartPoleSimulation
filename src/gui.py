@@ -111,10 +111,11 @@ class MainWindow(QMainWindow):
         # Radiobuttons to toggle the mode of operation
         lr = QVBoxLayout()
         self.rb_manual = QRadioButton('Manual Stabilization')
-        self.rb_LQR = QRadioButton('LQR-control with adjustable target position')
-        self.rb_do_mpc = QRadioButton('do-mpc-control with adjustable target position')
-        self.rb_do_mpc_discrete = QRadioButton('do-mpc-discrete-control with adjustable target position')
-        self.rbs = [self.rb_manual, self.rb_LQR, self.rb_do_mpc, self.rb_do_mpc_discrete]
+        self.rb_LQR = QRadioButton('LQR-control')
+        self.rb_do_mpc = QRadioButton('do-mpc-control')
+        self.rb_do_mpc_discrete = QRadioButton('do-mpc-discrete-control')
+        self.rb_rnn_as_mpc = QRadioButton('rnn-as-mpc-control')
+        self.rbs = [self.rb_manual, self.rb_LQR, self.rb_do_mpc, self.rb_do_mpc_discrete,  self.rb_rnn_as_mpc]
 
         lr.addStretch(1)
         for rb in self.rbs:
@@ -353,6 +354,7 @@ class MainWindow(QMainWindow):
                 # print('Terminating!')
                 self.run_thread_calculations = 0
 
+            # FIXME: when Speedup empty in GUI I expected inf speedup but got error Loop timer was not initialized properly
             self.looper.sleep_leftover_time()
 
         # print('Welcome')
@@ -545,6 +547,10 @@ class MainWindow(QMainWindow):
             self.MyCart.set_mode(new_mode=1)
         elif self.rb_do_mpc.isChecked():
             self.MyCart.set_mode(new_mode=2)
+        elif self.rb_do_mpc_discrete.isChecked():
+            self.MyCart.set_mode(new_mode=3)
+        elif self.rb_rnn_as_mpc.isChecked():
+            self.MyCart.set_mode(new_mode=4)
 
         # Reset the state of GUI and of the Cart instance after the mode has changed
         self.reset_variables()

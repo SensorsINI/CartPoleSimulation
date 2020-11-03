@@ -32,6 +32,7 @@ import pandas as pd
 from controllers.controller_lqr import controller_lqr
 from controllers.controller_do_mpc import controller_do_mpc
 from controllers.controller_do_mpc_discrete import controller_do_mpc_discrete
+from controllers.controller_rnn_as_mpc import controller_rnn_as_mpc
 
 
 # Interpolate function to create smooth random track
@@ -42,6 +43,9 @@ from src.globals import *
 from types import SimpleNamespace
 
 from src.utilis import normalize_angle_rad
+
+
+from memory_profiler import profile
 
 import timeit
 
@@ -99,6 +103,7 @@ class Cart:
         self.dict_history = {}
         self.reset_dict_history()
         self.save_history = save_history
+        self.csv_filepath = None
         self.random_trace_generated = False
         self.use_pregenerated_target_position = False
 
@@ -147,6 +152,7 @@ class Cart:
         self.controller_lqr = controller_lqr(self.Jacobian_UP, self.B, self.Q_matrix, self.R_matrix)
         self.controller_do_mpc = controller_do_mpc()
         self.controller_do_mpc_discrete = controller_do_mpc_discrete()
+        self.controller_rnn_as_mpc = controller_rnn_as_mpc()
         self.controller = None
         self.controller_name = ''
 
@@ -262,15 +268,17 @@ class Cart:
 
 
     # This method changes the internal state of the CartPole
-    # from a state at time t to a state at t+dt   
-    def update_state(self, slider=None, dt=None, save_history=True):
+    # from a state at time t to a state at t+dt
+    # @profile(precision=4)
+    def update_state(self, slider=None, dt=None, save_history=None):
 
         # Optionally update slider, mode and dt values
         if slider:
             self.slider_value = slider
         if dt:
             self.dt = dt
-        self.save_history = save_history
+        if save_history:
+            self.save_history = save_history
 
         if self.use_pregenerated_target_position == True:
             self.target_position = self.random_track_f(self.time)
@@ -327,6 +335,8 @@ class Cart:
 
             self.dict_history['s.angle.sin'].append(around(np.sin(self.s.angle), self.rounding_decimals))
             self.dict_history['s.angle.cos'].append(around(np.cos(self.s.angle), self.rounding_decimals))
+        else:
+            self.reset_dict_history()
 
         # Return the state of the CartPole
         return self.s.position, self.s.positionD, self.s.positionDD, \
@@ -452,51 +462,60 @@ class Cart:
 
 
     # This method saves the dictionary keeping the history of simulation to a .csv file
-    def save_history_csv(self, csv_name=None):
+    def save_history_csv(self, csv_name=None, init=True, iter=True):
 
-        # Make folder to save data (if not yet existing)
-        try:
-            os.makedirs('./data')
-        except FileExistsError:
-            pass
+        if init:
+            # Make folder to save data (if not yet existing)
+            try:
+                os.makedirs('./data')
+            except FileExistsError:
+                pass
 
-        # Set path where to save the data
-        if csv_name is None or csv_name == '':
-            logpath = './data/' + 'CP_' + self.controller_name + str(datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')) + '.csv'
-        else:
-            logpath = './data/' + csv_name
-            if csv_name[-4:] != '.csv':
-                logpath += '.csv'
+            # Set path where to save the data
+            if csv_name is None or csv_name == '':
+                self.csv_filepath = './data/' + 'CP_' + self.controller_name + str(datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')) + '.csv'
+            else:
+                self.csv_filepath = './data/' + csv_name
+                if csv_name[-4:] != '.csv':
+                    self.csv_filepath += '.csv'
 
-            # If such file exists, add index to the end (do not overwrite)
-            net_index = 1
-            logpath_new = logpath
-            while True:
-                if os.path.isfile(logpath_new):
-                    logpath_new = logpath[:-4]
+                # If such file exists, add index to the end (do not overwrite)
+                net_index = 1
+                logpath_new = self.csv_filepath
+                while True:
+                    if os.path.isfile(logpath_new):
+                        logpath_new = self.csv_filepath[:-4]
+                    else:
+                        self.csv_filepath = logpath_new
+                        break
+                    logpath_new = logpath_new + '-' + str(net_index) + '.csv'
+                    net_index += 1
+
+            # Write the .csv file
+            with open(self.csv_filepath, "a") as outfile:
+                writer = csv.writer(outfile)
+
+                writer.writerow(['# ' + 'This is CartPole experiment from {} at time {}'
+                                .format(datetime.now().strftime('%d.%m.%Y'), datetime.now().strftime('%H:%M:%S'))])
+                if iter:
+                    writer.writerow(['# Number of data points: {}'.format(len(self.dict_history['time']))])
                 else:
-                    logpath = logpath_new
-                    break
-                logpath_new = logpath_new + '-' + str(net_index) + '.csv'
-                net_index += 1
+                    writer.writerow(['# Number of data points: data saved online'])
+                writer.writerow(['# Controller: {}'.format(self.controller_name)])
 
-        # Write the .csv file
-        with open(logpath, "w") as outfile:
-            writer = csv.writer(outfile)
+                writer.writerow(['#'])
+                writer.writerow(['# Parameters:'])
+                for k in self.p.__dict__:
+                    writer.writerow(['# ' + k + ': ' + str(getattr(self.p, k))])
+                writer.writerow(['#'])
+                writer.writerow(['# Data:'])
+                writer.writerow(self.dict_history.keys())
 
-            writer.writerow(['# ' + 'This is CartPole experiment from {} at time {}'
-                            .format(datetime.now().strftime('%d.%m.%Y'), datetime.now().strftime('%H:%M:%S'))])
-            writer.writerow(['# Number of data points: {}'.format(len(self.dict_history['time']))])
-            writer.writerow(['# Controller: {}'.format(self.controller_name)])
-
-            writer.writerow(['#'])
-            writer.writerow(['# Parameters:'])
-            for k in self.p.__dict__:
-                writer.writerow(['# ' + k + ': ' + str(getattr(self.p, k))])
-            writer.writerow(['#'])
-            writer.writerow(['# Data:'])
-            writer.writerow(self.dict_history.keys())
-            writer.writerows(zip(*self.dict_history.values()))
+        if iter:
+            # Write the .csv file
+            with open(self.csv_filepath, "a") as outfile:
+                writer = csv.writer(outfile)
+                writer.writerows(zip(*self.dict_history.values()))
 
 
     def load_history_csv(self, csv_name=None, visualisation_only=True):
@@ -558,4 +577,9 @@ class Cart:
             self.mode = 3
             self.controller = self.controller_do_mpc_discrete
             self.controller_name = 'do-mpc-discrete'
+            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
+        elif new_mode == 4:
+            self.mode = 4
+            self.controller = self.controller_rnn_as_mpc
+            self.controller_name = 'rnn-as-mpc'
             self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider

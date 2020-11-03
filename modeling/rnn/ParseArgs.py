@@ -10,7 +10,9 @@ Created on Fri Jun 19 08:29:29 2020
 import argparse
 
 path_save = './save/'
-TRAIN_file_name = [#'./data/data_rnn_big.csv',
+TRAIN_file_name = ['./data/data_rnn_big-2.csv',
+                   './data/data_rnn_big-1.csv',
+                   './data/data_rnn_big.csv',
                    './data/data_rnn.csv',
                    './data/data_rnn-1.csv',
                    './data/data_rnn-2.csv'
@@ -21,10 +23,13 @@ VAL_file_name = './data/data_rnn-3.csv'
 FIXME: To tailor input list, output list and closed loop list according to cartpole
 angleD_next, positionD_next = cartpole_ode(p, s, Q2u(Q,p))
 '''
-RNN_name = 'GRU-64H1-64H2'
-inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'u']
+RNN_name = 'GRU-128H1-128H2'
+# inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'u']
+inputs_list = ['s.position', 's.angle', 'u']
+# outputs_list = ['s.angle', 's.position', 's.positionD', 's.angleD']
 outputs_list = ['s.angle', 's.position']
-closed_loop_list = ['s.position', 's.angle']
+# closed_loop_list = ['s.position', 's.angle']
+closed_loop_list = outputs_list
 
 # inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'target_position']
 # outputs_list = ['Q']
@@ -61,8 +66,8 @@ def args():
     parser.add_argument("--cheat_dt", action='store_true',
                         help="Give RNN during training a true (future) dt.")
 
-    parser.add_argument('--warm_up_len', default=1, type=int, help='Number of timesteps for a warm-up sequence')
-    parser.add_argument('--seq_len', default=5, type=int, help='Number of timesteps in a sequence')
+    parser.add_argument('--warm_up_len', default=10, type=int, help='Number of timesteps for a warm-up sequence')
+    parser.add_argument('--seq_len', default=50, type=int, help='Number of timesteps in a sequence')
 
     # Training parameters
     parser.add_argument('--num_epochs', default=3, type=int, help='Number of epochs of training')

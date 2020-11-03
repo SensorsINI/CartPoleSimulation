@@ -110,10 +110,11 @@ def train_network():
     print('')
 
 
-    # plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=1024,
-    #              comment='This is the network at the beginning of the training',
-    #              inputs_list=inputs_list, outputs_list=outputs_list,
-    #              save=True)
+    plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=1024,
+                 comment='This is the network at the beginning of the training',
+                 inputs_list=inputs_list, outputs_list=outputs_list,
+                 save=True,
+                 closed_loop_enabled=True)
 
     # Create PyTorch dataloaders for train and dev set
     train_generator = data.DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True,
@@ -339,7 +340,8 @@ def train_network():
             plot_string = 'This is the network after {} training epoch'.format(epoch + 1)
             plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=1024,
                          comment=plot_string,
-                         inputs_list=inputs_list, outputs_list=outputs_list, save=True)
+                         inputs_list=inputs_list, outputs_list=outputs_list, save=True,
+                         closed_loop_enabled=True)
         else:
             print('>>> We keep model from epoch {}'.format(epoch_saved))
             print('')

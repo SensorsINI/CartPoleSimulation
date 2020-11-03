@@ -76,7 +76,7 @@ def plot_results_specific(targets_pd, rnn_outputs, time_axis, comment, closed_lo
 
         axs.set_ylabel("Motor power (-)", fontsize=18)
         axs.plot(time_axis, motor_power_target, 'k:', markersize=12, label='Ground Truth')
-        # axs.plot(time_axis, motor_power_output, 'b', markersize=12, label='Predicted position')
+        axs.plot(time_axis, motor_power_output, 'b', markersize=12, label='Predicted position')
 
         axs.plot(time_axis[start_idx], motor_power_target[start_idx], 'g.', markersize=16, label='Start')
         axs.plot(time_axis[start_idx], motor_power_output[start_idx], 'g.', markersize=16)

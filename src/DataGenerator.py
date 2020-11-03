@@ -17,9 +17,14 @@ MyCart = Cart()
 for i in range(number_of_experiments):
     print(i)
     sleep(0.1)
+    gen_start = timeit.default_timer()
     Generate_Experiment(MyCart,
                         mode=mode,
                         exp_len=length_of_experiment,
                         dt=dt_main_simulation,
                         track_complexity=track_complexity,
-                        csv=csv)
+                        csv=csv,
+                        save_csv_online=False)
+    gen_end = timeit.default_timer()
+    gen_dt = (gen_end-gen_start)*1000.0
+    print('time to generate data: {} ms'.format(gen_dt))

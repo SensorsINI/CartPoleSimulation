@@ -18,7 +18,9 @@ import warnings
 
 import pandas as pd
 
-from tqdm import tqdm
+from tqdm import tqdm, trange
+
+from memory_profiler import profile
 
 
 # warnings.warn("Warning...........Message")
@@ -152,8 +154,14 @@ class loop_timer():
                       .format(np.mean(self.circ_buffer_dt) * 1000,
                               np.std(self.circ_buffer_dt) * 1000))
 
-
-def Generate_Experiment(MyCart, exp_len=random_length_globals, dt=dt_main_simulation_globals, track_complexity=N_globals, csv=None, mode=1):
+# @profile(precision=4)
+def Generate_Experiment(MyCart,
+                        exp_len=random_length_globals,
+                        dt=dt_main_simulation_globals,
+                        track_complexity=N_globals,
+                        csv=None,
+                        save_csv_online = True,
+                        mode=1):
     """
     This function runs a random CartPole experiment
     and returns the history of CartPole states, control inputs and desired cart position
@@ -166,7 +174,10 @@ def Generate_Experiment(MyCart, exp_len=random_length_globals, dt=dt_main_simula
 
     # Set CartPole in the right (automatic control) mode
     MyCart.set_mode(mode)  # 1 - you are controlling with LQR, 2- with do-mpc
-    MyCart.save_data = 1
+    if save_csv_online:
+        MyCart.save_history = False
+    else:
+        MyCart.save_history = True
     MyCart.use_pregenerated_target_position = 1
     MyCart.dt = dt
 
@@ -198,8 +209,12 @@ def Generate_Experiment(MyCart, exp_len=random_length_globals, dt=dt_main_simula
 
     MyCart.reset_dict_history()
 
+    if save_csv_online and csv is not None:
+        MyCart.save_history_csv(csv_name=csv, init=True, iter=False)
+        MyCart.save_history_csv(csv_name=csv, init=False, iter=True)
+
     # Run the CartPole experiment for number of time
-    for i in tqdm(range(int(exp_len)-1)):
+    for _ in trange(int(exp_len)-1):
 
         # Print an error message if it runs already to long (should stop before)
         if MyCart.time > MyCart.t_max_pre:
@@ -207,9 +222,13 @@ def Generate_Experiment(MyCart, exp_len=random_length_globals, dt=dt_main_simula
 
         MyCart.update_state()
 
+        if save_csv_online and csv is not None:
+            MyCart.save_history_csv(csv_name=csv, init=False, iter=True)
+
+
     data = pd.DataFrame(MyCart.dict_history)
 
-    if csv is not None:
+    if csv is not None and not save_csv_online:
         MyCart.save_history_csv(csv_name=csv)
 
     MyCart.reset_dict_history()
