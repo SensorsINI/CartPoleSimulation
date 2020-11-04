@@ -1,7 +1,8 @@
 import numpy as np
+from copy import deepcopy
 
 # Variables controlling flow of the program
-mode_globals = 2
+mode_globals = 3
 save_history_globals = True
 load_recording_globals = False
 
@@ -67,37 +68,28 @@ def Q2u(Q, p):
     return u
 
 
-def cartpole_next_state(p, s, u, dt_total, fine_dt=None, fine_N=None):
-    """
-    This function returns the "next state" of cartpole.
-    Given a state it calculates the state after time dt_total assuming constant control input
-    """
+def mpc_next_state(s, p, u, dt):
 
-    if fine_dt is None and fine_N is None:
-        raise Exception('You need to provide either fine_dt or fine_N. One of these two.')
-        return
-    elif fine_dt is not None and fine_N is not None:
-        raise Exception('You need to provide either fine_dt or fine_N. Not both.')
-        return
+    ca = np.cos(s.angle)
+    sa = np.sin(s.angle)
+    A = (p.k + 1) * (p.M + p.m) - p.m * (ca ** 2)
 
-    if fine_dt is not None:
-        fine_N = np.ceil(dt_total/fine_dt)
-        fine_dt = dt_total/float(fine_N)
+    angleDD = (p.g * (p.m + p.M) * sa -
+               ((p.J_fric * (p.m + p.M) * s.angleD) / (p.L * p.m)) -
+               ca * (p.m * p.L * (s.angleD ** 2) * sa + p.M_fric * s.positionD) +
+               ca * u) / (A * p.L)
+    positionDD = (
+                             p.m * p.g * sa * ca -
+                             ((p.J_fric * s.angleD * ca) / (p.L)) -
+                             (p.k + 1) * (p.m * p.L * (s.angleD ** 2) * sa + p.M_fric * s.positionD) +
+                             (p.k + 1) * u
+                        ) / A
 
-    if fine_N is not None:
-        fine_dt = dt_total/float(fine_N)
+    position_next = s.position + s.positionD * dt
+    positionD_next = s.positionD + positionDD * dt
 
-    s_next = s
+    angle_next = s.angle + s.angleD * dt
+    angleD_next = s.angleD + angleDD * dt
 
-    for _ in range(fine_N):
-        position, positionD, angle, angleD = cartpole_integration(s_next, fine_dt)
-        angleDD, positionDD = cartpole_ode(p, s_next, u)
+    return position_next, positionD_next, angle_next, angleD_next
 
-        s_next.position = position
-        s_next.positionD = positionD
-        s_next.positionDD = positionDD
-        s_next.angle = angle
-        s_next.angleD = angleD
-        s_next.angleDD = angleDD
-
-    return s_next

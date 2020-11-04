@@ -39,14 +39,10 @@ class controller_do_mpc_discrete:
         s = SimpleNamespace()  # s like state
         s.position = 0.0
         s.positionD = 0.0
-        s.positionDD = 0.0
         s.angle = 0.0
         s.angleD = 0.0
-        s.angleDD = 0.0
 
-        # Next state of the cart
-
-        model_type = 'discrete'  # either 'discrete' or 'continuous'
+        model_type = 'continuous'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
 
         s.position = self.model.set_variable(var_type='_x', var_name='s.position', shape=(1, 1))
@@ -59,12 +55,14 @@ class controller_do_mpc_discrete:
 
         target_position = self.model.set_variable('_tvp', 'target_position')
 
-        s_next = cartpole_next_state(p, s, u=Q2u(Q, p), dt_total=dt_main_simulation_globals, fine_N=1)
+        position_next, positionD_next, angle_next, angleD_next = \
+            mpc_next_state(s, p, Q2u(Q,p), dt = dt_mpc_simulation_globals)
 
-        self.model.set_rhs('s.position', s_next.position)
-        self.model.set_rhs('s.angle', s_next.angle)
-        self.model.set_rhs('s.positionD', s_next.positionD)
-        self.model.set_rhs('s.angleD', s_next.angleD)
+        self.model.set_rhs('s.position', position_next)
+        self.model.set_rhs('s.angle', angle_next)
+
+        self.model.set_rhs('s.positionD', positionD_next)
+        self.model.set_rhs('s.angleD', angleD_next)
 
         # Simplified, normalized expressions for E_kin and E_pot as a port of cost function
         E_kin_cart = (s.positionD / p.v_max) ** 2
@@ -88,7 +86,9 @@ class controller_do_mpc_discrete:
             't_step': dt_mpc_simulation_globals,
             'n_robust': 0,
             'store_full_solution': False,
-            'state_discretization': 'discrete',
+            'store_lagr_multiplier': False,
+            'store_solver_stats': [],
+            'state_discretization': 'discrete'
         }
         self.mpc.set_param(**setup_mpc)
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'mumps'})
@@ -105,6 +105,10 @@ class controller_do_mpc_discrete:
         self.tvp_template = self.mpc.get_tvp_template()
 
         self.mpc.set_tvp_fun(self.tvp_fun)
+
+        # Suppress IPOPT outputs
+        suppress_ipopt = {'ipopt.print_level': 0, 'ipopt.sb': 'yes', 'print_time': 0}
+        self.mpc.set_param(nlpsol_opts=suppress_ipopt)
 
         self.mpc.setup()
 
@@ -124,10 +128,7 @@ class controller_do_mpc_discrete:
         return self.tvp_template
 
 
-    def step(self, state, target_position):
-        print('Loaded mpc discrete')
-
-        s = deepcopy(state)
+    def step(self, s, target_position):
 
         self.x0['s.position'] = s.position
         self.x0['s.positionD'] = s.positionD

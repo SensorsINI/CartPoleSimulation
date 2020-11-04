@@ -71,7 +71,7 @@ def load_pretrained_rnn(net, pt_path, device):
             break
         layer_name, weights = pre_trained_model[count]
         new_state_dict[key] = weights
-        print("Pre-trained Layer: %s - Loaded into new layer: %s" % (layer_name, key))
+        # print("Pre-trained Layer: %s - Loaded into new layer: %s" % (layer_name, key))
         count += 1
     print('')
     net.load_state_dict(new_state_dict)

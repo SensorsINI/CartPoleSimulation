@@ -245,6 +245,10 @@ class Cart:
 
         self.s.angleDD, self.s.positionDD = cartpole_ode(self.p, self.s, self.u)
 
+        # Equivalent formulation
+        # self.s = cartpole_next_state(self.p, self.s, self.u, dt_total=dt_main_simulation_globals, fine_N=1)
+
+
     # Determine the dimensionales [-1,1] value of the motor power Q
     def Update_Q(self):
 

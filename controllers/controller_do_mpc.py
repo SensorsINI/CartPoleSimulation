@@ -39,10 +39,8 @@ class controller_do_mpc:
         s = SimpleNamespace()  # s like state
         s.position = 0.0
         s.positionD = 0.0
-        s.positionDD = 0.0
         s.angle = 0.0
         s.angleD = 0.0
-        s.angleDD = 0.0
 
         model_type = 'continuous'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
