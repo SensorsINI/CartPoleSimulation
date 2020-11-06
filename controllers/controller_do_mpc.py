@@ -89,7 +89,12 @@ class controller_do_mpc:
             'store_solver_stats': []
         }
         self.mpc.set_param(**setup_mpc)
-        self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'mumps'})
+        self.mpc.set_param(nlpsol_opts={'ipopt.linear_solver': 'mumps'})
+        # Other possible linear solvers from hsl library
+        # The give better performance 2-3 times.
+        # However if simulating at max speedup the simulation blocks. Issue with memory leak?
+        # self.mpc.set_param(nlpsol_opts={'ipopt.linear_solver': 'MA27'})
+        # self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'MA57'})
 
         lterm = - self.model.aux['E_pot'] + 0.02 * distance_difference
         mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
@@ -105,8 +110,8 @@ class controller_do_mpc:
         self.mpc.set_tvp_fun(self.tvp_fun)
 
         # Suppress IPOPT outputs
-        suppress_ipopt = {'ipopt.print_level': 0, 'ipopt.sb': 'yes', 'print_time': 0}
-        self.mpc.set_param(nlpsol_opts=suppress_ipopt)
+        # suppress_ipopt = {'ipopt.print_level': 0, 'ipopt.sb': 'yes', 'print_time': 0}
+        # self.mpc.set_param(nlpsol_opts=suppress_ipopt)
 
         self.mpc.setup()
 
