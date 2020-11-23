@@ -1,13 +1,9 @@
 import torch
 import torch.nn as nn
 from torch.utils import data
+
 from datetime import datetime
-from IPython.display import Image
 
-import matplotlib.pyplot as plt
-import numpy as np
-
-from src.utilis import Generate_Experiment
 import collections
 import os
 
@@ -36,9 +32,7 @@ def set_seed(args):
     seed = args.seed
     rnd.seed(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True
+
 
 
 # Print parameter count
@@ -345,15 +339,12 @@ class Sequence(nn.Module):
 import pandas as pd
 
 
-def load_data(args, filepath=None, inputs_list=None, outputs_list=None, norm_inf=False, rnn_full_name=None):
+def load_data(args, filepath=None, columns_list=None, norm_inf=False, rnn_full_name=None):
     if filepath is None:
         filepath = args.val_file_name
 
-    if inputs_list is None:
-        inputs_list = args.inputs_list
-
-    if outputs_list is None:
-        outputs_list = args.outputs_list
+    if columns_list is None:
+        columns_list = list(set(args.inputs_list).union(set(args.outputs_list)))
 
     if type(filepath) == list:
         filepaths = filepath
@@ -361,8 +352,6 @@ def load_data(args, filepath=None, inputs_list=None, outputs_list=None, norm_inf
         filepaths = [filepath]
 
     all_dfs = []  # saved separately to get normalization
-    all_features = []
-    all_targets = []
     all_time_axes = []
 
     for one_filepath in filepaths:
@@ -371,13 +360,13 @@ def load_data(args, filepath=None, inputs_list=None, outputs_list=None, norm_inf
         print('')
         df = pd.read_csv(one_filepath, comment='#')
 
+        # You can shift dt by one time step to know "now" the timestep till the next row
         if args.cheat_dt:
             if 'dt' in df:
                 df['dt'] = df['dt'].shift(-1)
                 df = df[:-1]
 
-        all_dfs.append(df)
-
+        # Get time axis as separate Dataframe
         if 'time' in df.columns:
             t = df['time']
         elif 'dt' in df.columns:
@@ -391,33 +380,17 @@ def load_data(args, filepath=None, inputs_list=None, outputs_list=None, norm_inf
         time_axis = t
         all_time_axes.append(time_axis)
 
-    if norm_inf:
-        if rnn_full_name is None:
-            raise Exception('rnn_full_name (information where to stort notmalization info) not provided!')
-        calculate_normalization_info(all_dfs, args.path_save, rnn_full_name)
+        # Get only relevant subset of columns
+        if columns_list == 'all':
+            pass
+        else:
+            df = df[columns_list]
 
-    for df in all_dfs:
-
-        # Get Raw Data
-        features = copy.deepcopy(df)
-        targets = copy.deepcopy(df)
-
-        features.drop(features.tail(1).index, inplace=True)  # Drop last row
-        targets.drop(targets.head(1).index, inplace=True)
-        features.reset_index(inplace=True)  # Reset index
-        targets.reset_index(inplace=True)
-
-        features = features[inputs_list]
-        targets = targets[outputs_list]
-
-        all_features.append(features)
-        all_targets.append(targets)
+        all_dfs.append(df)
 
 
-    if type(filepath) == list:
-        return all_features, all_targets, all_time_axes
-    else:
-        return features, targets, time_axis
+    return all_dfs, all_time_axes
+
 
 
 # This way of doing normalization is fine for long data sets and (relatively) short sequence lengths
@@ -507,10 +480,28 @@ def denormalize_df(dfs, normalization_info, normalization_type='minmax_sym'):
 
 
 class Dataset(data.Dataset):
-    def __init__(self, df, labels, args, time_axes=None, seq_len=None):
-        'Initialization'
-        self.data = df
-        self.labels = labels
+    def __init__(self, dfs, args, time_axes=None, seq_len=None):
+        'Initialization - divide data in features and labels'
+
+        self.data = []
+        self.labels = []
+
+        for df in dfs:
+            # Get Raw Data
+            features = copy.deepcopy(df)
+            targets = copy.deepcopy(df)
+
+            features.drop(features.tail(1).index, inplace=True)  # Drop last row
+            targets.drop(targets.head(1).index, inplace=True)
+            features.reset_index(inplace=True)  # Reset index
+            targets.reset_index(inplace=True)
+
+            features = features[args.inputs_list]
+            targets = targets[args.outputs_list]
+
+            self.data.append(features)
+            self.labels.append(targets)
+
         self.args = args
 
         self.seq_len = None
@@ -552,36 +543,35 @@ class Dataset(data.Dataset):
         return self.number_of_samples
 
     def __getitem__(self, idx, get_time_axis=False):
-        if type(self.data) == list:
-            idx_data_set = next(i for i, v in enumerate(self.df_lengths_cs) if v > idx)
-            if idx_data_set == 0:
-                pass
-            else:
-                idx -= self.df_lengths_cs[idx_data_set - 1]
-            if get_time_axis:
-                try:
-                    time_axis = self.time_axes[idx_data_set].to_numpy()[idx:idx + self.seq_len + 1]
-                except IndexError:
-                    time_axis = []
-                return self.data[idx_data_set].to_numpy()[idx:idx + self.seq_len, :], \
-                       self.labels[idx_data_set].to_numpy()[idx:idx + self.seq_len], \
-                       time_axis
-
-            else:
-                return self.data[idx_data_set].to_numpy()[idx:idx + self.seq_len, :], \
-                       self.labels[idx_data_set].to_numpy()[idx:idx + self.seq_len]
+        """
+        Requires the self.data to be a list of pandas dataframes
+        """
+        # Find index of the dataset in self.data and index of the starting point in this dataset
+        idx_data_set = next(i for i, v in enumerate(self.df_lengths_cs) if v > idx)
+        if idx_data_set == 0:
+            pass
         else:
-            if get_time_axis:
-                try:
-                    time_axis = self.time_axes.to_numpy()[idx:idx + self.seq_len + 1]
-                except IndexError:
-                    time_axis = []
-                return self.data.to_numpy()[idx:idx + self.seq_len, :], \
-                       self.labels.to_numpy()[idx:idx + self.seq_len], \
-                       time_axis
-            else:
-                return self.data.to_numpy()[idx:idx + self.seq_len, :], \
-                       self.labels.to_numpy()[idx:idx + self.seq_len]
+            idx -= self.df_lengths_cs[idx_data_set - 1]
+
+        # Get data
+        features = self.data[idx_data_set].to_numpy()[idx:idx + self.seq_len, :]
+        # Every point in features has its target value corresponding to the next time step:
+        targets = self.labels[idx_data_set].to_numpy()[idx:idx + self.seq_len]
+        # After feeding the whole sequence we just compare the final output of the RNN with the state following afterwards
+        # targets = self.labels[idx_data_set].to_numpy()[idx + self.seq_len-1]
+
+        # If get_time_axis try to obtain a vector of time data for the chosen sample
+        if get_time_axis:
+            try:
+                time_axis = self.time_axes[idx_data_set].to_numpy()[idx:idx + self.seq_len + 1]
+            except IndexError:
+                time_axis = []
+
+        # Return results
+        if get_time_axis:
+            return features, targets, time_axis
+        else:
+            return features, targets
 
     def get_experiment(self, idx=None):
         if self.time_axes is None:
@@ -649,18 +639,16 @@ def plot_results(net,
         normalization_info = load_normalization_info(args.path_save, rnn_full_name)
 
     if dataset is None or time_axes is None:
-        dev_features, dev_targets, time_axes = load_data(args, filepath, inputs_list=inputs_list,
-                                                         outputs_list=outputs_list)
-        dev_features_norm = normalize_df(dev_features, normalization_info)
-        dev_targets_norm = normalize_df(dev_targets, normalization_info)
-        dev_set = Dataset(dev_features_norm, dev_targets_norm, args, time_axes=time_axes, seq_len=seq_len)
-        del dev_features, dev_targets
+        test_dfs, time_axes = load_data(args, filepath)
+        test_dfs_norm = normalize_df(test_dfs, normalization_info)
+        test_set = Dataset(test_dfs_norm, args, time_axes=time_axes, seq_len=seq_len)
+        del test_dfs
     else:
-        dev_set = copy.deepcopy(dataset)
-        dev_set.reset_seq_len(seq_len=seq_len)
+        test_set = copy.deepcopy(dataset)
+        test_set.reset_seq_len(seq_len=seq_len)
 
     # Format the experiment data
-    features, targets, time_axis = dev_set.get_experiment(1)  # Put number in brackets to get the same idx at every run
+    features, targets, time_axis = test_set.get_experiment(1)  # Put number in brackets to get the same idx at every run
 
     features_pd = pd.DataFrame(data=features, columns=inputs_list)
     targets_pd = pd.DataFrame(data=targets, columns=outputs_list)

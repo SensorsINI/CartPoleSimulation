@@ -85,25 +85,19 @@ def train_network():
     # Create Dataset
     ########################################################
 
-    train_features,\
-    train_targets,\
-    _ = load_data(args, args.train_file_name, inputs_list, outputs_list, norm_inf=True, rnn_full_name=rnn_full_name)
+    train_dfs, _ = load_data(args, args.train_file_name)
 
+    normalization_info =  calculate_normalization_info(train_dfs, args.path_save, rnn_full_name)
 
-    normalization_info =  load_normalization_info(path_save, rnn_full_name)
-    dev_features,\
-    dev_targets,\
-    time_axes_dev = load_data(args, args.val_file_name, inputs_list, outputs_list)
+    test_dfs, time_axes_dev = load_data(args, args.val_file_name)
 
-    train_features_norm = normalize_df(train_features, normalization_info)
-    train_targets_norm = normalize_df(train_targets, normalization_info)
-    dev_features_norm = normalize_df(dev_features, normalization_info)
-    dev_targets_norm = normalize_df(dev_targets, normalization_info)
+    train_dfs_norm = normalize_df(train_dfs, normalization_info)
+    test_dfs_norm = normalize_df(test_dfs, normalization_info)
 
-    del train_features, train_targets, dev_features, dev_targets
+    del train_dfs, test_dfs
 
-    train_set = Dataset(train_features_norm, train_targets_norm, args)
-    dev_set = Dataset(dev_features_norm, dev_targets_norm, args, time_axes=time_axes_dev)
+    train_set = Dataset(train_dfs_norm, args)
+    dev_set = Dataset(test_dfs_norm, args, time_axes=time_axes_dev)
     print('Number of samples in training set: {}'.format(train_set.number_of_samples))
     print('The training sets sizes are: {}'.format(train_set.df_lengths))
     print('Number of samples in validation set: {}'.format(dev_set.number_of_samples))

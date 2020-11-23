@@ -2,7 +2,7 @@ import numpy as np
 from copy import deepcopy
 
 # Variables controlling flow of the program
-mode_globals = 2
+mode_globals = 4
 save_history_globals = True
 load_recording_globals = False
 
@@ -11,7 +11,7 @@ dt_main_simulation_globals = 0.020
 speedup_globals = 1.0
 
 # MPC
-dt_mpc_simulation_globals = 0.20
+dt_mpc_simulation_globals = 0.2
 mpc_horizon_globals = 20
 
 # Parameters of the CartPole

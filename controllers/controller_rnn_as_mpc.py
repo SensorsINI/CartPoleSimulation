@@ -4,7 +4,7 @@ import numpy as np
 from modeling.rnn.utilis_rnn import *
 
 
-RNN_FULL_NAME = 'GRU-5IN-64H1-64H2-1OUT-0'
+RNN_FULL_NAME = 'GRU-5IN-32H1-32H2-1OUT-0'
 INPUTS_LIST = ['s.position', 's.angle']
 OUTPUTS_LIST = ['Q']
 PATH_SAVE = './save/'
@@ -49,10 +49,9 @@ class controller_rnn_as_mpc:
 
         rnn_input_normed = normalize_df(self.rnn_input, self.normalization_info)
 
-        rnn_input_np = np.squeeze(rnn_input_normed.to_numpy())
-        rnn_input_torch = torch.from_numpy(rnn_input_np).float().unsqueeze(0).unsqueeze(0).to(self.device)
+        rnn_input_torch = torch.tensor(rnn_input_normed.values).float().unsqueeze(0).to(self.device)
         normalized_rnn_output = self.net(rnn_input=rnn_input_torch)
-        normalized_rnn_output = np.squeeze(normalized_rnn_output.detach().cpu().numpy()).tolist()
+        normalized_rnn_output = normalized_rnn_output.detach().cpu().squeeze().tolist()
         normalized_rnn_output = pd.DataFrame(data=[normalized_rnn_output], columns=self.outputs_list)
 
         denormalized_rnn_output = denormalize_df(normalized_rnn_output, self.normalization_info)

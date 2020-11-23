@@ -115,7 +115,13 @@ class MainWindow(QMainWindow):
         self.rb_do_mpc = QRadioButton('do-mpc-control')
         self.rb_do_mpc_discrete = QRadioButton('do-mpc-discrete-control')
         self.rb_rnn_as_mpc = QRadioButton('rnn-as-mpc-control')
-        self.rbs = [self.rb_manual, self.rb_LQR, self.rb_do_mpc, self.rb_do_mpc_discrete,  self.rb_rnn_as_mpc]
+        self.rb_mpc_on_rnn = QRadioButton('mpc-on-rnn-control')
+        self.rbs = [self.rb_manual,
+                    self.rb_LQR,
+                    self.rb_do_mpc,
+                    self.rb_do_mpc_discrete,
+                    self.rb_rnn_as_mpc,
+                    self.rb_mpc_on_rnn]
 
         lr.addStretch(1)
         for rb in self.rbs:
@@ -551,6 +557,8 @@ class MainWindow(QMainWindow):
             self.MyCart.set_mode(new_mode=3)
         elif self.rb_rnn_as_mpc.isChecked():
             self.MyCart.set_mode(new_mode=4)
+        elif self.rb_mpc_on_rnn.isChecked():
+            self.MyCart.set_mode(new_mode=5)
 
         # Reset the state of GUI and of the Cart instance after the mode has changed
         self.reset_variables()

@@ -33,6 +33,8 @@ from controllers.controller_lqr import controller_lqr
 from controllers.controller_do_mpc import controller_do_mpc
 from controllers.controller_do_mpc_discrete import controller_do_mpc_discrete
 from controllers.controller_rnn_as_mpc import controller_rnn_as_mpc
+from controllers.controller_mpc_on_rnn import controller_mpc_on_rnn
+
 
 
 # Interpolate function to create smooth random track
@@ -153,6 +155,7 @@ class Cart:
         self.controller_do_mpc = controller_do_mpc()
         self.controller_do_mpc_discrete = controller_do_mpc_discrete()
         self.controller_rnn_as_mpc = controller_rnn_as_mpc()
+        self.controller_mpc_on_rnn = controller_mpc_on_rnn()
         self.controller = None
         self.controller_name = ''
 
@@ -245,11 +248,13 @@ class Cart:
 
         self.s.angleDD, self.s.positionDD = cartpole_ode(self.p, self.s, self.u)
 
-        # Equivalent formulation
-        # self.s = cartpole_next_state(self.p, self.s, self.u, dt_total=dt_main_simulation_globals, fine_N=1)
+        # Equivalent (?) formulation
+        # self.s.position, self.s.positionD, self.s.angle, self.s.angleD = \
+        #     mpc_next_state(self.s, self.p, self.u, dt=dt_main_simulation_globals)
+        #
+        # self.s.angleDD, self.s.positionDD = cartpole_ode(self.p, self.s, self.u)
 
-
-    # Determine the dimensionales [-1,1] value of the motor power Q
+        # Determine the dimensionales [-1,1] value of the motor power Q
     def Update_Q(self):
 
         if self.mode == 0:  # in this case slider corresponds already to the power of the motor
@@ -586,4 +591,9 @@ class Cart:
             self.mode = 4
             self.controller = self.controller_rnn_as_mpc
             self.controller_name = 'rnn-as-mpc'
+            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
+        elif new_mode == 5:
+            self.mode = 5
+            self.controller = self.controller_mpc_on_rnn
+            self.controller_name = 'mpc-on-rnn'
             self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider

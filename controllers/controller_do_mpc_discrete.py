@@ -42,7 +42,7 @@ class controller_do_mpc_discrete:
         s.angle = 0.0
         s.angleD = 0.0
 
-        model_type = 'continuous'  # either 'discrete' or 'continuous'
+        model_type = 'discrete'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
 
         s.position = self.model.set_variable(var_type='_x', var_name='s.position', shape=(1, 1))
@@ -69,7 +69,7 @@ class controller_do_mpc_discrete:
         E_kin_pol = (s.angleD/(2*np.pi))**2
         E_pot = np.cos(s.angle)
 
-        distance_difference = ((s.position - target_position) ** 2)
+        distance_difference = (((s.position - target_position)/50.0) ** 2)
 
         self.model.set_expression('E_kin_cart', E_kin_cart)
         self.model.set_expression('E_kin_pol', E_kin_pol)
@@ -82,7 +82,7 @@ class controller_do_mpc_discrete:
         self.mpc = do_mpc.controller.MPC(self.model)
 
         setup_mpc = {
-            'n_horizon': mpc_horizon_globals,
+            'n_horizon': mpc_horizon_globals*4,
             't_step': dt_mpc_simulation_globals,
             'n_robust': 0,
             'store_full_solution': False,
@@ -91,10 +91,10 @@ class controller_do_mpc_discrete:
             'state_discretization': 'discrete'
         }
         self.mpc.set_param(**setup_mpc)
-        self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'mumps'})
+        self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'ma27'})
 
-        lterm = - self.model.aux['E_pot'] + 0.02 * distance_difference
-        mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
+        lterm = (- self.model.aux['E_pot'] + 10.0 * distance_difference + 5 * self.model.aux['E_kin_pol'])
+        mterm = (5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart'])
 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
         self.mpc.set_rterm(Q=0.1)

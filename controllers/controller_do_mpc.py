@@ -68,7 +68,7 @@ class controller_do_mpc:
         E_kin_pol = (s.angleD/(2*np.pi))**2
         E_pot = np.cos(s.angle)
 
-        distance_difference = ((s.position - target_position) ** 2)
+        distance_difference = (((s.position - target_position)/50.0) ** 2)
 
         self.model.set_expression('E_kin_cart', E_kin_cart)
         self.model.set_expression('E_kin_pol', E_kin_pol)
@@ -89,14 +89,14 @@ class controller_do_mpc:
             'store_solver_stats': []
         }
         self.mpc.set_param(**setup_mpc)
-        self.mpc.set_param(nlpsol_opts={'ipopt.linear_solver': 'mumps'})
+        # self.mpc.set_param(nlpsol_opts={'ipopt.linear_solver': 'mumps'})
         # Other possible linear solvers from hsl library
         # The give better performance 2-3 times.
         # However if simulating at max speedup the simulation blocks. Issue with memory leak?
-        # self.mpc.set_param(nlpsol_opts={'ipopt.linear_solver': 'MA27'})
+        self.mpc.set_param(nlpsol_opts={'ipopt.linear_solver': 'MA27'})
         # self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'MA57'})
 
-        lterm = - self.model.aux['E_pot'] + 0.02 * distance_difference
+        lterm = - self.model.aux['E_pot'] + 20.0 * distance_difference
         mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
