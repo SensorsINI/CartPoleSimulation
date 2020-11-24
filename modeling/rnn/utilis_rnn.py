@@ -339,7 +339,7 @@ class Sequence(nn.Module):
 import pandas as pd
 
 
-def load_data(args, filepath=None, columns_list=None, norm_inf=False, rnn_full_name=None):
+def load_data(args, filepath=None, columns_list=None, norm_inf=False, rnn_full_name=None, downsample=1):
     if filepath is None:
         filepath = args.val_file_name
 
@@ -359,6 +359,7 @@ def load_data(args, filepath=None, columns_list=None, norm_inf=False, rnn_full_n
         print('loading data from ' + str(one_filepath))
         print('')
         df = pd.read_csv(one_filepath, comment='#')
+        df=df.iloc[::downsample].reset_index()
 
         # You can shift dt by one time step to know "now" the timestep till the next row
         if args.cheat_dt:
@@ -366,6 +367,7 @@ def load_data(args, filepath=None, columns_list=None, norm_inf=False, rnn_full_n
                 df['dt'] = df['dt'].shift(-1)
                 df = df[:-1]
 
+        # FIXME: Make calculation of dt compatible with downsampling
         # Get time axis as separate Dataframe
         if 'time' in df.columns:
             t = df['time']

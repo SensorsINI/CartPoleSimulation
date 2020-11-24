@@ -14,8 +14,8 @@ TRAIN_file_name = [#'./data/data_rnn_big-2.csv',
                    #'./data/data_rnn_big-1.csv',
                    #'./data/data_rnn_big.csv',
                    './data/data_rnn.csv',
-                   './data/data_rnn-1.csv',
-                   './data/data_rnn-2.csv'
+                   # './data/data_rnn-1.csv',
+                   # './data/data_rnn-2.csv'
                    ]
 VAL_file_name = './data/data_rnn-3.csv'
 
@@ -24,16 +24,16 @@ FIXME: To tailor input list, output list and closed loop list according to cartp
 angleD_next, positionD_next = cartpole_ode(p, s, Q2u(Q,p))
 '''
 RNN_name = 'GRU-32H1-32H2'
-# inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'u']
+inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'u']
 # inputs_list = ['s.position', 's.angle', 'u']
 # outputs_list = ['s.angle', 's.position', 's.positionD', 's.angleD']
-# outputs_list = ['s.angle', 's.position']
-# closed_loop_list = ['s.position', 's.angle']
-# closed_loop_list = outputs_list
+outputs_list = ['s.angle', 's.position']
+closed_loop_list = ['s.position', 's.angle']
+closed_loop_list = outputs_list
 
 inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'target_position']
-outputs_list = ['Q']
-closed_loop_list = []
+# outputs_list = ['Q']
+# closed_loop_list = []
 
 def args():
     parser = argparse.ArgumentParser(description='Train a GRU network.')

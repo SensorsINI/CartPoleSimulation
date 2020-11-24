@@ -559,6 +559,10 @@ class MainWindow(QMainWindow):
             self.MyCart.set_mode(new_mode=4)
         elif self.rb_mpc_on_rnn.isChecked():
             self.MyCart.set_mode(new_mode=5)
+        elif self.rb_mpc_on_rnn_tf.isChecked():
+            self.MyCart.set_mode(new_mode=6)
+        elif self.rb_mpc_on_rnn_tf.isChecked():
+            self.MyCart.set_mode(new_mode=7)
 
         # Reset the state of GUI and of the Cart instance after the mode has changed
         self.reset_variables()
