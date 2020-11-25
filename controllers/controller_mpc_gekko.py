@@ -1,12 +1,27 @@
+"""
 
- '''
  Gekko based MPC controller
  Date created : 20/11/2020
 
  Copying the example to understand the working of GEKKO MPC
  TODO: Modify cartpole do_mpc to this format
 
- '''
+"""
+
+# Controler empty template. Pasted here by Marcin to prevent GUI crashing
+class controller_mpc_gekko:
+    def __init__(self):
+        pass
+    def step(self, s, target_position):
+        Q = 0.0
+        return Q
+
+
+
+
+
+
+
 
 from gekko import GEKKO
 import numpy as np

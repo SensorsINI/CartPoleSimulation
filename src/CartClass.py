@@ -34,6 +34,9 @@ from controllers.controller_do_mpc import controller_do_mpc
 from controllers.controller_do_mpc_discrete import controller_do_mpc_discrete
 from controllers.controller_rnn_as_mpc import controller_rnn_as_mpc
 from controllers.controller_mpc_on_rnn import controller_mpc_on_rnn
+from controllers.controller_rnn_as_mpc_tf import controller_rnn_as_mpc_tf
+from controllers.controller_mpc_on_rnn_tf import controller_mpc_on_rnn_tf
+from controllers.controller_mpc_gekko import controller_mpc_gekko
 
 
 
@@ -151,14 +154,8 @@ class Cart:
         self.Q_matrix = diag([10.0, 1.0, 1.0, 1.0])  # How much to punish x, v, theta, omega
         self.R_matrix = 1.0e9  # How much to punish Q
 
+        # TODO: Having a lot of controllers with big NN it is not optimal to load them all at start
         self.controller_lqr = controller_lqr(self.Jacobian_UP, self.B, self.Q_matrix, self.R_matrix)
-        self.controller_do_mpc = controller_do_mpc()
-        # self.controller_do_mpc = controller_mpc_gekko()
-        self.controller_do_mpc_discrete = controller_do_mpc_discrete()
-        self.controller_rnn_as_mpc = controller_rnn_as_mpc()
-        # self.controller_rnn_as_mpc = controller_rnn_as_mpc_tf()
-        self.controller_mpc_on_rnn = controller_mpc_on_rnn()
-        # self.controller_mpc_on_rnn = controller_mpc_on_rnn_tf()
         self.controller = None
         self.controller_name = ''
 
@@ -582,31 +579,36 @@ class Cart:
             self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
         elif new_mode == 2:
             self.mode = 2
-            self.controller = self.controller_do_mpc
+            self.controller = controller_do_mpc()
             self.controller_name = 'do-mpc'
             self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
         elif new_mode == 3:
             self.mode = 3
-            self.controller = self.controller_do_mpc_discrete
+            self.controller = controller_do_mpc_discrete()
             self.controller_name = 'do-mpc-discrete'
             self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
         elif new_mode == 4:
             self.mode = 4
-            self.controller = self.controller_rnn_as_mpc
+            self.controller = controller_rnn_as_mpc()
             self.controller_name = 'rnn-as-mpc'
             self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
         elif new_mode == 5:
             self.mode = 5
-            self.controller = self.controller_mpc_on_rnn
-            self.controller_name = 'mpc-on-rnn'
+            self.controller = controller_rnn_as_mpc_tf()
+            self.controller_name = 'rnn-as-mpc_tf'
             self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
         elif new_mode == 6:
             self.mode = 6
-            self.controller = self.controller_mpc_on_rnn
-            self.controller_name = 'mpc-on-rnn_tf'
+            self.controller = controller_mpc_on_rnn()
+            self.controller_name = 'mpc-on-rnn'
             self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
         elif new_mode == 7:
             self.mode = 7
-            self.controller = self.controller_mpc_on_rnn
-            self.controller_name = 'do_mpc_gekko'
+            self.controller = controller_mpc_on_rnn_tf()
+            self.controller_name = 'mpc-on-rnn_tf'
+            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
+        elif new_mode == 8:
+            self.mode = 8
+            self.controller = controller_mpc_gekko()
+            self.controller_name = 'mpc_gekko'
             self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider

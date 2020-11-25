@@ -111,21 +111,23 @@ class MainWindow(QMainWindow):
         # Radiobuttons to toggle the mode of operation
         lr = QVBoxLayout()
         self.rb_manual = QRadioButton('Manual Stabilization')
-        self.rb_LQR = QRadioButton('LQR-control')
+        self.rb_LQR = QRadioButton('LQR')
         self.rb_do_mpc = QRadioButton('do-mpc-control')
-        self.rb_do_mpc_discrete = QRadioButton('do-mpc-discrete-control')
-        self.rb_rnn_as_mpc = QRadioButton('rnn-as-mpc-control')
-        self.rb_mpc_on_rnn = QRadioButton('mpc-on-rnn-control')
-        self.rb_mpc_on_rnn_tf = QRadioButton('mpc-on-rnn-control_tf')
-        self.rb_do_mpc_gekko = QRadioButton('do-mpc-gekko-control')
+        self.rb_do_mpc_discrete = QRadioButton('do-mpc-discrete')
+        self.rb_rnn_as_mpc = QRadioButton('rnn-as-mpc')
+        self.rb_rnn_as_mpc_tf = QRadioButton('rnn(tf)-as-mpc')
+        self.rb_mpc_on_rnn = QRadioButton('mpc-on-rnn')
+        self.rb_mpc_on_rnn_tf = QRadioButton('mpc-on-rnn(tf)')
+        self.rb_mpc_gekko = QRadioButton('mpc-gekko-control')
         self.rbs = [self.rb_manual,
                     self.rb_LQR,
                     self.rb_do_mpc,
                     self.rb_do_mpc_discrete,
                     self.rb_rnn_as_mpc,
+                    self.rb_rnn_as_mpc_tf,
                     self.rb_mpc_on_rnn,
                     self.rb_mpc_on_rnn_tf,
-                    self.rb_do_mpc_gekko]
+                    self.rb_mpc_gekko]
 
         lr.addStretch(1)
         for rb in self.rbs:
@@ -561,12 +563,14 @@ class MainWindow(QMainWindow):
             self.MyCart.set_mode(new_mode=3)
         elif self.rb_rnn_as_mpc.isChecked():
             self.MyCart.set_mode(new_mode=4)
-        elif self.rb_mpc_on_rnn.isChecked():
+        elif self.rb_rnn_as_mpc_tf.isChecked():
             self.MyCart.set_mode(new_mode=5)
-        elif self.rb_mpc_on_rnn_tf.isChecked():
+        elif self.rb_mpc_on_rnn.isChecked():
             self.MyCart.set_mode(new_mode=6)
         elif self.rb_mpc_on_rnn_tf.isChecked():
             self.MyCart.set_mode(new_mode=7)
+        elif self.rb_mpc_gekko.isChecked():
+            self.MyCart.set_mode(new_mode=8)
 
         # Reset the state of GUI and of the Cart instance after the mode has changed
         self.reset_variables()

@@ -11,20 +11,33 @@ import casadi
 
 from copy import deepcopy
 
-RNN_FULL_NAME = 'GRU-3IN-32H1-32H2-2OUT-0'
-INPUTS_LIST = ['s.angle', 's.position', 'u']
-OUTPUTS_LIST = ['s.angle', 's.position']
-PATH_SAVE = './save/'
 
-
+# Controler empty template. Pasted here by Marcin to prevent GUI crashing
 class controller_mpc_on_rnn:
-    def __init__(self,
-                 position_init=0.0,
-                 positionD_init=0.0,
-                 angle_init=0.0,
-                 angleD_init=0.0,
-                 ):
+    def __init__(self):
         pass
+    def step(self, s, target_position):
+        Q = 0.0
+        return Q
+
+
+
+# Not working Pytorch implementation for reference
+#
+# RNN_FULL_NAME = 'GRU-3IN-32H1-32H2-2OUT-0'
+# INPUTS_LIST = ['s.angle', 's.position', 'u']
+# OUTPUTS_LIST = ['s.angle', 's.position']
+# PATH_SAVE = './save/'
+#
+#
+# class controller_mpc_on_rnn:
+#     def __init__(self,
+#                  position_init=0.0,
+#                  positionD_init=0.0,
+#                  angle_init=0.0,
+#                  angleD_init=0.0,
+#                  ):
+#         pass
     #     # Get RNN which acts as system model
     #     self.rnn_full_name = RNN_FULL_NAME
     #     self.path_save = PATH_SAVE

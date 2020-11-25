@@ -2,7 +2,7 @@ import numpy as np
 from copy import deepcopy
 
 # Variables controlling flow of the program
-mode_globals = 4
+mode_globals = 0
 save_history_globals = True
 load_recording_globals = False
 
