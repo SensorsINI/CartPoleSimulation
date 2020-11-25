@@ -153,9 +153,12 @@ class Cart:
 
         self.controller_lqr = controller_lqr(self.Jacobian_UP, self.B, self.Q_matrix, self.R_matrix)
         self.controller_do_mpc = controller_do_mpc()
+        # self.controller_do_mpc = controller_mpc_gekko()
         self.controller_do_mpc_discrete = controller_do_mpc_discrete()
         self.controller_rnn_as_mpc = controller_rnn_as_mpc()
+        # self.controller_rnn_as_mpc = controller_rnn_as_mpc_tf()
         self.controller_mpc_on_rnn = controller_mpc_on_rnn()
+        # self.controller_mpc_on_rnn = controller_mpc_on_rnn_tf()
         self.controller = None
         self.controller_name = ''
 
@@ -596,4 +599,14 @@ class Cart:
             self.mode = 5
             self.controller = self.controller_mpc_on_rnn
             self.controller_name = 'mpc-on-rnn'
+            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
+        elif new_mode == 6:
+            self.mode = 6
+            self.controller = self.controller_mpc_on_rnn
+            self.controller_name = 'mpc-on-rnn_tf'
+            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
+        elif new_mode == 7:
+            self.mode = 7
+            self.controller = self.controller_mpc_on_rnn
+            self.controller_name = 'do_mpc_gekko'
             self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider

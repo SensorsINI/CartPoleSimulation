@@ -116,12 +116,16 @@ class MainWindow(QMainWindow):
         self.rb_do_mpc_discrete = QRadioButton('do-mpc-discrete-control')
         self.rb_rnn_as_mpc = QRadioButton('rnn-as-mpc-control')
         self.rb_mpc_on_rnn = QRadioButton('mpc-on-rnn-control')
+        self.rb_mpc_on_rnn_tf = QRadioButton('mpc-on-rnn-control_tf')
+        self.rb_do_mpc_gekko = QRadioButton('do-mpc-gekko-control')
         self.rbs = [self.rb_manual,
                     self.rb_LQR,
                     self.rb_do_mpc,
                     self.rb_do_mpc_discrete,
                     self.rb_rnn_as_mpc,
-                    self.rb_mpc_on_rnn]
+                    self.rb_mpc_on_rnn,
+                    self.rb_mpc_on_rnn_tf,
+                    self.rb_do_mpc_gekko]
 
         lr.addStretch(1)
         for rb in self.rbs:
