@@ -38,7 +38,7 @@ VAL_file_name = './data/data_rnn_big.csv'
 FIXME: To tailor input list, output list and closed loop list according to cartpole
 angleD_next, positionD_next = cartpole_ode(p, s, Q2u(Q,p))
 '''
-RNN_name = 'GRU-32H1-32H2'
+RNN_name = 'LSTM-64H1-32H2-32H1'
 # inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'u']
 # inputs_list = ['s.position', 's.angle', 'u']
 inputs_list = ['s.position', 's.angle', 'u', 'target_position']
