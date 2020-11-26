@@ -11,6 +11,9 @@ import casadi
 
 from copy import deepcopy
 
+
+
+
 # Controler empty template. Pasted here by Marcin to prevent GUI crashing
 class controller_mpc_on_rnn_tf:
     def __init__(self):
