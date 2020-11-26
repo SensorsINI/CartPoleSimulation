@@ -105,7 +105,7 @@ def train_network():
 
     history = net.fit(
         train_set,
-        epochs=args.epochs,
+        epochs=args.num_epochs,
         verbose=1,
         shuffle=False,
         validation_data=test_set,
