@@ -70,7 +70,7 @@ def load_pretrained_rnn(net, ckpt_path):
 
 
 def create_rnn_instance(args=None, rnn_name=None, inputs_list=None, outputs_list=None, load_rnn=None, path_save=None,
-                        warm_up_len=None):
+                        warm_up_len=1, return_sequence=False, stateful=False, batchSize=None):
     if rnn_name is None and args is not None:
         rnn_name = args.rnn_name
     if inputs_list is None and args is not None:
@@ -81,8 +81,12 @@ def create_rnn_instance(args=None, rnn_name=None, inputs_list=None, outputs_list
         load_rnn = args.load_rnn
     if path_save is None and args is not None:
         path_save = args.path_save
-    if warm_up_len is None and args is not None:
+    if warm_up_len == 1 and args is not None:
         warm_up_len = args.warm_up_len
+    # if return_sequence is False and args is not None:
+    #     return_sequence = args.return_sequence
+    # if stateful is False and args is not None:
+    #     stateful = args.stateful
 
     if load_rnn is not None and load_rnn != 'last':
         # 1) Find csv with this name if exists load name, inputs and outputs list
@@ -120,7 +124,8 @@ def create_rnn_instance(args=None, rnn_name=None, inputs_list=None, outputs_list
 
         # Construct the requested RNN
         net = myNN(rnn_name=rnn_name, inputs_list=inputs_list, outputs_list=outputs_list,
-                   warm_up_len=warm_up_len)
+                   warm_up_len=warm_up_len, return_sequence=return_sequence,
+                   stateful=stateful, batchSize=batchSize)
         net.rnn_full_name = load_rnn
 
         # Load the parameters
@@ -161,7 +166,8 @@ def create_rnn_instance(args=None, rnn_name=None, inputs_list=None, outputs_list
 
         # Construct the requested RNN
         net = myNN(rnn_name=rnn_name, inputs_list=inputs_list, outputs_list=outputs_list,
-                   warm_up_len=warm_up_len)
+                   warm_up_len=warm_up_len, return_sequence=return_sequence,
+                   stateful=stateful, batchSize=batchSize)
         net.rnn_full_name = pre_rnn_full_name
 
         # Load the parameters
@@ -173,7 +179,8 @@ def create_rnn_instance(args=None, rnn_name=None, inputs_list=None, outputs_list
         print('')
         # Construct the requested RNN
         net = myNN(rnn_name=rnn_name, inputs_list=inputs_list, outputs_list=outputs_list,
-                   warm_up_len=warm_up_len)
+                   warm_up_len=warm_up_len, return_sequence=return_sequence,
+                   stateful=stateful, batchSize=batchSize)
 
     return net, rnn_name, inputs_list, outputs_list
 
@@ -682,16 +689,16 @@ def plot_results(net,
     net_predict = myNN(rnn_name,
                        inputs_list,
                        outputs_list,
-                       warm_up_len=net.warm_up_len,
+                       warm_up_len=1,
                        return_sequence=False,
                        batchSize=1,
-                       stateful=1
+                       stateful=True
                        )
     net_predict.rnn_full_name = rnn_full_name
 
     net_predict.set_weights(net.get_weights())
 
-    net_predict.summary()
+    # net_predict.summary()
 
     if normalization_info is None:
         normalization_info = load_normalization_info(args.path_save, rnn_full_name)

@@ -4,7 +4,9 @@ from copy import deepcopy
 # Variables controlling flow of the program
 mode_globals = 0
 save_history_globals = True
+stop_at_90_globals = False
 load_recording_globals = False
+slider_on_click_globals = True
 
 # Variables used for physical simulation
 dt_main_simulation_globals = 0.020

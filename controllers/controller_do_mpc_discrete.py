@@ -56,7 +56,7 @@ class controller_do_mpc_discrete:
         target_position = self.model.set_variable('_tvp', 'target_position')
 
         position_next, positionD_next, angle_next, angleD_next = \
-            mpc_next_state(s, p, Q2u(Q,p), dt = dt_mpc_simulation_globals)
+            mpc_next_state(s, p, Q2u(Q,p), dt=dt_mpc_simulation_globals)
 
         self.model.set_rhs('s.position', position_next)
         self.model.set_rhs('s.angle', angle_next)

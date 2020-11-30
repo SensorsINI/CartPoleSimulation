@@ -121,8 +121,6 @@ class controller_do_mpc:
         self.x0['s.positionD'] = positionD_init
         self.x0['s.angle'] = angle_init
         self.x0['s.angleD'] = angleD_init
-
-
         self.mpc.x0 = self.x0
 
         self.mpc.set_initial_guess()
