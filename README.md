@@ -12,6 +12,15 @@ Choose right installation command for Pytorch
 https://pytorch.org/get-started/locally/
 (Sensitive to whether you have CUDA (GPU) in your computer or not)
 
+If environment already created:
+
+    conda install matplotlib pyqt pandas tqdm scipy ipython memory_profiler
+    pip install do_mpc gekko tensorflow
+ 
+(For Mac without CUDA:)
+
+    conda install pytorch torchvision torchaudio -c pytorch
+
 
 ## Running the project files:
 

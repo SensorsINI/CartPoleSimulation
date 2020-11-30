@@ -29,10 +29,18 @@ from src.utilis import *
 
 # Window displaying summary (matplotlib plots) of an experiment with CartPole after clicking Stop button
 # (if experiment was previously running)
-class SummaryWindow(QMainWindow):
-    def __init__(self):
+class SummaryWindow(QWidget):
+    def __init__(self, summary_plots):
         super(SummaryWindow, self).__init__()
         lbl = QLabel('Summary', self)
+
+        ## Create GUI Layout
+        layout = QVBoxLayout()
+
+
+        # Attach figure to the layout
+        lf = QVBoxLayout()
+        lf.addWidget(self.canvas)
 
 
 # The following classes WorkerSignals and Worker are a standard tamplete
@@ -77,7 +85,9 @@ class MainWindow(QMainWindow):
 
         self.counter = 0
         self.save_history = save_history_globals
+        self.stop_at_90 = stop_at_90_globals
         self.load_recording = load_recording_globals
+        self.slider_on_click = slider_on_click_globals
         self.saved = 0
         self.printing_summary = 1
         self.Q_thread_enabled = False
@@ -89,6 +99,7 @@ class MainWindow(QMainWindow):
         # Create Cart object
 
         self.MyCart = Cart()
+        self.slider_value = self.MyCart.slider_value
 
         ## Create GUI Layout
         layout = QVBoxLayout()
@@ -170,6 +181,8 @@ class MainWindow(QMainWindow):
         ld2.addWidget(self.labTimeSim)
         self.labSpeedUp = QLabel('Speed-up (measured):')
         ld2.addWidget(self.labSpeedUp)
+        self.labSliderInstant = QLabel('')
+        ld2.addWidget(self.labSliderInstant)
         layout.addLayout(ld2)
 
         # Buttons "START/STOP", "RESET", "QUIT"
@@ -222,6 +235,18 @@ class MainWindow(QMainWindow):
         self.cb_save_history.toggled.connect(self.cb_save_history_f)
         l_cb.addWidget(self.cb_save_history)
 
+        self.cb_stop_at_90_deg = QCheckBox('Stop-at-90-deg', self)
+        if self.stop_at_90:
+            self.cb_stop_at_90_deg.toggle()
+        self.cb_stop_at_90_deg.toggled.connect(self.cb_stop_at_90_deg_f)
+        l_cb.addWidget(self.cb_stop_at_90_deg)
+
+        self.cb_slider_on_click = QCheckBox('Update slider on click', self)
+        if self.slider_on_click:
+            self.cb_slider_on_click.toggle()
+        self.cb_slider_on_click.toggled.connect(self.cb_slider_on_click_f)
+        l_cb.addWidget(self.cb_slider_on_click)
+
         self.load_generate_conflict_msg = QMessageBox()
         self.load_generate_conflict_msg.setWindowTitle("Load-generate conflict")
         self.load_generate_conflict_msg.setIcon(QMessageBox.Critical)
@@ -246,8 +271,10 @@ class MainWindow(QMainWindow):
         # in a different thread thqn the one cupturing the mouse position
         self.threadpool = QThreadPool()
 
-        # This line links function cupturing the mouse position to the canvas of the Figure
+        # This line links function capturing the mouse position on the canvas of the Figure
         self.canvas.mpl_connect("motion_notify_event", self.on_mouse_movement)
+        # This line links function capturing the mouse position on the canvas of the Figure click
+        self.canvas.mpl_connect("button_press_event", self.on_mouse_click)
 
         # Starts a thread constantly redrawing labels of the GUI
         # It runs till the QUIT button is pressed
@@ -261,10 +288,22 @@ class MainWindow(QMainWindow):
         # It runs till the QUIT button is pressed
         self.run_animation()
 
-    # Function evoked at a mouese movement
-    # If the mouse coursor is over the lower chart it reads the coresponding value
+    # Function evoked at a mouse movement
+    # If the mouse cursor is over the lower chart it reads the corresponding value
     # and updates the slider
     def on_mouse_movement(self, event):
+        if event.xdata == None or event.ydata == None:
+            pass
+        else:
+            if event.inaxes == self.fig.AxSlider:
+                self.slider_value = event.xdata
+                if not self.slider_on_click:
+                    self.MyCart.update_slider(mouse_position=event.xdata)
+
+    # Function evoked at a mouse click
+    # If the mouse cursor is over the lower chart it reads the corresponding value
+    # and updates the slider
+    def on_mouse_click(self, event):
         if event.xdata == None or event.ydata == None:
             pass
         else:
@@ -308,7 +347,7 @@ class MainWindow(QMainWindow):
         self.looper.first_call_done = False
 
     # Method printing the parameters of the CartPole over time during the experiment
-    def show_summary(self):
+    def summary_plots(self):
 
         fig, axs = plt.subplots(4, 1, figsize=(18, 14), sharex=True)  # share x axis so zoom zooms all plots
 
@@ -346,6 +385,8 @@ class MainWindow(QMainWindow):
                      (180 / pi) * max(abs(array(self.MyCart.dict_history['s.angle']))),
                      (180 / pi) * max(abs(array(self.MyCart.dict_history['s.angleD']))))
         print(max_state)
+
+        return fig, axs
 
     # This method initiate calculation of simulation and iterative updates of Cart state
     # It also measures time intervals for real time simulation
@@ -395,6 +436,11 @@ class MainWindow(QMainWindow):
             else:
                 self.labTargetPosition.setText("Target position (m): " + str(around(self.MyCart.slider_value, 2)))
 
+            if self.MyCart.mode == 0:
+                self.labSliderInstant.setText("Slider instant value (-): " + str(around(self.slider_value, 2)))
+            else:
+                self.labSliderInstant.setText("Slider instant value (m): " + str(around(self.slider_value, 2)))
+
             self.labTimeSim.setText('Simulation time (s): {:.2f}'.format(self.MyCart.time))
 
             mean_dt_real = np.mean(self.looper.circ_buffer_dt_real)
@@ -421,7 +467,7 @@ class MainWindow(QMainWindow):
                         sleep(0.001)
 
                 self.MyCart.use_pregenerated_target_position = False
-                self.show_summary()
+                self.summary_plots()
                 # Reset variables and redraw the figures
                 self.reset_variables()
                 # Draw figures
@@ -530,7 +576,7 @@ class MainWindow(QMainWindow):
                     sleep(0.001)
 
             self.MyCart.use_pregenerated_target_position = False
-            self.show_summary()
+            self.summary_plots()
             # Reset variables and redraw the figures
             self.reset_variables()
             # Draw figures
@@ -586,6 +632,25 @@ class MainWindow(QMainWindow):
             self.save_history = 0
 
         print('save history is now {}'.format(self.save_history))
+
+    # Action toggling between stopping (or not) the pole if it reaches 90 deg
+    def cb_stop_at_90_deg_f(self, state):
+
+        if state:
+            self.stop_at_90 = True
+        else:
+            self.stop_at_90 = False
+
+        self.MyCart.stop_at_90 = self.stop_at_90
+
+
+    def cb_slider_on_click_f(self, state):
+
+        if state:
+            self.slider_on_click = True
+        else:
+            self.slider_on_click = False
+
 
     # Action toggling between loading (and/for replaying) recorded data and performing new experiment
     def cb_load_recorded_data_f(self, state):

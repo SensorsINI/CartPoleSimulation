@@ -26,6 +26,8 @@ print(args.__dict__)
 
 exp_len = 5000//args.downsampling
 
+MULTIPLE_PICTURES = False
+
 
 def test_network():
 
@@ -48,12 +50,18 @@ def test_network():
                               inputs_list=inputs_list, outputs_list=outputs_list,
                               load_rnn=load_rnn, path_save=path_save)
     title = 'Testing RNN: {}'.format(rnn_name)
-    for i in range(exp_len//20):
-        close_loop_idx = (exp_len//4)+i*10
+    if MULTIPLE_PICTURES:
+        for i in range(exp_len//20):
+            close_loop_idx = (exp_len//4)+i*10
+            plot_results(net=net, args=args, dataset=None, filepath=filepath, exp_len=exp_len,
+                         comment=title,
+                         inputs_list=inputs_list, outputs_list=outputs_list, save=True,
+                         closed_loop_enabled=True, close_loop_idx=close_loop_idx)
+    else:
         plot_results(net=net, args=args, dataset=None, filepath=filepath, exp_len=exp_len,
                      comment=title,
                      inputs_list=inputs_list, outputs_list=outputs_list, save=True,
-                     closed_loop_enabled=True, close_loop_idx=close_loop_idx)
+                     closed_loop_enabled=True, close_loop_idx=exp_len//2)
 
 
 if __name__ == '__main__':

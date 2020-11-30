@@ -111,6 +111,7 @@ class Cart:
         self.csv_filepath = None
         self.random_trace_generated = False
         self.use_pregenerated_target_position = False
+        self.stop_at_90 = False
 
         # Physical parameters of the cart
         self.p = SimpleNamespace()  # p like parameters
@@ -246,7 +247,24 @@ class Cart:
         self.s.position, self.s.positionD, self.s.angle, self.s.angleD = \
             cartpole_integration(self.s, self.dt)
 
+        zero_DD = None
+        if self.stop_at_90:
+            if self.s.angle >= np.pi/2:
+                self.s.angle = np.pi/2
+                self.s.angleD = 0.0
+                zero_DD = True
+            elif self.s.angle <= -np.pi/2:
+                self.s.angle = -np.pi/2
+                self.s.angleD = 0.0
+                zero_DD = True
+            else:
+                pass
+
         self.s.angleDD, self.s.positionDD = cartpole_ode(self.p, self.s, self.u)
+
+        if zero_DD:
+            self.s.angleDD = 0.0
+
 
         # Equivalent (?) formulation
         # self.s.position, self.s.positionD, self.s.angle, self.s.angleD = \
