@@ -1,6 +1,18 @@
 import numpy as np
 from copy import deepcopy
 
+CARTPOLE_EQUATIONS = 'Marcin-Sharpneat'
+# Possible choices: 'Marcin-Sharpneat', 'Krishna'
+
+# Marcin-Sharpneat is done on the basis of: https://sharpneat.sourceforge.io/research/cart-pole/cart-pole-equations.html
+# Angle convention CLOCK-NEG
+
+# Krishna is done on the basis of:
+
+# Defines if a clockwise direction is negative ('CLOCK-NEG')
+# or positive ('CLOCK-POS') for angle change
+ANGLE_CONVENTION = 'CLOCK-NEG'
+
 # Variables controlling flow of the program
 mode_globals = 0
 save_history_globals = True
@@ -49,18 +61,31 @@ def cartpole_integration(s, dt):
 def cartpole_ode(p, s, u):
     ca = np.cos(s.angle)
     sa = np.sin(s.angle)
-    A = (p.k + 1) * (p.M + p.m) - p.m * (ca ** 2)
 
-    angleDD = (p.g * (p.m + p.M) * sa -
-               ((p.J_fric * (p.m + p.M) * s.angleD) / (p.L * p.m)) -
-               ca * (p.m * p.L * (s.angleD ** 2) * sa + p.M_fric * s.positionD) +
-               ca * u) / (A * p.L)
-    positionDD = (
-                             p.m * p.g * sa * ca -
-                             ((p.J_fric * s.angleD * ca) / (p.L)) -
-                             (p.k + 1) * (p.m * p.L * (s.angleD ** 2) * sa + p.M_fric * s.positionD) +
-                             (p.k + 1) * u
-                        ) / A
+    if CARTPOLE_EQUATIONS == 'Krishna':
+
+        A = (p.M + p.m) - p.m * (ca ** 2)
+        angleDD = ((p.m + p.M) * p.g * sa + (u * ca) - (p.m * p.L * (s.angleD ** 2) * sa * ca)) / (A * p.L)
+        positionDD = (u - (p.m * p.g * sa * ca) + (p.m * p.L * (s.angleD ** 2) * sa)) / A
+
+    elif CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
+
+        A = (p.k + 1) * (p.M + p.m) - p.m * (ca ** 2)
+
+        angleDD = (p.g * (p.m + p.M) * sa -
+                   ((p.J_fric * (p.m + p.M) * s.angleD) / (p.L * p.m)) -     # Friction of the pole in its joint
+                   p.m * p.L * (s.angleD ** 2) * sa * ca +
+                   ca * p.M_fric * s.positionD +                            # Friction of the cart on the track
+                   ca * u) / (A * p.L)
+
+        positionDD = (
+                                 p.m * p.g * sa * ca -
+                                 ((p.J_fric * s.angleD * ca) / (p.L)) -
+                                 (p.k + 1) * (p.m * p.L * (s.angleD ** 2) * sa + p.M_fric * s.positionD) +
+                                 (p.k + 1) * u
+                            ) / A
+    else:
+        raise('An undefined name for Cartpole equations')
 
     return angleDD, positionDD
 
@@ -72,20 +97,7 @@ def Q2u(Q, p):
 
 def mpc_next_state(s, p, u, dt):
 
-    ca = np.cos(s.angle)
-    sa = np.sin(s.angle)
-    A = (p.k + 1) * (p.M + p.m) - p.m * (ca ** 2)
-
-    angleDD = (p.g * (p.m + p.M) * sa -
-               ((p.J_fric * (p.m + p.M) * s.angleD) / (p.L * p.m)) -
-               ca * (p.m * p.L * (s.angleD ** 2) * sa + p.M_fric * s.positionD) +
-               ca * u) / (A * p.L)
-    positionDD = (
-                             p.m * p.g * sa * ca -
-                             ((p.J_fric * s.angleD * ca) / (p.L)) -
-                             (p.k + 1) * (p.m * p.L * (s.angleD ** 2) * sa + p.M_fric * s.positionD) +
-                             (p.k + 1) * u
-                        ) / A
+    angleDD, positionDD = cartpole_ode(p, s, u)
 
     position_next = s.position + s.positionD * dt
     positionD_next = s.positionD + positionDD * dt

@@ -457,7 +457,12 @@ class Cart:
         self.Mast.set_x(mast_position)
         # Draw rotated mast
         t21 = transforms.Affine2D().translate(-mast_position, -1.25 * self.WheelRadius)
-        t22 = transforms.Affine2D().rotate(self.s.angle)
+        if ANGLE_CONVENTION == 'CLOCK-NEG':
+            t22 = transforms.Affine2D().rotate(self.s.angle)
+        elif ANGLE_CONVENTION == 'CLOCK-POS':
+            t22 = transforms.Affine2D().rotate(-self.s.angle)
+        else:
+            raise ValueError('Unknown angle convention')
         t23 = transforms.Affine2D().translate(mast_position, 1.25 * self.WheelRadius)
         self.t2 = t21 + t22 + t23
         # Draw Chassis

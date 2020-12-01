@@ -10,6 +10,7 @@ import timeit
 # Some more functions needed for interaction of matplotlib with PyQt5 and
 # for running the animation are imported here
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from matplotlib import animation
 import matplotlib.pyplot as plt
@@ -30,17 +31,34 @@ from src.utilis import *
 # Window displaying summary (matplotlib plots) of an experiment with CartPole after clicking Stop button
 # (if experiment was previously running)
 class SummaryWindow(QWidget):
-    def __init__(self, summary_plots):
+    def __init__(self, summary_plots=None):
         super(SummaryWindow, self).__init__()
-        lbl = QLabel('Summary', self)
 
         ## Create GUI Layout
         layout = QVBoxLayout()
 
+        # self.setGeometry(500, 500, 1000, 1000)
 
+        self.fig, self.axs = summary_plots()
+        self.canvas = FigureCanvas(self.fig)
+        self.toolbar = NavigationToolbar(self.canvas, self)
         # Attach figure to the layout
         lf = QVBoxLayout()
         lf.addWidget(self.canvas)
+        layout.addLayout(lf)
+
+
+        # add quit button
+        bq = QPushButton("QUIT")
+        bq.pressed.connect(self.close)
+        lb = QVBoxLayout()  # Layout for buttons
+        lb.addWidget(bq)
+        layout.addLayout(lb)
+
+        self.setLayout(layout)
+        self.show()
+        self.setWindowTitle('Last experiment summary')
+
 
 
 # The following classes WorkerSignals and Worker are a standard tamplete
@@ -347,7 +365,7 @@ class MainWindow(QMainWindow):
         self.looper.first_call_done = False
 
     # Method printing the parameters of the CartPole over time during the experiment
-    def summary_plots(self):
+    def summary_plots(self, in_PyQT5 = False):
 
         fig, axs = plt.subplots(4, 1, figsize=(18, 14), sharex=True)  # share x axis so zoom zooms all plots
 
@@ -468,6 +486,7 @@ class MainWindow(QMainWindow):
 
                 self.MyCart.use_pregenerated_target_position = False
                 self.summary_plots()
+                self.w_summary = SummaryWindow(summary_plots=self.summary_plots)
                 # Reset variables and redraw the figures
                 self.reset_variables()
                 # Draw figures
