@@ -7,7 +7,7 @@ from modeling.rnn.utilis_rnn import *
 RNN_FULL_NAME = 'GRU-5IN-32H1-32H2-1OUT-0'
 INPUTS_LIST = ['s.position', 's.angle']
 OUTPUTS_LIST = ['Q']
-PATH_SAVE = './save/'
+PATH_SAVE = './save/nets/rnn_as_mpc_pt/'
 
 from copy import deepcopy
 

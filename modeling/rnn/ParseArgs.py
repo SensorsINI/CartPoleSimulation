@@ -24,14 +24,14 @@ FIXME: To tailor input list, output list and closed loop list according to cartp
 angleD_next, positionD_next = cartpole_ode(p, s, Q2u(Q,p))
 '''
 RNN_name = 'GRU-32H1-32H2'
-inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'u']
-# inputs_list = ['s.position', 's.angle', 'u']
+# inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'u']
+inputs_list = ['s.position', 's.angle', 'u']
 # outputs_list = ['s.angle', 's.position', 's.positionD', 's.angleD']
 outputs_list = ['s.angle', 's.position']
-closed_loop_list = ['s.position', 's.angle']
+# closed_loop_list = ['s.position', 's.angle']
 closed_loop_list = outputs_list
 
-inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'target_position']
+# inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'target_position']
 # outputs_list = ['Q']
 # closed_loop_list = []
 

@@ -13,7 +13,7 @@ import casadi
 RNN_FULL_NAME = 'GRU-6IN-32H1-32H2-4OUT-0'
 INPUTS_LIST = ['s.angle', 's.angleD', 's.position', 's.positionD', 'target_position', 'u']
 OUTPUTS_LIST = ['s.angle', 's.angleD', 's.position', 's.positionD']
-PATH_SAVE = './controllers/nets/'
+PATH_SAVE = './controllers/nets/mpc_on_rnn_tf/'
 
 
 
