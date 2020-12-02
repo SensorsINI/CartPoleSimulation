@@ -4,7 +4,7 @@ from modeling.rnn_tf.utilis_rnn import *
 RNN_FULL_NAME = 'GRU-5IN-64H1-64H2-1OUT-0'
 INPUTS_LIST = ['s.position', 's.angle', 's.positionD', 's.angleD', 'target_position']
 OUTPUTS_LIST = ['Q']
-PATH_SAVE = './save_tf/'
+PATH_SAVE = './controllers/nets/'
 
 # TODO: For this moment it is just copied Pytorch version
 class controller_rnn_as_mpc_tf:

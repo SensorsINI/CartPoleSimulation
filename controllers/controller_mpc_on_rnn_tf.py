@@ -6,14 +6,14 @@ from src.globals import *
 from types import SimpleNamespace
 
 from modeling.rnn_tf.utilis_rnn import *
-tf.compat.v1.disable_eager_execution()
+# tf.compat.v1.disable_eager_execution()
 
 import casadi
 
 RNN_FULL_NAME = 'GRU-6IN-32H1-32H2-4OUT-0'
 INPUTS_LIST = ['s.angle', 's.angleD', 's.position', 's.positionD', 'target_position', 'u']
 OUTPUTS_LIST = ['s.angle', 's.angleD', 's.position', 's.positionD']
-PATH_SAVE = './save_tf/'
+PATH_SAVE = './controllers/nets/'
 
 
 
