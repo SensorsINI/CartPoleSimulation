@@ -1,6 +1,7 @@
 """Parameters of CartPole system and simulation, Ground Truth equations of CartPole"""
 
 import numpy as np
+from types import SimpleNamespace
 
 # You can choose CartPole dynamical equations you want to use in simulation by setting CARTPOLE_EQUATIONS variable
 # The possible choices and their explanation are listed below
@@ -75,7 +76,7 @@ v_max_globals = 10.0  # max DC motor speed, m/s, in absense of friction, used fo
 controlDisturbance_globals = 0.0  # disturbance, as factor of u_max
 sensorNoise_globals = 0.0  # noise, as factor of max values
 
-g_globals = 9.81  # gravity, m/s^2
+g_globals = 9.81  # absolute value of gravity acceleration, m/s^2
 k_globals = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
 # (I = k*m*L^2) (with L being half if the length)
 
@@ -94,14 +95,15 @@ def cartpole_integration(s, dt):
     :param s: state of the CartPole (contains: s.position, s.positionD, s.angle and s.angleD)
     :param dt: time step by which the CartPole state should be integrated
     """
+    s_next = SimpleNamespace()
 
-    position = s.position + s.positionD * dt
-    positionD = s.positionD + s.positionDD * dt
+    s_next.position = s.position + s.positionD * dt
+    s_next.positionD = s.positionD + s.positionDD * dt
 
-    angle = s.angle + s.angleD * dt
-    angleD = s.angleD + s.angleDD * dt
+    s_next.angle = s.angle + s.angleD * dt
+    s_next.angleD = s.angleD + s.angleDD * dt
 
-    return position, positionD, angle, angleD
+    return s_next
 
 
 def cartpole_ode(p, s, u):
@@ -130,7 +132,7 @@ def cartpole_ode(p, s, u):
                    ca * u) / (A * p.L)
 
         positionDD = (
-                             p.m * p.g * sa * ca -
+                             p.m * p.g * sa * ca +
                              ((p.J_fric * s.angleD * ca) / (p.L)) -
                              (p.k + 1) * (p.m * p.L * (s.angleD ** 2) * sa + p.M_fric * s.positionD) +
                              (p.k + 1) * u

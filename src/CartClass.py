@@ -244,8 +244,11 @@ class Cart:
     # x = [x, v, theta, omega]
     def Equations_of_motion(self):
 
-        self.s.position, self.s.positionD, self.s.angle, self.s.angleD = \
-            cartpole_integration(self.s, self.dt)
+        s_next = cartpole_integration(self.s, self.dt)
+        self.s.position = s_next.position
+        self.s.positionD = s_next.positionD
+        self.s.angle = s_next.angle
+        self.s.angleD = s_next.angleD
 
         zero_DD = None
         if self.stop_at_90:

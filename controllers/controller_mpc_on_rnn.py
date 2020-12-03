@@ -185,6 +185,7 @@ class controller_mpc_on_rnn:
 
         rnn_input_normed = normalize_df(self.rnn_input, self.normalization_info)
 
+        print(rnn_input_normed.values)
         rnn_input_torch = torch.tensor(rnn_input_normed.values).float().unsqueeze(0).to(self.device)
         normalized_rnn_output = self.net(rnn_input=rnn_input_torch)
         normalized_rnn_output = normalized_rnn_output.detach().cpu().squeeze().tolist()

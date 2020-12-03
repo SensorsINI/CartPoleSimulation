@@ -641,7 +641,7 @@ def plot_results(net,
                  dataset=None,
                  normalization_info=None,
                  time_axes=None,
-                 filepath=None,
+                 testset_filepath=None,
                  inputs_list=None,
                  outputs_list=None,
                  closed_loop_list=None,
@@ -663,10 +663,10 @@ def plot_results(net,
     inputs_list = net.inputs_list
     outputs_list = net.outputs_list
 
-    if filepath is None:
-        filepath = args.val_file_name
-        if type(filepath) == list:
-            filepath = filepath[0]
+    if testset_filepath is None:
+        testset_filepath = args.val_file_name
+        if type(testset_filepath) == list:
+            testset_filepath = testset_filepath[0]
 
     if warm_up_len is None:
         warm_up_len = args.warm_up_len
@@ -704,7 +704,7 @@ def plot_results(net,
         normalization_info = load_normalization_info(args.path_save, rnn_full_name)
 
     if dataset is None or dataset.time_axes is None:
-        test_dfs, time_axes = load_data(args, filepath, columns_list=columns_list)
+        test_dfs, time_axes = load_data(args, testset_filepath, columns_list=columns_list)
         test_dfs_norm = normalize_df(test_dfs, normalization_info)
         test_set = Dataset(test_dfs_norm, args,
                            time_axes=time_axes, exp_len=exp_len,
