@@ -78,8 +78,10 @@ class Cart:
                  sensorNoise=sensorNoise_globals,  # 0.01, # noise, as factor of max values
 
                  # Variables for random trace generation
-                 N=N_globals,  # Complexity of the random trace, number of random points used for interpolation
+                 track_relative_complexity=track_relative_complexity_globals,  # Complexity of the random trace, randomly placed target points/s
                  random_length=random_length_globals,  # Number of points in the random length trece
+                 interpolation_type = interpolation_type_globals,  # Sets how to interpolate between turning points of random trace
+                 turning_points_period = turning_points_period_globals,  # How timeaxis of random trace should be devided
 
                  mode_init = mode_globals  # In which mode the Cart should be initialized
                  ):
@@ -163,8 +165,10 @@ class Cart:
 
         # Variables for pre-generated random trace
 
-        self.N = int(N)
+        self.track_relative_complexity = track_relative_complexity
         self.random_length = random_length
+        self.interpolation_type = interpolation_type
+        self.turning_points_period = turning_points_period
         self.random_track_f = None
         self.new_track_generated = False
         self.t_max_pre = None
@@ -213,29 +217,40 @@ class Cart:
 
     def Generate_Random_Trace_Function(self):
         # t_pre = arange(0, self.random_length)*self.dt
-        self.t_max_pre = self.random_length * self.dt
+        number_of_timesteps = np.ceil(self.random_length / self.dt)
+        number_of_turning_points = int(np.floor(self.random_length*self.track_relative_complexity))
+        self.t_max_pre = number_of_timesteps * self.dt
+        random_samples = number_of_turning_points - 2 if number_of_turning_points - 2 >= 0 else 0
 
-        # t_init = linspace(0, self.t_max_pre, num=self.N, endpoint=True)
-        t_init = np.sort(random.uniform(self.dt, self.t_max_pre, self.N))
-        t_init = np.insert(t_init, 0, 0.0)
-        t_init = np.append(t_init, self.t_max_pre)
+        # t_init = linspace(0, self.t_max_pre, num=self.track_relative_complexity, endpoint=True)
+        if self.turning_points_period == 'random':
+            t_init = np.sort(random.uniform(self.dt, self.t_max_pre-self.dt, random_samples))
+            t_init = np.insert(t_init, 0, 0.0)
+            t_init = np.append(t_init, self.t_max_pre)
+        elif self.turning_points_period == 'regular':
+            t_init = np.linspace(0, self.t_max_pre, num=random_samples+2, endpoint=True)
 
-        y = 2.0 * (random.random(self.N) - 0.5)
+        y = 2.0 * (random.random(number_of_turning_points) - 0.5)
+        y = y * 0.8 * self.HalfLength
 
-        y = y * 0.8 * self.HalfLength / max(abs(y))
-        y = np.insert(y, 0, 0.0)
-        y = np.append(y, 0.0)
+        if number_of_turning_points == 0:
+            y = np.append(y, 0.0)
+            y = np.append(y, 0.0)
+        elif number_of_turning_points == 1:
+            y = np.append(y, y[0])
 
-        # t1 = timeit.default_timer()
-        # self.random_track_f = interp1d(t_init, y, kind='cubic')
-        # t2 = timeit.default_timer()
+
         # Try algorithm setting derivative to 0 a each point
-        yder = [[y[i], 0] for i in range(len(y))]
-        self.random_track_f = BPoly.from_derivatives(t_init, yder)
-        # t3 = timeit.default_timer()
+        if self.interpolation_type == '0-derivative-smooth':
+            yder = [[y[i], 0] for i in range(len(y))]
+            self.random_track_f = BPoly.from_derivatives(t_init, yder)
+        elif self.interpolation_type == 'linear':
+            self.random_track_f = interp1d(t_init, y, kind='linear')
+        elif self.interpolation_type == 'previous':
+            self.random_track_f = interp1d(t_init, y, kind='previous')
+        else:
+            raise ValueError('Unknown interpolation type.')
 
-        # print('Time for simple method: {:.3f}ms'.format((t2-t1)*1000))
-        # print('Time for complex method: {:.3f}ms'.format((t3 - t2) * 1000))
 
         self.new_track_generated = True
 
@@ -349,6 +364,7 @@ class Cart:
         # It is saved first internally to a dictionary in the Cart instance
         if self.save_history:
             # Saving simulation data
+            # TODO: Move dict to pandas
             self.dict_history['time'].append(around(self.time, self.rounding_decimals))
             self.dict_history['dt'].append(around(self.dt, self.rounding_decimals))
             self.dict_history['s.position'].append(around(self.s.position, self.rounding_decimals))

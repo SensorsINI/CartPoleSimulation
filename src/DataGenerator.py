@@ -8,7 +8,7 @@ number_of_experiments = 4
 length_of_experiment = 4e5+1
 
 dt_main_simulation = dt_main_simulation_globals
-track_relative_complexity = 0.5  # randomly placed points/s
+track_relative_complexity = 0.5  # randomly placed target points/s
 track_complexity = int(dt_main_simulation*length_of_experiment*track_relative_complexity)  # Total number of randomly placed points
 mode = 2
 
@@ -22,7 +22,7 @@ for i in range(number_of_experiments):
                         mode=mode,
                         exp_len=length_of_experiment,
                         dt=dt_main_simulation,
-                        track_complexity=track_complexity,
+                        track_relative_complexity=track_relative_complexity,
                         csv=csv,
                         save_csv_online=False)
     gen_end = timeit.default_timer()

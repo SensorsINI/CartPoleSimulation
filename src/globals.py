@@ -81,9 +81,13 @@ k_globals = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
 # (I = k*m*L^2) (with L being half if the length)
 
 # Variables for random trace generation
-N_globals = 10  # Complexity of the random trace, number of random points used for interpolation
-# TODO: Instead it should be number of points per second
-random_length_globals = 1e2  # Number of points in the random length trace
+# Complexity of the random trace, number of random points used for interpolation (not accounting starting point)
+track_relative_complexity_globals = 0.3
+random_length_globals = 1e1  # Number of seconds in the random length trace
+interpolation_type_globals = 'previous'  # Sets how to interpolate between turning points of random trace
+# Possible choices: '0-derivative-smooth', 'linear', 'previous'
+turning_points_period_globals = 'regular'  # How turning points should be distributed
+# Possible choices: 'regular', 'random'
 
 
 def cartpole_integration(s, dt):

@@ -158,7 +158,7 @@ class loop_timer():
 def Generate_Experiment(MyCart,
                         exp_len=random_length_globals,
                         dt=dt_main_simulation_globals,
-                        track_complexity=N_globals,
+                        track_relative_complexity = track_relative_complexity_globals,
                         csv=None,
                         save_csv_online = True,
                         mode=1):
@@ -184,8 +184,8 @@ def Generate_Experiment(MyCart,
     MyCart.reset_state()
 
     # Generate new random function returning desired target position of the cart
-    MyCart.random_length = exp_len
-    MyCart.N = track_complexity  # Complexity of generated target position track
+    MyCart.random_length = exp_len*dt
+    MyCart.track_relative_complexity = track_relative_complexity  # Complexity of generated target position track
     MyCart.Generate_Random_Trace_Function()
 
     # Randomly set the initial state
