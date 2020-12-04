@@ -80,8 +80,11 @@ class Cart:
                  # Variables for random trace generation
                  track_relative_complexity=track_relative_complexity_globals,  # Complexity of the random trace, randomly placed target points/s
                  random_length=random_length_globals,  # Number of points in the random length trece
-                 interpolation_type = interpolation_type_globals,  # Sets how to interpolate between turning points of random trace
-                 turning_points_period = turning_points_period_globals,  # How timeaxis of random trace should be devided
+                 interpolation_type=interpolation_type_globals,  # Sets how to interpolate between turning points of random trace
+                 turning_points_period=turning_points_period_globals,  # How timeaxis of random trace should be devided
+                 start_random_target_position_at=start_random_target_position_at_globals,
+                 end_random_target_position_at=end_random_target_position_at_globals,
+                 turning_points=turning_points_globals,
 
                  mode_init = mode_globals  # In which mode the Cart should be initialized
                  ):
@@ -169,6 +172,9 @@ class Cart:
         self.random_length = random_length
         self.interpolation_type = interpolation_type
         self.turning_points_period = turning_points_period
+        self.start_random_target_position_at = start_random_target_position_at
+        self.end_random_target_position_at = end_random_target_position_at
+        self.turning_points = turning_points
         self.random_track_f = None
         self.new_track_generated = False
         self.t_max_pre = None
@@ -216,10 +222,43 @@ class Cart:
         self.set_mode(new_mode=mode_init)
 
     def Generate_Random_Trace_Function(self):
-        # t_pre = arange(0, self.random_length)*self.dt
+
+        if self.turning_points is None:
+
+            number_of_turning_points = int(np.floor(self.random_length * self.track_relative_complexity))
+
+            y = 2.0 * (random.random(number_of_turning_points) - 0.5)
+            y = y * 0.8 * self.HalfLength
+
+            if number_of_turning_points == 0:
+                y = np.append(y, 0.0)
+                y = np.append(y, 0.0)
+            elif number_of_turning_points == 1:
+                if self.start_random_target_position_at is not None:
+                    y[0] = self.start_random_target_position_at
+                elif self.end_random_target_position_at is not None:
+                    y[0] = self.end_random_target_position_at
+                else:
+                    pass
+                y = np.append(y, y[0])
+            else:
+                if self.start_random_target_position_at is not None:
+                    y[0] = self.start_random_target_position_at
+                if self.end_random_target_position_at is not None:
+                    y[-1] = self.end_random_target_position_at
+
+        else:
+            number_of_turning_points = len(self.turning_points)
+            if number_of_turning_points == 0:
+                y = np.array([0.0, 0.0])
+            elif number_of_turning_points == 1:
+                y = np.array([self.turning_points[0], self.turning_points[0]])
+            else:
+                y = np.array(self.turning_points)
+
         number_of_timesteps = np.ceil(self.random_length / self.dt)
-        number_of_turning_points = int(np.floor(self.random_length*self.track_relative_complexity))
         self.t_max_pre = number_of_timesteps * self.dt
+
         random_samples = number_of_turning_points - 2 if number_of_turning_points - 2 >= 0 else 0
 
         # t_init = linspace(0, self.t_max_pre, num=self.track_relative_complexity, endpoint=True)
@@ -229,15 +268,6 @@ class Cart:
             t_init = np.append(t_init, self.t_max_pre)
         elif self.turning_points_period == 'regular':
             t_init = np.linspace(0, self.t_max_pre, num=random_samples+2, endpoint=True)
-
-        y = 2.0 * (random.random(number_of_turning_points) - 0.5)
-        y = y * 0.8 * self.HalfLength
-
-        if number_of_turning_points == 0:
-            y = np.append(y, 0.0)
-            y = np.append(y, 0.0)
-        elif number_of_turning_points == 1:
-            y = np.append(y, y[0])
 
 
         # Try algorithm setting derivative to 0 a each point
