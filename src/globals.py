@@ -93,7 +93,7 @@ start_random_target_position_at_globals = 10.0
 end_random_target_position_at_globals = 10.0
 # Alternatively you can provide a list of target positions. If not non this method has precedency
 # turning_points_globals = None
-turning_points_globals = [0.0, 30.0, -10.00, 10.0]
+turning_points_globals = [10.0, 0.0, 0.0]
 
 
 def cartpole_integration(s, dt):

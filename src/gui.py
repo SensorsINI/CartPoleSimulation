@@ -37,13 +37,18 @@ class SummaryWindow(QWidget):
         ## Create GUI Layout
         layout = QVBoxLayout()
 
-        # self.setGeometry(500, 500, 1000, 1000)
-
         self.fig, self.axs = summary_plots()
+        for axis in self.axs:
+            axis.tick_params(axis='both', which='major', labelsize=9)
+            axis.xaxis.label.set_fontsize(11)
+            axis.yaxis.label.set_fontsize(11)
+        self.fig.subplots_adjust(bottom=0.11)
+        self.fig.subplots_adjust(hspace=0.3)
         self.canvas = FigureCanvas(self.fig)
         self.toolbar = NavigationToolbar(self.canvas, self)
         # Attach figure to the layout
         lf = QVBoxLayout()
+        lf.addWidget(self.toolbar)
         lf.addWidget(self.canvas)
         layout.addLayout(lf)
 
@@ -56,6 +61,8 @@ class SummaryWindow(QWidget):
         layout.addLayout(lb)
 
         self.setLayout(layout)
+        self.setGeometry(100, 150, 1500, 800)
+        # self.adjustSize()
         self.show()
         self.setWindowTitle('Last experiment summary')
 
@@ -365,7 +372,7 @@ class MainWindow(QMainWindow):
         self.looper.first_call_done = False
 
     # Method printing the parameters of the CartPole over time during the experiment
-    def summary_plots(self, in_PyQT5 = False):
+    def summary_plots(self):
 
         fig, axs = plt.subplots(4, 1, figsize=(18, 14), sharex=True)  # share x axis so zoom zooms all plots
 
@@ -388,11 +395,13 @@ class MainWindow(QMainWindow):
         axs[2].tick_params(axis='both', which='major', labelsize=16)
 
         # Plot target position
-        axs[3].set_ylabel("position target", fontsize=18)
+        axs[3].set_ylabel("position target (m)", fontsize=18)
         axs[3].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['target_position'], 'k')
         axs[3].tick_params(axis='both', which='major', labelsize=16)
 
         axs[3].set_xlabel('Time (s)', fontsize=18)
+
+        fig.align_ylabels()
 
         plt.show()
 
@@ -434,9 +443,6 @@ class MainWindow(QMainWindow):
             csv_name = self.textbox.text()
             self.MyCart.save_history_csv(csv_name=csv_name)
             self.saved = 1
-
-        # plot_summary = True
-        # if self.save_history and plot_summary:
 
     # We define a separate threat for the controller:
     def thread_control_input(self):
@@ -596,6 +602,7 @@ class MainWindow(QMainWindow):
 
             self.MyCart.use_pregenerated_target_position = False
             self.summary_plots()
+            self.w_summary = SummaryWindow(summary_plots=self.summary_plots)
             # Reset variables and redraw the figures
             self.reset_variables()
             # Draw figures
