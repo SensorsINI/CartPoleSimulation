@@ -93,7 +93,9 @@ turning_points_period_globals = 'regular'  # How turning points should be distri
 # Where the target position of the random experiment starts and end
 start_random_target_position_at_globals = 10.0
 end_random_target_position_at_globals = 10.0
-# Alternatively you can provide a list of target positions. If not non this method has precedency
+# Alternatively you can provide a list of target positions.
+# If not None this variable has precedence -
+# track_relative_complexity, start/end_random_target_position_at_globals have no effect.
 # turning_points_globals = None
 turning_points_globals = [10.0, 0.0, 0.0]
 

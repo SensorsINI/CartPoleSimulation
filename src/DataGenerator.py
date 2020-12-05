@@ -17,6 +17,7 @@ turning_points_period = 'regular'  # How turning points should be distributed
 # Where the target position of the random experiment starts and end
 start_random_target_position_at = 0.0
 end_random_target_position_at = 0.0
+# The list of turning points is set to None, no matter what is in globals.py
 
 save_data_online = False  # It was intended to save memory usage, but it doesn't seems to help. Leave it false.
 
