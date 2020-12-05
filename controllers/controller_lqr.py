@@ -5,7 +5,7 @@ import numpy as np
 from copy import deepcopy
 
 class controller_lqr:
-    def __init__(self, A, B, Q, R):
+    def __init__(self, A, B):
         # From https://github.com/markwmuller/controlpy/blob/master/controlpy/synthesis.py#L8
         """Solve the continuous time LQR controller for a continuous time system.
 
@@ -24,14 +24,18 @@ class controller_lqr:
         """
         # ref Bertsekas, p.151
 
+        # Cost matrices for LQR controller
+        self.Q = np.diag([10.0, 1.0, 1.0, 1.0])  # How much to punish x, v, theta, omega
+        self.R = 1.0e9  # How much to punish Q
+
         # first, try to solve the ricatti equation
-        X = scipy.linalg.solve_continuous_are(A, B, Q, R)
+        X = scipy.linalg.solve_continuous_are(A, B, self.Q, self.R)
 
         # compute the LQR gain
-        if np.array(R).ndim == 0:
-            Ri = 1.0 / R
+        if np.array(self.R).ndim == 0:
+            Ri = 1.0 / self.R
         else:
-            Ri = np.linalg.inv(R)
+            Ri = np.linalg.inv(self.R)
 
         K = np.dot(Ri, (np.dot(B.T, X)))
 

@@ -159,9 +159,13 @@ def Generate_Experiment(MyCart,
                         exp_len=random_length_globals,
                         dt=dt_main_simulation_globals,
                         track_relative_complexity = track_relative_complexity_globals,
+                        interpolation_type=interpolation_type_globals,
+                        turning_points_period=turning_points_period_globals,
+                        start_random_target_position_at=start_random_target_position_at_globals,
+                        end_random_target_position_at=end_random_target_position_at_globals,
                         csv=None,
-                        save_csv_online = True,
-                        mode=1):
+                        save_data_online = True,
+                        controller='manual-stabilization'):
     """
     This function runs a random CartPole experiment
     and returns the history of CartPole states, control inputs and desired cart position
@@ -173,8 +177,16 @@ def Generate_Experiment(MyCart,
 
 
     # Set CartPole in the right (automatic control) mode
-    MyCart.set_mode(mode)  # 1 - you are controlling with LQR, 2- with do-mpc
-    if save_csv_online:
+    mode = MyCart.controller_names.index(controller)
+    MyCart.set_mode(mode)
+
+    MyCart.turning_points = None
+    MyCart.interpolation_type = interpolation_type
+    MyCart.turning_points_period = turning_points_period
+    MyCart.start_random_target_position_at = start_random_target_position_at
+    MyCart.end_random_target_position_at = end_random_target_position_at
+
+    if save_data_online:
         MyCart.save_history = False
     else:
         MyCart.save_history = True
@@ -184,9 +196,10 @@ def Generate_Experiment(MyCart,
     MyCart.reset_state()
 
     # Generate new random function returning desired target position of the cart
-    MyCart.random_length = exp_len*dt
+    MyCart.random_length = exp_len
     MyCart.track_relative_complexity = track_relative_complexity  # Complexity of generated target position track
     MyCart.Generate_Random_Trace_Function()
+    number_of_timesteps = int(np.ceil(MyCart.random_length / MyCart.dt))
 
     # Randomly set the initial state
 
@@ -201,20 +214,21 @@ def Generate_Experiment(MyCart,
     MyCart.s.angleD = np.random.uniform(low=-15.5 * (np.pi / 180.0),
                                         high=15.5 * (np.pi / 180.0))
 
-    MyCart.u = np.random.uniform(low=-0.9 * MyCart.p.u_max,
-                                 high=0.9 * MyCart.p.u_max)
+    # Target position at time 0
+    MyCart.target_position = MyCart.random_track_f(MyCart.time)
 
-    # Target position at time 0 (should be always 0)
-    MyCart.target_position = MyCart.random_track_f(MyCart.time)  # = 0
+    MyCart.Update_Q()
+
+    MyCart.u = Q2u(MyCart.Q, MyCart.p)
 
     MyCart.reset_dict_history()
 
-    if save_csv_online and csv is not None:
+    if save_data_online and csv is not None:
         MyCart.save_history_csv(csv_name=csv, init=True, iter=False)
         MyCart.save_history_csv(csv_name=csv, init=False, iter=True)
 
     # Run the CartPole experiment for number of time
-    for _ in trange(int(exp_len)-1):
+    for _ in trange(number_of_timesteps):
 
         # Print an error message if it runs already to long (should stop before)
         if MyCart.time > MyCart.t_max_pre:
@@ -222,14 +236,16 @@ def Generate_Experiment(MyCart,
 
         MyCart.update_state()
 
-        if save_csv_online and csv is not None:
+        if save_data_online and csv is not None:
             MyCart.save_history_csv(csv_name=csv, init=False, iter=True)
-
 
     data = pd.DataFrame(MyCart.dict_history)
 
-    if csv is not None and not save_csv_online:
+    if csv is not None and not save_data_online:
         MyCart.save_history_csv(csv_name=csv)
+
+    if not save_data_online:
+        MyCart.summary_plots()
 
     MyCart.reset_dict_history()
     MyCart.reset_state()

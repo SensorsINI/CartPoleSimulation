@@ -10,11 +10,11 @@ Created on Sat May  9 17:27:59 2020
 # related to CartPole which are not related to PyQt5 GUI
 
 
-from numpy import around, random, pi, array, diag
+from numpy import around, random, pi, array
 # Shapes used to draw a Cart and the slider
 from matplotlib.patches import FancyBboxPatch, Rectangle, Circle
 # NullLocator is used to disable ticks on the Figures
-from matplotlib.pyplot import NullLocator
+import matplotlib.pyplot as plt
 # rc sets global parameters for matlibplot; transforms is used to rotate the Mast
 from matplotlib import transforms, rc
 # Import module to interact with OS
@@ -28,16 +28,6 @@ from datetime import datetime
 import glob
 # to keep the loaded data
 import pandas as pd
-
-from controllers.controller_lqr import controller_lqr
-from controllers.controller_do_mpc import controller_do_mpc
-from controllers.controller_do_mpc_discrete import controller_do_mpc_discrete
-from controllers.controller_rnn_as_mpc import controller_rnn_as_mpc
-from controllers.controller_mpc_on_rnn import controller_mpc_on_rnn
-from controllers.controller_rnn_as_mpc_tf import controller_rnn_as_mpc_tf
-from controllers.controller_mpc_on_rnn_tf import controller_mpc_on_rnn_tf
-from controllers.controller_mpc_gekko import controller_mpc_gekko
-
 
 
 # Interpolate function to create smooth random track
@@ -156,15 +146,15 @@ class Cart:
             [1.0 / (L * (-m + (1 + k) * (m + M)))],
         ])
 
-        # Cost matrices for LQR controller
-        self.Q_matrix = diag([10.0, 1.0, 1.0, 1.0])  # How much to punish x, v, theta, omega
-        self.R_matrix = 1.0e9  # How much to punish Q
 
-        # TODO: Having a lot of controllers with big NN it is not optimal to load them all at start
-        self.controller_lqr = controller_lqr(self.Jacobian_UP, self.B, self.Q_matrix, self.R_matrix)
         self.controller = None
         self.controller_name = ''
 
+        controller_files = glob.glob(PATH_TO_CONTROLLERS + 'controller_' + '*.py')
+        self.controller_names = ['manual-stabilization']
+        self.controller_names.extend(np.sort(
+            [os.path.basename(item)[len('controller_'):-len('.py')].replace('_', '-') for item in controller_files]
+        ))
 
         # Variables for pre-generated random trace
 
@@ -219,11 +209,13 @@ class Cart:
         self.t2 = transforms.Affine2D().rotate(0.0)  # An abstract container for the transform rotating the mast
 
         # Set starting mode of operation
+        self.slider_max = 0.0
+        self.mode = mode_init
         self.set_mode(new_mode=mode_init)
 
     def Generate_Random_Trace_Function(self):
 
-        if self.turning_points is None:
+        if (self.turning_points is None) or (self.turning_points == []):
 
             number_of_turning_points = int(np.floor(self.random_length * self.track_relative_complexity))
 
@@ -250,7 +242,7 @@ class Cart:
         else:
             number_of_turning_points = len(self.turning_points)
             if number_of_turning_points == 0:
-                y = np.array([0.0, 0.0])
+                raise ValueError('You should not be here!')
             elif number_of_turning_points == 1:
                 y = np.array([self.turning_points[0], self.turning_points[0]])
             else:
@@ -453,7 +445,7 @@ class Cart:
         AxCart.set_xlim((-self.HalfLength * 1.1, self.HalfLength * 1.1))
         AxCart.set_ylim((-1.0, 15.0))
         # Remove ticks on the y-axes
-        AxCart.yaxis.set_major_locator(NullLocator())
+        AxCart.yaxis.set_major_locator(plt.NullLocator())  # NullLocator is used to disable ticks on the Figures
 
         # Draw track
         Floor = Rectangle((-self.HalfLength, -1.0),
@@ -478,7 +470,7 @@ class Cart:
         # Set y limits
         AxSlider.set(xlim=(-1.1 * self.slider_max, self.slider_max * 1.1))
         # Remove ticks on the y-axes
-        AxSlider.yaxis.set_major_locator(NullLocator())
+        AxSlider.yaxis.set_major_locator(plt.NullLocator())  # NullLocator is used to disable ticks on the Figures
         # Apply scaling
         AxSlider.set_aspect("auto")
 
@@ -632,55 +624,67 @@ class Cart:
             return False
 
         if visualisation_only:
-            data = data[['time', 'dt', 's.position', 's.positionD', 's.angle', 'u', 'target_position']]
+            data = data[['time', 'dt', 's.position', 's.positionD', 's.angle', 'u', 'target_position', 'Q']]
 
         return data
 
 
     def set_mode(self, new_mode=0):
 
-        if new_mode == 0:
-            self.mode = 0
+        self.mode = new_mode
+        self.controller_name = self.controller_names[self.mode]
+
+        # Load controller
+        if self.controller_name == 'manual-stabilization':
             self.controller = None
-            self.controller_name = 'free'
+        else:
+            controller_full_name = 'controller_' + self.controller_name.replace('-', '_')
+            path_import = PATH_TO_CONTROLLERS[2:].replace('/','.').replace(r'\\', '.')
+            import_str = 'from ' + path_import + controller_full_name + ' import ' + controller_full_name
+            exec(import_str)
+            if self.controller_name == 'lqr':
+                self.controller = eval(controller_full_name + '(self.Jacobian_UP, self.B)')
+            else:
+                self.controller = eval(controller_full_name + '()')
+
+        # Set the maximal allowed value of the slider
+        if self.controller_name == 'manual-stabilization':
             self.slider_max = self.Q_max
-        elif new_mode == 1:
-            self.mode = 1
-            self.controller = self.controller_lqr
-            self.controller_name = 'lqr'
-            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
-        elif new_mode == 2:
-            self.mode = 2
-            self.controller = controller_do_mpc()
-            self.controller_name = 'do-mpc'
-            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
-        elif new_mode == 3:
-            self.mode = 3
-            self.controller = controller_do_mpc_discrete()
-            self.controller_name = 'do-mpc-discrete'
-            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
-        elif new_mode == 4:
-            self.mode = 4
-            self.controller = controller_rnn_as_mpc()
-            self.controller_name = 'rnn-as-mpc'
-            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
-        elif new_mode == 5:
-            self.mode = 5
-            self.controller = controller_rnn_as_mpc_tf()
-            self.controller_name = 'rnn-as-mpc_tf'
-            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
-        elif new_mode == 6:
-            self.mode = 6
-            self.controller = controller_mpc_on_rnn()
-            self.controller_name = 'mpc-on-rnn'
-            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
-        elif new_mode == 7:
-            self.mode = 7
-            self.controller = controller_mpc_on_rnn_tf()
-            self.controller_name = 'mpc-on-rnn_tf'
-            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
-        elif new_mode == 8:
-            self.mode = 8
-            self.controller = controller_mpc_gekko()
-            self.controller_name = 'mpc_gekko'
-            self.slider_max = self.HalfLength  # Set the maximal allowed value of the slider
+        else:
+            self.slider_max = self.HalfLength
+
+    # Method printing the parameters of the CartPole over time after an experiment
+    def summary_plots(self):
+
+        fig, axs = plt.subplots(4, 1, figsize=(18, 14), sharex=True)  # share x axis so zoom zooms all plots
+
+        # Plot angle error
+        axs[0].set_ylabel("Angle (deg)", fontsize=18)
+        axs[0].plot(array(self.dict_history['time']), array(self.dict_history['s.angle']) * 180.0 / pi,
+                    'b', markersize=12, label='Ground Truth')
+        axs[0].tick_params(axis='both', which='major', labelsize=16)
+
+        # Plot position
+        axs[1].set_ylabel("position (m)", fontsize=18)
+        axs[1].plot(self.dict_history['time'], self.dict_history['s.position'], 'g', markersize=12,
+                    label='Ground Truth')
+        axs[1].tick_params(axis='both', which='major', labelsize=16)
+
+        # Plot motor input command
+        axs[2].set_ylabel("motor (N)", fontsize=18)
+        axs[2].plot(self.dict_history['time'], self.dict_history['u'], 'r', markersize=12,
+                    label='motor')
+        axs[2].tick_params(axis='both', which='major', labelsize=16)
+
+        # Plot target position
+        axs[3].set_ylabel("position target (m)", fontsize=18)
+        axs[3].plot(self.dict_history['time'], self.dict_history['target_position'], 'k')
+        axs[3].tick_params(axis='both', which='major', labelsize=16)
+
+        axs[3].set_xlabel('Time (s)', fontsize=18)
+
+        fig.align_ylabels()
+
+        plt.show()
+
+        return fig, axs

@@ -110,8 +110,8 @@ class controller_do_mpc:
         self.mpc.set_tvp_fun(self.tvp_fun)
 
         # Suppress IPOPT outputs
-        # suppress_ipopt = {'ipopt.print_level': 0, 'ipopt.sb': 'yes', 'print_time': 0}
-        # self.mpc.set_param(nlpsol_opts=suppress_ipopt)
+        suppress_ipopt = {'ipopt.print_level': 0, 'ipopt.sb': 'yes', 'print_time': 0}
+        self.mpc.set_param(nlpsol_opts=suppress_ipopt)
 
         self.mpc.setup()
 

@@ -1,7 +1,7 @@
 # Import functions from PyQt5 module (creating GUI)
 from PyQt5.QtWidgets import QMainWindow, QRadioButton, QApplication, QVBoxLayout, \
     QHBoxLayout, QLabel, QPushButton, QWidget, QCheckBox, \
-    QLineEdit, QMessageBox
+    QLineEdit, QMessageBox, QComboBox
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool, QTimer, Qt
 # Import functions to measure time intervals and to pause a thread for a given time
 from time import sleep
@@ -146,28 +146,13 @@ class MainWindow(QMainWindow):
 
         # Radiobuttons to toggle the mode of operation
         lr = QVBoxLayout()
-        self.rb_manual = QRadioButton('Manual Stabilization')
-        self.rb_LQR = QRadioButton('LQR')
-        self.rb_do_mpc = QRadioButton('do-mpc-control')
-        self.rb_do_mpc_discrete = QRadioButton('do-mpc-discrete')
-        self.rb_rnn_as_mpc = QRadioButton('rnn-as-mpc')
-        self.rb_rnn_as_mpc_tf = QRadioButton('rnn(tf)-as-mpc')
-        self.rb_mpc_on_rnn = QRadioButton('mpc-on-rnn')
-        self.rb_mpc_on_rnn_tf = QRadioButton('mpc-on-rnn(tf)')
-        self.rb_mpc_gekko = QRadioButton('mpc-gekko-control')
-        self.rbs = [self.rb_manual,
-                    self.rb_LQR,
-                    self.rb_do_mpc,
-                    self.rb_do_mpc_discrete,
-                    self.rb_rnn_as_mpc,
-                    self.rb_rnn_as_mpc_tf,
-                    self.rb_mpc_on_rnn,
-                    self.rb_mpc_on_rnn_tf,
-                    self.rb_mpc_gekko]
+        self.rbs = []
+        for controller_name in self.MyCart.controller_names:
+            self.rbs.append(QRadioButton(controller_name))
 
         lr.addStretch(1)
         for rb in self.rbs:
-            rb.toggled.connect(self.RadioButtons)
+            rb.clicked.connect(self.RadioButtons)
             lr.addWidget(rb)
         lr.addStretch(1)
         # self.rb_manual.setChecked(True)
@@ -222,6 +207,23 @@ class MainWindow(QMainWindow):
         lb.addWidget(bq)
         lb.addWidget(bt)
         layout.addLayout(lb)
+
+        l_generate_trace = QHBoxLayout()
+        l_generate_trace.addWidget(QLabel('Generate trace settings:'))
+        l_generate_trace.addWidget(QLabel('Length (s):'))
+        self.textbox_length = QLineEdit()
+        l_generate_trace.addWidget(self.textbox_length)
+        l_generate_trace.addWidget(QLabel('Turning Points (m):'))
+        self.textbox_turning_points = QLineEdit()
+        l_generate_trace.addWidget(self.textbox_turning_points)
+        l_generate_trace.addWidget(QLabel('Interpolation:'))
+        self.cb_interpolation = QComboBox()
+        self.cb_interpolation.addItems(['0-derivative-smooth', 'linear', 'previous'])
+        self.cb_interpolation.currentIndexChanged.connect(self.cb_interpolation_selectionchange)
+        self.cb_interpolation.setCurrentText(self.MyCart.interpolation_type)
+        l_generate_trace.addWidget(self.cb_interpolation)
+
+        layout.addLayout(l_generate_trace)
 
         # Textbox to add provide a file name
         l_text = QHBoxLayout()
@@ -335,6 +337,9 @@ class MainWindow(QMainWindow):
             if event.inaxes == self.fig.AxSlider:
                 self.MyCart.update_slider(mouse_position=event.xdata)
 
+    def cb_interpolation_selectionchange(self, i):
+        self.MyCart.interpolation_type = self.cb_interpolation.currentText()
+
     def get_speedup(self):
         speedup = self.tx_speedup.text()
         if speedup == '':
@@ -370,50 +375,6 @@ class MainWindow(QMainWindow):
             pass
         self.saved = 0
         self.looper.first_call_done = False
-
-    # Method printing the parameters of the CartPole over time during the experiment
-    def summary_plots(self):
-
-        fig, axs = plt.subplots(4, 1, figsize=(18, 14), sharex=True)  # share x axis so zoom zooms all plots
-
-        # Plot angle error
-        axs[0].set_ylabel("Angle (deg)", fontsize=18)
-        axs[0].plot(array(self.MyCart.dict_history['time']), array(self.MyCart.dict_history['s.angle']) * 180.0 / pi,
-                    'b', markersize=12, label='Ground Truth')
-        axs[0].tick_params(axis='both', which='major', labelsize=16)
-
-        # Plot position
-        axs[1].set_ylabel("position (m)", fontsize=18)
-        axs[1].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['s.position'], 'g', markersize=12,
-                    label='Ground Truth')
-        axs[1].tick_params(axis='both', which='major', labelsize=16)
-
-        # Plot motor input command
-        axs[2].set_ylabel("motor (N)", fontsize=18)
-        axs[2].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['u'], 'r', markersize=12,
-                    label='motor')
-        axs[2].tick_params(axis='both', which='major', labelsize=16)
-
-        # Plot target position
-        axs[3].set_ylabel("position target (m)", fontsize=18)
-        axs[3].plot(self.MyCart.dict_history['time'], self.MyCart.dict_history['target_position'], 'k')
-        axs[3].tick_params(axis='both', which='major', labelsize=16)
-
-        axs[3].set_xlabel('Time (s)', fontsize=18)
-
-        fig.align_ylabels()
-
-        plt.show()
-
-        print('Max state:')
-        print('[x,v,theta, omega]')
-        max_state = (max(abs(array(self.MyCart.dict_history['s.position']))),
-                     max(abs(array(self.MyCart.dict_history['s.positionD']))),
-                     (180 / pi) * max(abs(array(self.MyCart.dict_history['s.angle']))),
-                     (180 / pi) * max(abs(array(self.MyCart.dict_history['s.angleD']))))
-        print(max_state)
-
-        return fig, axs
 
     # This method initiate calculation of simulation and iterative updates of Cart state
     # It also measures time intervals for real time simulation
@@ -476,7 +437,7 @@ class MainWindow(QMainWindow):
 
     # Actions to be taken when start/stop button is clicked
     def play(self):
-        print('Mode {}'.format(self.MyCart.mode))
+        # print('Mode {}'.format(self.MyCart.mode))
         if self.load_recording:
             worker_replay = Worker(self.thread_replay)
             # Execute
@@ -491,8 +452,8 @@ class MainWindow(QMainWindow):
                         sleep(0.001)
 
                 self.MyCart.use_pregenerated_target_position = False
-                self.summary_plots()
-                self.w_summary = SummaryWindow(summary_plots=self.summary_plots)
+                self.MyCart.summary_plots()
+                self.w_summary = SummaryWindow(summary_plots=self.MyCart.summary_plots)
                 # Reset variables and redraw the figures
                 self.reset_variables()
                 # Draw figures
@@ -539,26 +500,21 @@ class MainWindow(QMainWindow):
         replay_looper.start_loop()
         for index, row in history_pd.iterrows():
             self.MyCart.s.position = row['s.position']
-            self.MyCart.s.position = self.MyCart.s.position + 0.1
             self.MyCart.s.positionD = row['s.positionD']
             self.MyCart.s.angle = row['s.angle']
             self.MyCart.time = row['time']
-            self.MyCart.dt = row['dt']/1000.0
+            self.MyCart.dt = row['dt']
             self.MyCart.u = row['u']
+            self.MyCart.Q = row['Q']
             self.MyCart.target_position = row['target_position']
+            self.slider_value = self.MyCart.target_position
 
             dt_target = (self.MyCart.dt / self.speedup)
             replay_looper.dt_target = dt_target
-            # print(replay_looper.dt_target)
 
             replay_looper.sleep_leftover_time()
 
         self.reset_variables()
-        # Load either last one if empty or the one with given name
-        # You need just a position of the cart, angle and target position (slider)
-        # Use looper to wait?
-        # Use speed-up also in this mode
-        # ...
 
     # The acctions which has to be taken to properly terminate the application
     # The method is evoked after QUIT button is pressed
@@ -582,6 +538,17 @@ class MainWindow(QMainWindow):
             return
         self.cb_load_recorded_data.setEnabled(False)
         self.cb_save_history.setEnabled(False)
+        if self.textbox_length.text() == '':
+            self.MyCart.random_length = random_length_globals
+        else:
+            self.MyCart.random_length = float(self.textbox_length.text())
+
+        turning_points_list = []
+        if self.textbox_turning_points.text() != '':
+            for turning_point in self.textbox_turning_points.text().split(', '):
+                turning_points_list.append(float(turning_point))
+        self.MyCart.turning_points = turning_points_list
+
         self.MyCart.Generate_Random_Trace_Function()
         if self.run_thread_calculations == 1:
             print('First reset the previous run')
@@ -601,8 +568,8 @@ class MainWindow(QMainWindow):
                     sleep(0.001)
 
             self.MyCart.use_pregenerated_target_position = False
-            self.summary_plots()
-            self.w_summary = SummaryWindow(summary_plots=self.summary_plots)
+            self.MyCart.summary_plots()
+            self.w_summary = SummaryWindow(summary_plots=self.MyCart.summary_plots)
             # Reset variables and redraw the figures
             self.reset_variables()
             # Draw figures
@@ -624,25 +591,11 @@ class MainWindow(QMainWindow):
     # Action to be taken while a radio button is clicked
     # Toggle a mode of simulation: manual or LQR
     def RadioButtons(self):
+
         # Change the mode variable depending on the Radiobutton state
-        if self.rb_manual.isChecked():
-            self.MyCart.set_mode(new_mode=0)
-        elif self.rb_LQR.isChecked():
-            self.MyCart.set_mode(new_mode=1)
-        elif self.rb_do_mpc.isChecked():
-            self.MyCart.set_mode(new_mode=2)
-        elif self.rb_do_mpc_discrete.isChecked():
-            self.MyCart.set_mode(new_mode=3)
-        elif self.rb_rnn_as_mpc.isChecked():
-            self.MyCart.set_mode(new_mode=4)
-        elif self.rb_rnn_as_mpc_tf.isChecked():
-            self.MyCart.set_mode(new_mode=5)
-        elif self.rb_mpc_on_rnn.isChecked():
-            self.MyCart.set_mode(new_mode=6)
-        elif self.rb_mpc_on_rnn_tf.isChecked():
-            self.MyCart.set_mode(new_mode=7)
-        elif self.rb_mpc_gekko.isChecked():
-            self.MyCart.set_mode(new_mode=8)
+        for i in range(len(self.rbs)):
+            if self.rbs[i].isChecked():
+                self.MyCart.set_mode(new_mode=i)
 
         # Reset the state of GUI and of the Cart instance after the mode has changed
         self.reset_variables()
@@ -656,8 +609,6 @@ class MainWindow(QMainWindow):
             self.save_history = 1
         else:
             self.save_history = 0
-
-        print('save history is now {}'.format(self.save_history))
 
     # Action toggling between stopping (or not) the pole if it reaches 90 deg
     def cb_stop_at_90_deg_f(self, state):
@@ -685,8 +636,6 @@ class MainWindow(QMainWindow):
             self.load_recording = 1
         else:
             self.load_recording = 0
-
-        print('load recording is now {}'.format(self.load_recording))
 
     # A function redrawing the changing elements of the Figure
     # This animation runs always when the GUI is open

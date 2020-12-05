@@ -44,6 +44,8 @@ Possible choices
 7: like  6, just different RNN implemented in TensorFlow
 
 """
+PATH_TO_CONTROLLERS = './controllers/'
+PATH_TO_DATA = './data/'
 save_history_globals = True  # Save experiment history as CSV
 stop_at_90_globals = False  # Block the pole if it reaches +/-90 deg (horizontal position)
 load_recording_globals = False  # Start/Stop button: True: load and replay a recording; False: start new experiment
