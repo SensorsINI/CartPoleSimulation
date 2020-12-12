@@ -55,14 +55,13 @@ class controller_do_mpc_discrete:
 
         target_position = self.model.set_variable('_tvp', 'target_position')
 
-        position_next, positionD_next, angle_next, angleD_next = \
-            mpc_next_state(s, p, Q2u(Q,p), dt=dt_mpc_simulation_globals)
+        s_next = mpc_next_state(s, p, Q2u(Q,p), dt=dt_mpc_simulation_globals)
 
-        self.model.set_rhs('s.position', position_next)
-        self.model.set_rhs('s.angle', angle_next)
+        self.model.set_rhs('s.position', s_next.position)
+        self.model.set_rhs('s.angle', s_next.angle)
 
-        self.model.set_rhs('s.positionD', positionD_next)
-        self.model.set_rhs('s.angleD', angleD_next)
+        self.model.set_rhs('s.positionD',s_next.positionD)
+        self.model.set_rhs('s.angleD', s_next.angleD)
 
         # Simplified, normalized expressions for E_kin and E_pot as a port of cost function
         E_kin_cart = (s.positionD / p.v_max) ** 2
@@ -82,7 +81,7 @@ class controller_do_mpc_discrete:
         self.mpc = do_mpc.controller.MPC(self.model)
 
         setup_mpc = {
-            'n_horizon': mpc_horizon_globals*4,
+            'n_horizon': mpc_horizon_globals,
             't_step': dt_mpc_simulation_globals,
             'n_robust': 0,
             'store_full_solution': False,
@@ -93,7 +92,9 @@ class controller_do_mpc_discrete:
         self.mpc.set_param(**setup_mpc)
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'ma27'})
 
-        lterm = (- self.model.aux['E_pot'] + 10.0 * distance_difference + 5 * self.model.aux['E_kin_pol'])
+        lterm = - (2-distance_difference)*self.model.aux['E_pot'] +\
+                20 * distance_difference +\
+                5 * (2-distance_difference)*self.model.aux['E_kin_pol']
         mterm = (5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart'])
 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)

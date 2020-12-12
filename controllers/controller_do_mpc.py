@@ -7,6 +7,8 @@ from types import SimpleNamespace
 
 from copy import deepcopy
 
+import time
+
 
 
 class controller_do_mpc:
@@ -136,6 +138,8 @@ class controller_do_mpc:
 
         self.x0['s.angle'] = s.angle
         self.x0['s.angleD'] = s.angleD
+        #
+        time.sleep(0.1)
 
         self.tvp_template['_tvp', :, 'target_position'] = target_position
 

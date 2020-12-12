@@ -84,7 +84,7 @@ k_globals = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
 
 # Variables for random trace generation
 # Complexity of the random trace, number of turning points used for interpolation
-track_relative_complexity_globals = 0.2
+track_relative_complexity_globals = 0.5
 random_length_globals = 1e1  # Number of seconds in the random length trace
 interpolation_type_globals = 'previous'  # Sets how to interpolate between turning points of random trace
 # Possible choices: '0-derivative-smooth', 'linear', 'previous'
@@ -96,8 +96,8 @@ end_random_target_position_at_globals = 10.0
 # Alternatively you can provide a list of target positions.
 # If not None this variable has precedence -
 # track_relative_complexity, start/end_random_target_position_at_globals have no effect.
-# turning_points_globals = None
-turning_points_globals = [10.0, 0.0, 0.0]
+turning_points_globals = None
+# turning_points_globals = [10.0, 0.0, 0.0]
 
 
 def cartpole_integration(s, dt):
@@ -173,13 +173,11 @@ def mpc_next_state(s, p, u, dt):
         although the order of cartpole_ode and cartpole_integration is different than in CartClass
     """
 
-    angleDD, positionDD = cartpole_ode(p, s, u)  # Calculates CURRENT second derivatives
+    s_next = s
+
+    s_next.angleDD, s_next.positionDD = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
 
     # Calculate NEXT state:
-    position_next = s.position + s.positionD * dt
-    positionD_next = s.positionD + positionDD * dt
+    s_next = cartpole_integration(s_next, dt)
 
-    angle_next = s.angle + s.angleD * dt
-    angleD_next = s.angleD + angleDD * dt
-
-    return position_next, positionD_next, angle_next, angleD_next
+    return s_next

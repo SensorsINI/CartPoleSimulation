@@ -305,13 +305,6 @@ class Cart:
         if zero_DD:
             self.s.angleDD = 0.0
 
-
-        # Equivalent (?) formulation
-        # self.s.position, self.s.positionD, self.s.angle, self.s.angleD = \
-        #     mpc_next_state(self.s, self.p, self.u, dt=dt_main_simulation_globals)
-        #
-        # self.s.angleDD, self.s.positionDD = cartpole_ode(self.p, self.s, self.u)
-
         # Determine the dimensionales [-1,1] value of the motor power Q
     def Update_Q(self):
 
