@@ -8,29 +8,14 @@ from types import SimpleNamespace
 from modeling.rnn_tf.utilis_rnn import *
 # tf.compat.v1.disable_eager_execution()
 
-from casadi import Callback, Sparsity
+
 import time
 
-from casadi import Callback
 
 RNN_FULL_NAME = 'GRU-6IN-32H1-32H2-4OUT-0'
 INPUTS_LIST = ['s.angle', 's.angleD', 's.position', 's.positionD', 'target_position', 'u']
 OUTPUTS_LIST = ['s.angle', 's.angleD', 's.position', 's.positionD']
 PATH_SAVE = './controllers/nets/mpc_on_rnn_tf/'
-
-
-# Package the resulting regression model in a CasADi callback
-class RNN(Callback):
-  def __init__(self, name, function, opts={}):
-    Callback.__init__(self)
-    self.construct(name, opts)
-    self.function = function
-
-  def eval(self, args):
-    x = args[0]
-    u = args[1]
-    x_next = self.function.predict_y(x, u)
-    return x_next
 
 
 class controller_mpc_on_rnn_tf:

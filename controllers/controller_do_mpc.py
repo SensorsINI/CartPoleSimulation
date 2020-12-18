@@ -95,8 +95,8 @@ class controller_do_mpc:
         # Other possible linear solvers from hsl library
         # The give better performance 2-3 times.
         # However if simulating at max speedup the simulation blocks. Issue with memory leak?
-        self.mpc.set_param(nlpsol_opts={'ipopt.linear_solver': 'mumps'})
-        # self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'MA57'})
+        # self.mpc.set_param(nlpsol_opts={'ipopt.linear_solver': 'mumps'})
+        self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'MA57'})
 
         lterm = - self.model.aux['E_pot'] + 20.0 * distance_difference
         mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']

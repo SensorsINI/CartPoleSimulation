@@ -211,7 +211,6 @@ def create_log_file(rnn_name, inputs_list, outputs_list, path_save):
     return rnn_full_name
 
 
-# FIXME: To tailor this sequence class according to the commands and state_variables of cartpole
 class myNN(keras.Sequential):
     """"
     Our RNN class.
@@ -302,6 +301,32 @@ class myNN(keras.Sequential):
               .format(self.rnn_type, len(self.h_size), ', '.join(map(str, self.h_size))))
         print('The inputs are (in this order): {}'.format(', '.join(map(str, inputs_list))))
         print('The outputs are (in this order): {}'.format(', '.join(map(str, outputs_list))))
+
+    def get_internal_states(self):
+        states_list = []
+        for layer in self.layers:
+            if (('gru' in layer.name) or
+                    ('lstm' in layer.name) or
+                        ('rnn' in layer.name)):
+                single_states = []
+                for single_state in layer.states:
+                    single_state = single_state.numpy()
+                    single_states.append(single_state)
+
+                states_list.append(single_states)
+            else:
+                states_list.append(None)
+        return states_list
+
+    def load_internal_states(self, states):
+
+        for layer, state in zip(self.layers, states):
+            # print(layer)
+            # print(state)
+            if (('gru' in layer.name) or
+                    ('lstm' in layer.name) or
+                        ('rnn' in layer.name)):
+                layer.reset_states(state[0])
 
 
 def load_data(args, filepath=None, columns_list=None, norm_inf=False, rnn_full_name=None):
@@ -651,7 +676,8 @@ def plot_results(net,
                  comment='',
                  rnn_full_name=None,
                  save=False,
-                 close_loop_idx=None):
+                 close_loop_idx=None,
+                 path_save=None):
     """
     This function accepts RNN instance, arguments and CartPole instance.
     It runs one random experiment with CartPole,
@@ -662,6 +688,9 @@ def plot_results(net,
     rnn_name = net.rnn_name
     inputs_list = net.inputs_list
     outputs_list = net.outputs_list
+
+    if path_save is None and args is not None:
+        path_save = args.path_save
 
     if testset_filepath is None:
         testset_filepath = args.val_file_name
@@ -701,7 +730,7 @@ def plot_results(net,
     # net_predict.summary()
 
     if normalization_info is None:
-        normalization_info = load_normalization_info(args.path_save, rnn_full_name)
+        normalization_info = load_normalization_info(path_save, rnn_full_name)
 
     if dataset is None or dataset.time_axes is None:
         test_dfs, time_axes = load_data(args, testset_filepath, columns_list=columns_list)
@@ -728,6 +757,12 @@ def plot_results(net,
     close_the_loop = False
 
     for index, row in features_pd.iterrows():
+        states = net_predict.get_internal_states()
+        net_predict.reset_states()
+        net_predict.load_internal_states(states)
+        # states2 = net_predict.get_internal_states()
+        # if states!= states2:
+        #     raise ValueError('The states were not copied correctly.')
         rnn_input = pd.DataFrame(copy.deepcopy(row)).transpose().reset_index(drop=True)
 
         if idx_cl == close_loop_idx:

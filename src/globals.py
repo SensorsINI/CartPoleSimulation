@@ -65,7 +65,7 @@ dt_mpc_simulation_globals = 0.2  # Time step used by MPC controller
 # WARNING: if using RNN to provide CartPole model to MPC
 # make sure that it is trained to predict future states with this timestep
 # TODO: Add dt information to .txt file associated with and describing each RNN
-mpc_horizon_globals = 20 # Number of steps into future MPC controller simulates at each evaluation
+mpc_horizon_globals = 10 # Number of steps into future MPC controller simulates at each evaluation
 
 # Parameters of the CartPole
 m_globals = 2.0  # mass of pend, kg

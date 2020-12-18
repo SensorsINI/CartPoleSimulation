@@ -45,8 +45,8 @@ inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'u', 'target_
 # inputs_list = ['s.position', 's.angle', 'u', 'target_position']
 outputs_list = ['s.angle', 's.position', 's.positionD', 's.angleD']
 # outputs_list = ['s.angle', 's.position']
-# closed_loop_list = ['s.position', 's.angle']
-closed_loop_list = outputs_list
+closed_loop_list = ['s.position', 's.angle']
+# closed_loop_list = outputs_list
 
 # inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'target_position']
 # outputs_list = ['Q']

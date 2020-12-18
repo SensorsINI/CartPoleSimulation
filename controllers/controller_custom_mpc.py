@@ -9,6 +9,13 @@ from copy import deepcopy
 
 import matplotlib.pyplot as plt
 
+import timeit
+
+method = 'L-BFGS-B'
+# method = 'SLSQP'
+maxiter = 10
+mpc_horizon = 5
+
 
 class controller_custom_mpc:
     def __init__(self):
@@ -36,7 +43,7 @@ class controller_custom_mpc:
 
         self.target_position = 0.0
 
-        self.mpc_horizon = 5
+        self.mpc_horizon = mpc_horizon
         self.dt = dt_mpc_simulation_globals
 
         self.yp_hat = np.zeros(self.mpc_horizon, dtype=object)  # MPC prediction of future states
@@ -49,7 +56,8 @@ class controller_custom_mpc:
         self.E_pot_cost = lambda s: 1 - np.cos(s.angle)
         self.distance_difference = lambda s: ((s.position - self.target_position) / 50.0)**2
 
-        self.Q_bounds = [(-1, 1)] * self.mpc_horizon
+        # self.Q_bounds = [(-1, 1)] * self.mpc_horizon
+        self.Q_bounds = scipy.optimize.Bounds(lb=-1.0, ub=1.0)
         self.max_mterm = 0.0
         self.max_rterms = 0.0
         self.max_l_terms = 0.0
@@ -58,40 +66,37 @@ class controller_custom_mpc:
         self.E_pot_cost_max = 0.0
         self.distance_difference_max = 0.0
 
-    def cost_function(self, Q_hat):
+    def predictor(self, Q_hat):
 
-        # Predict future states given control_inputs Q_hat
+        yp_hat = np.zeros(self.mpc_horizon+1, dtype=object)
 
-        for k in range(0,
-                       self.mpc_horizon - 1):  # We predict mpc_horizon future u, but mpc_horizon-1 y, as y0 is a current y
+        for k in range(0, self.mpc_horizon):
             if k == 0:
-                self.yp_hat[0] = self.s
+                yp_hat[0] = deepcopy(self.s)
+                s_next = deepcopy(self.s)
 
-            cost = 0.0
-            s_next = mpc_next_state(self.yp_hat[k], self.p, Q2u(Q_hat[k], self.p), dt=self.dt)
+            s_next = mpc_next_state(s_next, self.p, Q2u(Q_hat[k], self.p), dt=self.dt)
 
-            self.yp_hat[k + 1] = s_next
+            yp_hat[k + 1] = s_next
 
-        # # Calculate sum of l-terms
-        # l_terms = 0.0
-        # for k in range(1, self.mpc_horizon):
-        #     l_terms += 100 * self.distance_difference(self.yp_hat[k])*(2-self.E_pot_cost(self.yp_hat[k])) + \
-        #             5 * (2 - self.distance_difference(self.yp_hat[k])) * self.E_pot_cost(self.yp_hat[k]) + \
-        #             1.0 * (2 - self.distance_difference(self.yp_hat[k])) * self.E_kin_pol(self.yp_hat[k])
+        return yp_hat
+
+    def cost_function(self, Q_hat):
+        t0 = timeit.default_timer()
+        # Predict future states given control_inputs Q_hat
+        self.yp_hat = self.predictor(Q_hat)
+
+        t1 = timeit.default_timer()
+
+        cost = 0.0
 
         # Calculate sum of r-terms
-        r_terms = (0.1 * (self.Q_hat[0] - self.Q_previous)) ** 2
+        r_terms = (0.2 * (self.Q_hat[0] - self.Q_previous)) ** 2
         for k in range(0, self.mpc_horizon - 1):
-            r_terms += (0.1 * (self.Q_hat[k + 1] - self.Q_hat[k])) ** 2
+            r_terms += (0.2 * (self.Q_hat[k + 1] - self.Q_hat[k])) ** 2
 
-        # Calculate m_term
-        # m_term = 5 * (self.E_kin_pol(self.yp_hat[-1]) + self.E_kin_cart(self.yp_hat[-1]) + self.E_pot_cost(self.yp_hat[-1]))
 
-        # cost += l_terms + r_terms + m_term
         l_terms = 0.0
-        # for k in range(0, self.mpc_horizon - 1):
-        #     l_terms += self.distance_difference(self.yp_hat[k])
-        # l_terms = 50*l_terms
 
         E_kin_cart = self.E_kin_cart(self.yp_hat[-1])
         E_kin_pol = self.E_kin_pol(self.yp_hat[-1])
@@ -107,29 +112,12 @@ class controller_custom_mpc:
                   # 50.0 * (distance_difference - self.distance_difference(self.yp_hat[0])) ** 2
                   + 0.0)
 
-        # if m_term > self.max_mterm:
-        #     self.max_mterm = m_term
-        #     print('m_term = {}'.format(m_term))
-        # if r_terms > self.max_rterms:
-        #     self.max_rterms = r_terms
-        #     print('r_terms = {}'.format(r_terms))
-        # if l_terms > self.max_l_terms:
-        #     self.max_l_terms = l_terms
-        #     print('l_terms = {}'.format(l_terms))
-        # if E_kin_cart > self.E_kin_cart_max:
-        #     self.E_kin_cart_max = E_kin_cart
-        #     print('E_kin_cart = {}'.format(E_kin_cart))
-        # if E_kin_pol > self.E_kin_pol_max:
-        #     self.E_kin_pol_max = E_kin_pol
-        #     print('E_kin_pol = {}'.format(E_kin_pol))
-        # if E_pot_cost > self.E_pot_cost_max:
-        #     self.E_pot_cost_max = E_pot_cost
-        #     print('E_pot_cost = {}'.format(E_pot_cost))
-        # if distance_difference > self.distance_difference_max:
-        #     self.distance_difference_max = distance_difference
-        #     print('distance_difference = {}'.format(distance_difference))
+        cost += r_terms + m_term + l_terms
 
-        cost = r_terms + m_term + l_terms
+        t2 = timeit.default_timer()
+        # print('cost function eval {} ms'.format((t2-t0)*1000.0))
+        # print('predictor eval {} ms'.format((t1-t0)*1000.0))
+        # print('predictor/all {}%'.format(np.round(100*(t1-t0)/(t2-t0))))
 
         return cost
 
@@ -137,18 +125,32 @@ class controller_custom_mpc:
 
         self.s = deepcopy(s)
         self.target_position = deepcopy(target_position)
-        try:
-            solution = scipy.optimize.minimize(self.cost_function, self.Q_hat0, bounds=self.Q_bounds)
-            self.Q_hat = solution.x
-        except:
-            self.Q_hat0 = np.full(self.Q_hat0.shape, self.Q_previous)
-            return self.Q_previous
+        solution = scipy.optimize.minimize(self.cost_function, self.Q_hat0, bounds=self.Q_bounds, method=method, options={'maxiter': maxiter})
+        self.Q_hat = solution.x
+        print(solution)
 
         self.Q_hat0 = np.hstack((self.Q_hat[1:], self.Q_hat[-1]))
-
+        self.Q_previous = self.Q_hat[0]
         Q = self.Q_hat[0]
 
         return Q
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def plot_prediction(self):
 
