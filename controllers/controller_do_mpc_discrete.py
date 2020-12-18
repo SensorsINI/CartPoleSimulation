@@ -92,9 +92,9 @@ class controller_do_mpc_discrete:
         self.mpc.set_param(**setup_mpc)
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'ma27'})
 
-        lterm = - (2-distance_difference)*self.model.aux['E_pot'] +\
+        lterm = - self.model.aux['E_pot'] +\
                 20 * distance_difference +\
-                5 * (2-distance_difference)*self.model.aux['E_kin_pol']
+                5 * self.model.aux['E_kin_pol']
         mterm = (5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart'])
 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
