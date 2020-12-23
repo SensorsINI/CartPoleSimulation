@@ -103,13 +103,20 @@ def train_network():
                          closed_loop_enabled=True,
                          exp_len = 500//args.downsampling)
 
+    model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
+        filepath=args.path_save + rnn_full_name + '.ckpt',
+        save_weights_only=True,
+        monitor='val_loss',
+        mode='auto',
+        save_best_only=False)
+
     history = net.fit(
         train_set,
         epochs=args.num_epochs,
         verbose=1,
         shuffle=False,
         validation_data=test_set,
-        callbacks=[CustomCallback()],
+        callbacks=[CustomCallback(), model_checkpoint_callback],
     )
 
     net.save_weights(args.path_save + rnn_full_name + '.ckpt')

@@ -757,12 +757,9 @@ def plot_results(net,
     close_the_loop = False
 
     for index, row in features_pd.iterrows():
-        states = net_predict.get_internal_states()
-        net_predict.reset_states()
-        net_predict.load_internal_states(states)
-        # states2 = net_predict.get_internal_states()
-        # if states!= states2:
-        #     raise ValueError('The states were not copied correctly.')
+        # states = net_predict.get_internal_states()
+        # net_predict.reset_states()
+        # net_predict.load_internal_states(states)
         rnn_input = pd.DataFrame(copy.deepcopy(row)).transpose().reset_index(drop=True)
 
         if idx_cl == close_loop_idx:

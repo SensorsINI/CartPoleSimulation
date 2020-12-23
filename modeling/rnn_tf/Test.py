@@ -44,7 +44,8 @@ def test_network():
     # load_rnn = args.load_rnn  # If specified this is the name of pretrained RNN which should be loaded
     # load_rnn_path = args.path_save
     load_rnn_path = './controllers/nets/mpc_on_rnn_tf/'
-    load_rnn = 'GRU-4IN-32H1-32H2-2OUT-0'
+    load_rnn = 'GRU-4IN-1024H1-1024H2-2OUT-2'
+    # load_rnn = 'GRU-4IN-1024H1-1024H2-2OUT-1'
 
     # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
     net, rnn_name, inputs_list, outputs_list \

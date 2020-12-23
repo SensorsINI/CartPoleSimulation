@@ -17,7 +17,7 @@ maxiter = 15 # I think it was a key thing.
 mpc_horizon = 10
 
 
-class controller_custom_mpc:
+class controller_scipy_mpc:
     def __init__(self):
 
         """
@@ -55,7 +55,7 @@ class controller_custom_mpc:
         self.E_kin_pol = lambda s: (s.angleD / (2 * np.pi)) ** 2
         self.E_pot_cost = lambda s: 1 - np.cos(s.angle)
         self.E_pot = lambda s: np.cos(s.angle)**2
-        self.distance_difference = lambda s: ((s.position - self.target_position) / 50.0)**2
+        self.distance_difference = lambda s: np.tanh((((s.position - self.target_position) / 50.0)**2)*10.0)*0.16
 
         # self.Q_bounds = [(-1, 1)] * self.mpc_horizon
         self.Q_bounds = scipy.optimize.Bounds(lb=-1.0, ub=1.0)
@@ -83,11 +83,11 @@ class controller_custom_mpc:
         return yp_hat
 
     def cost_function(self, Q_hat):
-        t0 = timeit.default_timer()
+        # t0 = timeit.default_timer()
         # Predict future states given control_inputs Q_hat
         self.yp_hat = self.predictor(Q_hat)
 
-        t1 = timeit.default_timer()
+        # t1 = timeit.default_timer()
 
         cost = 0.0
 
@@ -134,10 +134,10 @@ class controller_custom_mpc:
 
         cost += r_terms + m_term + l_terms
 
-        t2 = timeit.default_timer()
-        print('cost function eval {} ms'.format((t2-t0)*1000.0))
-        print('predictor eval {} ms'.format((t1-t0)*1000.0))
-        print('predictor/all {}%'.format(np.round(100*(t1-t0)/(t2-t0))))
+        # t2 = timeit.default_timer()
+        # print('cost function eval {} ms'.format((t2-t0)*1000.0))
+        # print('predictor eval {} ms'.format((t1-t0)*1000.0))
+        # print('predictor/all {}%'.format(np.round(100*(t1-t0)/(t2-t0))))
 
         return cost
 
@@ -147,7 +147,7 @@ class controller_custom_mpc:
         self.target_position = deepcopy(target_position)
         solution = scipy.optimize.minimize(self.cost_function, self.Q_hat0, bounds=self.Q_bounds, method=method, options={'maxiter': maxiter})
         self.Q_hat = solution.x
-        # print(solution)
+        print(solution)
 
         self.Q_hat0 = np.hstack((self.Q_hat[1:], self.Q_hat[-1]))
         self.Q_previous = self.Q_hat[0]

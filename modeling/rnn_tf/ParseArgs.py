@@ -38,13 +38,13 @@ VAL_file_name = './data/data_rnn_big.csv'
 FIXME: To tailor input list, output list and closed loop list according to cartpole
 angleD_next, positionD_next = cartpole_ode(p, s, Q2u(Q,p))
 '''
-RNN_name = 'GRU-32H1-32H2'
+RNN_name = 'GRU-8H1-8H2'
 # inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'u']
-inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'u', 'target_position']
+# inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'u', 'target_position']
 # inputs_list = ['s.position', 's.angle', 'u']
-# inputs_list = ['s.position', 's.angle', 'u', 'target_position']
-outputs_list = ['s.angle', 's.position', 's.positionD', 's.angleD']
-# outputs_list = ['s.angle', 's.position']
+inputs_list = ['s.position', 's.angle', 'u', 'target_position']
+# outputs_list = ['s.angle', 's.position', 's.positionD', 's.angleD']
+outputs_list = ['s.angle', 's.position']
 closed_loop_list = ['s.position', 's.angle']
 # closed_loop_list = outputs_list
 
@@ -89,7 +89,7 @@ def args():
     parser.add_argument('--downsampling', default=10, type=int, help='Take every n-th point of callected dataset to make dt bigger')
 
     # Training parameters
-    parser.add_argument('--num_epochs', default=2, type=int, help='Number of epochs of training')
+    parser.add_argument('--num_epochs', default=200, type=int, help='Number of epochs of training')
     parser.add_argument('--batch_size', default=64, type=int, help='Size of a batch')
     parser.add_argument('--seed', default=1873, type=int, help='Set seed for reproducibility')
     parser.add_argument('--lr', default=1.0e-3, type=float, help='Learning rate')
