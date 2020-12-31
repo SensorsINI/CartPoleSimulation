@@ -16,8 +16,8 @@ from modeling.rnn_tf.utilis_rnn import *
 # method = 'L-BFGS-B'
 method = 'SLSQP'
 maxiter = 80 # I think it was a key thing.
-ftol = 1.0e-5
-mpc_horizon = 2
+ftol = 1.0e-3
+mpc_horizon = 4
 
 RNN_FULL_NAME = 'GRU-4IN-1024H1-1024H2-2OUT-2'
 # RNN_FULL_NAME = 'GRU-4IN-8H1-8H2-2OUT-0'
@@ -50,22 +50,14 @@ class controller_custom_mpc_2:
     def __init__(self):
 
         # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
-        self.net, self.rnn_name, self.inputs_list, self.outputs_list \
+        self.net, self.rnn_name, self.inputs_list, self.outputs_list, self.normalization_info \
             = create_rnn_instance(load_rnn=RNN_FULL_NAME, path_save=PATH_SAVE,
                                   return_sequence=False, stateful=True,
                                   warm_up_len=1, batchSize=1)
-
-        self.normalization_info = load_normalization_info(PATH_SAVE, RNN_FULL_NAME)
 
         self.rnn_initial_input = pd.DataFrame(columns=self.inputs_list)
         self.rnn_input = pd.DataFrame(columns=self.inputs_list)
         self.rnn_output = pd.DataFrame(columns=self.outputs_list)
-
-        # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
-        self.net, self.rnn_name, self.inputs_list, self.outputs_list \
-            = create_rnn_instance(load_rnn=RNN_FULL_NAME, path_save=PATH_SAVE,
-                                  return_sequence=False, stateful=True,
-                                  warm_up_len=1, batchSize=1)
 
         self.rnn_internal_states = self.net.get_internal_states()
 

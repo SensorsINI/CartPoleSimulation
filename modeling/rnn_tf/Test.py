@@ -16,15 +16,16 @@ from modeling.rnn_tf.utilis_rnn import *
 # Parameters of RNN
 from modeling.rnn_tf.ParseArgs import args as my_args
 
-testset_filepath = './data/test_1.csv'
+# testset_filepath = './data/test_1.csv'
 # testset_filepath = './data/dt_variable_test-2.csv'
+testset_filepath = './data/data_rnn_big.csv'
 
 # Get arguments as default or from terminal line
 args = my_args()
 # Print the arguments
 print(args.__dict__)
 
-exp_len = 380//args.downsampling
+exp_len = 5000//args.downsampling
 
 MULTIPLE_PICTURES = True
 
@@ -42,20 +43,20 @@ def test_network():
     outputs_list = args.outputs_list
 
     # load_rnn = args.load_rnn  # If specified this is the name of pretrained RNN which should be loaded
-    # load_rnn_path = args.path_save
-    load_rnn_path = './controllers/nets/mpc_on_rnn_tf/'
+    load_rnn_path = args.path_save
+    # load_rnn_path = './controllers/nets/mpc_on_rnn_tf/'
     load_rnn = 'GRU-4IN-1024H1-1024H2-2OUT-2'
     # load_rnn = 'GRU-4IN-1024H1-1024H2-2OUT-1'
 
     # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
-    net, rnn_name, inputs_list, outputs_list \
+    net, rnn_name, inputs_list, outputs_list, normalization_info \
         = create_rnn_instance(args=args, rnn_name=rnn_name,
                               inputs_list=inputs_list, outputs_list=outputs_list,
                               load_rnn=load_rnn, path_save=load_rnn_path)
     title = 'Testing RNN: {}'.format(rnn_name)
     if MULTIPLE_PICTURES:
-        for i in range(exp_len//2):
-            close_loop_idx = (exp_len//4)+i*2
+        for i in range(exp_len//20):
+            close_loop_idx = (exp_len//4)+i*20
             plot_results(net=net, args=args, dataset=None, testset_filepath=testset_filepath, exp_len=exp_len,
                          comment=title, path_save=load_rnn_path,
                          inputs_list=inputs_list, outputs_list=outputs_list, save=True,

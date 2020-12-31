@@ -12,12 +12,12 @@ import argparse
 path_save = './save_tf/'
 TRAIN_file_name = [
                    './data/data_around_zero.csv',
-                   # './data/data_rnn_big-2.csv',
-                   # './data/data_rnn_big-1.csv',
-                   # './data/data_rnn_very_big.csv',
-                   # './data/data_rnn_very_big-1.csv',
-                   # './data/data_rnn-1.csv',
-                   # './data/data_rnn-2.csv',
+                   './data/data_rnn_big-2.csv',
+                   './data/data_rnn_big-1.csv',
+                   './data/data_rnn_very_big.csv',
+                   './data/data_rnn_very_big-1.csv',
+                   './data/data_rnn-1.csv',
+                   './data/data_rnn-2.csv',
                    ]
 VAL_file_name = './data/data_rnn_big.csv'
 
@@ -91,7 +91,7 @@ def args():
     parser.add_argument('--downsampling', default=10, type=int, help='Take every n-th point of callected dataset to make dt bigger')
 
     # Training parameters
-    parser.add_argument('--num_epochs', default=5, type=int, help='Number of epochs of training')
+    parser.add_argument('--num_epochs', default=50, type=int, help='Number of epochs of training')
     parser.add_argument('--batch_size', default=64, type=int, help='Size of a batch')
     parser.add_argument('--seed', default=1873, type=int, help='Set seed for reproducibility')
     parser.add_argument('--lr', default=1.0e-3, type=float, help='Learning rate')

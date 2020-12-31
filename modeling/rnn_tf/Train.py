@@ -62,8 +62,11 @@ def train_network():
     columns_list = list(set(inputs_list).union(set(outputs_list)))
 
     # Create log for this RNN and determine its full name
-    rnn_full_name = create_log_file(rnn_name, inputs_list, outputs_list, path_save)
-    net.rnn_full_name = rnn_full_name
+    if net.rnn_full_name is None:
+        rnn_full_name = create_log_file(rnn_name, inputs_list, outputs_list, path_save)
+        net.rnn_full_name = rnn_full_name
+    else:
+        rnn_full_name = net.rnn_full_name
 
     ########################################################
     # Create Dataset
