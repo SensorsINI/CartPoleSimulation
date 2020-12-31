@@ -18,6 +18,8 @@ import tensorflow.keras as keras
 
 import pandas as pd
 
+import timeit
+
 
 # Set seeds everywhere required to make results reproducible
 def set_seed(args):
@@ -131,6 +133,10 @@ def create_rnn_instance(args=None, rnn_name=None, inputs_list=None, outputs_list
         # Load the parameters
         load_pretrained_rnn(net, ckpt_path)
 
+        ## TODO: Load Normalization
+        normalization_info = load_normalization_info(path_save, filename)
+
+
     elif load_rnn == 'last':
         files_found = False
         while (not files_found):
@@ -173,6 +179,9 @@ def create_rnn_instance(args=None, rnn_name=None, inputs_list=None, outputs_list
         # Load the parameters
         load_pretrained_rnn(net, ckpt_path)
 
+        ## TODO: Load Normalization
+        normalization_info = load_normalization_info(path_save, pre_rnn_full_name)
+
 
     else:  # args.load_rnn is None
         print('No pretrained network specified. I will train a network from scratch.')
@@ -181,8 +190,10 @@ def create_rnn_instance(args=None, rnn_name=None, inputs_list=None, outputs_list
         net = myNN(rnn_name=rnn_name, inputs_list=inputs_list, outputs_list=outputs_list,
                    warm_up_len=warm_up_len, return_sequence=return_sequence,
                    stateful=stateful, batchSize=batchSize)
+        normalization_info = None
 
-    return net, rnn_name, inputs_list, outputs_list
+
+    return net, rnn_name, inputs_list, outputs_list, normalization_info
 
 
 def create_log_file(rnn_name, inputs_list, outputs_list, path_save):
@@ -349,6 +360,8 @@ def load_data(args, filepath=None, columns_list=None, norm_inf=False, rnn_full_n
         print('loading data from ' + str(one_filepath))
         print('')
         df_dense = pd.read_csv(one_filepath, comment='#')
+        max_pos = df_dense['s.position'].abs().max()
+        print('Max_pos: {}'.format(max_pos))
         # Here time calculation
 
 
@@ -428,54 +441,83 @@ def load_normalization_info(path_save, rnn_full_name):
     return pd.read_csv(path_save + rnn_full_name + '-norm' + '.csv', index_col=0)
 
 
-def normalize_df(dfs, normalization_info, normalization_type='minmax_sym'):
+def normalize_feature(feature, normalization_info, normalization_type='minmax_sym', name=None):
+    """feature needs to have atribute name!!!"""
+
+    if hasattr(feature, 'name'):
+        name = feature.name
+    else:
+        pass
+
     if normalization_type == 'gaussian':
-        def normalize_feature(col):
-            col_mean = normalization_info.loc['mean', col.name]
-            col_std = normalization_info.loc['std', col.name]
-            return (col - col_mean) / col_std
+        col_mean = normalization_info.loc['mean', name]
+        col_std = normalization_info.loc['std', name]
+        if col_std == 0:
+            return 0
+        else:
+            return (feature - col_mean) / col_std
     elif normalization_type == 'minmax_pos':
-        def normalize_feature(col):
-            col_min = normalization_info.loc['min', col.name]
-            col_max = normalization_info.loc['max', col.name]
-            return (col - col_min) / (col_max - col_min)
+        col_min = normalization_info.loc['min', name]
+        col_max = normalization_info.loc['max', name]
+        if (col_max - col_min) == 0:
+            return 0
+        else:
+            return (feature - col_min) / (col_max - col_min)
     elif normalization_type == 'minmax_sym':
-        def normalize_feature(col):
-            col_min = normalization_info.loc['min', col.name]
-            col_max = normalization_info.loc['max', col.name]
-            return -1.0 + 2.0 * (col - col_min) / (col_max - col_min)
+        col_min = normalization_info.loc['min', name]
+        col_max = normalization_info.loc['max', name]
+        if (col_max - col_min) == 0:
+            return 0
+        else:
+            return -1.0 + 2.0 * (feature - col_min) / (col_max - col_min)
+
+
+def normalize_df(dfs, normalization_info, normalization_type='minmax_sym'):
 
     if type(dfs) is list:
         for i in range(len(dfs)):
-            dfs[i] = dfs[i].apply(normalize_feature, axis=0)
+            dfs[i] = dfs[i].apply(normalize_feature, axis=0,
+                                  normalization_info=normalization_info,
+                                  normalization_type=normalization_type)
     else:
-        dfs = dfs.apply(normalize_feature, axis=0)
+        dfs = dfs.apply(normalize_feature, axis=0,
+                                  normalization_info=normalization_info,
+                                  normalization_type=normalization_type)
 
     return dfs
 
+def denormalize_feature(feature, normalization_info, normalization_type='minmax_sym', name=None):
+    """feature needs to have atribute name!!!"""
+
+    if hasattr(feature, 'name'):
+        name = feature.name
+    else:
+        pass
+
+    if normalization_type == 'gaussian':
+        col_mean = normalization_info.loc['mean', name]
+        col_std = normalization_info.loc['std', name]
+        return feature * col_std + col_mean
+    elif normalization_type == 'minmax_pos':
+        col_min = normalization_info.loc['min', name]
+        col_max = normalization_info.loc['max', name]
+        return feature * (col_max - col_min) + col_min
+    elif normalization_type == 'minmax_sym':
+        col_min = normalization_info.loc['min', name]
+        col_max = normalization_info.loc['max', name]
+        return ((feature + 1.0) / 2.0) * (col_max - col_min) + col_min
 
 def denormalize_df(dfs, normalization_info, normalization_type='minmax_sym'):
-    if normalization_type == 'gaussian':
-        def denormalize_feature(col):
-            col_mean = normalization_info.loc['mean', col.name]
-            col_std = normalization_info.loc['std', col.name]
-            return col * col_std + col_mean
-    elif normalization_type == 'minmax_pos':
-        def denormalize_feature(col):
-            col_min = normalization_info.loc['min', col.name]
-            col_max = normalization_info.loc['max', col.name]
-            return col * (col_max - col_min) + col_min
-    elif normalization_type == 'minmax_sym':
-        def denormalize_feature(col):
-            col_min = normalization_info.loc['min', col.name]
-            col_max = normalization_info.loc['max', col.name]
-            return ((col + 1.0) / 2.0) * (col_max - col_min) + col_min
 
     if type(dfs) is list:
         for i in range(len(dfs)):
-            dfs[i] = dfs[i].apply(denormalize_feature, axis=0)
+            dfs[i] = dfs[i].apply(denormalize_feature, axis=0,
+                                  normalization_info=normalization_info,
+                                  normalization_type=normalization_type)
     else:
-        dfs = dfs.apply(denormalize_feature, axis=0)
+        dfs = dfs.apply(denormalize_feature, axis=0,
+                                  normalization_info=normalization_info,
+                                  normalization_type=normalization_type)
 
     return dfs
 
@@ -534,6 +576,12 @@ class Dataset(keras.utils.Sequence):
 
         self.reset_exp_len(exp_len=exp_len)
         self.reset_batch_size(batch_size=batch_size)
+
+        # Here we imnplement a trial to change the target position and current positions
+        # for ease of implementation we assume that both input and output has s.position, only input has target position
+        self.idx_pos_in = inputs_list.index('s.position')
+        self.idx_pos_out = outputs_list.index('s.position')
+        self.idx_target_pos_in = inputs_list.index('target_position')
 
     def reset_exp_len(self, exp_len=None):
         """
@@ -612,6 +660,13 @@ class Dataset(keras.utils.Sequence):
             targets = self.labels[idx_data_set].to_numpy()[idx+self.warm_up_len:idx + self.exp_len]
         else:
             raise('Non-existent target_type')
+
+        # mix_position = True
+        # if mix_position and targets_type == 'all after warm-up':
+        #     random_pos = np.random.uniform(-40.0, 40.0)
+        #     features[:,self.idx_pos_in] = features[:,self.idx_pos_in]+random_pos
+        #     features[:,self.idx_target_pos_in] = features[:,self.idx_target_pos_in]+random_pos
+        #     targets[self.idx_pos_out] = targets[self.idx_pos_out]+random_pos
 
         # If get_time_axis try to obtain a vector of time data for the chosen sample
         if get_time_axis:
@@ -744,7 +799,7 @@ def plot_results(net,
         test_set.reset_exp_len(exp_len=exp_len)
 
     # Format the experiment data
-    features, targets, time_axis = test_set.get_experiment(1)  # Put number in brackets to get the same idx at every run
+    features, targets, time_axis = test_set.get_experiment(0)  # Put number in brackets to get the same idx at every run
 
     features_pd = pd.DataFrame(data=features, columns=inputs_list)
     targets_pd = pd.DataFrame(data=targets, columns=outputs_list)
@@ -768,7 +823,10 @@ def plot_results(net,
             rnn_input[closed_loop_list] = normalized_rnn_output[closed_loop_list]
         rnn_input = np.squeeze(rnn_input.to_numpy())
         rnn_input = rnn_input[np.newaxis, np.newaxis, :]
+        # t2 = timeit.default_timer()
         normalized_rnn_output = net_predict.predict_on_batch(rnn_input)
+        # t3 = timeit.default_timer()
+        # print('t3 evaluation {} ms'.format((t3 - t2) * 1000.0))
         normalized_rnn_output = np.squeeze(normalized_rnn_output).tolist()
         normalized_rnn_output = copy.deepcopy(pd.DataFrame(data=[normalized_rnn_output], columns=outputs_list))
 

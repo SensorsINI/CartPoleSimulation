@@ -15,17 +15,38 @@ from modeling.rnn_tf.utilis_rnn import *
 
 # method = 'L-BFGS-B'
 method = 'SLSQP'
-maxiter = 8 # I think it was a key thing.
-mpc_horizon = 10
+maxiter = 80 # I think it was a key thing.
+ftol = 1.0e-5
+mpc_horizon = 2
 
-# RNN_FULL_NAME = 'GRU-4IN-1024H1-1024H2-2OUT-2'
-RNN_FULL_NAME = 'GRU-4IN-8H1-8H2-2OUT-0'
+RNN_FULL_NAME = 'GRU-4IN-1024H1-1024H2-2OUT-2'
+# RNN_FULL_NAME = 'GRU-4IN-8H1-8H2-2OUT-0'
 INPUTS_LIST = ['s.angle', 's.position', 'target_position', 'u']
 OUTPUTS_LIST = ['s.angle', 's.position']
 PATH_SAVE = './controllers/nets/mpc_on_rnn_tf/'
 
+# weights
+wr = 0.0  # rterm
+l1 = 2.0  # -pot
+l2 = 0.0  # distance
+l3 = 0.0  # kin_pol
+m1 = 0.0  # kin_pol
+m2 = 2.0  # -pot
+m3 = 0.0  # kin_cart
+m4 = 0.0  # distance
 
-class controller_custom_mpc:
+w_sum = wr + l1 + l2 + l3 + m1 + m2 + m3
+
+wr /= w_sum
+l1 /= w_sum
+l2 /= w_sum
+l3 /= w_sum
+m1 /= w_sum
+m2 /= w_sum
+m3 /= w_sum
+
+
+class controller_custom_mpc_2:
     def __init__(self):
 
         # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
@@ -34,29 +55,17 @@ class controller_custom_mpc:
                                   return_sequence=False, stateful=True,
                                   warm_up_len=1, batchSize=1)
 
-        # print(self.net.summary())
+        self.normalization_info = load_normalization_info(PATH_SAVE, RNN_FULL_NAME)
 
-        normalization_info = load_normalization_info(PATH_SAVE, RNN_FULL_NAME)
-        self.min_in = []
-        self.max_in = []
-        for feature in self.inputs_list:
-            self.min_in.append(normalization_info.loc['min', feature])
-            self.max_in.append(normalization_info.loc['max', feature])
-        self.min_in = np.array(self.min_in)
-        self.max_in = np.array(self.max_in)
+        self.rnn_initial_input = pd.DataFrame(columns=self.inputs_list)
+        self.rnn_input = pd.DataFrame(columns=self.inputs_list)
+        self.rnn_output = pd.DataFrame(columns=self.outputs_list)
 
-        self.min_out = []
-        self.max_out = []
-        for feature in self.outputs_list:
-            self.min_out.append(normalization_info.loc['min', feature])
-            self.max_out.append(normalization_info.loc['max', feature])
-        self.min_out = np.array(self.min_out)
-        self.max_out = np.array(self.max_out)
-
-
-        self.rnn_input = np.array([])
-        self.normalized_rnn_output = np.array([])
-        self.rnn_output = np.array([])
+        # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
+        self.net, self.rnn_name, self.inputs_list, self.outputs_list \
+            = create_rnn_instance(load_rnn=RNN_FULL_NAME, path_save=PATH_SAVE,
+                                  return_sequence=False, stateful=True,
+                                  warm_up_len=1, batchSize=1)
 
         self.rnn_internal_states = self.net.get_internal_states()
 
@@ -88,20 +97,22 @@ class controller_custom_mpc:
         self.s = SimpleNamespace()  # s like state
 
         self.target_position = 0.0
+        self.target_position_normed = 0.0
 
         self.mpc_horizon = mpc_horizon
         self.dt = dt_mpc_simulation_globals
+        self.f = 1.0/self.dt  # We prefare to perform multiplication than division
 
         self.yp_hat = np.zeros(self.mpc_horizon, dtype=object)  # MPC prediction of future states
         self.Q_hat = np.zeros(self.mpc_horizon)  # MPC prediction of future control inputs
         self.Q_hat0 = np.zeros(self.mpc_horizon)  # initial guess for future control inputs to be predicted
         self.Q_previous = 0.0
 
-        self.E_kin_cart = lambda s: (s.positionD / self.p.v_max) ** 2
-        self.E_kin_pol = lambda s: (s.angleD / (2 * np.pi)) ** 2
-        self.E_pot_cost = lambda s: 1 - np.cos(s.angle)
-        self.E_pot = lambda s: np.cos(s.angle)**2
-        self.distance_difference = lambda s: ((s.position - self.target_position) / 50.0)**2
+        self.E_kin_cart = lambda positionD: (positionD) ** 2
+        self.E_kin_pol = lambda angleD: (angleD) ** 2
+        self.E_pot_cost = lambda angle: 1 - np.cos(angle)
+        self.E_pot = lambda angle: np.cos(angle)**2
+        self.distance_difference = lambda position: ((position - self.target_position_normed))**2
 
         # self.Q_bounds = [(-1, 1)] * self.mpc_horizon
         self.Q_bounds = scipy.optimize.Bounds(lb=-1.0, ub=1.0)
@@ -113,142 +124,147 @@ class controller_custom_mpc:
         self.E_pot_cost_max = 0.0
         self.distance_difference_max = 0.0
 
+        self.initial_state = pd.DataFrame(columns=['s.angle', 's.angleD', 's.position', 's.positionD'])
 
-    def step_rnn(self, s, u=None, target_position=None):
-        # Copy state and target_position into rnn_input
-        # t0 = timeit.default_timer()
-        rnn_input = []
-        for feature in self.inputs_list:
-            rnn_input.append(eval(feature))
-        self.rnn_input = np.array(rnn_input)
-        # t1 = timeit.default_timer()
+    def step_rnn(self, rnn_input):
 
-        self.rnn_input = -1.0 + 2.0 * (self.rnn_input - self.min_in) / (self.max_in - self.min_in)
+        rnn_input = np.squeeze(rnn_input.to_numpy())
+        rnn_input = rnn_input[np.newaxis, np.newaxis, :]
+        rnn_input = tf.convert_to_tensor(rnn_input, dtype=tf.float64)
 
-        self.rnn_input = self.rnn_input[np.newaxis, np.newaxis, :]
-        rnn_input_normed = tf.convert_to_tensor(self.rnn_input, dtype = tf.float64)
-        t2 = timeit.default_timer()
+        # t00 = timeit.default_timer()
+        rnn_output = self.net.predict_on_batch(rnn_input)
+        # t11 = timeit.default_timer()
 
-        normalized_rnn_output = self.net.predict_on_batch(rnn_input_normed)
-        t3 = timeit.default_timer()
+        rnn_output = np.squeeze(rnn_output).tolist()
+        rnn_output = deepcopy(pd.DataFrame(data=[rnn_output], columns=self.outputs_list))
 
-        rnn_output = np.squeeze(normalized_rnn_output)
+        # self.rnn_eval_time.append((t11 - t00) * 1.0e6)
 
-
-        # t4 = timeit.default_timer()
-        self.rnn_output = ((rnn_output + 1.0) / 2.0) * (self.max_out - self.min_out) + self.min_out
-        # t5 = timeit.default_timer()
-
-        s_rnn_out = SimpleNamespace()
-        for i in range(len(self.outputs_list)):
-            feature = self.outputs_list[i]
-            if feature[0] == 's':
-                exec('s_rnn_out.' + feature[2:] + '=self.rnn_output[' + str(i) + ']')
-            else:
-                exec('s_rnn_out.'+self.outputs_list[i]+'=self.rnn_output['+str(i)+']')
-
-        if 's.positionD' not in self.outputs_list:
-            s_rnn_out.positionD = (s_rnn_out.position-s.position) / self.dt
-
-        if 's.angleD' not in self.outputs_list:
-            s_rnn_out.angleD = (s_rnn_out.angle - s.angle) / self.dt
-
-        # print('t1 evaluation {} ms'.format((t1 - t0) * 1000.0))
-        # print('t2 evaluation {} ms'.format((t2 - t1) * 1000.0))
-        # print('t3 evaluation {} ms'.format((t3 - t2) * 1000.0))
-        # print('t4 evaluation {} ms'.format((t4 - t3) * 1000.0))
-        # print('t5 evaluation {} ms'.format((t5 - t4) * 1000.0))
-        self.rnn_eval_time.append((t3 - t2) * 1.0e6)
-
-        return s_rnn_out
-
+        return rnn_output
 
     def predictor(self, Q_hat):
 
         self.net.load_internal_states(self.rnn_internal_states)
+        prediction = pd.DataFrame(data=np.zeros((self.mpc_horizon+1, len(self.initial_state_normed.columns))),
+                                  columns=self.initial_state_normed.columns)
 
-        yp_hat = np.zeros(self.mpc_horizon+1, dtype=object)
+        # FIXME: This is ugly. You should just train it on Q
+        #   Otherwise if u(Q,p) is known you can train RNN on normed u,
+        #   optimize for normed u, and find Q analytically
+        #   For the moment as normed u is approx Q we plug Q for the RNN trained on normed u
+        if 'u' in self.rnn_input:
+            self.rnn_initial_input['u'] = [Q_hat[0]]
+
+        for col_name in prediction:
+            if col_name in self.initial_state_normed:
+                prediction.loc[prediction.index[0], col_name] = self.initial_state_normed.loc[
+                    self.initial_state_normed.index[0], col_name]
 
         for k in range(0, self.mpc_horizon):
+
             if k == 0:
-                yp_hat[0] = deepcopy(self.s)
-                s_next = deepcopy(self.s)
+                self.rnn_input = deepcopy(self.rnn_initial_input)
+            else:
+                for col_name in self.rnn_input.columns:
+                    if col_name in self.rnn_output:
+                        self.rnn_input[col_name] = self.rnn_output[col_name]
+                if 'target_position' in self.rnn_input:
+                    self.rnn_input['target_position'] = self.target_position_normed
+                if 'u' in self.rnn_input:
+                    self.rnn_input['u'] = [Q_hat[k]]
 
-            s_next = self.step_rnn(s_next, Q2u(Q_hat[k], self.p), self.target_position)
 
-            yp_hat[k + 1] = s_next
+            self.rnn_output = self.step_rnn(self.rnn_input)
 
-        return yp_hat
+            for col_name in prediction:
+                if col_name in self.rnn_output:
+                    prediction.loc[prediction.index[k+1], col_name] = self.rnn_output.loc[self.rnn_output.index[0], col_name]
+
+        if 's.positionD' not in self.outputs_list:
+            # Remark: first line which is initial state already has D
+            prediction['s.positionD'] = (prediction['s.position']-prediction['s.position'].shift(1)) * self.f
+            prediction.loc[prediction.index[0], 's.positionD'] = self.initial_state_normed.loc[self.initial_state_normed.index[0], 's.positionD']
+
+        if 's.angleD' not in self.outputs_list:
+            prediction['s.angleD'] = (prediction['s.angle']-prediction['s.angle'].shift(1)) * self.f
+            prediction.loc[prediction.index[0], 's.angleD'] = self.initial_state_normed.loc[prediction.index[0], 's.angleD']
+
+        return prediction
 
     def cost_function(self, Q_hat):
-        t0 = timeit.default_timer()
+        # t0 = timeit.default_timer()
         # Predict future states given control_inputs Q_hat
-        self.yp_hat = self.predictor(Q_hat)
+        self.predictions = self.predictor(Q_hat)
 
-        t1 = timeit.default_timer()
+        # t1 = timeit.default_timer()
 
+        self.predictions['E_pot'] = self.E_pot(self.predictions['s.angle'])
+        self.predictions['E_kin_pol'] = self.E_kin_pol(self.predictions['s.angleD'])
+        self.predictions['E_kin_cart'] = self.E_kin_cart(self.predictions['s.positionD'])
+        self.predictions['distance_difference'] = self.distance_difference(self.predictions['s.position'])
+
+        self.predictions['lterm'] = - l1 * self.predictions['E_pot'] + \
+                                        l2 * self.predictions['distance_difference'] + \
+                                             l3 * self.predictions['E_kin_pol']
         cost = 0.0
 
-        # weights
-        wr = 0.1
-        l1 = 2.0
-        l2 = 1.0
-        l3 = 5.0
-        m1 = 1.0
-        m2 = 1.0
-        m3 = 5.0
-        m4 = 1.0
 
-        w_sum = wr + l1 + l2 + l3 + m1 + m2 + m3
-
-        wr /= w_sum
-        l1 /= w_sum
-        l2 /= w_sum
-        l3 /= w_sum
-        m1 /= w_sum
-        m2 /= w_sum
-        m3 /= w_sum
 
         # Calculate sum of r-terms
-        r_terms = wr * ((self.Q_hat[0] - self.Q_previous) ** 2)
-        for k in range(0, self.mpc_horizon - 1):
-            r_terms += wr * ((self.Q_hat[k + 1] - self.Q_hat[k]) ** 2)
+        r_terms = wr * ((Q_hat[0] - self.Q_previous) ** 2)
+        r_terms += wr * sum((Q_hat[1:] - Q_hat[:-1]) ** 2)
 
-        l_terms = 0.0
-        for k in range(self.mpc_horizon):
-            distance = self.distance_difference(self.yp_hat[k+1])
-            lterm = - l1 * self.E_pot(self.yp_hat[k+1]) + \
-                        l2 * distance + \
-                             l3 * self.E_kin_pol(self.yp_hat[k+1])
 
-            l_terms += lterm
+        l_terms = self.predictions['lterm'].sum()
 
-        E_kin_cart = self.E_kin_cart(self.yp_hat[-1])
-        E_kin_pol = self.E_kin_pol(self.yp_hat[-1])
-        E_pot = self.E_pot(self.yp_hat[-1])
-        distance = self.distance_difference(self.yp_hat[-1])
-
-        m_term = (m1 * E_kin_pol - m2 * E_pot + m3 * E_kin_cart + m4 * distance)
+        m_term = (m1 * self.predictions['E_kin_pol'].iloc[-1]
+                    - m2 * self.predictions['E_pot'].iloc[-1]
+                        + m3 * self.predictions['E_kin_cart'].iloc[-1]
+                            + m4 * self.predictions['distance_difference'].iloc[-1])
 
         cost += r_terms + m_term + l_terms
 
-        t2 = timeit.default_timer()
+        # t2 = timeit.default_timer()
         # print('cost function eval {} ms'.format((t2-t0)*1000.0))
         # print('predictor eval {} ms'.format((t1-t0)*1000.0))
-        self.predictor_time.append((t1-t0)*1000.0)
+        # self.predictor_time.append((t1-t0)*1000.0)
         # print('predictor/all {}%'.format(np.round(100*(t1-t0)/(t2-t0))))
 
         return cost
 
     def step(self, s, target_position):
+        # TODO: Step should get already a dataframe/dataseries from which it should pick the columns it needs
+        #   Optimally you should operate on the normed values all the time, try to eliminate devisions
 
         self.rnn_internal_states = self.net.get_internal_states()
 
         self.s = deepcopy(s)
         self.target_position = deepcopy(target_position)
-        solution = scipy.optimize.minimize(self.cost_function, self.Q_hat0, bounds=self.Q_bounds, method=method, options={'maxiter': maxiter})
+
+        self.initial_state['s.position'] = [s.position]
+        self.initial_state['s.angle'] = [s.angle]
+        self.initial_state['s.positionD'] = [s.positionD]
+        self.initial_state['s.angleD'] = [s.angleD]
+
+        self.initial_state_normed = normalize_df(self.initial_state, self.normalization_info)
+        self.target_position_normed = normalize_feature(self.target_position, self.normalization_info,
+                                                        name='s.position')
+
+        for col_name in self.rnn_input.columns:
+            if col_name in self.initial_state_normed:
+                self.rnn_initial_input[col_name] = self.initial_state_normed[col_name]
+        if 'target_position' in self.rnn_input:
+            self.rnn_initial_input['target_position'] = [self.target_position_normed]
+
+
+        #  FIXME: IT IS NOT GOOD THE NORMALIZATION OF Q
+        #    FOR THE MOMEMT I ASSUME THAT NORMED AND UNNORMED Q IS THE SAME,
+        #    WHICH IS IN THE SPECIAL CASE OF MY DATASET AND NOTMALIZATION PROCEDURE EVEN EXACTLY TRUE
+        solution = scipy.optimize.minimize(self.cost_function, self.Q_hat0, bounds=self.Q_bounds, method=method,
+                                           options={'maxiter': maxiter, 'ftol': ftol})
         self.Q_hat = solution.x
-        self.nfun.append(solution.nfev)
+        # self.nfun.append(solution.nfev)
         print(solution)
 
         self.Q_hat0 = np.hstack((self.Q_hat[1:], self.Q_hat[-1]))
@@ -257,9 +273,13 @@ class controller_custom_mpc:
         Q = self.Q_hat[0]
 
         self.net.load_internal_states(self.rnn_internal_states)
-        self.step_rnn(self.s, Q2u(Q, self.p), self.target_position)
+        self.step_rnn(self.rnn_initial_input)
 
         return Q
+
+    def reset(self):
+        self.net.reset_states()
+        self.Q_hat0 = np.zeros(self.mpc_horizon)
 
     def controller_summary(self):
         print('******************************************************************')

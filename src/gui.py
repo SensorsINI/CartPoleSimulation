@@ -452,6 +452,10 @@ class MainWindow(QMainWindow):
                         sleep(0.001)
 
                 self.MyCart.use_pregenerated_target_position = False
+                try:
+                    self.MyCart.controller.controller_summary()
+                except:
+                    pass
                 self.MyCart.summary_plots()
                 self.w_summary = SummaryWindow(summary_plots=self.MyCart.summary_plots)
                 # Reset variables and redraw the figures
@@ -466,6 +470,10 @@ class MainWindow(QMainWindow):
                 self.cb_save_history.setEnabled(False)
                 self.cb_load_recorded_data.setEnabled(False)
                 speedup_updated = self.get_speedup()
+                try:
+                    self.MyCart.controller.reset()
+                except:
+                    print('Controller reset not done')
                 if speedup_updated:
                     self.looper.dt_target = self.dt_main_simulation / self.speedup
                     self.run_thread_calculations = 1

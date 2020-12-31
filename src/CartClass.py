@@ -156,6 +156,13 @@ class Cart:
             [os.path.basename(item)[len('controller_'):-len('.py')].replace('_', '-') for item in controller_files]
         ))
 
+        self.controller_interval = np.inf
+        self.controller_interval_threshold = controller_interval_threshold_globals
+        self.controller_off = 100.0
+        self.controller_on  = 50
+        self.controller_index = 0
+
+
         # Variables for pre-generated random trace
 
         self.track_relative_complexity = track_relative_complexity
@@ -308,23 +315,27 @@ class Cart:
         # Determine the dimensionales [-1,1] value of the motor power Q
     def Update_Q(self):
 
-        if self.mode == 0:  # in this case slider corresponds already to the power of the motor
-            self.Q = self.slider_value
+        if self.controller_index == self.controller_on:
+            self.controller_index = 0
+        else:
+            self.controller_index += 1
 
-        else:  # in this case slider gives a target position, lqr regulator
-            # mode == 1 -> lqr controller
-            # mode == 2 -> mpc controller
-            # tic = timeit.default_timer()
-            self.Q = self.controller.step(self.s, self.target_position)
-            # toc = timeit.default_timer()
+        if self.controller_index<self.controller_off:
 
-            # print("Time to find control input = {} ms".format((toc - tic) * 1000.0))
+            if self.mode == 0:  # in this case slider corresponds already to the power of the motor
+                self.Q = self.slider_value
 
-            # if self.Q > 1.0:
-            #     print('Q to big! ' + str(self.Q))
-            # elif self.Q < -1.0:
-            #     print('Q to small! ' + str(self.Q))
+            else:  # in this case slider gives a target position, lqr regulator
 
+                self.controller_interval += self.dt
+                if self.controller_interval > self.controller_interval_threshold:
+                    self.Q = self.controller.step(self.s, self.target_position)
+                    self.controller_interval = 0.0
+
+
+
+        else:
+            self.Q = np.random.uniform(-1.0, 1.0)
 
 
     # This method changes the internal state of the CartPole

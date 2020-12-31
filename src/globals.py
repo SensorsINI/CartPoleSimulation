@@ -28,7 +28,9 @@ The 0-angle state is always defined as pole in upright position. This currently 
 # Variables settings parameters CartPole GUI starts with
 # This is useful if you need to many times restart the GUI to some particular settings
 # e.g. while testing new controller
-mode_globals = 0  # Defines which controller is loaded
+mode_globals = 2  # Defines which controller is loaded
+
+controller_interval_threshold_globals = 0.00
 """Sets the controller of the CartPole
 
 Possible choices

@@ -2,11 +2,11 @@ from src.CartClass import *
 from src.utilis import *
 
 # User defined simulation settings - check the effect first in GUI before you launch big data generation
-csv = 'new_test'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
-number_of_experiments = 4  # How many experiments will be generated
-length_of_experiment = 100.0  # Length of each experiment in s
+csv = 'data_around_zero'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
+number_of_experiments = 1  # How many experiments will be generated
+length_of_experiment = 800.0  # Length of each experiment in s
 dt_main_simulation = dt_main_simulation_globals  # simulation timestep
-track_relative_complexity = 0.2  # randomly placed target points/s
+track_relative_complexity = 0.0  # randomly placed target points/s
 controller = 'do-mpc'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'rnn_as_mpc_tf'
@@ -19,7 +19,9 @@ start_random_target_position_at = 0.0
 end_random_target_position_at = 0.0
 # The list of turning points is set to None, no matter what is in globals.py
 
-save_data_online = False  # It was intended to save memory usage, but it doesn't seems to help. Leave it false.
+save_data_online = True  # It was intended to save memory usage, but it doesn't seems to help. Leave it false.
+
+print(controller)
 
 for i in range(number_of_experiments):
 

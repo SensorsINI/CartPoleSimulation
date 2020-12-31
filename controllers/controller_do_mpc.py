@@ -107,6 +107,9 @@ class controller_do_mpc:
         self.mpc.bounds['lower', '_u', 'Q'] = -1.0
         self.mpc.bounds['upper', '_u', 'Q'] = 1.0
 
+        # self.mpc.bounds['lower', '_x', 's.angle'] = - 0.5 * np.pi
+        # self.mpc.bounds['upper', '_x', 's.angle'] =   0.5 * np.pi
+
         self.tvp_template = self.mpc.get_tvp_template()
 
         self.mpc.set_tvp_fun(self.tvp_fun)
@@ -138,8 +141,6 @@ class controller_do_mpc:
 
         self.x0['s.angle'] = s.angle
         self.x0['s.angleD'] = s.angleD
-        #
-        time.sleep(0.1)
 
         self.tvp_template['_tvp', :, 'target_position'] = target_position
 

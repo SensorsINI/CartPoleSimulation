@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 
 import timeit
 
-# method = 'L-BFGS-B'
-method = 'SLSQP'
+method = 'L-BFGS-B'
+# method = 'SLSQP'
 maxiter = 15 # I think it was a key thing.
 mpc_horizon = 10
 
@@ -23,6 +23,10 @@ class controller_scipy_mpc:
         """
         Get configured do-mpc modules:
         """
+
+        self.eq_eval_time = []
+        self.predictor_time = []
+        self.nfun = []
 
         # Physical parameters of the cart
         self.p = SimpleNamespace()  # p like parameters
@@ -76,18 +80,22 @@ class controller_scipy_mpc:
                 yp_hat[0] = deepcopy(self.s)
                 s_next = deepcopy(self.s)
 
+            t0 = timeit.default_timer()
             s_next = mpc_next_state(s_next, self.p, Q2u(Q_hat[k], self.p), dt=self.dt)
+            t1 = timeit.default_timer()
+            self.eq_eval_time.append((t1 - t0) * 1.0e6)
 
             yp_hat[k + 1] = s_next
 
         return yp_hat
 
+
     def cost_function(self, Q_hat):
-        # t0 = timeit.default_timer()
+        t0 = timeit.default_timer()
         # Predict future states given control_inputs Q_hat
         self.yp_hat = self.predictor(Q_hat)
 
-        # t1 = timeit.default_timer()
+        t1 = timeit.default_timer()
 
         cost = 0.0
 
@@ -138,6 +146,7 @@ class controller_scipy_mpc:
         # print('cost function eval {} ms'.format((t2-t0)*1000.0))
         # print('predictor eval {} ms'.format((t1-t0)*1000.0))
         # print('predictor/all {}%'.format(np.round(100*(t1-t0)/(t2-t0))))
+        self.predictor_time.append((t1 - t0) * 1.0e6)
 
         return cost
 
@@ -148,6 +157,7 @@ class controller_scipy_mpc:
         solution = scipy.optimize.minimize(self.cost_function, self.Q_hat0, bounds=self.Q_bounds, method=method, options={'maxiter': maxiter})
         self.Q_hat = solution.x
         print(solution)
+        self.nfun.append(solution.nfev)
 
         self.Q_hat0 = np.hstack((self.Q_hat[1:], self.Q_hat[-1]))
         self.Q_previous = self.Q_hat[0]
@@ -156,6 +166,34 @@ class controller_scipy_mpc:
         return Q
 
 
+    def controller_summary(self):
+        print('******************************************************************')
+        print('Controller summary:')
+        print('Model name: {}'.format('SCIPY'))
+        print('Optimizer name: {}'.format(method))
+        print('Number of timesteps: {}'.format(len(self.nfun)))
+        print('Number of eqations evaluations: {}'.format(len(self.eq_eval_time)))
+        print('')
+        print('--------------------')
+        print('Equations evaluation time:')
+        print('Avg: {} us'.format(np.around(np.mean(self.eq_eval_time))))
+        print('Std: {} us'.format(np.around(np.std(self.eq_eval_time))))
+        print('Min: {} us'.format(np.around(np.min(self.eq_eval_time))))
+        print('Max: {} us'.format(np.around(np.max(self.eq_eval_time))))
+        print('--------------------')
+        print('Predictor evaluation time:')
+        print('Avg: {} us'.format(np.around(np.mean(self.predictor_time))))
+        print('Std: {} us'.format(np.around(np.std(self.predictor_time))))
+        print('Min: {} us'.format(np.around(np.min(self.predictor_time))))
+        print('Max: {} us'.format(np.around(np.max(self.predictor_time))))
+        print('--------------------')
+        print('number of cost function (=number of predictor) evaluations per time step:')
+        print('Average: {}'.format(np.around(np.mean(self.nfun))))
+        print('Std: {}'.format(np.around(np.std(self.nfun))))
+        print('Min: {}'.format(np.around(np.min(self.nfun))))
+        print('Max: {}'.format(np.around(np.max(self.nfun))))
+
+        print('******************************************************************')
 
 
 

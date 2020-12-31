@@ -57,7 +57,7 @@ def train_network():
     path_save = args.path_save
 
     # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
-    net, rnn_name, inputs_list, outputs_list \
+    net, rnn_name, inputs_list, outputs_list, normalization_info \
         = create_rnn_instance(args, rnn_name, inputs_list, outputs_list, load_rnn, path_save)
     columns_list = list(set(inputs_list).union(set(outputs_list)))
 
@@ -71,7 +71,8 @@ def train_network():
 
     train_dfs, _ = load_data(args, args.train_file_name, columns_list=columns_list)
 
-    normalization_info =  calculate_normalization_info(train_dfs, args.path_save, rnn_full_name)
+    if normalization_info is None:
+        normalization_info =  calculate_normalization_info(train_dfs, args.path_save, rnn_full_name)
 
     test_dfs, time_axes_test = load_data(args, args.val_file_name, columns_list=columns_list)
 
