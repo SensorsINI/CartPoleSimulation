@@ -2,11 +2,11 @@ from src.CartClass import *
 from src.utilis import *
 
 # User defined simulation settings - check the effect first in GUI before you launch big data generation
-csv = 'data_around_zero'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
+csv = 'data_free_fall_1'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
 number_of_experiments = 1  # How many experiments will be generated
-length_of_experiment = 800.0  # Length of each experiment in s
+length_of_experiment = 8000.0  # Length of each experiment in s
 dt_main_simulation = dt_main_simulation_globals  # simulation timestep
-track_relative_complexity = 0.0  # randomly placed target points/s
+track_relative_complexity = 0.01  # randomly placed target points/s
 controller = 'do-mpc'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'rnn_as_mpc_tf'

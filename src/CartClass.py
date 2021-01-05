@@ -158,8 +158,8 @@ class Cart:
 
         self.controller_interval = np.inf
         self.controller_interval_threshold = controller_interval_threshold_globals
-        self.controller_off = 100.0
-        self.controller_on  = 50
+        self.controller_off = 250.0
+        self.controller_on  = 500.0
         self.controller_index = 0
 
 
@@ -227,7 +227,7 @@ class Cart:
             number_of_turning_points = int(np.floor(self.random_length * self.track_relative_complexity))
 
             y = 2.0 * (random.random(number_of_turning_points) - 0.5)
-            y = y * 0.8 * self.HalfLength
+            y = y * 0.6 * self.HalfLength
 
             if number_of_turning_points == 0:
                 y = np.append(y, 0.0)
@@ -332,10 +332,32 @@ class Cart:
                     self.Q = self.controller.step(self.s, self.target_position)
                     self.controller_interval = 0.0
 
-
-
         else:
-            self.Q = np.random.uniform(-1.0, 1.0)
+            # self.Q = np.random.uniform(-1.0, 1.0)
+            self.Q = 0.0
+
+        # if self.controller_index == 0:
+        #     if abs(self.s.angle) > 2.5 or abs(self.s.angleD) > 3.6 or abs(self.s.positionD) > 20.0:
+        #         self.controller_index = 1  # switch controller on
+        # elif self.controller_index == 1:
+        #     if abs(self.s.angle) < 0.01 and abs(self.s.angleD) < 0.01 and abs(self.s.positionD) < 1.0:
+        #         self.controller_index = 0  # swich controller off
+        #
+        # if self.controller_index==1:
+        #
+        #     if self.mode == 0:  # in this case slider corresponds already to the power of the motor
+        #         self.Q = self.slider_value
+        #
+        #     else:  # in this case slider gives a target position, lqr regulator
+        #
+        #         self.controller_interval += self.dt
+        #         if self.controller_interval > self.controller_interval_threshold:
+        #             self.Q = self.controller.step(self.s, self.target_position)
+        #             self.controller_interval = 0.0
+        #
+        # else:
+        #     # self.Q = np.random.uniform(-1.0, 1.0)
+        #     self.Q = 0.0
 
 
     # This method changes the internal state of the CartPole

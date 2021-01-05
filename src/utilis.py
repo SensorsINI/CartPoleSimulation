@@ -236,6 +236,9 @@ def Generate_Experiment(MyCart,
 
         MyCart.update_state()
 
+        if abs(MyCart.s.angle) > 0.8*np.pi:
+            raise ValueError('Cart went unstable')
+
         if save_data_online and csv is not None:
             MyCart.save_history_csv(csv_name=csv, init=False, iter=True)
 

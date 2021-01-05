@@ -16,9 +16,8 @@ from modeling.rnn_tf.utilis_rnn import *
 # Parameters of RNN
 from modeling.rnn_tf.ParseArgs import args as my_args
 
-# testset_filepath = './data/test_1.csv'
-# testset_filepath = './data/dt_variable_test-2.csv'
 testset_filepath = './data/data_rnn_big.csv'
+# testset_filepath = './data/fall_test.csv' # exp_len 1000//...
 
 # Get arguments as default or from terminal line
 args = my_args()
@@ -43,10 +42,11 @@ def test_network():
     outputs_list = args.outputs_list
 
     # load_rnn = args.load_rnn  # If specified this is the name of pretrained RNN which should be loaded
-    load_rnn_path = args.path_save
-    # load_rnn_path = './controllers/nets/mpc_on_rnn_tf/'
-    load_rnn = 'GRU-4IN-1024H1-1024H2-2OUT-2'
+    # load_rnn_path = args.path_save
+    load_rnn_path = './controllers/nets/mpc_on_rnn_tf/'
+    load_rnn = 'GRU-7IN-8H1-8H2-5OUT-0'
     # load_rnn = 'GRU-4IN-1024H1-1024H2-2OUT-1'
+    load_rnn = 'last'
 
     # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
     net, rnn_name, inputs_list, outputs_list, normalization_info \

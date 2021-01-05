@@ -9,7 +9,7 @@ import random as rnd
 
 import copy
 
-from modeling.rnn.utilis_rnn_specific import *
+from modeling.rnn_tf.utilis_rnn_specific import *
 
 from tqdm import tqdm
 
@@ -306,7 +306,7 @@ class myNN(keras.Sequential):
                 stateful=stateful
             ))
 
-        self.add(keras.layers.Dense(units=len(outputs_list)))
+        self.add(keras.layers.Dense(units=len(outputs_list), activation='tanh'))
 
         print('Constructed a neural network of type {}, with {} hidden layers with sizes {} respectively.'
               .format(self.rnn_type, len(self.h_size), ', '.join(map(str, self.h_size))))
@@ -581,7 +581,8 @@ class Dataset(keras.utils.Sequence):
         # for ease of implementation we assume that both input and output has s.position, only input has target position
         self.idx_pos_in = inputs_list.index('s.position')
         self.idx_pos_out = outputs_list.index('s.position')
-        self.idx_target_pos_in = inputs_list.index('target_position')
+        if 'target_position' in inputs_list:
+            self.idx_target_pos_in = inputs_list.index('target_position')
 
     def reset_exp_len(self, exp_len=None):
         """
@@ -806,8 +807,6 @@ def plot_results(net,
 
     rnn_outputs = pd.DataFrame(columns=outputs_list)
 
-
-
     idx_cl = 0
     close_the_loop = False
 
@@ -833,9 +832,10 @@ def plot_results(net,
         rnn_outputs = rnn_outputs.append(copy.deepcopy(normalized_rnn_output), ignore_index=True)
         idx_cl += 1
 
+    features_pd_denorm = denormalize_df(features_pd, normalization_info)
     targets_pd_denorm = denormalize_df(targets_pd, normalization_info)
     rnn_outputs_denorm = denormalize_df(rnn_outputs, normalization_info)
-    fig, axs = plot_results_specific(targets_pd_denorm, rnn_outputs_denorm, time_axis, comment, closed_loop_enabled,
+    figs = plot_results_specific(targets_pd_denorm, rnn_outputs_denorm, features_pd_denorm, time_axis, comment, closed_loop_enabled,
                                      close_loop_idx)
 
     plt.show()
@@ -848,7 +848,11 @@ def plot_results(net,
             pass
         dateTimeObj = datetime.now()
         timestampStr = dateTimeObj.strftime("-%d%b%Y_%H%M%S")
-        if rnn_full_name is not None:
-            fig.savefig('./save_plots_tf/' + rnn_full_name + timestampStr + '.png')
-        else:
-            fig.savefig('./save_plots_tf/' + timestampStr + '.png')
+
+        for i in range(len(figs)):
+            fig = figs[i]
+            figNrStr = '-'+str(i)+''
+            if rnn_full_name is not None:
+                fig.savefig('./save_plots_tf/' + rnn_full_name + figNrStr +timestampStr + '.png')
+            else:
+                fig.savefig('./save_plots_tf/' + figNrStr + timestampStr + '.png')

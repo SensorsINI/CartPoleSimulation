@@ -17,21 +17,22 @@ from modeling.rnn_tf.utilis_rnn import *
 method = 'SLSQP'
 maxiter = 80 # I think it was a key thing.
 ftol = 1.0e-3
-mpc_horizon = 4
+mpc_horizon = 5
 
-RNN_FULL_NAME = 'GRU-4IN-1024H1-1024H2-2OUT-2'
+# RNN_FULL_NAME = 'GRU-4IN-1024H1-1024H2-2OUT-2'
 # RNN_FULL_NAME = 'GRU-4IN-8H1-8H2-2OUT-0'
-INPUTS_LIST = ['s.angle', 's.position', 'target_position', 'u']
-OUTPUTS_LIST = ['s.angle', 's.position']
+RNN_FULL_NAME = 'GRU-7IN-8H1-8H2-5OUT-0'
+INPUTS_LIST = ['s.angle.sin', 's.angle.cos', 's.angleD', 's.position', 's.positionD', 'target_position', 'Q']
+OUTPUTS_LIST = ['s.angle.sin', 's.angle.cos', 's.angleD', 's.position', 's.positionD']
 PATH_SAVE = './controllers/nets/mpc_on_rnn_tf/'
 
 # weights
 wr = 0.0  # rterm
-l1 = 2.0  # -pot
+l1 = 1.0  # -pot
 l2 = 0.0  # distance
-l3 = 0.0  # kin_pol
-m1 = 0.0  # kin_pol
-m2 = 2.0  # -pot
+l3 = 1.0  # kin_pol
+m1 = 1.0  # kin_pol
+m2 = 1.0  # -pot
 m3 = 0.0  # kin_cart
 m4 = 0.0  # distance
 
@@ -54,6 +55,8 @@ class controller_custom_mpc_2:
             = create_rnn_instance(load_rnn=RNN_FULL_NAME, path_save=PATH_SAVE,
                                   return_sequence=False, stateful=True,
                                   warm_up_len=1, batchSize=1)
+
+        print(self.net.summary())
 
         self.rnn_initial_input = pd.DataFrame(columns=self.inputs_list)
         self.rnn_input = pd.DataFrame(columns=self.inputs_list)
@@ -103,7 +106,12 @@ class controller_custom_mpc_2:
         self.E_kin_cart = lambda positionD: (positionD) ** 2
         self.E_kin_pol = lambda angleD: (angleD) ** 2
         self.E_pot_cost = lambda angle: 1 - np.cos(angle)
-        self.E_pot = lambda angle: np.cos(angle)**2
+        if 's.angle.cos' in self.rnn_output:
+            self.E_pot = lambda cos_angle: cos_angle
+            self.E_pot_cost = lambda cos_angle: 1 - cos_angle
+        else:
+            self.E_pot = lambda angle: np.cos(angle)
+            self.E_pot_cost = lambda angle: 1 - np.cos(angle)
         self.distance_difference = lambda position: ((position - self.target_position_normed))**2
 
         # self.Q_bounds = [(-1, 1)] * self.mpc_horizon
@@ -116,7 +124,21 @@ class controller_custom_mpc_2:
         self.E_pot_cost_max = 0.0
         self.distance_difference_max = 0.0
 
-        self.initial_state = pd.DataFrame(columns=['s.angle', 's.angleD', 's.position', 's.positionD'])
+        if 's.angle.cos' in self.rnn_output:
+            self.initial_state = pd.DataFrame(columns=['s.angle.cos', 's.angle.sin', 's.angleD', 's.position', 's.positionD'])
+        else:
+            self.initial_state = pd.DataFrame(columns=['s.angle', 's.angleD', 's.position', 's.positionD'])
+
+
+        # Constraints
+        self.cons = []
+        for i in range(self.mpc_horizon):
+            self.cons.append({'type': 'ineq', 'fun': lambda Q_hat: self.constrain_angle(Q_hat, i)})
+
+
+    def constrain_angle(self, Q_hat, i):
+        prediction = self.predictor(Q_hat)
+        return prediction['s.angle.cos'].to_numpy()[i+1]-0.3
 
     def step_rnn(self, rnn_input):
 
@@ -124,14 +146,18 @@ class controller_custom_mpc_2:
         rnn_input = rnn_input[np.newaxis, np.newaxis, :]
         rnn_input = tf.convert_to_tensor(rnn_input, dtype=tf.float64)
 
-        # t00 = timeit.default_timer()
+        t00 = timeit.default_timer()
         rnn_output = self.net.predict_on_batch(rnn_input)
-        # t11 = timeit.default_timer()
+        t11 = timeit.default_timer()
 
         rnn_output = np.squeeze(rnn_output).tolist()
         rnn_output = deepcopy(pd.DataFrame(data=[rnn_output], columns=self.outputs_list))
 
-        # self.rnn_eval_time.append((t11 - t00) * 1.0e6)
+        rnn_eval_time = (t11 - t00) * 1.0e6
+        if rnn_eval_time > 500000.0:
+            a = 'stop'
+            pass
+        self.rnn_eval_time.append((t11 - t00) * 1.0e6)
 
         return rnn_output
 
@@ -145,8 +171,8 @@ class controller_custom_mpc_2:
         #   Otherwise if u(Q,p) is known you can train RNN on normed u,
         #   optimize for normed u, and find Q analytically
         #   For the moment as normed u is approx Q we plug Q for the RNN trained on normed u
-        if 'u' in self.rnn_input:
-            self.rnn_initial_input['u'] = [Q_hat[0]]
+        if 'Q' in self.rnn_input:
+            self.rnn_initial_input['Q'] = [Q_hat[0]]
 
         for col_name in prediction:
             if col_name in self.initial_state_normed:
@@ -163,11 +189,12 @@ class controller_custom_mpc_2:
                         self.rnn_input[col_name] = self.rnn_output[col_name]
                 if 'target_position' in self.rnn_input:
                     self.rnn_input['target_position'] = self.target_position_normed
-                if 'u' in self.rnn_input:
-                    self.rnn_input['u'] = [Q_hat[k]]
+                if 'Q' in self.rnn_input:
+                    self.rnn_input['Q'] = [Q_hat[k]]
 
 
             self.rnn_output = self.step_rnn(self.rnn_input)
+
 
             for col_name in prediction:
                 if col_name in self.rnn_output:
@@ -178,20 +205,27 @@ class controller_custom_mpc_2:
             prediction['s.positionD'] = (prediction['s.position']-prediction['s.position'].shift(1)) * self.f
             prediction.loc[prediction.index[0], 's.positionD'] = self.initial_state_normed.loc[self.initial_state_normed.index[0], 's.positionD']
 
-        if 's.angleD' not in self.outputs_list:
+        if 's.angleD' not in self.outputs_list and 's.angle' in self.outputs_list:
             prediction['s.angleD'] = (prediction['s.angle']-prediction['s.angle'].shift(1)) * self.f
             prediction.loc[prediction.index[0], 's.angleD'] = self.initial_state_normed.loc[prediction.index[0], 's.angleD']
+        elif 's.angleD' not in self.outputs_list:
+            raise KeyError('Option not implemented')
+        else:
+            pass
 
         return prediction
 
     def cost_function(self, Q_hat):
-        # t0 = timeit.default_timer()
+        t0 = timeit.default_timer()
         # Predict future states given control_inputs Q_hat
         self.predictions = self.predictor(Q_hat)
 
-        # t1 = timeit.default_timer()
+        t1 = timeit.default_timer()
 
-        self.predictions['E_pot'] = self.E_pot(self.predictions['s.angle'])
+        if 's.angle.cos' in self.rnn_output:
+            self.predictions['E_pot'] = self.E_pot(self.predictions['s.angle.cos'])
+        else:
+            self.predictions['E_pot'] = self.E_pot(self.predictions['s.angle'])
         self.predictions['E_kin_pol'] = self.E_kin_pol(self.predictions['s.angleD'])
         self.predictions['E_kin_cart'] = self.E_kin_cart(self.predictions['s.positionD'])
         self.predictions['distance_difference'] = self.distance_difference(self.predictions['s.position'])
@@ -220,7 +254,7 @@ class controller_custom_mpc_2:
         # t2 = timeit.default_timer()
         # print('cost function eval {} ms'.format((t2-t0)*1000.0))
         # print('predictor eval {} ms'.format((t1-t0)*1000.0))
-        # self.predictor_time.append((t1-t0)*1000.0)
+        self.predictor_time.append((t1-t0)*1000.0)
         # print('predictor/all {}%'.format(np.round(100*(t1-t0)/(t2-t0))))
 
         return cost
@@ -235,7 +269,11 @@ class controller_custom_mpc_2:
         self.target_position = deepcopy(target_position)
 
         self.initial_state['s.position'] = [s.position]
-        self.initial_state['s.angle'] = [s.angle]
+        if 's.angle.cos' in self.rnn_output:
+            self.initial_state['s.angle.cos'] = [np.cos(s.angle)]
+            self.initial_state['s.angle.sin'] = [np.sin(s.angle)]
+        else:
+            self.initial_state['s.angle'] = [s.angle]
         self.initial_state['s.positionD'] = [s.positionD]
         self.initial_state['s.angleD'] = [s.angleD]
 
@@ -253,21 +291,24 @@ class controller_custom_mpc_2:
         #  FIXME: IT IS NOT GOOD THE NORMALIZATION OF Q
         #    FOR THE MOMEMT I ASSUME THAT NORMED AND UNNORMED Q IS THE SAME,
         #    WHICH IS IN THE SPECIAL CASE OF MY DATASET AND NOTMALIZATION PROCEDURE EVEN EXACTLY TRUE
-        solution = scipy.optimize.minimize(self.cost_function, self.Q_hat0, bounds=self.Q_bounds, method=method,
+        solution = scipy.optimize.minimize(self.cost_function, self.Q_hat0,
+                                           bounds=self.Q_bounds, constraints=self.cons, method=method,
                                            options={'maxiter': maxiter, 'ftol': ftol})
         self.Q_hat = solution.x
-        # self.nfun.append(solution.nfev)
+        self.nfun.append(solution.nfev)
         print(solution)
 
         self.Q_hat0 = np.hstack((self.Q_hat[1:], self.Q_hat[-1]))
         self.Q_previous = self.Q_hat[0]
 
-        Q = self.Q_hat[0]
+        self.plot_prediction()
 
         self.net.load_internal_states(self.rnn_internal_states)
+        if 'Q' in self.rnn_input:
+            self.rnn_initial_input['Q'] = [self.Q_hat[0]]
         self.step_rnn(self.rnn_initial_input)
 
-        return Q
+        return self.Q_hat[0]
 
     def reset(self):
         self.net.reset_states()
@@ -323,39 +364,41 @@ class controller_custom_mpc_2:
 
         self.fig, self.axs = plt.subplots(5, 1, figsize=(18, 14), sharex=True)  # share x axis so zoom zooms all plots
 
-        angle = []
-        angleD = []
-        position = []
-        positionD = []
-        for s in self.yp_hat:
-            angle.append(s.angle)
-            angleD.append(s.angleD)
-            position.append(s.position)
-            positionD.append(s.positionD)
+        if 's.angle' in self.predictions:
+            raise KeyError('You should not be there')
+            # angle = np.rad2deg(self.predictions['s.angle'].to_numpy())
+        elif ('s.angle.sin' in self.predictions) and ('s.angle.cos' in self.predictions):
+            angle = np.rad2deg(np.arctan2(self.predictions['s.angle.sin'].to_numpy(), self.predictions['s.angle.cos'].to_numpy()))
+        else:
+            raise ValueError('No data for angle in self.predictions')
+
+        angleD = self.predictions['s.angleD'].to_numpy()
+        position = self.predictions['s.position'].to_numpy()
+        positionD = self.predictions['s.positionD'].to_numpy()
 
         # Plot angle
         self.axs[0].set_ylabel("Angle (deg)", fontsize=18)
-        self.axs[0].plot(np.array(angle) * 180.0 / np.pi, color='b',
+        self.axs[0].plot(angle, color='b',
                          markersize=12, label='Angel prediction')
         self.axs[0].tick_params(axis='both', which='major', labelsize=16)
 
         self.axs[1].set_ylabel("AngleD (deg/s)", fontsize=18)
-        self.axs[1].plot(np.array(angleD), color='r',
+        self.axs[1].plot(angleD, color='r',
                          markersize=12, label='AngelD prediction')
         self.axs[1].tick_params(axis='both', which='major', labelsize=16)
 
         self.axs[2].set_ylabel("Position (m)", fontsize=18)
-        self.axs[2].plot(np.array(position), color='green',
+        self.axs[2].plot(position, color='green',
                          markersize=12, label='Position prediction')
         self.axs[2].tick_params(axis='both', which='major', labelsize=16)
 
         self.axs[3].set_ylabel("PositionD (m/s)", fontsize=18)
-        self.axs[3].plot(np.array(positionD), color='magenta',
+        self.axs[3].plot(positionD, color='magenta',
                          markersize=12, label='PositionD prediction')
         self.axs[3].tick_params(axis='both', which='major', labelsize=16)
 
         self.axs[4].set_ylabel("Motor (-1,1)", fontsize=18)
-        self.axs[4].plot(np.array(self.Q_hat), color='orange',
+        self.axs[4].plot(self.Q_hat, color='orange',
                          markersize=12, label='Force of motor')
         self.axs[4].tick_params(axis='both', which='major', labelsize=16)
 
