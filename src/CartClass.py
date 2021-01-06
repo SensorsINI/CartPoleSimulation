@@ -158,10 +158,6 @@ class Cart:
 
         self.controller_interval = np.inf
         self.controller_interval_threshold = controller_interval_threshold_globals
-        self.controller_off = 250.0
-        self.controller_on  = 500.0
-        self.controller_index = 0
-
 
         # Variables for pre-generated random trace
 
@@ -220,6 +216,7 @@ class Cart:
         self.mode = mode_init
         self.set_mode(new_mode=mode_init)
 
+    # Generates a random target position in a form of a function
     def Generate_Random_Trace_Function(self):
 
         if (self.turning_points is None) or (self.turning_points == []):
@@ -312,52 +309,20 @@ class Cart:
         if zero_DD:
             self.s.angleDD = 0.0
 
-        # Determine the dimensionales [-1,1] value of the motor power Q
+    # Determine the dimensionales [-1,1] value of the motor power Q
     def Update_Q(self):
 
-        if self.controller_index == self.controller_on:
-            self.controller_index = 0
-        else:
-            self.controller_index += 1
+        if self.mode == 0:  # in this case slider corresponds already to the power of the motor
+            self.Q = self.slider_value
 
-        if self.controller_index<self.controller_off:
+        else:  # in this case slider gives a target position, lqr regulator
 
-            if self.mode == 0:  # in this case slider corresponds already to the power of the motor
-                self.Q = self.slider_value
+            self.controller_interval += self.dt
+            if self.controller_interval >= self.controller_interval_threshold:
+                self.Q = self.controller.step(self.s, self.target_position)
+                self.controller_interval = 0.0
 
-            else:  # in this case slider gives a target position, lqr regulator
 
-                self.controller_interval += self.dt
-                if self.controller_interval > self.controller_interval_threshold:
-                    self.Q = self.controller.step(self.s, self.target_position)
-                    self.controller_interval = 0.0
-
-        else:
-            # self.Q = np.random.uniform(-1.0, 1.0)
-            self.Q = 0.0
-
-        # if self.controller_index == 0:
-        #     if abs(self.s.angle) > 2.5 or abs(self.s.angleD) > 3.6 or abs(self.s.positionD) > 20.0:
-        #         self.controller_index = 1  # switch controller on
-        # elif self.controller_index == 1:
-        #     if abs(self.s.angle) < 0.01 and abs(self.s.angleD) < 0.01 and abs(self.s.positionD) < 1.0:
-        #         self.controller_index = 0  # swich controller off
-        #
-        # if self.controller_index==1:
-        #
-        #     if self.mode == 0:  # in this case slider corresponds already to the power of the motor
-        #         self.Q = self.slider_value
-        #
-        #     else:  # in this case slider gives a target position, lqr regulator
-        #
-        #         self.controller_interval += self.dt
-        #         if self.controller_interval > self.controller_interval_threshold:
-        #             self.Q = self.controller.step(self.s, self.target_position)
-        #             self.controller_interval = 0.0
-        #
-        # else:
-        #     # self.Q = np.random.uniform(-1.0, 1.0)
-        #     self.Q = 0.0
 
 
     # This method changes the internal state of the CartPole
@@ -616,7 +581,7 @@ class Cart:
                 writer = csv.writer(outfile)
                 writer.writerows(zip(*self.dict_history.values()))
 
-
+    # load csv file with experiment recording (e.g. for replay)
     def load_history_csv(self, csv_name=None, visualisation_only=True):
         # Set path where to save the data
         if csv_name is None or csv_name == '':
@@ -654,7 +619,7 @@ class Cart:
 
         return data
 
-
+    # Set mode i.e. select controller
     def set_mode(self, new_mode=0):
 
         self.mode = new_mode

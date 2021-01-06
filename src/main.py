@@ -35,7 +35,7 @@ if __name__ == "__main__":
         # Every PyQt5 application has to contain this line
         app = QApplication(sys.argv)
         # Set the default icon to use for all the windows of our application
-        app.setWindowIcon(QIcon('myicon.ico'))
+        app.setWindowIcon(QIcon('./src/myicon.ico'))
         # Create an instance of the GUI window.
         window = MainWindow()
         window.show()

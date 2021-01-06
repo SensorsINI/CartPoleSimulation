@@ -9,14 +9,10 @@ from types import SimpleNamespace
 # to draw a CartPole correctly in the CartPole GUI
 CARTPOLE_EQUATIONS = 'Marcin-Sharpneat'
 """ 
-Possible choices: 'Marcin-Sharpneat', 'Krishna'
-
+Possible choices: 'Marcin-Sharpneat'
 'Marcin-Sharpneat' is done on the basis of:
 https://sharpneat.sourceforge.io/research/cart-pole/cart-pole-equations.html
 Required angle convention: CLOCK-NEG
-
-Krishna is done on the basis of:
-Required angle convention:
 """
 
 ANGLE_CONVENTION = 'CLOCK-NEG'
@@ -28,6 +24,7 @@ The 0-angle state is always defined as pole in upright position. This currently 
 # Variables settings parameters CartPole GUI starts with
 # This is useful if you need to many times restart the GUI to some particular settings
 # e.g. while testing new controller
+# TODO: Give controller name instead
 mode_globals = 5  # Defines which controller is loaded
 
 controller_interval_threshold_globals = 0.1
@@ -74,11 +71,11 @@ m_globals = 2.0  # mass of pend, kg
 M_globals = 1.0  # mass of cart, kg
 L_globals = 1.0  # HALF (!!!) length of pend, m
 u_max_globals = 200.0  # max cart force, N
-M_fric_globals = 0.0  # cart friction, N/m/s
-J_fric_globals = 0.0  # friction coefficient on angular velocity, Nm/rad/s
+M_fric_globals = 1.0  # cart friction, N/m/s
+J_fric_globals = 1.0  # friction coefficient on angular velocity, Nm/rad/s
 v_max_globals = 10.0  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model
 controlDisturbance_globals = 0.0  # disturbance, as factor of u_max
-sensorNoise_globals = 0.0  # noise, as factor of max values
+sensorNoise_globals = 0.0  # noise, as factor of max values, TODO:probably not implemented yet
 
 g_globals = 9.81  # absolute value of gravity acceleration, m/s^2
 k_globals = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
@@ -131,13 +128,7 @@ def cartpole_ode(p, s, u):
     ca = np.cos(s.angle)
     sa = np.sin(s.angle)
 
-    if CARTPOLE_EQUATIONS == 'Krishna':
-
-        A = (p.M + p.m) - p.m * (ca ** 2)
-        angleDD = ((p.m + p.M) * p.g * sa + (u * ca) - (p.m * p.L * (s.angleD ** 2) * sa * ca)) / (A * p.L)
-        positionDD = (u - (p.m * p.g * sa * ca) + (p.m * p.L * (s.angleD ** 2) * sa)) / A
-
-    elif CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
+    if CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
 
         A = (p.k + 1) * (p.M + p.m) - p.m * (ca ** 2)
 

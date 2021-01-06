@@ -17,11 +17,11 @@ from modeling.rnn_tf.utilis_rnn import *
 method = 'SLSQP'
 maxiter = 80 # I think it was a key thing.
 ftol = 1.0e-3
-mpc_horizon = 5
+mpc_horizon = 2
 
-# RNN_FULL_NAME = 'GRU-4IN-1024H1-1024H2-2OUT-2'
+RNN_FULL_NAME = 'GRU-4IN-1024H1-1024H2-2OUT-2'
 # RNN_FULL_NAME = 'GRU-4IN-8H1-8H2-2OUT-0'
-RNN_FULL_NAME = 'GRU-7IN-8H1-8H2-5OUT-0'
+# RNN_FULL_NAME = 'GRU-7IN-8H1-8H2-5OUT-0'
 INPUTS_LIST = ['s.angle.sin', 's.angle.cos', 's.angleD', 's.position', 's.positionD', 'target_position', 'Q']
 OUTPUTS_LIST = ['s.angle.sin', 's.angle.cos', 's.angleD', 's.position', 's.positionD']
 PATH_SAVE = './controllers/nets/mpc_on_rnn_tf/'
@@ -138,7 +138,10 @@ class controller_custom_mpc_2:
 
     def constrain_angle(self, Q_hat, i):
         prediction = self.predictor(Q_hat)
-        return prediction['s.angle.cos'].to_numpy()[i+1]-0.3
+        if 's.angle.cos' in prediction.columns:
+            return prediction['s.angle.cos'].to_numpy()[i+1]-0.3
+        elif 's.angle' in prediction.columns:
+            return np.cos(prediction['s.angle'].to_numpy()[i + 1]) - 0.3
 
     def step_rnn(self, rnn_input):
 
@@ -167,10 +170,6 @@ class controller_custom_mpc_2:
         prediction = pd.DataFrame(data=np.zeros((self.mpc_horizon+1, len(self.initial_state_normed.columns))),
                                   columns=self.initial_state_normed.columns)
 
-        # FIXME: This is ugly. You should just train it on Q
-        #   Otherwise if u(Q,p) is known you can train RNN on normed u,
-        #   optimize for normed u, and find Q analytically
-        #   For the moment as normed u is approx Q we plug Q for the RNN trained on normed u
         if 'Q' in self.rnn_input:
             self.rnn_initial_input['Q'] = [Q_hat[0]]
 
@@ -365,8 +364,8 @@ class controller_custom_mpc_2:
         self.fig, self.axs = plt.subplots(5, 1, figsize=(18, 14), sharex=True)  # share x axis so zoom zooms all plots
 
         if 's.angle' in self.predictions:
-            raise KeyError('You should not be there')
-            # angle = np.rad2deg(self.predictions['s.angle'].to_numpy())
+            # raise KeyError('You should not be there')
+            angle = np.rad2deg(self.predictions['s.angle'].to_numpy())
         elif ('s.angle.sin' in self.predictions) and ('s.angle.cos' in self.predictions):
             angle = np.rad2deg(np.arctan2(self.predictions['s.angle.sin'].to_numpy(), self.predictions['s.angle.cos'].to_numpy()))
         else:
