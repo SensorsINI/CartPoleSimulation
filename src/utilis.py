@@ -156,6 +156,7 @@ class loop_timer():
 
 # @profile(precision=4)
 def Generate_Experiment(MyCart,
+                        initial_state = [None,None,None,None],
                         exp_len=random_length_globals,
                         dt=dt_main_simulation_globals,
                         track_relative_complexity = track_relative_complexity_globals,
@@ -204,15 +205,29 @@ def Generate_Experiment(MyCart,
     # Randomly set the initial state
 
     MyCart.time = 0.0
+    if initial_state[0] is None:
+        MyCart.s.position = np.random.uniform(low=-MyCart.HalfLength / 2.0,
+                                              high=MyCart.HalfLength / 2.0)
+    else:
+        MyCart.s.position = initial_state[0]
 
-    MyCart.s.position = np.random.uniform(low=-MyCart.HalfLength / 2.0,
-                                          high=MyCart.HalfLength / 2.0)
-    MyCart.s.positionD = np.random.uniform(low=-10.0,
-                                           high=10.0)
-    MyCart.s.angle = np.random.uniform(low=-17.5 * (np.pi / 180.0),
-                                       high=17.5 * (np.pi / 180.0))
-    MyCart.s.angleD = np.random.uniform(low=-15.5 * (np.pi / 180.0),
-                                        high=15.5 * (np.pi / 180.0))
+    if initial_state[1] is None:
+        MyCart.s.positionD = np.random.uniform(low=-10.0,
+                                               high=10.0)
+    else:
+        MyCart.s.positionD = initial_state[1]
+
+    if initial_state[2] is None:
+        MyCart.s.angle = np.random.uniform(low=-17.5 * (np.pi / 180.0),
+                                           high=17.5 * (np.pi / 180.0))
+    else:
+        MyCart.s.angle = initial_state[2]
+
+    if initial_state[3] is None:
+        MyCart.s.angleD = np.random.uniform(low=-15.5 * (np.pi / 180.0),
+                                            high=15.5 * (np.pi / 180.0))
+    else:
+        MyCart.s.angleD = initial_state[3]
 
     # Target position at time 0
     MyCart.target_position = MyCart.random_track_f(MyCart.time)
@@ -236,8 +251,8 @@ def Generate_Experiment(MyCart,
 
         MyCart.update_state()
 
-        if abs(MyCart.s.angle) > 0.8*np.pi:
-            raise ValueError('Cart went unstable')
+        # if abs(MyCart.s.angle) > 0.8*np.pi:
+        #     raise ValueError('Cart went unstable')
 
         if save_data_online and csv is not None:
             MyCart.save_history_csv(csv_name=csv, init=False, iter=True)

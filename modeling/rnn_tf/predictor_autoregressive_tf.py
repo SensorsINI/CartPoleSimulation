@@ -47,6 +47,7 @@ HORIZON = 5
 class predictor_autoregressive_tf:
     def __init__(self, rnn_full_name, horizon):
 
+        # load rnn
         self.net = ...
 
         self.horizon = horizon
@@ -112,11 +113,6 @@ class predictor_autoregressive_tf:
     def system_state_2_rnn_input(self, system_state):
 
         return tf.squeeze(tf.convert_to_tensor(   system_state[self.rnn_inputs_names],   dtype=tf.float32)   )
-
-    # decorate
-    def iterate_rnn(self, rnn_inout, horizon):
-        # You should make sure that this function retrace only if horizon changes
-
 
 
 

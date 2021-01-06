@@ -2,12 +2,12 @@ from src.CartClass import *
 from src.utilis import *
 
 # User defined simulation settings - check the effect first in GUI before you launch big data generation
-csv = 'data_free_fall_1'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
-number_of_experiments = 1  # How many experiments will be generated
-length_of_experiment = 8000.0  # Length of each experiment in s
+csv = 'free'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
+number_of_experiments = 10  # How many experiments will be generated
+length_of_experiment = 10.0  # Length of each experiment in s
 dt_main_simulation = dt_main_simulation_globals  # simulation timestep
 track_relative_complexity = 0.01  # randomly placed target points/s
-controller = 'do-mpc'  # Controller which should be used in generated experiment
+controller = 'manual-stabilization'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'rnn_as_mpc_tf'
 interpolation_type = 'previous'  # Sets how to interpolate between turning points of random trace
@@ -18,6 +18,9 @@ turning_points_period = 'regular'  # How turning points should be distributed
 start_random_target_position_at = 0.0
 end_random_target_position_at = 0.0
 # The list of turning points is set to None, no matter what is in globals.py
+
+# [position, positionD, angle, angleD]
+initial_state = [None, None, None, None]
 
 save_data_online = True  # It was intended to save memory usage, but it doesn't seems to help. Leave it false.
 
@@ -30,10 +33,12 @@ for i in range(number_of_experiments):
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
     print(i)
+    initial_state = [0.0, 0.0, 12*i/60.0, 0.0]
     sleep(0.1)
     MyCart = Cart()
     gen_start = timeit.default_timer()
     Generate_Experiment(MyCart,
+                        initial_state=initial_state,
                         controller=controller,
                         exp_len=length_of_experiment,
                         dt=dt_main_simulation,
