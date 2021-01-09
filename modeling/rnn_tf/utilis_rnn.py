@@ -306,38 +306,99 @@ class myNN(keras.Sequential):
                 stateful=stateful
             ))
 
-        self.add(keras.layers.Dense(units=len(outputs_list), activation='tanh'))
+        # self.add(keras.layers.Dense(units=len(outputs_list), activation='tanh'))
+        self.add(keras.layers.Dense(units=len(outputs_list)))
 
         print('Constructed a neural network of type {}, with {} hidden layers with sizes {} respectively.'
               .format(self.rnn_type, len(self.h_size), ', '.join(map(str, self.h_size))))
         print('The inputs are (in this order): {}'.format(', '.join(map(str, inputs_list))))
         print('The outputs are (in this order): {}'.format(', '.join(map(str, outputs_list))))
 
-    def get_internal_states(self):
-        states_list = []
-        for layer in self.layers:
-            if (('gru' in layer.name) or
-                    ('lstm' in layer.name) or
-                        ('rnn' in layer.name)):
-                single_states = []
-                for single_state in layer.states:
-                    single_state = single_state.numpy()
-                    single_states.append(single_state)
+def get_internal_states(net):
+    states_list = []
+    for layer in net.layers:
+        if (('gru' in layer.name) or
+                ('lstm' in layer.name) or
+                    ('rnn' in layer.name)):
+            single_states = []
+            for single_state in layer.states:
+                captured_single_state = copy.deepcopy(single_state).numpy()
+                single_states.append(captured_single_state)
 
-                states_list.append(single_states)
-            else:
-                states_list.append(None)
-        return states_list
+            states_list.append(single_states)
+        else:
+            states_list.append(None)
+    return states_list
 
-    def load_internal_states(self, states):
+from tensorflow.python.keras import backend as K
+from tensorflow.python.util import nest
+from tensorflow.python.framework import tensor_shape
+def my_reset_states(layer, states=None):
 
-        for layer, state in zip(self.layers, states):
-            # print(layer)
-            # print(state)
-            if (('gru' in layer.name) or
-                    ('lstm' in layer.name) or
-                        ('rnn' in layer.name)):
-                layer.reset_states(state[0])
+    spec_shape = None
+
+    if layer.input_spec is not None:
+      spec_shape = nest.flatten(layer.input_spec[0])[0].shape
+
+    if spec_shape is None:
+      batch_size = None
+    else:
+      batch_size = spec_shape[1] if layer.time_major else spec_shape[0]
+
+    if states is None:
+      for state, size in zip(nest.flatten(layer.states),
+                             nest.flatten(layer.cell.state_size)):
+        K.set_value(state, np.zeros([batch_size] +
+                                    tensor_shape.as_shape(size).as_list()))
+    else:
+      flat_states = nest.flatten(layer.states)
+      flat_input_states = nest.flatten(states)
+      set_value_tuples = []
+      for i, (value, state) in enumerate(zip(flat_input_states,
+                                             flat_states)):
+
+        set_value_tuples.append((state, value))
+      K.batch_set_value(set_value_tuples)
+
+def load_internal_states(net, states):
+
+    for layer, state in zip(net.layers, states):
+        if (('gru' in layer.name) or
+                ('lstm' in layer.name) or
+                    ('rnn' in layer.name)):
+            layer.reset_states(state[0])
+            # my_reset_states(layer, state[0])
+
+# def load_internal_states(net, states):
+#
+#     for idx_layer, state in zip(np.arange(len(net.layers)), states):
+#         # print(layer)
+#         # print(state)
+#         layer =  net.layers[idx_layer]
+#         layer_name = net.layers[idx_layer].name
+#         if (('gru' in layer_name) or
+#                 ('lstm' in layer_name) or
+#                     ('rnn' in layer_name)):
+#             # layer.reset_states(state[0])
+#             layer_states = net.layers[idx_layer].states
+#             for idx_state, state_saved in zip(np.arange(len(layer_states)), state):
+#                 net.layers[idx_layer].states[idx_state] = state_saved
+#                 new_state = net.layers[idx_layer]
+#                 pass
+
+
+# def load_internal_states(net, states):
+#
+#     for layer, state in zip(net.layers, states):
+#         # print(layer)
+#         # print(state)
+#         layer_name = layer.name
+#         if (('gru' in layer_name) or
+#                 ('lstm' in layer_name) or
+#                     ('rnn' in layer_name)):
+#             # layer.reset_states(state[0])
+#             for substate, state_saved in zip(layer.states, state):
+#                 substate = state_saved
 
 
 def load_data(args, filepath=None, columns_list=None, norm_inf=False, rnn_full_name=None):
@@ -784,6 +845,11 @@ def plot_results(net,
     net_predict.set_weights(net.get_weights())
 
     # net_predict.summary()
+    SAVEPATH = path_save+rnn_full_name+'/1/'
+    print(SAVEPATH)
+
+    net_predict = keras.models.load_model(SAVEPATH)
+    net_predict.set_weights(net.get_weights())
 
     if normalization_info is None:
         normalization_info = load_normalization_info(path_save, rnn_full_name)
@@ -802,22 +868,36 @@ def plot_results(net,
     # Format the experiment data
     features, targets, time_axis = test_set.get_experiment(0)  # Put number in brackets to get the same idx at every run
 
-    features_pd = pd.DataFrame(data=features, columns=inputs_list)
-    targets_pd = pd.DataFrame(data=targets, columns=outputs_list)
+    features_pd = pd.DataFrame(data=features, columns=inputs_list, dtype=np.float32)
+    targets_pd = pd.DataFrame(data=targets, columns=outputs_list, dtype=np.float32)
 
-    rnn_outputs = pd.DataFrame(columns=outputs_list)
+    rnn_outputs = pd.DataFrame(columns=outputs_list, dtype=np.float32)
 
     idx_cl = 0
     close_the_loop = False
-
+    # print()
     for index, row in features_pd.iterrows():
-        # states = net_predict.get_internal_states()
-        # net_predict.reset_states()
-        # net_predict.load_internal_states(states)
-        rnn_input = pd.DataFrame(copy.deepcopy(row)).transpose().reset_index(drop=True)
+
+        states = get_internal_states(net_predict)
+        # print(states)
+        net_predict.reset_states()
+        load_internal_states(net_predict, states)
 
         if idx_cl == close_loop_idx:
             close_the_loop = True
+            # print('RNN input:')
+            # print(rnn_input)
+            # print()
+            # print('Rnn internal states')
+            # for state in states:
+            #     print(state)
+            #     print()
+            print('p: {}'.format(normalized_rnn_output))
+
+
+        # states = get_internal_states(net_predict)
+        rnn_input = pd.DataFrame(copy.deepcopy(row)).transpose().reset_index(drop=True)
+
         if closed_loop_enabled and close_the_loop and (normalized_rnn_output is not None):
             rnn_input[closed_loop_list] = normalized_rnn_output[closed_loop_list]
         rnn_input = np.squeeze(rnn_input.to_numpy())

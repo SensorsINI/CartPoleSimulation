@@ -20,6 +20,8 @@ import pandas as pd
 
 from tqdm import tqdm, trange
 
+import matplotlib.pyplot as plt
+
 from memory_profiler import profile
 
 
@@ -269,3 +271,27 @@ def Generate_Experiment(MyCart,
     MyCart.reset_state()
 
     return data
+
+
+
+
+def pd_plotter_simple(df, x_name=None, y_name=None, idx_range=[0, -1], color='blue', dt=None):
+
+    if y_name is None:
+        raise ValueError ('You must provide y_name')
+    y = df[y_name].iloc[idx_range[0]:idx_range[1]]
+
+    if x_name is None:
+        x = np.arange(len(y))
+        if dt is not None:
+            x = x*dt
+    else:
+        x = df[x_name].iloc[idx_range[0]:idx_range[1]]
+
+    fig = plt.figure(figsize=(18, 10))
+    ax = fig.add_subplot(111)
+    ax.plot(x, y, color=color, linewidth=3)
+    ax.set_ylabel(y_name, fontsize=18)
+    ax.set_xlabel(x_name, fontsize=18)
+    plt.show()
+

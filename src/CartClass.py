@@ -417,6 +417,7 @@ class Cart:
         self.s.angleD = 0.0
         self.s.angleDD = 0.0
 
+        self.Q =0.0
         self.u = 0.0
 
         self.slider_value = 0.0

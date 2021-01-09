@@ -58,7 +58,7 @@ class controller_custom_mpc:
         self.normalized_rnn_output = np.array([])
         self.rnn_output = np.array([])
 
-        self.rnn_internal_states = self.net.get_internal_states()
+        self.rnn_internal_states = get_internal_states(self.net)
 
         self.rnn_eval_time = []
         self.predictor_time = []
@@ -165,7 +165,7 @@ class controller_custom_mpc:
 
     def predictor(self, Q_hat):
 
-        self.net.load_internal_states(self.rnn_internal_states)
+        load_internal_states(self.net, self.rnn_internal_states)
 
         yp_hat = np.zeros(self.mpc_horizon+1, dtype=object)
 
@@ -242,7 +242,7 @@ class controller_custom_mpc:
 
     def step(self, s, target_position):
 
-        self.rnn_internal_states = self.net.get_internal_states()
+        self.rnn_internal_states = get_internal_states(self.net)
 
         self.s = deepcopy(s)
         self.target_position = deepcopy(target_position)
@@ -256,7 +256,7 @@ class controller_custom_mpc:
 
         Q = self.Q_hat[0]
 
-        self.net.load_internal_states(self.rnn_internal_states)
+        load_internal_states(self.net, self.rnn_internal_states)
         self.step_rnn(self.s, Q2u(Q, self.p), self.target_position)
 
         return Q

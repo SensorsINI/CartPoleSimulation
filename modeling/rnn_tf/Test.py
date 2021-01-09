@@ -16,7 +16,8 @@ from modeling.rnn_tf.utilis_rnn import *
 # Parameters of RNN
 from modeling.rnn_tf.ParseArgs import args as my_args
 
-testset_filepath = './data/data_rnn_big.csv'
+# testset_filepath = './data/data_rnn_big.csv'
+testset_filepath = './data/small_test.csv'
 # testset_filepath = './data/fall_test.csv' # exp_len 1000//...
 
 # Get arguments as default or from terminal line
@@ -24,9 +25,9 @@ args = my_args()
 # Print the arguments
 print(args.__dict__)
 
-exp_len = 5000//args.downsampling
+exp_len = 500//args.downsampling
 
-MULTIPLE_PICTURES = True
+MULTIPLE_PICTURES = False
 
 
 def test_network():
@@ -42,9 +43,9 @@ def test_network():
     outputs_list = args.outputs_list
 
     # load_rnn = args.load_rnn  # If specified this is the name of pretrained RNN which should be loaded
-    # load_rnn_path = args.path_save
-    load_rnn_path = './controllers/nets/mpc_on_rnn_tf/'
-    load_rnn = 'GRU-7IN-8H1-8H2-5OUT-0'
+    load_rnn_path = args.path_save
+    # load_rnn_path = './controllers/nets/mpc_on_rnn_tf/'
+    # load_rnn = 'GRU-7IN-8H1-8H2-5OUT-0'
     # load_rnn = 'GRU-4IN-1024H1-1024H2-2OUT-1'
     load_rnn = 'last'
 
@@ -65,7 +66,7 @@ def test_network():
         plot_results(net=net, args=args, dataset=None, testset_filepath=testset_filepath, exp_len=exp_len,
                      comment=title, path_save=load_rnn_path,
                      inputs_list=inputs_list, outputs_list=outputs_list, save=True,
-                     closed_loop_enabled=True, close_loop_idx=exp_len//2)
+                     closed_loop_enabled=True, close_loop_idx=290)
 
 
 if __name__ == '__main__':

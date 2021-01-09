@@ -114,13 +114,21 @@ def train_network():
         mode='auto',
         save_best_only=False)
 
+    reduce_lr = keras.callbacks.ReduceLROnPlateau(
+        monitor='val_loss',
+        factor=0.2,
+        patience=1,
+        min_lr=0.0001,
+        verbose=2
+    )
+
     history = net.fit(
         train_set,
         epochs=args.num_epochs,
         verbose=1,
         shuffle=False,
         validation_data=test_set,
-        callbacks=[CustomCallback(), model_checkpoint_callback],
+        callbacks=[CustomCallback(), model_checkpoint_callback, reduce_lr],
     )
 
     net.save_weights(args.path_save + rnn_full_name + '.ckpt')

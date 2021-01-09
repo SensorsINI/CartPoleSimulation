@@ -62,7 +62,7 @@ class controller_custom_mpc_2:
         self.rnn_input = pd.DataFrame(columns=self.inputs_list)
         self.rnn_output = pd.DataFrame(columns=self.outputs_list)
 
-        self.rnn_internal_states = self.net.get_internal_states()
+        self.rnn_internal_states = get_internal_states(self.net)
 
         self.rnn_eval_time = []
         self.predictor_time = []
@@ -166,7 +166,7 @@ class controller_custom_mpc_2:
 
     def predictor(self, Q_hat):
 
-        self.net.load_internal_states(self.rnn_internal_states)
+        load_internal_states(self.net, self.rnn_internal_states)
         prediction = pd.DataFrame(data=np.zeros((self.mpc_horizon+1, len(self.initial_state_normed.columns))),
                                   columns=self.initial_state_normed.columns)
 
@@ -262,7 +262,7 @@ class controller_custom_mpc_2:
         # TODO: Step should get already a dataframe/dataseries from which it should pick the columns it needs
         #   Optimally you should operate on the normed values all the time, try to eliminate devisions
 
-        self.rnn_internal_states = self.net.get_internal_states()
+        self.rnn_internal_states = get_internal_states(self.net)
 
         self.s = deepcopy(s)
         self.target_position = deepcopy(target_position)
@@ -302,7 +302,7 @@ class controller_custom_mpc_2:
 
         self.plot_prediction()
 
-        self.net.load_internal_states(self.rnn_internal_states)
+        load_internal_states(self.net, self.rnn_internal_states)
         if 'Q' in self.rnn_input:
             self.rnn_initial_input['Q'] = [self.Q_hat[0]]
         self.step_rnn(self.rnn_initial_input)

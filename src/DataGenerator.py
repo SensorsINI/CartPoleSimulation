@@ -33,7 +33,7 @@ for i in range(number_of_experiments):
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
     print(i)
-    initial_state = [0.0, 0.0, 12*i/60.0, 0.0]
+    initial_state = [0.0, 0.0, 12*i/57.3, 0.0]
     sleep(0.1)
     MyCart = Cart()
     gen_start = timeit.default_timer()
