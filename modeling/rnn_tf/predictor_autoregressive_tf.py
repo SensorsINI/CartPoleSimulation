@@ -89,9 +89,17 @@ class predictor_autoregressive_tf:
         Q_type = tf.TensorSpec((self.horizon,), tf.float32)
         initial_input_type = tf.TensorSpec((len(self.rnn_inputs_names)-1,), tf.float32)
 
+        rnn_input_type = tf.TensorSpec((1, 1, len(self.rnn_inputs_names)), tf.float32)
+
+        try:
+            self.evaluate_rnn = self.evaluate_rnn_f.get_concrete_function(rnn_input=rnn_input_type)
+        except:
+            self.evaluate_rnn = self.evaluate_rnn_f
+
         try:
             self.iterate_rnn = self.iterate_rnn_f.get_concrete_function(Q=Q_type,
                                                                         initial_input=initial_input_type)
+            print(self.iterate_rnn)
         except:
             self.iterate_rnn = self.iterate_rnn_f
 
@@ -123,13 +131,16 @@ class predictor_autoregressive_tf:
 
         load_internal_states(self.net, self.rnn_internal_states)
         initial_input = tf.convert_to_tensor(self.rnn_current_input_without_Q, tf.float32)
+        # t0 = timeit.default_timer()
         rnn_inout = self.iterate_rnn(Q, initial_input)
-
+        # t1 = timeit.default_timer()
+        # iterate_t = (t1-t0)/self.horizon
+        # print('Iterate {} us/eval'.format(iterate_t * 1.0e6))
         # compose the pandas output DF
         # Later: if necessary add sin, cos, derivatives
         # First version let us assume net returns all state except for angle
 
-        self.prediction_rnn.iloc[:, :] = rnn_inout[:self.horizon+1, 0, :]
+        self.prediction_rnn.iloc[:, :] = rnn_inout[:self.horizon+1, 0, :].numpy()
         if self.prediction_denorm:
             return denormalize_df(self.prediction_rnn[self.prediction_features_names], self.normalization_info)
         else:
@@ -142,38 +153,41 @@ class predictor_autoregressive_tf:
         load_internal_states(self.net, self.rnn_internal_states)
         self.rnn_current_input[0, 0, 0] = Q0
         self.rnn_current_input[0, 0, 1:] = self.rnn_current_input_without_Q
-        self.net(self.rnn_current_input)
+        self.evaluate_rnn(self.rnn_current_input) # Using tf.function to compile net
+        self.net(self.rnn_current_input) # Using net directly
         self.rnn_internal_states = get_internal_states(self.net)
 
-    #@tf.function
+    @tf.function
     def iterate_rnn_f(self, Q, initial_input):
         print('retracing')
         # Iterate over RNN -
-        rnn_input = tf.zeros(shape=(1, 1, len(self.rnn_inputs_names),), dtype=tf.float32)
+        # rnn_input = tf.zeros(shape=(1, 1, len(self.rnn_inputs_names),), dtype=tf.float32)
         rnn_output = tf.zeros(shape=(1,len(self.rnn_outputs_names)), dtype=tf.float32)
         rnn_inout = tf.TensorArray(tf.float32, size=self.horizon + 1)
-        Q_current = tf.zeros(shape=(1,), dtype=tf.float32)
+        # Q_current = tf.zeros(shape=(1,), dtype=tf.float32)
 
-        rnn_inout.write(0, tf.reshape(initial_input, [1, len(initial_input)]))
+        rnn_inout = rnn_inout.write(0, tf.reshape(initial_input, [1, len(initial_input)]))
         for i in tf.range(0, self.horizon):
             Q_current = (tf.reshape(Q[i], [1]))
             if i == 0:
                 rnn_input = (tf.reshape(tf.concat([Q_current, initial_input], axis=0), [1, 1, len(self.rnn_inputs_names)]))
             else:
                 rnn_input = tf.reshape(tf.concat([Q_current, tf.squeeze(rnn_output)], axis=0), [1, 1, len(self.rnn_inputs_names)])
-            rnn_output = (self.net(rnn_input))
+            # rnn_output = (self.net(rnn_input))
+            rnn_output = (self.evaluate_rnn(rnn_input))
             #tf.print(rnn_output)
 
-            rnn_inout.write(i+1, rnn_output)
-            tf.print(rnn_inout.read(i+1))
+            rnn_inout = rnn_inout.write(i, rnn_output)
+            # tf.print(rnn_inout.read(i+1))
         # print(rnn_inout)
-        return rnn_inout.stack()
+        rnn_inout = rnn_inout.stack()
+        return rnn_inout
 
-    # @tf.function(input_signature=[tf.TensorSpec(None, tf.float32)])
-    # def tf_function(self, input_array):
-    #     print('Retrace')
-    #     y = tf.numpy_function(self.iterate_rnn, [input_array], tf.float32)
-    #     return y
+    # @tf.function
+    def evaluate_rnn_f(self, rnn_input):
+        rnn_output = self.net(rnn_input)
+        return rnn_output
+
 
 
 
@@ -187,25 +201,26 @@ if __name__ == '__main__':
     df = pd.read_csv(data_path+filename, comment='#')
     pd_plotter_simple(df, 'time', feature_to_plot, idx_range=[0, autoregres_at+horizon])
     predictor = predictor_autoregressive_tf(horizon=horizon)
-    # t0 = timeit.default_timer()
-    # for row_number in range(autoregres_at):
-    #     initial_state = pd.DataFrame(df.iloc[row_number, :]).transpose()
-    #     Q = float(df.loc[df.index[row_number], 'Q'])
-    #     predictor.setup(initial_state)
-    #     predictor.update_internal_rnn_state(Q)
-    # t1 = timeit.default_timer()
+    t0 = timeit.default_timer()
+    for row_number in range(autoregres_at):
+        initial_state = pd.DataFrame(df.iloc[row_number, :]).transpose()
+        Q = float(df.loc[df.index[row_number], 'Q'])
+        predictor.setup(initial_state)
+        predictor.update_internal_rnn_state(Q)
+    t1 = timeit.default_timer()
 
     initial_state = pd.DataFrame(df.iloc[autoregres_at, 1:]).transpose()
     predictor.setup(initial_state, prediction_denorm=True)
     print('Predictor ready')
     Q = df.loc[df.index[autoregres_at:autoregres_at+horizon], 'Q'].to_numpy(dtype=np.float32).squeeze()
     t2 = timeit.default_timer()
-    prediction = predictor.predict(Q)
+    for i in range(10):
+        prediction = predictor.predict(Q)
     t3 = timeit.default_timer()
     pd_plotter_simple(df, x_name='time', y_name=feature_to_plot, idx_range=[autoregres_at, autoregres_at+horizon])
     pd_plotter_simple(prediction, y_name=feature_to_plot, idx_range=[0, horizon], color='red', dt=0.02)
 
-    # update_rnn_t = (t1-t0)/autoregres_at
-    # print('Update RNN {} us/eval'.format(update_rnn_t*1.0e6))
-    predictor_t = (t3-t2)/horizon
+    update_rnn_t = (t1-t0)/autoregres_at
+    print('Update RNN {} us/eval'.format(update_rnn_t*1.0e6))
+    predictor_t = (t3-t2)/horizon/10.0
     print('Predict {} us/eval'.format(predictor_t*1.0e6))
