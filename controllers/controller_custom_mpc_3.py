@@ -1,6 +1,5 @@
 """mpc controller"""
 
-from src.globals import *
 from types import SimpleNamespace
 
 import scipy.optimize
@@ -8,7 +7,7 @@ import scipy.optimize
 from copy import deepcopy
 
 from modeling.rnn_tf.utilis_rnn import *
-from modeling.rnn_tf.predictor_autoregressive_tf import predictor_autoregressive_tf
+from Predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
 
 method = 'L-BFGS-B'
 # method = 'SLSQP'

@@ -7,11 +7,6 @@ Created on Fri Jun 19 06:21:32 2020
 The file generates an CartPole experiments and loads pretrained RNN network. It feeds
 """
 
-import torch
-import torch.utils.data.dataloader
-
-import collections
-
 from modeling.rnn_tf.utilis_rnn import *
 # Parameters of RNN
 from modeling.rnn_tf.ParseArgs import args as my_args
