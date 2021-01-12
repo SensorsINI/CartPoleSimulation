@@ -39,9 +39,6 @@ Using predictor:
 #   Updating it more often will lead to false results.
 
 
-import pandas as pd
-import numpy as np
-import tensorflow as tf
 from modeling.rnn_tf.utilis_rnn import *
 from src.utilis import pd_plotter_simple
 
@@ -146,7 +143,7 @@ class predictor_autoregressive_tf:
             return denormalize_df(self.prediction_rnn[self.prediction_features_names], self.normalization_info)
         else:
             return self.prediction_rnn[self.prediction_features_names]
-
+# check
     # @tf.function
     def update_internal_rnn_state(self, Q0):
 

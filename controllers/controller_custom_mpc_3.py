@@ -10,8 +10,8 @@ from copy import deepcopy
 from modeling.rnn_tf.utilis_rnn import *
 from modeling.rnn_tf.predictor_autoregressive_tf import predictor_autoregressive_tf
 
-# method = 'L-BFGS-B'
-method = 'SLSQP'
+method = 'L-BFGS-B'
+# method = 'SLSQP'
 maxiter = 80 # I think it was a key thing.
 ftol = 1.0e-5
 mpc_horizon = 5
@@ -19,12 +19,12 @@ mpc_horizon = 5
 # weights
 wr = 0.0  # rterm
 l1 = 1.0  # -pot
-l2 = 0.0  # distance
+l2 = 20.0  # distance
 l3 = 1.0  # kin_pol
 m1 = 1.0  # kin_pol
-m2 = 1.0  # -pot
+m2 = 5.0  # -pot
 m3 = 0.0  # kin_cart
-m4 = 0.0  # distance
+m4 = 5.0  # distance
 
 w_sum = wr + l1 + l2 + l3 + m1 + m2 + m3
 
@@ -159,7 +159,7 @@ class controller_custom_mpc_3:
         return Q0
 
     def reset(self):
-        self.net.reset_states()
+        self.Predictor.net.reset_states()
         self.Q_hat0 = np.zeros(self.mpc_horizon)
 
     def controller_summary(self):
