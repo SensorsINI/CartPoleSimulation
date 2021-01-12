@@ -47,8 +47,8 @@ from src.utilis import pd_plotter_simple
 
 
 HORIZON = 5
-RNN_FULL_NAME = 'GRU-6IN-8H1-8H2-5OUT-0'
-RNN_PATH = './save_tf/'
+RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0'
+RNN_PATH = './save_tf/long_3_55/'
 # RNN_PATH = './controllers/nets/mpc_on_rnn_tf/'
 PREDICTION_FEATURES_NAMES = ['s.angle.cos', 's.angle.sin', 's.angleD', 's.position', 's.positionD']
 
@@ -66,11 +66,11 @@ class predictor_autoregressive_tf:
                                   return_sequence=False, stateful=True,
                                   warm_up_len=1, batchSize=1)
 
-        SAVEPATH = rnn_path + rnn_full_name + '/1/'
-        net_predict = keras.models.load_model(SAVEPATH)
-        net_predict.set_weights(self.net.get_weights())
-
-        self.net = net_predict
+        # SAVEPATH = rnn_path + rnn_full_name + '/1/'
+        # net_predict = keras.models.load_model(SAVEPATH)
+        # net_predict.set_weights(self.net.get_weights())
+        #
+        # self.net = net_predict
 
         self.rnn_internal_states = get_internal_states(self.net)
 
@@ -107,6 +107,7 @@ class predictor_autoregressive_tf:
     # @tf.function
     def setup(self, initial_state: pd.DataFrame, prediction_denorm=False):
 
+        self.rnn_internal_states = get_internal_states(self.net)
         initial_state_normed = normalize_df(initial_state[self.rnn_inputs_names[1:]], self.normalization_info)
         self.rnn_current_input_without_Q = initial_state_normed.to_numpy(dtype=np.float32).squeeze()
         if prediction_denorm:
@@ -155,11 +156,10 @@ class predictor_autoregressive_tf:
         self.rnn_current_input[0, 0, 1:] = self.rnn_current_input_without_Q
         self.evaluate_rnn(self.rnn_current_input) # Using tf.function to compile net
         self.net(self.rnn_current_input) # Using net directly
-        self.rnn_internal_states = get_internal_states(self.net)
 
     @tf.function
     def iterate_rnn_f(self, Q, initial_input):
-        print('retracing')
+        print('retracing iterate_rnn_f')
         # Iterate over RNN -
         # rnn_input = tf.zeros(shape=(1, 1, len(self.rnn_inputs_names),), dtype=tf.float32)
         rnn_output = tf.zeros(shape=(1,len(self.rnn_outputs_names)), dtype=tf.float32)
@@ -183,22 +183,31 @@ class predictor_autoregressive_tf:
         rnn_inout = rnn_inout.stack()
         return rnn_inout
 
-    # @tf.function
+    @tf.function
     def evaluate_rnn_f(self, rnn_input):
+        print('retracing evaluate_rnn_f')
         rnn_output = self.net(rnn_input)
         return rnn_output
 
 
 
 
-import timeit
+
 if __name__ == '__main__':
-    horizon = 500
-    autoregres_at = 289
-    data_path = './data/'
-    filename = 'small_test.csv'
-    feature_to_plot = 's.positionD'
-    df = pd.read_csv(data_path+filename, comment='#')
+    import timeit
+    import glob
+    horizon = 20
+    autoregres_at = 60
+    downsampling = 1
+    start_at = 190
+    # data_path = './data/validate/'
+    # filename = 'free.csv'
+    datafile = glob.glob('./data/validate/' + '*.csv')[0]
+    feature_to_plot = 's.angle.cos'
+    # df = pd.read_csv(data_path+filename, comment='#')
+    df = pd.read_csv(datafile, comment='#')
+    df = df.iloc[::downsampling].reset_index()
+    df = df.iloc[start_at:].reset_index()
     pd_plotter_simple(df, 'time', feature_to_plot, idx_range=[0, autoregres_at+horizon])
     predictor = predictor_autoregressive_tf(horizon=horizon)
     t0 = timeit.default_timer()

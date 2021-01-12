@@ -252,6 +252,9 @@ def Generate_Experiment(MyCart,
             raise Exception('ERROR: It seems the experiment is running too long...')
 
         MyCart.update_state()
+        if abs(MyCart.s.position)>45.0:
+            break
+            print('Cart went out of safety boundaries')
 
         # if abs(MyCart.s.angle) > 0.8*np.pi:
         #     raise ValueError('Cart went unstable')

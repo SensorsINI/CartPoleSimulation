@@ -98,11 +98,23 @@ class controller_do_mpc:
         # self.mpc.set_param(nlpsol_opts={'ipopt.linear_solver': 'mumps'})
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'MA57'})
 
+        # # Standard version
         lterm = - self.model.aux['E_pot'] + 20.0 * distance_difference
         mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
+        self.mpc.set_rterm(Q=0.1)
+
+        # # Alternative versions to get data for training
+        # lterm = 20.0 * distance_difference
+        # mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
+        # self.mpc.set_rterm(Q=0.2)
+        #
+        # lterm = 20.0 * distance_difference + 5 * self.model.aux['E_kin_cart']
+        # mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot'] + 200.0 * distance_difference
+        # self.mpc.set_rterm(Q=0.2)
+
 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
-        self.mpc.set_rterm(Q=0.1)
+
 
         self.mpc.bounds['lower', '_u', 'Q'] = -1.0
         self.mpc.bounds['upper', '_u', 'Q'] = 1.0

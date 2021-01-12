@@ -17,6 +17,50 @@ def plot_results_specific(targets_pd, rnn_outputs, features_pd_denorm, time_axis
     angle_target = None
     angle_output = None
 
+    if ('s.angle.sin' in rnn_outputs) and ('s.angle.cos' in rnn_outputs):
+        sin_target = targets_pd['s.angle.sin'].to_numpy()
+        sin_output = rnn_outputs['s.angle.sin'].to_numpy()
+        cos_target = targets_pd['s.angle.cos'].to_numpy()
+        cos_output = rnn_outputs['s.angle.cos'].to_numpy()
+
+        # Create a figure instance
+        fig, axs = plt.subplots(2, 1, figsize=(18, 10), sharex=True)
+        plt.subplots_adjust(hspace=0.4)
+        start_idx = 0
+        axs[0].set_title(comment, fontsize=20)
+
+        axs[0].set_ylabel("Cos (-)", fontsize=18)
+        axs[0].plot(time_axis, cos_target, 'k:', markersize=12, label='Ground Truth')
+        axs[0].plot(time_axis, cos_output, 'b', markersize=12, label='Predicted Cos')
+
+        axs[0].plot(time_axis[start_idx], cos_target[start_idx], 'g.', markersize=16, label='Start')
+        axs[0].plot(time_axis[start_idx], cos_output[start_idx], 'g.', markersize=16)
+        axs[0].plot(time_axis[-1], cos_target[-1], 'r.', markersize=16, label='End')
+        axs[0].plot(time_axis[-1], cos_output[-1], 'r.', markersize=16)
+        if closed_loop_enabled:
+            axs[0].plot(time_axis[close_loop_idx], cos_target[close_loop_idx], '.', color='darkorange', markersize=16, label='connect output->input')
+            axs[0].plot(time_axis[close_loop_idx], cos_output[close_loop_idx], '.', color='darkorange', markersize=16)
+
+        axs[0].legend()
+
+        axs[1].set_ylabel("Sin (-)", fontsize=18)
+        axs[1].plot(time_axis, sin_target, 'k:', markersize=12, label='Ground Truth')
+        axs[1].plot(time_axis, sin_output, 'b', markersize=12,
+                    label='Predicted angle')
+
+        axs[1].plot(time_axis[start_idx], sin_target[start_idx], 'g.', markersize=16,
+                    label='Start')
+        axs[1].plot(time_axis[start_idx], sin_output[start_idx], 'g.', markersize=16)
+        axs[1].plot(time_axis[-1], sin_target[-1], 'r.', markersize=16, label='End')
+        axs[1].plot(time_axis[-1], sin_output[-1], 'r.', markersize=16)
+        if closed_loop_enabled:
+            axs[1].plot(time_axis[close_loop_idx], sin_target[close_loop_idx], '.',
+                        color='darkorange', markersize=16, label='connect output->input')
+            axs[1].plot(time_axis[close_loop_idx], sin_output[close_loop_idx], '.',
+                        color='darkorange', markersize=16)
+        axs[1].legend()
+
+
     if ('s.position' in targets_pd) and ('s.position' in rnn_outputs):
         if ('s.angle' in targets_pd) and ('s.angle' in rnn_outputs):
             angle_target = np.rad2deg(targets_pd['s.angle'].to_numpy())

@@ -100,12 +100,15 @@ def train_network():
 
     class CustomCallback(keras.callbacks.Callback):
         def on_epoch_end(self, epoch, logs=None):
-            plot_string = 'This is the network after {} training epoch(s)'.format(epoch +1)
-            plot_results(net=net, args=args, dataset=test_set,
-                         comment=plot_string,
-                         save=True,
-                         closed_loop_enabled=True,
-                         exp_len = 500//args.downsampling)
+            if epoch==4:
+                plot_string = 'This is the network after {} training epoch(s), warm_up={}'.format(epoch +1, args.warm_up_len)
+                plot_results(net=net, args=args, dataset=test_set,
+                             comment=plot_string,
+                             save=True,
+                             closed_loop_enabled=True,
+                             exp_len=310//args.downsampling,
+                             start_at=190,
+                             close_loop_idx=60)
 
     model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
         filepath=args.path_save + rnn_full_name + '.ckpt',
@@ -118,7 +121,7 @@ def train_network():
         monitor='val_loss',
         factor=0.2,
         patience=1,
-        min_lr=0.0001,
+        min_lr=0.00001,
         verbose=2
     )
 
@@ -148,5 +151,12 @@ def train_network():
 
 if __name__ == '__main__':
 
-    time_to_accomplish = train_network()
-    print('Total time of training the network: ' + str(time_to_accomplish))
+    # warm_up_lens = [30, 5, 20, 5, 30, 5, 40, 5, 20, 5]
+    print('updated')
+    warm_up_lens = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 55, 50, 45, 40, 45, 40, 35, 30, 25, 20, 15, 10, 5]
+    for warm_up_len_idx in range(len(warm_up_lens)):
+        print('We are at iteration: {}'.format(warm_up_len_idx))
+        args.warm_up_len = warm_up_lens[warm_up_len_idx]
+        args.exp_len = warm_up_lens[warm_up_len_idx]+5
+        time_to_accomplish = train_network()
+        print('Total time of training the network: ' + str(time_to_accomplish))

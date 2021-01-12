@@ -72,7 +72,7 @@ M_globals = 1.0  # mass of cart, kg
 L_globals = 1.0  # HALF (!!!) length of pend, m
 u_max_globals = 200.0  # max cart force, N
 M_fric_globals = 1.0  # cart friction, N/m/s
-J_fric_globals = 1.0  # friction coefficient on angular velocity, Nm/rad/s
+J_fric_globals = 2.0  # friction coefficient on angular velocity, Nm/rad/s
 v_max_globals = 10.0  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model
 controlDisturbance_globals = 0.0  # disturbance, as factor of u_max
 sensorNoise_globals = 0.0  # noise, as factor of max values, TODO:probably not implemented yet
@@ -83,8 +83,8 @@ k_globals = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
 
 # Variables for random trace generation
 # Complexity of the random trace, number of turning points used for interpolation
-track_relative_complexity_globals = 0.1 # 0.5 is normal default
-random_length_globals = 1e1  # Number of seconds in the random length trace
+track_relative_complexity_globals = 0.05 # 0.5 is normal default
+random_length_globals = 100.0e1  # Number of seconds in the random length trace
 interpolation_type_globals = 'previous'  # Sets how to interpolate between turning points of random trace
 # Possible choices: '0-derivative-smooth', 'linear', 'previous'
 turning_points_period_globals = 'regular'  # How turning points should be distributed

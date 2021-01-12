@@ -11,12 +11,14 @@ import copy
 
 from modeling.rnn_tf.utilis_rnn_specific import *
 
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 import tensorflow as tf
 import tensorflow.keras as keras
 
 import pandas as pd
+
+from time import sleep
 
 import timeit
 
@@ -416,13 +418,16 @@ def load_data(args, filepath=None, columns_list=None, norm_inf=False, rnn_full_n
     all_dfs = []  # saved separately to get normalization
     all_time_axes = []
 
-    for one_filepath in filepaths:
+    print('Loading data files:')
+    sleep(0.1)
+    for file_number in trange(len(filepaths)):
+        one_filepath = filepaths[file_number]
         # Load dataframe
-        print('loading data from ' + str(one_filepath))
-        print('')
+        # print('loading data from ' + str(one_filepath))
+        # print('')
         df_dense = pd.read_csv(one_filepath, comment='#')
         max_pos = df_dense['s.position'].abs().max()
-        print('Max_pos: {}'.format(max_pos))
+        # print('Max_pos: {}'.format(max_pos))
         # Here time calculation
 
 
@@ -794,7 +799,8 @@ def plot_results(net,
                  rnn_full_name=None,
                  save=False,
                  close_loop_idx=None,
-                 path_save=None):
+                 path_save=None,
+                 start_at = None):
     """
     This function accepts RNN instance, arguments and CartPole instance.
     It runs one random experiment with CartPole,
@@ -845,11 +851,11 @@ def plot_results(net,
     net_predict.set_weights(net.get_weights())
 
     # net_predict.summary()
-    SAVEPATH = path_save+rnn_full_name+'/1/'
-    print(SAVEPATH)
-
-    net_predict = keras.models.load_model(SAVEPATH)
-    net_predict.set_weights(net.get_weights())
+    # SAVEPATH = path_save+rnn_full_name+'/1/'
+    # print(SAVEPATH)
+    #
+    # net_predict = keras.models.load_model(SAVEPATH)
+    # net_predict.set_weights(net.get_weights())
 
     if normalization_info is None:
         normalization_info = load_normalization_info(path_save, rnn_full_name)
@@ -867,6 +873,10 @@ def plot_results(net,
 
     # Format the experiment data
     features, targets, time_axis = test_set.get_experiment(0)  # Put number in brackets to get the same idx at every run
+    if start_at is not None:
+        features = features[start_at:]
+        targets = targets[start_at:]
+        time_axis = time_axis[start_at:]
 
     features_pd = pd.DataFrame(data=features, columns=inputs_list, dtype=np.float32)
     targets_pd = pd.DataFrame(data=targets, columns=outputs_list, dtype=np.float32)
