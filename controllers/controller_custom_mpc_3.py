@@ -7,10 +7,10 @@ import scipy.optimize
 from copy import deepcopy
 
 from modeling.rnn_tf.utilis_rnn import *
-from Predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
+from predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
 
-method = 'L-BFGS-B'
-# method = 'SLSQP'
+# method = 'L-BFGS-B'
+method = 'SLSQP'
 maxiter = 80 # I think it was a key thing.
 ftol = 1.0e-5
 mpc_horizon = 5

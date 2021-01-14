@@ -3,7 +3,7 @@
 from src.globals import *
 from types import SimpleNamespace
 
-from src.utilis import normalize_angle_rad
+from src.utilis import wrap_angle_rad
 
 import matplotlib.pyplot as plt
 

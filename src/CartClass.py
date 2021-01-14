@@ -37,7 +37,7 @@ from src.globals import *
 
 from types import SimpleNamespace
 
-from src.utilis import normalize_angle_rad
+from src.utilis import wrap_angle_rad
 
 
 from memory_profiler import profile
@@ -378,11 +378,29 @@ class Cart:
                 self.target_position = self.slider_value
 
         # Calculate the next state
-        self.Equations_of_motion()
+        # self.Equations_of_motion()
+        s_next = cartpole_integration(self.s, self.dt)
+        self.s.position = s_next.position
+        self.s.positionD = s_next.positionD
+        self.s.angle = s_next.angle
+        self.s.angleD = s_next.angleD
 
-        # Normalize angle
+        # Snippet to stop pole at +/- 90 deg if enabled
+        zero_DD = None
+        if self.stop_at_90:
+            if self.s.angle >= np.pi/2:
+                self.s.angle = np.pi/2
+                self.s.angleD = 0.0
+                zero_DD = True
+            elif self.s.angle <= -np.pi/2:
+                self.s.angle = -np.pi/2
+                self.s.angleD = 0.0
+                zero_DD = True
+            else:
+                pass
 
-        self.s.angle = normalize_angle_rad(self.s.angle)
+        # Wrap angle to +/-π
+        self.s.angle = wrap_angle_rad(self.s.angle)
 
         # In case in the next step the wheel of the cart
         # went beyond the track
@@ -394,7 +412,14 @@ class Cart:
         if not self.Q_thread_enabled:
             self.Update_Q()
 
+        # Convert dimensionless motor power to a physical force acting on the Cart
         self.u = Q2u(self.Q, self.p)
+
+        # Update second derivatives
+        self.s.angleDD, self.s.positionDD = cartpole_ode(self.p, self.s, self.u)
+
+        if zero_DD:
+            self.s.angleDD = 0.0
 
         # Update the total time of the simulation
         self.time = self.time + self.dt
@@ -435,20 +460,29 @@ class Cart:
                self.u
 
     # This method resets the internal state of the CartPole instance
-    def reset_state(self):
-        self.s.position = 0.0
-        self.s.positionD = 2.0
-        self.s.positionDD = 0.0
-        self.s.angle = (2.0 * random.normal() - 1.0) * pi / 180.0
-        self.s.angleD = 0.0
-        self.s.angleDD = 0.0
+    def reset_state(self, reset_mode=1):
+        if reset_mode == 0:
+            self.s.position = self.s.positionD = self.s.positionDD = 0.0
+            self.s.angle = self.s.angleD = self.s.angleDD = 0.0
+            self.Q = self.u = 0.0
+            self.slider_value = 0.0
+            self.time = 0.0
+        else:
+            # You can change here with which initial parameters you wish to start the simulation
+            self.s.position = 0.0
+            self.s.positionD = 0.0
+            self.s.angle = (2.0 * random.normal() - 1.0) * pi / 180.0
+            self.s.angleD = 0.0
+            self.s.angleDD = 0.0
 
-        self.Q =0.0
-        self.u = 0.0
+            self.Q = 0.0
+            self.u = 0.0
 
-        self.slider_value = 0.0
+            self.s.angleDD, self.s.positionDD = cartpole_ode(self.p, self.s, self.u)
 
-        self.time = 0.0
+            self.slider_value = 0.0
+
+            self.time = 0.0
 
     # This method draws elements and set properties of the CartPole figure
     # which do not change at every frame of the animation

@@ -28,7 +28,7 @@ from memory_profiler import profile
 # warnings.warn("Warning...........Message")
 
 
-def normalize_angle_rad(angle):
+def wrap_angle_rad(angle):
     Modulo = fmod(angle, 2 * np.pi)  # positive modulo
     if Modulo < -np.pi:
         angle = Modulo + 2 * np.pi
@@ -231,12 +231,20 @@ def Generate_Experiment(MyCart,
     else:
         MyCart.s.angleD = initial_state[3]
 
+
     # Target position at time 0
     MyCart.target_position = MyCart.random_track_f(MyCart.time)
+
+    # Make already in the first timestep Q appropriate to the initial state, target position and controller
 
     MyCart.Update_Q()
 
     MyCart.u = Q2u(MyCart.Q, MyCart.p)
+
+    # Calculate the initial second derivatives
+    MyCart.s.angleDD, MyCart.s.positionDD = cartpole_ode(MyCart.p, MyCart.s, MyCart.u)
+
+
 
     MyCart.reset_dict_history()
 
@@ -278,7 +286,7 @@ def Generate_Experiment(MyCart,
 
 
 
-def pd_plotter_simple(df, x_name=None, y_name=None, idx_range=[0, -1], color='blue', dt=None):
+def pd_plotter_simple(df, x_name=None, y_name=None, idx_range=[0, -1], color='blue', dt=None, marker=None):
 
     if y_name is None:
         raise ValueError ('You must provide y_name')

@@ -20,18 +20,18 @@ angleD_next, positionD_next = cartpole_ode(p, s, Q2u(Q,p))
 '''
 RNN_name = 'GRU-8H1-8H2'
 # inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'Q']
-# inputs_list = ['Q', 's.angle.sin', 's.angle.cos', 's.angleD', 's.position', 's.positionD']
+inputs_list = ['Q', 's.angle.sin', 's.angle.cos', 's.angleD', 's.position', 's.positionD']
 # inputs_list = ['s.position', 's.angle']
 # inputs_list = ['s.position', 's.angle', 'u', 'target_position']
-# outputs_list = ['s.angle.sin', 's.angle.cos', 's.angleD', 's.position', 's.positionD']
+outputs_list = ['s.angle.sin', 's.angle.cos', 's.angleD', 's.position', 's.positionD']
 # outputs_list = ['s.angle', 's.position']
 # closed_loop_list = ['s.position', 's.angle']
 
 # inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD']
 # outputs_list = ['s.position', 's.angle']
 
-inputs_list = ['s.position', 's.positionD', 's.angle.sin', 's.angle.cos', 's.angleD']
-outputs_list = ['s.position', 's.angle.sin', 's.angle.cos']
+# inputs_list = ['s.position', 's.positionD', 's.angle.sin', 's.angle.cos', 's.angleD']
+# outputs_list = ['s.position', 's.angle.sin', 's.angle.cos']
 # outputs_list = inputs_list
 # inputs_list = outputs_list
 

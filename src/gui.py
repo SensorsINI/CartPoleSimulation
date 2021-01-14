@@ -116,6 +116,7 @@ class MainWindow(QMainWindow):
         self.saved = 0
         self.printing_summary = 1
         self.Q_thread_enabled = False
+        self.reset_mode = 1 # Set 0 to start with all states 0, 1 to make
 
         self.dt_main_simulation = dt_main_simulation_globals
         self.speedup = speedup_globals
@@ -308,7 +309,7 @@ class MainWindow(QMainWindow):
         worker_labels = Worker(self.thread_labels)
         self.threadpool.start(worker_labels)
 
-        self.reset_variables()
+        self.reset_variables(0)
         # Defines a variable holding animation object
         self.anim = None
         # Start redrawing the changing elements of the Figure
@@ -363,8 +364,8 @@ class MainWindow(QMainWindow):
                 return True
 
     # Method resetting variables
-    def reset_variables(self):
-        self.MyCart.reset_state()
+    def reset_variables(self, reset_mode=1):
+        self.MyCart.reset_state(reset_mode)
         self.MyCart.reset_dict_history()
         self.counter = 0
         # "Try" because this function is called for the first time during initialisation of the Window
@@ -459,7 +460,7 @@ class MainWindow(QMainWindow):
                 self.MyCart.summary_plots()
                 self.w_summary = SummaryWindow(summary_plots=self.MyCart.summary_plots)
                 # Reset variables and redraw the figures
-                self.reset_variables()
+                self.reset_variables(0)
                 # Draw figures
                 self.MyCart.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
                 self.canvas.draw()
@@ -475,6 +476,7 @@ class MainWindow(QMainWindow):
                 except:
                     print('Controller reset not done')
                 if speedup_updated:
+                    self.reset_variables(self.reset_mode)
                     self.looper.dt_target = self.dt_main_simulation / self.speedup
                     self.run_thread_calculations = 1
                     # Pass the function to execute
@@ -522,7 +524,7 @@ class MainWindow(QMainWindow):
 
             replay_looper.sleep_leftover_time()
 
-        self.reset_variables()
+        self.reset_variables(0)
 
     # The acctions which has to be taken to properly terminate the application
     # The method is evoked after QUIT button is pressed
@@ -579,7 +581,7 @@ class MainWindow(QMainWindow):
             self.MyCart.summary_plots()
             self.w_summary = SummaryWindow(summary_plots=self.MyCart.summary_plots)
             # Reset variables and redraw the figures
-            self.reset_variables()
+            self.reset_variables(0)
             # Draw figures
             self.MyCart.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
             self.canvas.draw()
@@ -606,7 +608,7 @@ class MainWindow(QMainWindow):
                 self.MyCart.set_mode(new_mode=i)
 
         # Reset the state of GUI and of the Cart instance after the mode has changed
-        self.reset_variables()
+        self.reset_variables(0)
         self.MyCart.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
         self.canvas.draw()
 
