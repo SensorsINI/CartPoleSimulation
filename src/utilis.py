@@ -180,7 +180,10 @@ def Generate_Experiment(MyCart,
 
 
     # Set CartPole in the right (automatic control) mode
-    mode = MyCart.controller_names.index(controller)
+    try:
+        mode = MyCart.controller_names.index(controller)
+    except ValueError:
+        raise ValueError('{} is not in list. \n In list are: {}'.format(controller, MyCart.controller_names))
     MyCart.set_mode(mode)
 
     MyCart.turning_points = None

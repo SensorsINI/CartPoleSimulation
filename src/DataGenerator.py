@@ -1,13 +1,14 @@
 from src.CartClass import *
 from src.utilis import *
+import os
 
 # User defined simulation settings - check the effect first in GUI before you launch big data generation
-csv = 'do-mpc'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
-number_of_experiments = 10  # How many experiments will be generated
+csv = 'custom'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
+number_of_experiments = 200  # How many experiments will be generated
 length_of_experiment = 4000.0  # Length of each experiment in s
 dt_main_simulation = dt_main_simulation_globals  # simulation timestep
-track_relative_complexity = 0.5  # randomly placed target points/s
-controller = 'do-mpc'  # Controller which should be used in generated experiment
+track_relative_complexity = 0.0  # randomly placed target points/s
+controller = 'custom-mpc-3'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'rnn_as_mpc_tf'
 interpolation_type = '0-derivative-smooth'  # Sets how to interpolate between turning points of random trace
@@ -24,8 +25,8 @@ initial_state = [None, None, None, None]
 
 save_data_online = True  # It was intended to save memory usage, but it doesn't seems to help. Leave it false.
 
-print(controller)
-
+# print(controller)
+#
 # initial_positions = np.arange(-40.0, 40.0, 5.0)
 # initial_positionsD = np.arange(-2.0, 2.0, 1.0)
 # initial_angle = np.arange(-90.0,90.0, 30.0)/57.3
@@ -35,8 +36,9 @@ print(controller)
 #                                          for positionD in initial_positionsD
 #                                             for angle in initial_angle
 #                                                 for angleD in initial_angleD)
-#
-# states = [[0.0, 0.0, 0.01, 0.1]]
+
+states = [[0.0, 0.0, 0.01, 0.1]]
+print('do-mpc-3')
 
 for i in range(number_of_experiments):
 # for i in range(len(states)):
@@ -46,7 +48,7 @@ for i in range(number_of_experiments):
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
     print(i)
-    initial_state = [0.0, 0.1, 1.0*i/57.3, 0.0]
+    # initial_state = [0.0, 0.1, 1.0*i/57.3, 0.0]
     # initial_state = states[i]
     sleep(0.1)
     MyCart = Cart()
@@ -67,3 +69,5 @@ for i in range(number_of_experiments):
     gen_end = timeit.default_timer()
     gen_dt = (gen_end-gen_start)*1000.0
     print('time to generate data: {} ms'.format(gen_dt))
+
+os.system('say "Todo ha terminado"')

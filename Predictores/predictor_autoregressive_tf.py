@@ -43,9 +43,10 @@ from modeling.rnn_tf.utilis_rnn import *
 from src.utilis import pd_plotter_simple
 
 
-HORIZON = 5
+HORIZON = 3
 RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0'
-RNN_PATH = './save_tf/long_3_55/'
+# RNN_PATH = './save_tf/long_3_55/'
+RNN_PATH = './save_tf/'
 # RNN_PATH = './controllers/nets/mpc_on_rnn_tf/'
 PREDICTION_FEATURES_NAMES = ['s.angle.cos', 's.angle.sin', 's.angleD', 's.position', 's.positionD']
 
@@ -152,7 +153,7 @@ class predictor_autoregressive_tf:
         self.rnn_current_input[0, 0, 0] = Q0
         self.rnn_current_input[0, 0, 1:] = self.rnn_current_input_without_Q
         self.evaluate_rnn(self.rnn_current_input) # Using tf.function to compile net
-        self.net(self.rnn_current_input) # Using net directly
+        # self.net(self.rnn_current_input) # Using net directly
 
     @tf.function
     def iterate_rnn_f(self, Q, initial_input):

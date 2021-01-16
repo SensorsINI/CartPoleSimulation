@@ -11,19 +11,19 @@ from predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
 
 # method = 'L-BFGS-B'
 method = 'SLSQP'
-maxiter = 80 # I think it was a key thing.
+# maxiter = 80 # I think it was a key thing.
 ftol = 1.0e-5
 mpc_horizon = 5
 
 # weights
 wr = 0.0  # rterm
-l1 = 1.0  # -pot
-l2 = 20.0  # distance
-l3 = 1.0  # kin_pol
-m1 = 1.0  # kin_pol
-m2 = 5.0  # -pot
+l1 = 5.0  # -pot
+l2 = 0.0  # distance
+l3 = 0.0  # kin_pol
+m1 = 0.0  # kin_pol
+m2 = 20.0  # -pot
 m3 = 0.0  # kin_cart
-m4 = 5.0  # distance
+m4 = 0.0  # distance
 
 w_sum = wr + l1 + l2 + l3 + m1 + m2 + m3
 
@@ -110,7 +110,7 @@ class controller_custom_mpc_3:
         # t2 = timeit.default_timer()
         # print('cost function eval {} ms'.format((t2-t0)*1000.0))
         # print('predictor eval {} ms'.format((t1-t0)*1000.0))
-        self.predictor_time.append((t1-t0)*1000.0)
+        # self.predictor_time.append((t1-t0)*1000.0)
         # print('predictor/all {}%'.format(np.round(100*(t1-t0)/(t2-t0))))
 
         return cost
@@ -151,9 +151,9 @@ class controller_custom_mpc_3:
         self.Predictor.update_internal_rnn_state(Q0)
 
         # Conclude by collecting/printing some info about this iteration
-        self.nfun.append(solution.nfev)
+        # self.nfun.append(solution.nfev)
         # print(solution)
-        self.plot_prediction()
+        # self.plot_prediction()
 
         return Q0
 

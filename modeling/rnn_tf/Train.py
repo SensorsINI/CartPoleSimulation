@@ -97,13 +97,14 @@ def train_network():
 
     class CustomCallback(keras.callbacks.Callback):
         def on_epoch_end(self, epoch, logs=None):
-            if epoch>=0:
+            # if epoch==4:
+            if epoch >= 0:
                 plot_string = 'This is the network after {} training epoch(s), warm_up={}'.format(epoch +1, args.warm_up_len)
                 plot_results(net=net, args=args, dataset=test_set,
                              comment=plot_string,
                              save=True,
                              closed_loop_enabled=True,
-                             exp_len=500//args.downsampling)
+                             exp_len=120//args.downsampling)
 
     model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
         filepath=args.path_save + rnn_full_name + '.ckpt',
@@ -145,9 +146,11 @@ def train_network():
 
 
 if __name__ == '__main__':
-
+    import os.path, time
+    file = os.path.realpath(__file__)
+    print("Training script last modified: %s" % time.ctime(os.path.getmtime(file)))
     # warm_up_lens = [30, 5, 20, 5, 30, 5, 40, 5, 20, 5]
-    # print('updated')
+
     # warm_up_lens = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 55, 50, 45, 40, 45, 40, 35, 30, 25, 20, 15, 10, 5]
     # for warm_up_len_idx in range(len(warm_up_lens)):
     #     print('We are at iteration: {}'.format(warm_up_len_idx))
