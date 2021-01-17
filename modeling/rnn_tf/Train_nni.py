@@ -6,8 +6,6 @@ Created on Fri Jun 19 06:21:32 2020
 """
 
 
-import timeit
-
 # Various
 
 # Custom functions
@@ -15,12 +13,13 @@ from modeling.rnn_tf.utilis_rnn import *
 # Parameters of RNN
 from modeling.rnn_tf.ParseArgs import args
 
-import tensorflow as tf
 import tensorflow.keras as keras
 
-import autokeras as ak
+
+import nni
 
 
+from tensorboard.plugins.hparams import api as hp
 
 print('')
 
@@ -31,7 +30,7 @@ print(args.__dict__)
 # Uncomment the @profile(precision=4) to get the report on memory usage after the training
 # Warning! It may affect performance. I would discourage you to use it for long training tasks
 # @profile(precision=4)
-def train_network():
+def train_network(params):
     print('')
     print('')
     # Start measuring time - to evaluate performance of the training function
@@ -94,78 +93,48 @@ def train_network():
     print('Number of samples in validation set: {}'.format(test_set.number_of_samples))
     print('')
 
+    del train_dfs, test_dfs, train_dfs_norm, test_dfs_norm
 
+    net.summary()
+    net.compile(
+        loss='mean_squared_error',
+        optimizer=keras.optimizers.Adam(0.001)
+    )
 
+    class CustomCallback(keras.callbacks.Callback):
+        def on_epoch_end(self, epoch, logs=None):
+            # if epoch==4:
+            if epoch >= 0:
+                plot_string = 'This is the network after {} training epoch(s), warm_up={}'.format(epoch +1, args.warm_up_len)
+                plot_results(net=net, args=args, dataset=test_set,
+                             comment=plot_string,
+                             save=True,
+                             closed_loop_enabled=True,
+                             exp_len=120//args.downsampling)
 
-    # TODO: Fix the dataset according to auto keras 
+    model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
+        filepath=args.path_save + rnn_full_name + '.ckpt',
+        save_weights_only=True,
+        monitor='val_loss',
+        mode='auto',
+        save_best_only=False)
 
+    reduce_lr = keras.callbacks.ReduceLROnPlateau(
+        monitor='val_loss',
+        factor=params['reduce_lr_factor'],
+        patience=1,
+        min_lr=0.0001,
+        verbose=2
+    )
 
-    input_node = ak.Input()
-    
-    # output_node = ak.Normalization()(input_node)
-
-    output_node = ak.RNNBlock(layer_type='GRU')(input_node)
-    
-    # output_node = ak.ClassificationHead()(output_node)
-
-    auto_model = ak.AutoModel(
-        inputs=input_node, 
-        outputs=output_node,
-        overwrite=True,
-        max_trials=10)
-
-    # Feed the AutoModel with training data.
-
-    auto_model.fit(x_train, y_train, epochs=1)
-    # Predict with the best model.
-    predicted_y = auto_model.predict(x_test)
-    # Evaluate the best model with testing data.
-    print(auto_model.evaluate(x_test, y_test))
-
-
-
-    # del train_dfs, test_dfs, train_dfs_norm, test_dfs_norm
-
-    # net.summary()
-    # net.compile(
-    #     loss='mean_squared_error',
-    #     optimizer=keras.optimizers.Adam(0.001)
-    # )
-
-    # class CustomCallback(keras.callbacks.Callback):
-    #     def on_epoch_end(self, epoch, logs=None):
-    #         plot_string = 'This is the network after {} training epoch(s)'.format(epoch +1)
-    #         plot_results(net=net, args=args, dataset=test_set,
-    #                      comment=plot_string,
-    #                      save=True,
-    #                      closed_loop_enabled=True,
-    #                      exp_len = 500//args.downsampling)
-
-    # model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
-    #     filepath=args.path_save + rnn_full_name + '.ckpt',
-    #     save_weights_only=True,
-    #     monitor='val_loss',
-    #     mode='auto',
-    #     save_best_only=False)
-
-    # reduce_lr = keras.callbacks.ReduceLROnPlateau(
-    #     monitor='val_loss',
-    #     factor=0.2,
-    #     patience=1,
-    #     min_lr=0.0001,
-    #     verbose=2
-    # )
-
-    # history = net.fit(
-    #     train_set,
-    #     epochs=args.num_epochs,
-    #     verbose=1,
-    #     shuffle=False,
-    #     validation_data=test_set,
-    #     callbacks=[CustomCallback(), model_checkpoint_callback, reduce_lr],
-    # )
-
-    
+    history = net.fit(
+        train_set,
+        epochs=args.num_epochs,
+        verbose=1,
+        shuffle=False,
+        validation_data=test_set,
+        callbacks=[CustomCallback(), model_checkpoint_callback, reduce_lr],
+    )
 
     net.save_weights(args.path_save + rnn_full_name + '.ckpt')
 
@@ -183,6 +152,18 @@ def train_network():
 
 
 if __name__ == '__main__':
+    import os.path, time
+    file = os.path.realpath(__file__)
+    print("Training script last modified: %s" % time.ctime(os.path.getmtime(file)))
+    # warm_up_lens = [30, 5, 20, 5, 30, 5, 40, 5, 20, 5]
 
-    time_to_accomplish = train_network()
+    # warm_up_lens = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 55, 50, 45, 40, 45, 40, 35, 30, 25, 20, 15, 10, 5]
+    # for warm_up_len_idx in range(len(warm_up_lens)):
+    #     print('We are at iteration: {}'.format(warm_up_len_idx))
+    #     args.warm_up_len = warm_up_lens[warm_up_len_idx]
+    #     args.exp_len = warm_up_lens[warm_up_len_idx]+5
+    #     time_to_accomplish = train_network()
+    #     print('Total time of training the network: ' + str(time_to_accomplish))
+    params = nni.get_next_parameter()
+    time_to_accomplish = train_network(params)
     print('Total time of training the network: ' + str(time_to_accomplish))
