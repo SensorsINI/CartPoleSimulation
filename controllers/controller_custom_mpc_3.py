@@ -11,7 +11,8 @@ from predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
 
 # method = 'L-BFGS-B'
 method = 'SLSQP'
-# maxiter = 80 # I think it was a key thing.
+maxiter = 80 # I think it was a key thing.
+maxiter = 800
 ftol = 1.0e-5
 mpc_horizon = 5
 

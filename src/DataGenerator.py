@@ -3,7 +3,7 @@ from src.utilis import *
 import os
 
 # User defined simulation settings - check the effect first in GUI before you launch big data generation
-csv = 'custom'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
+csv = '2_custom'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
 number_of_experiments = 200  # How many experiments will be generated
 length_of_experiment = 4000.0  # Length of each experiment in s
 dt_main_simulation = dt_main_simulation_globals  # simulation timestep
