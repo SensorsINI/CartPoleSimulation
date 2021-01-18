@@ -105,12 +105,14 @@ def train_network(params):
         def on_epoch_end(self, epoch, logs=None):
             # if epoch==4:
             if epoch >= 0:
+
+                # nni.report_intermeidate_result(history.history['val_loss'])
                 plot_string = 'This is the network after {} training epoch(s), warm_up={}'.format(epoch +1, args.warm_up_len)
-                plot_results(net=net, args=args, dataset=test_set,
-                             comment=plot_string,
-                             save=True,
-                             closed_loop_enabled=True,
-                             exp_len=120//args.downsampling)
+                # plot_results(net=net, args=args, dataset=test_set,
+                #              comment=plot_string,
+                #              save=True,
+                #              closed_loop_enabled=True,
+                #              exp_len=120//args.downsampling)
 
     model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
         filepath=args.path_save + rnn_full_name + '.ckpt',
@@ -146,7 +148,7 @@ def train_network(params):
     # Calculate the total time it took to run the function
     stop = timeit.default_timer()
     total_time = stop - start
-
+    nni.report_final_result(history.history['val_loss'][-1])
     # Return the total time it took to run the function
     return total_time
 
