@@ -16,6 +16,6 @@ tuner:
     #choice: maximize, minimize
     optimize_mode: maximize
 trial:
-  command: python modeling/rnn_tf/Train_nni.py --num_epochs=1 --rnn_name --inputs_list --outputs_list --close_loop_for --cheat_dt
+  command: python modeling/rnn_tf/Train_nni.py --num_epochs=10 --rnn_name --inputs_list --outputs_list --close_loop_for --cheat_dt
   codeDir: .
   gpuNum: 0

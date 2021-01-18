@@ -31,6 +31,9 @@ print(args.__dict__)
 # Warning! It may affect performance. I would discourage you to use it for long training tasks
 # @profile(precision=4)
 def train_network(params):
+
+    args.rnn_name = 'GRU-'+str(params['h1'])+'H1-'+str(params['h2'])+'H2'
+
     print('')
     print('')
     # Start measuring time - to evaluate performance of the training function
@@ -123,7 +126,7 @@ def train_network(params):
 
     reduce_lr = keras.callbacks.ReduceLROnPlateau(
         monitor='val_loss',
-        factor=params['reduce_lr_factor'],
+        factor=0.2,
         patience=1,
         min_lr=0.0001,
         verbose=2

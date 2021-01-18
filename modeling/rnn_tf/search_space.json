@@ -1,3 +1,4 @@
 {
-    "reduce_lr_factor":{"_type":"choice","_value":[0.1, 0.2, 0.4]}
+	"h1":{"_type": "randint", "_value": [32, 1024]},
+	"h2":{"_type": "randint", "_value": [32, 1024]}
 }
