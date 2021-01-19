@@ -33,7 +33,9 @@ print(args.__dict__)
 def train_network(params):
 
     args.rnn_name = 'GRU-'+str(params['h1'])+'H1-'+str(params['h2'])+'H2'
+    # "warm_up_len":{"_type": "randint", "_value": [5, 20]},
 
+    # args.warm_up_len = int(params['warm_up_len'])
     print('')
     print('')
     # Start measuring time - to evaluate performance of the training function

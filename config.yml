@@ -1,8 +1,8 @@
 authorName: Nikhil
 experimentName: cartpole
-trialConcurrency: 1
-maxExecDuration: 1h
-maxTrialNum: 10
+trialConcurrency: 2
+maxExecDuration: 10h
+maxTrialNum: 20
 #choice: local, remote, pai
 trainingServicePlatform: local
 searchSpacePath: ./modeling/rnn_tf/search_space.json
@@ -14,8 +14,8 @@ tuner:
   builtinTunerName: TPE
   classArgs:
     #choice: maximize, minimize
-    optimize_mode: maximize
+    optimize_mode: minimize
 trial:
-  command: python modeling/rnn_tf/Train_nni.py --num_epochs=10 --rnn_name --inputs_list --outputs_list --close_loop_for --cheat_dt
+  command: python modeling/rnn_tf/Train_nni.py --num_epochs=5 --rnn_name --inputs_list --outputs_list --close_loop_for --cheat_dt
   codeDir: .
   gpuNum: 0
