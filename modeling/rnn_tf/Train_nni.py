@@ -31,6 +31,11 @@ print(args.__dict__)
 # Warning! It may affect performance. I would discourage you to use it for long training tasks
 # @profile(precision=4)
 def train_network(params):
+
+    args.rnn_name = 'GRU-'+str(params['h1'])+'H1-'+str(params['h2'])+'H2'
+    # "warm_up_len":{"_type": "randint", "_value": [5, 20]},
+
+    # args.warm_up_len = int(params['warm_up_len'])
     print('')
     print('')
     # Start measuring time - to evaluate performance of the training function
@@ -105,12 +110,14 @@ def train_network(params):
         def on_epoch_end(self, epoch, logs=None):
             # if epoch==4:
             if epoch >= 0:
+
+                # nni.report_intermeidate_result(history.history['val_loss'])
                 plot_string = 'This is the network after {} training epoch(s), warm_up={}'.format(epoch +1, args.warm_up_len)
-                plot_results(net=net, args=args, dataset=test_set,
-                             comment=plot_string,
-                             save=True,
-                             closed_loop_enabled=True,
-                             exp_len=120//args.downsampling)
+                # plot_results(net=net, args=args, dataset=test_set,
+                #              comment=plot_string,
+                #              save=True,
+                #              closed_loop_enabled=True,
+                #              exp_len=120//args.downsampling)
 
     model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
         filepath=args.path_save + rnn_full_name + '.ckpt',
@@ -121,7 +128,7 @@ def train_network(params):
 
     reduce_lr = keras.callbacks.ReduceLROnPlateau(
         monitor='val_loss',
-        factor=params['reduce_lr_factor'],
+        factor=0.2,
         patience=1,
         min_lr=0.0001,
         verbose=2
@@ -146,7 +153,7 @@ def train_network(params):
     # Calculate the total time it took to run the function
     stop = timeit.default_timer()
     total_time = stop - start
-
+    nni.report_final_result(history.history['val_loss'][-1])
     # Return the total time it took to run the function
     return total_time
 
