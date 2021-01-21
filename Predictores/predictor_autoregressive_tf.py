@@ -41,21 +41,21 @@ Using predictor:
 
 from modeling.rnn_tf.utilis_rnn import *
 from src.utilis import pd_plotter_simple
+import numpy as np
 
 
-HORIZON = 3
-RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0'
+RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0' # DT = 0.1s for this net
 # RNN_PATH = './save_tf/long_3_55/'
 RNN_PATH = './save_tf/'
 # RNN_PATH = './controllers/nets/mpc_on_rnn_tf/'
 PREDICTION_FEATURES_NAMES = ['s.angle.cos', 's.angle.sin', 's.angleD', 's.position', 's.positionD']
 
-
 class predictor_autoregressive_tf:
-    def __init__(self,
-                 rnn_full_name=RNN_FULL_NAME,
-                 rnn_path=RNN_PATH, horizon=HORIZON,
-                 prediction_features_names=PREDICTION_FEATURES_NAMES):
+    def __init__(self, horizon, dt=None):
+
+        prediction_features_names = PREDICTION_FEATURES_NAMES
+        rnn_full_name = RNN_FULL_NAME
+        rnn_path = RNN_PATH
 
         # load rnn
         # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
@@ -64,6 +64,7 @@ class predictor_autoregressive_tf:
                                   return_sequence=False, stateful=True,
                                   warm_up_len=1, batchSize=1)
 
+        # TODO: Load it from SaveModel TF
         # SAVEPATH = rnn_path + rnn_full_name + '/1/'
         # net_predict = keras.models.load_model(SAVEPATH)
         # net_predict.set_weights(self.net.get_weights())
@@ -89,6 +90,7 @@ class predictor_autoregressive_tf:
 
         rnn_input_type = tf.TensorSpec((1, 1, len(self.rnn_inputs_names)), tf.float32)
 
+        # Retracing tensorflow functions
         try:
             self.evaluate_rnn = self.evaluate_rnn_f.get_concrete_function(rnn_input=rnn_input_type)
         except:
@@ -101,23 +103,17 @@ class predictor_autoregressive_tf:
         except:
             self.iterate_rnn = self.iterate_rnn_f
 
-        # TODO: Load it from SaveModel TF
-    # @tf.function
     def setup(self, initial_state: pd.DataFrame, prediction_denorm=False):
 
         self.rnn_internal_states = get_internal_states(self.net)
-        initial_state_normed = normalize_df(initial_state[self.rnn_inputs_names[1:]], self.normalization_info)
-        self.rnn_current_input_without_Q = initial_state_normed.to_numpy(dtype=np.float32).squeeze()
+        initial_state_normed = normalize_df(copy.copy(initial_state[self.rnn_inputs_names[1:]]), self.normalization_info)
+        self.rnn_current_input_without_Q = initial_state_normed.to_numpy(dtype=np.float32, copy=True).squeeze()
         if prediction_denorm:
             self.prediction_denorm=True
         else:
             self.prediction_denorm = False
 
-    # decorate with tf.function - this must work without retracing within one opt problem!!!
-    # @tf.function
     def predict(self, Q) -> pd.DataFrame:
-        # print('retracing') # if decorated with tf.function it executes only while retracing
-        # Check the input data
 
         # load internal RNN state
 
@@ -138,22 +134,28 @@ class predictor_autoregressive_tf:
         # compose the pandas output DF
         # Later: if necessary add sin, cos, derivatives
         # First version let us assume net returns all state except for angle
+        rnn_inout_np = rnn_inout.numpy()
+        rnn_inout = rnn_inout[:self.horizon+1, 0, :].numpy()
+        self.prediction_rnn.iloc[:, :] = rnn_inout
 
-        self.prediction_rnn.iloc[:, :] = rnn_inout[:self.horizon+1, 0, :].numpy()
         if self.prediction_denorm:
-            return denormalize_df(self.prediction_rnn[self.prediction_features_names], self.normalization_info)
+            predictions = copy.copy(denormalize_df(self.prediction_rnn[self.prediction_features_names], self.normalization_info))
+            predictions['s.angle'] = np.arctan2(predictions['s.angle.sin'], predictions['s.angle.cos'])
         else:
-            return self.prediction_rnn[self.prediction_features_names]
-# check
+            predictions = copy.copy(self.prediction_rnn[self.prediction_features_names])
+            predictions['s.angle'] = np.arctan2(predictions['s.angle.sin'], predictions['s.angle.cos'])/np.pi
+
+        return predictions
+
     # @tf.function
-    def update_internal_rnn_state(self, Q0):
+    def update_internal_state(self, Q0):
 
         # load internal RNN state
         load_internal_states(self.net, self.rnn_internal_states)
         self.rnn_current_input[0, 0, 0] = Q0
         self.rnn_current_input[0, 0, 1:] = self.rnn_current_input_without_Q
-        self.evaluate_rnn(self.rnn_current_input) # Using tf.function to compile net
-        # self.net(self.rnn_current_input) # Using net directly
+        # self.evaluate_rnn(self.rnn_current_input) # Using tf.function to compile net
+        self.net(self.rnn_current_input) # Using net directly
 
     @tf.function
     def iterate_rnn_f(self, Q, initial_input):
@@ -175,7 +177,7 @@ class predictor_autoregressive_tf:
             rnn_output = (self.evaluate_rnn(rnn_input))
             #tf.print(rnn_output)
 
-            rnn_inout = rnn_inout.write(i, rnn_output)
+            rnn_inout = rnn_inout.write(i+1, rnn_output)
             # tf.print(rnn_inout.read(i+1))
         # print(rnn_inout)
         rnn_inout = rnn_inout.stack()
@@ -186,48 +188,3 @@ class predictor_autoregressive_tf:
         print('retracing evaluate_rnn_f')
         rnn_output = self.net(rnn_input)
         return rnn_output
-
-
-
-
-
-if __name__ == '__main__':
-    import timeit
-    import glob
-    horizon = 20
-    autoregres_at = 60
-    downsampling = 1
-    start_at = 190
-    # data_path = './data/validate/'
-    # filename = 'free.csv'
-    datafile = glob.glob('./data/validate/' + '*.csv')[0]
-    feature_to_plot = 's.angle.cos'
-    # df = pd.read_csv(data_path+filename, comment='#')
-    df = pd.read_csv(datafile, comment='#')
-    df = df.iloc[::downsampling].reset_index()
-    df = df.iloc[start_at:].reset_index()
-    pd_plotter_simple(df, 'time', feature_to_plot, idx_range=[0, autoregres_at+horizon])
-    predictor = predictor_autoregressive_tf(horizon=horizon)
-    t0 = timeit.default_timer()
-    for row_number in range(autoregres_at):
-        initial_state = pd.DataFrame(df.iloc[row_number, :]).transpose()
-        Q = float(df.loc[df.index[row_number], 'Q'])
-        predictor.setup(initial_state)
-        predictor.update_internal_rnn_state(Q)
-    t1 = timeit.default_timer()
-
-    initial_state = pd.DataFrame(df.iloc[autoregres_at, 1:]).transpose()
-    predictor.setup(initial_state, prediction_denorm=True)
-    print('Predictor ready')
-    Q = df.loc[df.index[autoregres_at:autoregres_at+horizon], 'Q'].to_numpy(dtype=np.float32).squeeze()
-    t2 = timeit.default_timer()
-    for i in range(10):
-        prediction = predictor.predict(Q)
-    t3 = timeit.default_timer()
-    pd_plotter_simple(df, x_name='time', y_name=feature_to_plot, idx_range=[autoregres_at, autoregres_at+horizon])
-    pd_plotter_simple(prediction, y_name=feature_to_plot, idx_range=[0, horizon], color='red', dt=0.02)
-
-    update_rnn_t = (t1-t0)/autoregres_at
-    print('Update RNN {} us/eval'.format(update_rnn_t*1.0e6))
-    predictor_t = (t3-t2)/horizon/10.0
-    print('Predict {} us/eval'.format(predictor_t*1.0e6))

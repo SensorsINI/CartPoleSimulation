@@ -73,12 +73,12 @@ def args():
                         help="Give RNN during training a true (future) dt.")
 
     # Exp len>warm_up_len!f
-    parser.add_argument('--exp_len', default=30, type=int, help='Return after cosuming this number of points')
+    parser.add_argument('--exp_len', default=21, type=int, help='Return after cosuming this number of points')
     parser.add_argument('--warm_up_len', default=20, type=int, help='Number of timesteps for a warm-up sequence')
     parser.add_argument('--downsampling', default=1, type=int, help='Take every n-th point of callected dataset to make dt bigger')
 
     # Training parameters
-    parser.add_argument('--num_epochs', default=20, type=int, help='Number of epochs of training')
+    parser.add_argument('--num_epochs', default=15, type=int, help='Number of epochs of training')
     parser.add_argument('--batch_size', default=256, type=int, help='Size of a batch')
     parser.add_argument('--seed', default=1873, type=int, help='Set seed for reproducibility')
     parser.add_argument('--lr', default=1.0e-3, type=float, help='Learning rate')

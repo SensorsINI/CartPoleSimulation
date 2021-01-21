@@ -40,19 +40,14 @@ from copy import deepcopy
 
 import matplotlib.pyplot as plt
 
-
-HORIZON = 5
 RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0' # You need it to get normalization info
-RNN_PATH = './save_tf/long_3_55/'
+RNN_PATH = './save_tf/'
 # RNN_PATH = './controllers/nets/mpc_on_rnn_tf/'
-PREDICTION_FEATURES_NAMES = ['s.angle.cos', 's.angle.sin', 's.angleD', 's.position', 's.positionD']
-downsampling = 1
-DT = dt_main_simulation_globals*downsampling
+PREDICTION_FEATURES_NAMES = ['s.angle.cos', 's.angle.sin', 's.angle', 's.angleD', 's.position', 's.positionD']
 
 
 class predictor_ideal:
-    def __init__(self, horizon=HORIZON,
-                 prediction_features_names=PREDICTION_FEATURES_NAMES):
+    def __init__(self, horizon, dt):
 
         self.normalization_info = load_normalization_info(RNN_PATH, RNN_FULL_NAME)
 
@@ -79,26 +74,42 @@ class predictor_ideal:
 
         self.horizon = horizon
 
-        self.dt = DT
+        self.dt = dt
 
-        self.prediction_features_names = prediction_features_names
+        self.prediction_features_names = PREDICTION_FEATURES_NAMES
         self.prediction_denorm = False
 
-        self.prediction_list = pd.DataFrame(columns=PREDICTION_FEATURES_NAMES, index=range(horizon + 1))
+        # self.prediction_list = pd.DataFrame(columns=PREDICTION_FEATURES_NAMES, index=range(horizon + 1))
+        self.prediction_list = pd.DataFrame(data=np.zeros((self.horizon+1, len(PREDICTION_FEATURES_NAMES)+1)),
+                                            columns=['Q'] + PREDICTION_FEATURES_NAMES)
 
+        pass
 
     def setup(self, initial_state: pd.DataFrame, prediction_denorm=False):
 
-        self.s.angle = initial_state['s.angle'].to_numpy().squeeze()
-        self.s.angle_cos = np.cos(initial_state['s.angle']).to_numpy().squeeze()
-        self.s.angle_sin = np.sin(initial_state['s.angle']).to_numpy().squeeze()
+        if ('s.angle' in initial_state.columns):
+            self.s.angle = initial_state['s.angle'].to_numpy().squeeze()
+        elif ('s.angle.cos' in initial_state.columns) and ('s.angle.sin' in initial_state.columns):
+            self.s.angle = np.arctan2(initial_state['s.angle.sin'].to_numpy(), initial_state['s.angle.cos'].to_numpy())
+        else:
+            raise ValueError('Angle info missing')
+
+        if ('s.angle.cos' in initial_state.columns) and ('s.angle.sin' in initial_state.columns):
+            self.s.angle_cos = initial_state['s.angle.cos'].to_numpy().squeeze()
+            self.s.angle_sin = initial_state['s.angle.sin'].to_numpy().squeeze()
+        elif ('s.angle' in initial_state.columns):
+            self.s.angle_cos = np.cos(initial_state['s.angle']).to_numpy().squeeze()
+            self.s.angle_sin = np.sin(initial_state['s.angle']).to_numpy().squeeze()
+        else:
+            raise ValueError('Angle info missing')
+
         self.s.angleD = initial_state['s.angleD'].to_numpy().squeeze()
 
         self.s.position = initial_state['s.position'].to_numpy().squeeze()
         self.s.positionD = initial_state['s.positionD'].to_numpy().squeeze()
 
         if prediction_denorm:
-            self.prediction_denorm=True
+            self.prediction_denorm = True
         else:
             self.prediction_denorm = False
 
@@ -108,7 +119,7 @@ class predictor_ideal:
         if len(Q) != self.horizon:
             raise IndexError('Number of provided control inputs does not match the horizon')
         else:
-            Q_hat = np.asarray(Q).squeeze()
+            Q_hat = np.atleast_1d(np.asarray(Q).squeeze())
 
         # t0 = timeit.default_timer()
         yp_hat = np.zeros(self.horizon + 1, dtype=object)
@@ -129,79 +140,23 @@ class predictor_ideal:
         all_features = []
         for k in range(len(yp_hat)):
             s = yp_hat[k]
-            if k<horizon:
+            if k < self.horizon:
                 Q = Q_hat[k]
             else:
                 Q = Q_hat[k-1]
-            timestep_features = [Q, s.angle_cos, s.angle_sin, s.angleD, s.position, s.positionD]
+            timestep_features = [Q, s.angle_cos, s.angle_sin, s.angle, s.angleD, s.position, s.positionD]
             all_features.append(timestep_features)
         all_features = np.asarray(all_features)
-        self.prediction_list = pd.DataFrame(data=all_features, columns=['Q']+PREDICTION_FEATURES_NAMES)
+        self.prediction_list.values[:, :] = all_features
         # self.prediction_list = normalize_df(self.prediction_list, self.normalization_info)
 
+        predictions = copy.copy(self.prediction_list)
+
         if self.prediction_denorm:
-            pass
-            # return denormalize_df(self.prediction_list[PREDICTION_FEATURES_NAMES], self.normalization_info)
+            return predictions
         else:
-            return self.prediction_list[['Q']+PREDICTION_FEATURES_NAMES]
+            return normalize_df(predictions, self.normalization_info)
 
     # @tf.function
-    def update_internal_rnn_state(self, Q0):
+    def update_internal_state(self, Q0):
         pass
-
-
-
-if __name__ == '__main__':
-    import timeit
-    import glob
-    import matplotlib as mpl
-    # mpl.use('macosx')
-    horizon = 100//downsampling
-    autoregres_at = 0
-    start_at = 200
-    # data_path = './data/validate/'
-    # filename = 'free.csv'
-    datafile = glob.glob('./data/validate/' + '*.csv')[0]
-    feature_to_plot = 's.angle.cos'
-    # df = pd.read_csv(data_path+filename, comment='#')
-    df = pd.read_csv(datafile, comment='#')
-    df = df.iloc[::downsampling].reset_index(drop=True)
-    df = df.iloc[start_at:].reset_index(drop=True)
-    df = df.iloc[0:autoregres_at+horizon+1, df.columns.get_indexer(['time', 'Q', 's.angle', 's.angle.cos', 's.angle.sin', 's.angleD', 's.position', 's.positionD'])]
-    # pd_plotter_simple(df, 'time', feature_to_plot, idx_range=[0, autoregres_at+horizon+1])
-    predictor = predictor_ideal(horizon=horizon)
-    t0 = timeit.default_timer()
-    # for row_number in range(autoregres_at):
-    #     initial_state = pd.DataFrame(df.iloc[row_number, :]).transpose()
-    #     initial_state = initial_state[['s.angle', 's.angleD', 's.position', 's.positionD']]
-    #     Q = float(df.loc[df.index[row_number], 'Q'])
-    #     predictor.setup(initial_state)
-    #     predictor.update_internal_rnn_state(Q)
-    t1 = timeit.default_timer()
-
-    initial_state = pd.DataFrame(deepcopy(df.iloc[autoregres_at, :])).transpose()
-    print(initial_state)
-    print(df.iloc[autoregres_at, :])
-    predictor.setup(initial_state, prediction_denorm=False)
-    Q = df.loc[df.index[autoregres_at:autoregres_at+horizon], 'Q'].to_numpy(dtype=np.float32).squeeze()
-    print(Q)
-    t2 = timeit.default_timer()
-    # for i in range(10):
-    #     prediction = predictor.predict(Q)
-    prediction = predictor.predict(Q)
-    t3 = timeit.default_timer()
-    fig1 = pd_plotter_simple(df, y_name=feature_to_plot, idx_range=[autoregres_at, autoregres_at+horizon+1], dt=DT*downsampling) # , x_name='time'
-    fig2 = pd_plotter_simple(prediction, y_name=feature_to_plot, idx_range=[0, horizon+1], color='red', dt=DT*downsampling)
-
-    target = df[feature_to_plot].to_numpy().squeeze()[autoregres_at : autoregres_at+horizon+1]
-    prediction_single = prediction[feature_to_plot].to_numpy().squeeze()
-    fig3 = plt.figure()
-    plt.plot(target-prediction_single)
-    # plt.ion()
-    # plt.show(block=False)
-    # input("Press [enter] to continue.")
-    # plt.show()
-    # update_rnn_t = (t1-t0)/autoregres_at
-    # print('Update RNN {} us/eval'.format(update_rnn_t*1.0e6))
-    # predictor_t = (t3-t2)/horizon/10.0
-    # print('Predict {} us/eval'.format(predictor_t*1.0e6))

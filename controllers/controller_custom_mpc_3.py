@@ -8,23 +8,27 @@ from copy import deepcopy
 
 from modeling.rnn_tf.utilis_rnn import *
 from predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
+from predictores.predictor_ideal import predictor_ideal
+
+predictor = predictor_autoregressive_tf
+DT = 0.1
 
 # method = 'L-BFGS-B'
 method = 'SLSQP'
 maxiter = 80 # I think it was a key thing.
 maxiter = 800
-ftol = 1.0e-5
+ftol = 1.0e-8
 mpc_horizon = 5
 
 # weights
-wr = 0.0  # rterm
+wr = 1.0  # rterm
 l1 = 5.0  # -pot
-l2 = 0.0  # distance
+l2 = 50.0  # distance
 l3 = 0.0  # kin_pol
 m1 = 0.0  # kin_pol
 m2 = 20.0  # -pot
 m3 = 0.0  # kin_cart
-m4 = 0.0  # distance
+m4 = 20.0  # distance
 
 w_sum = wr + l1 + l2 + l3 + m1 + m2 + m3
 
@@ -41,7 +45,7 @@ class controller_custom_mpc_3:
     def __init__(self):
 
 
-        self.Predictor = predictor_autoregressive_tf(horizon=mpc_horizon)
+        self.Predictor = predictor(horizon=mpc_horizon, dt=DT)
 
         self.rnn_eval_time = []
         self.predictor_time = []
@@ -76,12 +80,15 @@ class controller_custom_mpc_3:
 
         self.Q_bounds = scipy.optimize.Bounds(lb=-1.0, ub=1.0)
 
-        self.initial_state = pd.DataFrame(columns=['s.angle.cos', 's.angle.sin', 's.angleD', 's.position', 's.positionD'])
+        self.initial_state = pd.DataFrame(0, index=np.arange(1), columns=['s.angle.cos', 's.angle.sin', 's.angleD', 's.position', 's.positionD'])
+
+        self.step_number = 0
+        self.warm_up_len = 20
 
     def cost_function(self, Q_hat):
         t0 = timeit.default_timer()
         # Predict future states given control_inputs Q_hat
-        self.predictions = self.Predictor.predict(Q_hat)
+        self.predictions = copy.copy(self.Predictor.predict(Q_hat))
 
         t1 = timeit.default_timer()
 
@@ -93,6 +100,8 @@ class controller_custom_mpc_3:
         self.predictions['lterm'] = - l1 * self.predictions['E_pot'] + \
                                         l2 * self.predictions['distance_difference'] + \
                                              l3 * self.predictions['E_kin_pol']
+
+        # print(self.predictions['distance_difference'])
 
         # Calculate sum of r-terms
         r_terms = wr * ((Q_hat[0] - self.Q_previous) ** 2)
@@ -133,34 +142,48 @@ class controller_custom_mpc_3:
         self.initial_state['s.positionD'] = [s.positionD]
 
         # Setup Predictor
-        self.Predictor.setup(initial_state=self.initial_state)
+        self.Predictor.setup(initial_state=self.initial_state, prediction_denorm=False)
 
         # FIXME: You are now norming target position manually...
         self.target_position_normed = self.target_position/50.0
 
-        # Solve Optimization problem
-        solution = scipy.optimize.minimize(self.cost_function, self.Q_hat0,
-                                           bounds=self.Q_bounds,
-                                           options={'maxiter': maxiter, 'ftol': ftol})
-        self.Q_hat = solution.x
+        if self.step_number > self.warm_up_len:
+            # Solve Optimization problem
+            # solution = scipy.optimize.basinhopping(self.cost_function, self.Q_hat0, niter=2,
+            #                                        minimizer_kwargs={ "method": method,"bounds":self.Q_bounds })
+            # self.Q_hat0 = solution.x
 
-        # Compose new initial guess
-        self.Q_hat0 = np.hstack((self.Q_hat[1:], self.Q_hat[-1]))
+            # self.Q_hat0 = np.clip(self.Q_hat0*(1+0.01*np.random.uniform(-1.0,1.0)), -1, 1)
+            solution = scipy.optimize.minimize(self.cost_function, self.Q_hat0,
+                                               bounds=self.Q_bounds, method=method,
+                                               options={'maxiter': maxiter, 'ftol': ftol})
+
+            self.Q_hat = solution.x
+
+            # Compose new initial guess
+            self.Q_previous = Q0 = self.Q_hat[0]
+            self.Q_hat0 = np.hstack((self.Q_hat[1:], self.Q_hat[-1]))
+            self.plot_prediction()
+        else:
+            self.Q_previous = Q0 = -np.sin(s.angle) * 0.2
+            self.step_number = self.step_number + 1
+
+
 
         # Make predictor ready for the next timestep
-        self.Q_previous = Q0 = self.Q_hat[0]
-        self.Predictor.update_internal_rnn_state(Q0)
+        self.Predictor.update_internal_state(Q0)
 
         # Conclude by collecting/printing some info about this iteration
         # self.nfun.append(solution.nfev)
         # print(solution)
-        # self.plot_prediction()
+
 
         return Q0
 
     def reset(self):
         self.Predictor.net.reset_states()
         self.Q_hat0 = np.zeros(self.mpc_horizon)
+        self.step_number = 0
 
     def controller_summary(self):
         print('******************************************************************')

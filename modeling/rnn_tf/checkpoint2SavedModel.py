@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 from modeling.rnn_tf.utilis_rnn import create_rnn_instance
 
-RNN_FULL_NAME = 'GRU-6IN-8H1-8H2-5OUT-0'
+RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0'
 RNN_PATH = './save_tf/'
 SAVEPATH = RNN_PATH + RNN_FULL_NAME + '/1/'
 

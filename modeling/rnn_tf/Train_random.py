@@ -69,26 +69,9 @@ def train_network():
     # Create Dataset
     ########################################################
 
-    train_dfs, _ = load_data(args, args.train_file_name, columns_list=columns_list)
 
-    if normalization_info is None:
-        normalization_info =  calculate_normalization_info(train_dfs, args.path_save, rnn_full_name)
-
-    test_dfs, time_axes_test = load_data(args, args.val_file_name, columns_list=columns_list)
-
-    # Take just one data set
-    train_dfs_norm = normalize_df(train_dfs, normalization_info)
-    test_dfs_norm = normalize_df(test_dfs, normalization_info)
-
-    train_set = Dataset(train_dfs_norm, args, inputs_list=inputs_list, outputs_list=outputs_list)
-    test_set = Dataset(test_dfs_norm, args, time_axes=time_axes_test, shuffle=False, inputs_list=inputs_list, outputs_list=outputs_list)
-
-    print('Number of samples in training set: {}'.format(train_set.number_of_samples))
-    print('The training sets sizes are: {}'.format(train_set.df_lengths))
-    print('Number of samples in validation set: {}'.format(test_set.number_of_samples))
-    print('')
-
-    del train_dfs, test_dfs, train_dfs_norm, test_dfs_norm
+    train_set = DatasetRandom(args, inputs_list=inputs_list, outputs_list=outputs_list, number_of_batches=1000)
+    test_set = DatasetRandom(args, inputs_list=inputs_list, outputs_list=outputs_list, number_of_batches=10)
 
     net.summary()
     net.compile(
@@ -101,7 +84,7 @@ def train_network():
             # if epoch==4:
             if epoch >= 0:
                 plot_string = 'This is the network after {} training epoch(s), warm_up={}'.format(epoch +1, args.warm_up_len)
-                plot_results(net=net, args=args, dataset=test_set,
+                plot_results(net=net, args=args,
                              comment=plot_string,
                              save=True,
                              closed_loop_enabled=True,
@@ -152,13 +135,15 @@ if __name__ == '__main__':
     print("Training script last modified: %s" % time.ctime(os.path.getmtime(file)))
     # warm_up_lens = [30, 5, 20, 5, 30, 5, 40, 5, 20, 5]
 
-    # warm_up_lens = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 55, 50, 45, 40, 45, 40, 35, 30, 25, 20, 15, 10, 5]
-    # for warm_up_len_idx in range(len(warm_up_lens)):
-    #     print('We are at iteration: {}'.format(warm_up_len_idx))
-    #     args.warm_up_len = warm_up_lens[warm_up_len_idx]
-    #     args.exp_len = warm_up_lens[warm_up_len_idx]+5
-    #     time_to_accomplish = train_network()
-    #     print('Total time of training the network: ' + str(time_to_accomplish))
+    warm_up_lens = [20, 50, 20, 30, 20]
 
-    time_to_accomplish = train_network()
-    print('Total time of training the network: ' + str(time_to_accomplish))
+    # warm_up_lens = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 55, 50, 45, 40, 45, 40, 35, 30, 25, 20, 15, 10, 5]
+    for warm_up_len_idx in range(len(warm_up_lens)):
+        print('We are at iteration: {}'.format(warm_up_len_idx))
+        args.warm_up_len = warm_up_lens[warm_up_len_idx]
+        args.exp_len = warm_up_lens[warm_up_len_idx]+5
+        time_to_accomplish = train_network()
+        print('Total time of training the network: ' + str(time_to_accomplish))
+
+    # time_to_accomplish = train_network()
+    # print('Total time of training the network: ' + str(time_to_accomplish))

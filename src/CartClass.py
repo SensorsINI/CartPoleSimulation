@@ -344,6 +344,8 @@ class Cart:
 
         if self.mode == 0:  # in this case slider corresponds already to the power of the motor
             self.Q = self.slider_value
+            self.controller_interval = 0.0
+            self.save_now = True
 
         else:  # in this case slider gives a target position, lqr regulator
 
