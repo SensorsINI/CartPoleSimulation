@@ -63,7 +63,7 @@ def test_network():
                          inputs_list=inputs_list, outputs_list=outputs_list, save=True,
                          closed_loop_enabled=True, close_loop_idx=close_loop_idx, start_at=start_at)
     else:
-        close_loop_idx = 10
+        close_loop_idx = 20
         plot_results(net=net, args=args, dataset=None, testset_filepath=testset_filepath, exp_len=exp_len,
                      comment=title, path_save=load_rnn_path,
                      inputs_list=inputs_list, outputs_list=outputs_list, save=True,

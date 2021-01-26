@@ -5,7 +5,6 @@ import numpy as np
 
 def plot_results_specific(targets_pd, rnn_outputs, features_pd_denorm, time_axis, comment, closed_loop_enabled, close_loop_idx):
     start_idx = 10
-    close_loop_idx = 10
     end_idx = -1
     if time_axis == []:
         time_axis = np.arange(0, targets_pd.shape[0])
