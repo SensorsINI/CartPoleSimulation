@@ -308,8 +308,8 @@ class myNN(keras.Sequential):
                 stateful=stateful
             ))
 
-        self.add(keras.layers.Dense(units=len(outputs_list), activation='tanh'))
-        # self.add(keras.layers.Dense(units=len(outputs_list)))
+        # self.add(keras.layers.Dense(units=len(outputs_list), activation='tanh'))
+        self.add(keras.layers.Dense(units=len(outputs_list)))
 
         print('Constructed a neural network of type {}, with {} hidden layers with sizes {} respectively.'
               .format(self.rnn_type, len(self.h_size), ', '.join(map(str, self.h_size))))
