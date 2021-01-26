@@ -11,9 +11,9 @@ from predictores.predictor_ideal import predictor_ideal
 
 DT = 0.1 # This is DT fed into predictor at initialization - meaning may differ between predictors
 downsampling = 1
-horizon = 5 // downsampling
-start_at = 20
-autoregres_at_after_start = 20
+horizon = 50 // downsampling
+start_at = 20+320
+autoregres_at_after_start = 50
 
 tested_predictor_1 = predictor_autoregressive_tf(horizon=horizon, dt=DT)
 tested_predictor_2 = predictor_ideal(horizon=horizon, dt=DT)

@@ -23,8 +23,8 @@ args = my_args()
 # Print the arguments
 print(args.__dict__)
 
-exp_len = 310//args.downsampling
-start_at = 190
+exp_len = 230//args.downsampling
+start_at = 200
 
 
 MULTIPLE_PICTURES = False
@@ -63,7 +63,7 @@ def test_network():
                          inputs_list=inputs_list, outputs_list=outputs_list, save=True,
                          closed_loop_enabled=True, close_loop_idx=close_loop_idx, start_at=start_at)
     else:
-        close_loop_idx = 60
+        close_loop_idx = 10
         plot_results(net=net, args=args, dataset=None, testset_filepath=testset_filepath, exp_len=exp_len,
                      comment=title, path_save=load_rnn_path,
                      inputs_list=inputs_list, outputs_list=outputs_list, save=True,

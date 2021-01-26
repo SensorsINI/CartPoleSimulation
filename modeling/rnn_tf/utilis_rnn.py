@@ -614,8 +614,8 @@ class Dataset(keras.utils.Sequence):
 
             features.drop(features.tail(1).index, inplace=True)  # Drop last row
             targets.drop(targets.head(1).index, inplace=True)
-            features.reset_index(inplace=True)  # Reset index
-            targets.reset_index(inplace=True)
+            features = features.reset_index()  # Reset index
+            targets = targets.reset_index()
 
             features = features[inputs_list]
             targets = targets[outputs_list]

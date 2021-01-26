@@ -73,8 +73,6 @@ class predictor_autoregressive_tf:
 
         self.rnn_internal_states = get_internal_states(self.net)
 
-        print(self.net.summary())
-
         self.horizon = horizon
         # self.rnn_inout = np.zeros([horizon+1, 1, 1, len(self.rnn_inputs_names)], dtype=np.float32)
 
@@ -157,7 +155,7 @@ class predictor_autoregressive_tf:
         # self.evaluate_rnn(self.rnn_current_input) # Using tf.function to compile net
         self.net(self.rnn_current_input) # Using net directly
 
-    @tf.function
+    # @tf.function
     def iterate_rnn_f(self, Q, initial_input):
         print('retracing iterate_rnn_f')
         # Iterate over RNN -
@@ -183,7 +181,7 @@ class predictor_autoregressive_tf:
         rnn_inout = rnn_inout.stack()
         return rnn_inout
 
-    @tf.function
+    # @tf.function
     def evaluate_rnn_f(self, rnn_input):
         print('retracing evaluate_rnn_f')
         rnn_output = self.net(rnn_input)

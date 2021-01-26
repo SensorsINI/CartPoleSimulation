@@ -4,7 +4,9 @@ import numpy as np
 
 
 def plot_results_specific(targets_pd, rnn_outputs, features_pd_denorm, time_axis, comment, closed_loop_enabled, close_loop_idx):
-
+    start_idx = 10
+    close_loop_idx = 10
+    end_idx = -1
     if time_axis == []:
         time_axis = np.arange(0, targets_pd.shape[0])
         time_axis_string = 'Sample number'
@@ -26,12 +28,11 @@ def plot_results_specific(targets_pd, rnn_outputs, features_pd_denorm, time_axis
         # Create a figure instance
         fig, axs = plt.subplots(2, 1, figsize=(18, 10), sharex=True)
         plt.subplots_adjust(hspace=0.4)
-        start_idx = 0
         axs[0].set_title(comment, fontsize=20)
 
         axs[0].set_ylabel("Cos (-)", fontsize=18)
-        axs[0].plot(time_axis, cos_target, 'k:', markersize=12, label='Ground Truth')
-        axs[0].plot(time_axis, cos_output, 'b', markersize=12, label='Predicted Cos')
+        axs[0].plot(time_axis[start_idx:end_idx], cos_target[start_idx:end_idx], 'k:', markersize=12, label='Ground Truth')
+        axs[0].plot(time_axis[start_idx:end_idx], cos_output[start_idx:end_idx], 'b', markersize=12, label='Predicted Cos')
 
         axs[0].plot(time_axis[start_idx], cos_target[start_idx], 'g.', markersize=16, label='Start')
         axs[0].plot(time_axis[start_idx], cos_output[start_idx], 'g.', markersize=16)
@@ -44,8 +45,8 @@ def plot_results_specific(targets_pd, rnn_outputs, features_pd_denorm, time_axis
         axs[0].legend()
 
         axs[1].set_ylabel("Sin (-)", fontsize=18)
-        axs[1].plot(time_axis, sin_target, 'k:', markersize=12, label='Ground Truth')
-        axs[1].plot(time_axis, sin_output, 'b', markersize=12,
+        axs[1].plot(time_axis[start_idx:end_idx], sin_target[start_idx:end_idx], 'k:', markersize=12, label='Ground Truth')
+        axs[1].plot(time_axis[start_idx:end_idx], sin_output[start_idx:end_idx], 'b', markersize=12,
                     label='Predicted angle')
 
         axs[1].plot(time_axis[start_idx], sin_target[start_idx], 'g.', markersize=16,
@@ -85,12 +86,11 @@ def plot_results_specific(targets_pd, rnn_outputs, features_pd_denorm, time_axis
         # Create a figure instance
         fig, axs = plt.subplots(number_of_plots, 1, figsize=(18, 10), sharex=True)
         plt.subplots_adjust(hspace=0.4)
-        start_idx = 0
         axs[0].set_title(comment, fontsize=20)
 
         axs[0].set_ylabel("Position (m)", fontsize=18)
-        axs[0].plot(time_axis, position_target, 'k:', markersize=12, label='Ground Truth')
-        axs[0].plot(time_axis, position_output, 'b', markersize=12, label='Predicted position')
+        axs[0].plot(time_axis[start_idx:end_idx], position_target[start_idx:end_idx], 'k:', markersize=12, label='Ground Truth')
+        axs[0].plot(time_axis[start_idx:end_idx], position_output[start_idx:end_idx], 'b', markersize=12, label='Predicted position')
 
         axs[0].plot(time_axis[start_idx], position_target[start_idx], 'g.', markersize=16, label='Start')
         axs[0].plot(time_axis[start_idx], position_output[start_idx], 'g.', markersize=16)
@@ -104,8 +104,8 @@ def plot_results_specific(targets_pd, rnn_outputs, features_pd_denorm, time_axis
 
         if number_of_plots>1:
             axs[1].set_ylabel("Angle (deg)", fontsize=18)
-            axs[1].plot(time_axis, angle_target, 'k:', markersize=12, label='Ground Truth')
-            axs[1].plot(time_axis, angle_output, 'b', markersize=12,
+            axs[1].plot(time_axis[start_idx:end_idx], angle_target[start_idx:end_idx], 'k:', markersize=12, label='Ground Truth')
+            axs[1].plot(time_axis[start_idx:end_idx], angle_output[start_idx:end_idx], 'b', markersize=12,
                         label='Predicted angle')
 
             axs[1].plot(time_axis[start_idx], angle_target[start_idx], 'g.', markersize=16,
@@ -123,7 +123,7 @@ def plot_results_specific(targets_pd, rnn_outputs, features_pd_denorm, time_axis
         if number_of_plots>2:
             Q = features_pd_denorm['Q'].to_numpy()
             axs[2].set_ylabel("Motor (-)", fontsize=18)
-            axs[2].plot(time_axis, Q, 'r', markersize=12, label='Ground Truth')
+            axs[2].plot(time_axis[start_idx:end_idx], Q[start_idx:end_idx], 'r', markersize=12, label='Ground Truth')
 
             axs[2].plot(time_axis[start_idx], Q[start_idx], 'g.', markersize=16,
                         label='Start')
@@ -155,12 +155,11 @@ def plot_results_specific(targets_pd, rnn_outputs, features_pd_denorm, time_axis
         # Create a figure instance
         fig, axs = plt.subplots(number_of_plots, 1, figsize=(18, 10), sharex=True)
         plt.subplots_adjust(hspace=0.4)
-        start_idx = 0
         axs[0].set_title(comment, fontsize=20)
 
         axs[0].set_ylabel("PositionD (m/s)", fontsize=18)
-        axs[0].plot(time_axis, positionD_target, 'k:', markersize=12, label='Ground Truth')
-        axs[0].plot(time_axis, positionD_output, 'b', markersize=12, label='Predicted position')
+        axs[0].plot(time_axis[start_idx:end_idx], positionD_target[start_idx:end_idx], 'k:', markersize=12, label='Ground Truth')
+        axs[0].plot(time_axis[start_idx:end_idx], positionD_output[start_idx:end_idx], 'b', markersize=12, label='Predicted position')
 
         axs[0].plot(time_axis[start_idx], positionD_target[start_idx], 'g.', markersize=16, label='Start')
         axs[0].plot(time_axis[start_idx], positionD_output[start_idx], 'g.', markersize=16)
@@ -174,8 +173,8 @@ def plot_results_specific(targets_pd, rnn_outputs, features_pd_denorm, time_axis
 
 
         axs[1].set_ylabel("AngleD (deg/s)", fontsize=18)
-        axs[1].plot(time_axis, angleD_target, 'k:', markersize=12, label='Ground Truth')
-        axs[1].plot(time_axis, angleD_output, 'b', markersize=12,
+        axs[1].plot(time_axis[start_idx:end_idx], angleD_target[start_idx:end_idx], 'k:', markersize=12, label='Ground Truth')
+        axs[1].plot(time_axis[start_idx:end_idx], angleD_output[start_idx:end_idx], 'b', markersize=12,
                     label='Predicted angle')
 
         axs[1].plot(time_axis[start_idx], angleD_target[start_idx], 'g.', markersize=16,
@@ -193,7 +192,7 @@ def plot_results_specific(targets_pd, rnn_outputs, features_pd_denorm, time_axis
         if number_of_plots>2:
             Q = features_pd_denorm['Q'].to_numpy()
             axs[2].set_ylabel("Motor (-)", fontsize=18)
-            axs[2].plot(time_axis, Q, 'r', markersize=12, label='Ground Truth')
+            axs[2].plot(time_axis[start_idx:end_idx], Q[start_idx:end_idx], 'r', markersize=12, label='Ground Truth')
 
             axs[2].plot(time_axis[start_idx], Q[start_idx], 'g.', markersize=16,
                         label='Start')

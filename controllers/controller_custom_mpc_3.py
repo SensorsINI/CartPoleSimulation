@@ -10,8 +10,8 @@ from modeling.rnn_tf.utilis_rnn import *
 from predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
 from predictores.predictor_ideal import predictor_ideal
 
-predictor = predictor_autoregressive_tf
-DT = 0.1
+predictor = predictor_ideal
+DT = 0.2
 
 # method = 'L-BFGS-B'
 method = 'SLSQP'
@@ -163,7 +163,7 @@ class controller_custom_mpc_3:
             # Compose new initial guess
             self.Q_previous = Q0 = self.Q_hat[0]
             self.Q_hat0 = np.hstack((self.Q_hat[1:], self.Q_hat[-1]))
-            self.plot_prediction()
+            # self.plot_prediction()
         else:
             self.Q_previous = Q0 = -np.sin(s.angle) * 0.2
             self.step_number = self.step_number + 1
