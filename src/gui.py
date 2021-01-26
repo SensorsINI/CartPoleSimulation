@@ -524,6 +524,9 @@ class MainWindow(QMainWindow):
 
             replay_looper.sleep_leftover_time()
 
+        dict_history = history_pd.to_dict(orient='list')
+        self.MyCart.dict_history = dict_history
+        self.MyCart.summary_plots()
         self.reset_variables(0)
 
     # The acctions which has to be taken to properly terminate the application
