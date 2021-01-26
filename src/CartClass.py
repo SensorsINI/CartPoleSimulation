@@ -98,6 +98,7 @@ class Cart:
 
         self.slider_value = 0.0
         self.dt = dt
+        self.dt_save = 0.0
         self.time = 0.0
         self.rounding_decimals = 5
         self.dict_history = {}
@@ -156,7 +157,7 @@ class Cart:
             [os.path.basename(item)[len('controller_'):-len('.py')].replace('_', '-') for item in controller_files]
         ))
 
-        self.controller_interval = np.inf
+        self.controller_interval = 0.0
         self.controller_interval_threshold = controller_interval_threshold_globals
 
         # Variables for pre-generated random trace
@@ -346,6 +347,7 @@ class Cart:
 
             if self.controller_interval >= self.controller_interval_threshold:
                 self.Q = self.slider_value
+                self.dt_save = self.controller_interval
                 self.controller_interval = 0.0
                 self.save_now = True
 
@@ -353,6 +355,7 @@ class Cart:
 
             if self.controller_interval >= self.controller_interval_threshold:
                 self.Q = self.controller.step(self.s, self.target_position)
+                self.dt_save = self.controller_interval
                 self.controller_interval = 0.0
                 self.save_now = True
 
@@ -439,7 +442,7 @@ class Cart:
             # Saving simulation data
             # TODO: Move dict to pandas
             self.dict_history['time'].append(around(self.time, self.rounding_decimals))
-            self.dict_history['dt'].append(around(self.dt, self.rounding_decimals))
+            self.dict_history['dt'].append(around(self.dt_save, self.rounding_decimals))
             self.dict_history['s.position'].append(around(self.s.position, self.rounding_decimals))
             self.dict_history['s.positionD'].append(around(self.s.positionD, self.rounding_decimals))
             self.dict_history['s.positionDD'].append(around(self.s.positionDD, self.rounding_decimals))
@@ -580,7 +583,7 @@ class Cart:
     # This method resets the dictionary keeping the history of simulation
     def reset_dict_history(self):
         self.dict_history = {'time': [around(self.time, self.rounding_decimals)],
-                             'dt': [around(self.dt, self.rounding_decimals)],
+                             'dt': [around(self.dt_save, self.rounding_decimals)],
                              's.position': [around(self.s.position, self.rounding_decimals)],
                              's.positionD': [around(self.s.positionD, self.rounding_decimals)],
                              's.positionDD': [around(self.s.positionDD, self.rounding_decimals)],

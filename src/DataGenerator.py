@@ -5,7 +5,7 @@ import os
 # User defined simulation settings - check the effect first in GUI before you launch big data generation
 csv = 'test_K'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
 number_of_experiments = 1  # How many experiments will be generated
-length_of_experiment = 400.0  # Length of each experiment in s
+length_of_experiment = 30.0  # Length of each experiment in s
 dt_main_simulation = dt_main_simulation_globals  # simulation timestep
 track_relative_complexity = 0.0  # randomly placed target points/s
 controller = 'manual-stabilization'  # Controller which should be used in generated experiment
@@ -38,7 +38,6 @@ save_data_online = True  # It was intended to save memory usage, but it doesn't 
 #                                                 for angleD in initial_angleD)
 
 states = [[0.0, 0.0, 0.01, 0.1]]
-print('do-mpc-3')
 
 for i in range(number_of_experiments):
 # for i in range(len(states)):
