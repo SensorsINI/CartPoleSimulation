@@ -52,18 +52,7 @@ class predictor_ideal:
         self.normalization_info = load_normalization_info(RNN_PATH, RNN_FULL_NAME)
 
         # Physical parameters of the cart
-        self.p = SimpleNamespace()  # p like parameters
-        self.p.m = m_globals  # mass of pend, kg
-        self.p.M = M_globals  # mass of cart, kg
-        self.p.L = L_globals  # half length of pend, m
-        self.p.u_max = u_max_globals  # max cart force, N
-        self.p.M_fric = M_fric_globals  # cart friction, N/m/s
-        self.p.J_fric = J_fric_globals  # friction coefficient on angular velocity, Nm/rad/s
-        self.p.v_max = v_max_globals  # max DC motor speed, m/s, in absence of friction, used for motor back EMF model
-        self.p.controlDisturbance = controlDisturbance_globals  # disturbance, as factor of u_max
-        self.p.sensorNoise = sensorNoise_globals  # noise, as factor of max values
-        self.p.g = g_globals  # gravity, m/s^2
-        self.p.k = k_globals  # Dimensionless factor, for moment of inertia of the pend (with L being half if the length)
+        self.p = p_globals
 
         # State of the cart
         self.s = SimpleNamespace()  # s like state

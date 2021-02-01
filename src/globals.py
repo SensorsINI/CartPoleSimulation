@@ -30,17 +30,17 @@ mode_globals = 5  # Defines which controller is loaded
 controller_interval_threshold_globals = 0.1
 """Sets the controller of the CartPole
 
-Possible choices
-0: manual stabilization
-1: linear-quadratic regulator (LQR)
-2: MPC based on Ground Truth CartPole ODE (continuous model) implemented with do-mpc library
-3: MPC based on Ground Truth CartPole ODE wrapped (integrated) to predict the next state of the system (discrete model)
+Possible choices - out of data
+manual stabilization
+linear-quadratic regulator (LQR)
+MPC based on Ground Truth CartPole ODE (continuous model) implemented with do-mpc library
+MPC based on Ground Truth CartPole ODE wrapped (integrated) to predict the next state of the system (discrete model)
     implemented in do-mpc library
-4: RNN trained to mimic the MPC controller, RNN implemented in Pytorch
-5: like as 4, just different RNN implemented in TensorFlow
-6: like 3, just CartPole dynamics model provided not with true equation,
+    RNN trained to mimic the MPC controller, RNN implemented in Pytorch
+like as 4, just different RNN implemented in TensorFlow
+like 3, just CartPole dynamics model provided not with true equation,
         but rather with RNN (Pytorch) trained to predict future state of the CartPole
-7: like  6, just different RNN implemented in TensorFlow
+like  6, just different RNN implemented in TensorFlow
 
 """
 PATH_TO_CONTROLLERS = './controllers/'
@@ -67,19 +67,51 @@ dt_mpc_simulation_globals = 0.2  # Time step used by MPC controller
 mpc_horizon_globals = 10 # Number of steps into future MPC controller simulates at each evaluation
 
 # Parameters of the CartPole
-m_globals = 2.0  # mass of pend, kg
-M_globals = 1.0  # mass of cart, kg
-L_globals = 1.0  # HALF (!!!) length of pend, m
-u_max_globals = 200.0  # max cart force, N
-M_fric_globals = 1.0  # cart friction, N/m/s
-J_fric_globals = 2.0  # friction coefficient on angular velocity, Nm/rad/s
-v_max_globals = 10.0  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model
-controlDisturbance_globals = 0.0  # disturbance, as factor of u_max
-sensorNoise_globals = 0.0  # noise, as factor of max values, TODO:probably not implemented yet
+p_globals = SimpleNamespace()  # p like parameters
+p_globals.m = 2.0  # mass of pend, kg
+p_globals.M = 1.0  # mass of cart, kg
+p_globals.L = 1.0  # HALF (!!!) length of pend, m
+p_globals.u_max = 200.0  # max cart force, N
+p_globals.M_fric = 1.0  # cart friction, N/m/s
+p_globals.J_fric = 2.0  # friction coefficient on angular velocity, Nm/rad/s
+p_globals.v_max = 10.0  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model
+p_globals.controlDisturbance = 0.0  # disturbance, as factor of u_maxTODO:probably not implemented yet
+p_globals.sensorNoise = 0.0  # noise, as factor of max values,
 
-g_globals = 9.81  # absolute value of gravity acceleration, m/s^2
-k_globals = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
+p_globals.g = 9.81  # absolute value of gravity acceleration, m/s^2
+p_globals.k = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
 # (I = k*m*L^2) (with L being half if the length)
+
+# Container for Cartpole state filled with 0.0
+s0 = SimpleNamespace()  # s like state
+s0.position = 0.0
+s0.positionD = 0.0
+s0.positionDD = 0.0
+s0.angle = 0.0
+s0.angleD = 0.0
+s0.angleDD = 0.0
+
+
+# Jacobian-UP (check it)
+Jacobian_UP_f= lambda p: np.array([
+                        [0.0, 1.0, 0.0, 0.0],
+                        [0.0, (-(1 + p.k) * p.M_fric) / (-p.m + (1 + p.k) * (p.m + p.M)), (p.g * p.m) / (-p.m + (1 + p.k) * (p.m + p.M)),
+                         (-p.J_fric) / (p.L * (-p.m + (1 + p.k) * (p.m + p.M)))],
+                        [0.0, 0.0, 0.0, 1.0],
+                        [0.0, (-p.M_fric) / (p.L * (-p.m + (1 + p.k) * (p.m + p.M))), (p.g * (p.M + p.m)) / (p.L * (-p.m + (1 + p.k) * (p.m + p.M))),
+                         -p.m * (p.M + p.m) * p.J_fric / (p.L * p.L * (-p.m + (1 + p.k) * (p.m + p.M)))],
+                    ])
+
+# Array gathering control around UP equilibrium
+B_f = lambda p: p.u_max * np.array([
+                    [0.0],
+                    [(1 + p.k) / (-p.m + (1 + p.k) * (p.m + p.M))],
+                    [0.0],
+                    [1.0 / (p.L * (-p.m + (1 + p.k) * (p.m + p.M)))],
+                ])
+
+
+
 
 # Variables for random trace generation
 # Complexity of the random trace, number of turning points used for interpolation

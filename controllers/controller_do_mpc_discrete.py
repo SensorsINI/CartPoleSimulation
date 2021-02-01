@@ -22,18 +22,7 @@ class controller_do_mpc_discrete:
         """
 
         # Physical parameters of the cart
-        p = SimpleNamespace()  # p like parameters
-        p.m = m_globals  # mass of pend, kg
-        p.M = M_globals  # mass of cart, kg
-        p.L = L_globals  # half length of pend, m
-        p.u_max = u_max_globals  # max cart force, N
-        p.M_fric = M_fric_globals  # cart friction, N/m/s
-        p.J_fric = J_fric_globals  # friction coefficient on angular velocity, Nm/rad/s
-        p.v_max = v_max_globals  # max DC motor speed, m/s, in absence of friction, used for motor back EMF model
-        p.controlDisturbance = controlDisturbance_globals  # disturbance, as factor of u_max
-        p.sensorNoise = sensorNoise_globals  # noise, as factor of max values
-        p.g = g_globals  # gravity, m/s^2
-        p.k = k_globals  # Dimensionless factor, for moment of inertia of the pend (with L being half if the length)
+        p = p_globals
 
         # State of the cart
         s = SimpleNamespace()  # s like state
@@ -92,13 +81,48 @@ class controller_do_mpc_discrete:
         self.mpc.set_param(**setup_mpc)
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'ma27'})
 
+        # Works with horizon 10
         lterm = - self.model.aux['E_pot'] +\
                 20 * distance_difference +\
                 5 * self.model.aux['E_kin_pol']
         mterm = (5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart'])
+        self.mpc.set_rterm(Q=0.1)
+
+        # Horizon 5
+        # weights
+        # wr = 0.1  # rterm
+        # l1 = 0.0  # -pot
+        # l2 = 50.0  # distance
+        # l3 = 0.0  # kin_pol
+        # m1 = 0.0  # kin_pol
+        # m2 = 50.0  # -pot
+        # m3 = 0.0  # kin_cart
+        # m4 = 0.0# 20.0*10.0  # distance
+        #
+        # w_sum = wr + l1 + l2 + l3 + m1 + m2 + m3
+        #
+        # wr /= w_sum
+        # l1 /= w_sum
+        # l2 /= w_sum
+        # l3 /= w_sum
+        # m1 /= w_sum
+        # m2 /= w_sum
+        # m3 /= w_sum
+        # m4 /= w_sum
+
+        # print(distance_difference)
+        # lterm = -l1 * self.model.aux['E_pot'] +\
+        #         l2 * distance_difference +\
+        #         l3 * self.model.aux['E_kin_pol']
+        # mterm = m1 * self.model.aux['E_kin_pol']\
+        #         - m2 * self.model.aux['E_pot']\
+        #         + m3 * self.model.aux['E_kin_cart']\
+        #         + m4 * distance_difference
+        #
+        # self.mpc.set_objective(mterm=mterm, lterm=lterm)
+        # self.mpc.set_rterm(Q=wr)
 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
-        self.mpc.set_rterm(Q=0.1)
 
         self.mpc.bounds['lower', '_u', 'Q'] = -1.0
         self.mpc.bounds['upper', '_u', 'Q'] = 1.0
