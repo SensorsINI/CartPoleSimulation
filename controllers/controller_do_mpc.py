@@ -5,11 +5,6 @@ import do_mpc
 from src.globals import *
 from types import SimpleNamespace
 
-from copy import deepcopy
-
-import time
-
-
 
 class controller_do_mpc:
     def __init__(self,
@@ -24,18 +19,7 @@ class controller_do_mpc:
         """
 
         # Physical parameters of the cart
-        p = SimpleNamespace()  # p like parameters
-        p.m = m_globals  # mass of pend, kg
-        p.M = M_globals  # mass of cart, kg
-        p.L = L_globals  # half length of pend, m
-        p.u_max = u_max_globals  # max cart force, N
-        p.M_fric = M_fric_globals  # cart friction, N/m/s
-        p.J_fric = J_fric_globals  # friction coefficient on angular velocity, Nm/rad/s
-        p.v_max = v_max_globals  # max DC motor speed, m/s, in absence of friction, used for motor back EMF model
-        p.controlDisturbance = controlDisturbance_globals  # disturbance, as factor of u_max
-        p.sensorNoise = sensorNoise_globals  # noise, as factor of max values
-        p.g = g_globals  # gravity, m/s^2
-        p.k = k_globals  # Dimensionless factor, for moment of inertia of the pend (with L being half if the length)
+        p = p_globals
 
         # State of the cart
         s = SimpleNamespace()  # s like state

@@ -54,4 +54,4 @@ Both Train.py and Test.py generate data from data generated on the fly from rand
 
 
 ## Next step TODO:
-Summary window (summary function already ready)
+Better description of recorded files (controller, git revision, )

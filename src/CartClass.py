@@ -57,15 +57,8 @@ class Cart:
 
                  # Variables used for physical simulation
                  dt=dt_main_simulation_globals,
-                 m=m_globals,  # mass of pend, kg
-                 M=M_globals,  # mass of cart, kg
-                 L=L_globals,  # half length of pend, m
-                 u_max=u_max_globals,  # max cart force, N
-                 M_fric=M_fric_globals,  # 1.0, # cart friction, N/m/s
-                 J_fric=J_fric_globals,  # 10.0, # friction coefficient on angular velocity, Nm/rad/s
-                 v_max=v_max_globals,  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model
-                 controlDisturbance=controlDisturbance_globals,  # 0.01, # disturbance, as factor of u_max
-                 sensorNoise=sensorNoise_globals,  # 0.01, # noise, as factor of max values
+
+                 p = p_globals, # parameters of the CartPole
 
                  # Variables for random trace generation
                  track_relative_complexity=track_relative_complexity_globals,  # Complexity of the random trace, randomly placed target points/s
@@ -80,13 +73,7 @@ class Cart:
                  ):
 
         # State of the cart
-        self.s = SimpleNamespace()  # s like state
-        self.s.position = 0.0
-        self.s.positionD = 0.0
-        self.s.positionDD = 0.0
-        self.s.angle = 0.0
-        self.s.angleD = 0.0
-        self.s.angleDD = 0.0
+        self.s = s0
 
         self.u = 0.0
         self.Q = 0.0
@@ -110,47 +97,20 @@ class Cart:
         self.stop_at_90 = False
 
         # Physical parameters of the cart
-        self.p = SimpleNamespace()  # p like parameters
-        self.p.m = m  # mass of pend, kg
-        self.p.M = M  # mass of cart, kg
-        self.p.M_fric = M_fric  # cart friction, N/m/s
-        self.p.J_fric = J_fric  # friction coefficient on angular velocity, Nm/rad/s
-        g = g_globals
-        self.p.g = g_globals
-        self.p.L = L  # half length of pend, m
-        k = k_globals
-        self.p.k = k_globals
-        self.p.u_max = u_max  # max cart force, N
-        self.p.v_max = v_max  # max DC motor speed, m/s, in absence of friction, used for motor back EMF model
-        self.p.controlDisturbance = controlDisturbance  # disturbance, as factor of u_max
-        self.p.sensorNoise = sensorNoise  # noise, as factor of max values
-        self.p.force_damping = 1.0
+        self.p = p_globals
 
         # Jacobian of the system linearized around upper equilibrium position
         # x' = f(x)
         # x = [x, v, theta, omega]
         # TODO if parameters change in runtime this Jacobian wont be updated
-        self.Jacobian_UP = array([
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, (-(1 + k) * M_fric) / (-m + (1 + k) * (m + M)), (g * m) / (-m + (1 + k) * (m + M)),
-             (-J_fric) / (L * (-m + (1 + k) * (m + M)))],
-            [0.0, 0.0, 0.0, 1.0],
-            [0.0, (-M_fric) / (L * (-m + (1 + k) * (m + M))), (g * (M + m)) / (L * (-m + (1 + k) * (m + M))),
-             -m * (M + m) * J_fric / (L * L * (-m + (1 + k) * (m + M)))],
-        ])
+        self.Jacobian_UP = Jacobian_UP_f(self.p)
 
         # Array gathering control around equilibrium
-        self.B = u_max * array([
-            [0.0],
-            [(1 + k) / (-m + (1 + k) * (m + M))],
-            [0.0],
-            [1.0 / (L * (-m + (1 + k) * (m + M)))],
-        ])
+        self.B = B_f(self.p)
 
 
         self.controller = None
         self.controller_name = ''
-
         controller_files = glob.glob(PATH_TO_CONTROLLERS + 'controller_' + '*.py')
         self.controller_names = ['manual-stabilization']
         self.controller_names.extend(np.sort(
