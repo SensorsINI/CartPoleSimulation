@@ -64,7 +64,7 @@ dt_mpc_simulation_globals = 0.2  # Time step used by MPC controller
 # WARNING: if using RNN to provide CartPole model to MPC
 # make sure that it is trained to predict future states with this timestep
 # TODO: Add dt information to .txt file associated with and describing each RNN
-mpc_horizon_globals = 10 # Number of steps into future MPC controller simulates at each evaluation
+mpc_horizon_globals = 10  # Number of steps into future MPC controller simulates at each evaluation
 
 # Parameters of the CartPole
 p_globals = SimpleNamespace()  # p like parameters
@@ -91,31 +91,28 @@ s0.angle = 0.0
 s0.angleD = 0.0
 s0.angleDD = 0.0
 
-
 # Jacobian-UP (check it)
-Jacobian_UP_f= lambda p: np.array([
-                        [0.0, 1.0, 0.0, 0.0],
-                        [0.0, (-(1 + p.k) * p.M_fric) / (-p.m + (1 + p.k) * (p.m + p.M)), (p.g * p.m) / (-p.m + (1 + p.k) * (p.m + p.M)),
-                         (-p.J_fric) / (p.L * (-p.m + (1 + p.k) * (p.m + p.M)))],
-                        [0.0, 0.0, 0.0, 1.0],
-                        [0.0, (-p.M_fric) / (p.L * (-p.m + (1 + p.k) * (p.m + p.M))), (p.g * (p.M + p.m)) / (p.L * (-p.m + (1 + p.k) * (p.m + p.M))),
-                         -p.m * (p.M + p.m) * p.J_fric / (p.L * p.L * (-p.m + (1 + p.k) * (p.m + p.M)))],
-                    ])
+Jacobian_UP_f = lambda p: np.array([
+    [0.0, 1.0, 0.0, 0.0],
+    [0.0, (-(1 + p.k) * p.M_fric) / (-p.m + (1 + p.k) * (p.m + p.M)), (p.g * p.m) / (-p.m + (1 + p.k) * (p.m + p.M)),
+     (-p.J_fric) / (p.L * (-p.m + (1 + p.k) * (p.m + p.M)))],
+    [0.0, 0.0, 0.0, 1.0],
+    [0.0, (-p.M_fric) / (p.L * (-p.m + (1 + p.k) * (p.m + p.M))),
+     (p.g * (p.M + p.m)) / (p.L * (-p.m + (1 + p.k) * (p.m + p.M))),
+     -p.m * (p.M + p.m) * p.J_fric / (p.L * p.L * (-p.m + (1 + p.k) * (p.m + p.M)))],
+])
 
 # Array gathering control around UP equilibrium
 B_f = lambda p: p.u_max * np.array([
-                    [0.0],
-                    [(1 + p.k) / (-p.m + (1 + p.k) * (p.m + p.M))],
-                    [0.0],
-                    [1.0 / (p.L * (-p.m + (1 + p.k) * (p.m + p.M)))],
-                ])
-
-
-
+    [0.0],
+    [(1 + p.k) / (-p.m + (1 + p.k) * (p.m + p.M))],
+    [0.0],
+    [1.0 / (p.L * (-p.m + (1 + p.k) * (p.m + p.M)))],
+])
 
 # Variables for random trace generation
 # Complexity of the random trace, number of turning points used for interpolation
-track_relative_complexity_globals = 0.05 # 0.5 is normal default
+track_relative_complexity_globals = 0.05  # 0.5 is normal default
 random_length_globals = 100.0e1  # Number of seconds in the random length trace
 interpolation_type_globals = 'previous'  # Sets how to interpolate between turning points of random trace
 # Possible choices: '0-derivative-smooth', 'linear', 'previous'
@@ -128,6 +125,8 @@ end_random_target_position_at_globals = 10.0
 # If not None this variable has precedence -
 # track_relative_complexity, start/end_random_target_position_at_globals have no effect.
 turning_points_globals = None
+
+
 # turning_points_globals = [10.0, 0.0, 0.0]
 
 
@@ -161,21 +160,29 @@ def cartpole_ode(p, s, u):
     sa = np.sin(s.angle)
 
     if CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
+        # Clockwise rotation is defined as negative
+        # force and cart movement to the right are defined as positive
+        # g (gravitational acceleration) is positive (absolute value)
+        # Checked independently by Marcin and Krishna
 
         A = (p.k + 1) * (p.M + p.m) - p.m * (ca ** 2)
 
-        angleDD = (p.g * (p.m + p.M) * sa -
-                   ((p.J_fric * (p.m + p.M) * s.angleD) / (p.L * p.m)) -  # Friction of the pole in its joint
-                   p.m * p.L * (s.angleD ** 2) * sa * ca +
-                   ca * p.M_fric * s.positionD +  # Friction of the cart on the track
-                   ca * u) / (A * p.L)
-
         positionDD = (
-                             p.m * p.g * sa * ca +
-                             ((p.J_fric * s.angleD * ca) / (p.L)) -
-                             (p.k + 1) * (p.m * p.L * (s.angleD ** 2) * sa + p.M_fric * s.positionD) +
-                             (p.k + 1) * u
-                     ) / A
+                             + p.m * p.g * sa * ca*0.0
+                             + ((p.J_fric * s.angleD * ca) / (p.L))*0.0
+                             - (p.k + 1) * (p.m * p.L * (s.angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                             - (p.k + 1) * p.M_fric * s.positionD
+                     ) / A \
+                                + ((p.k + 1) / A) * u *0.0 # effect of force applied to cart
+
+        angleDD = (
+                          + p.g * (p.m + p.M) * sa*0.0
+                          - ((p.J_fric * (p.m + p.M) * s.angleD) / (p.L * p.m))*0.0  # Friction of the pole in its joint
+                          - p.m * p.L * (s.angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                          - ca * p.M_fric * s.positionD  # Friction of the cart on the track
+                          ) / (A * p.L) \
+                                + (ca / (A * p.L)) * u  *0.0
+
     else:
         raise ValueError('An undefined name for Cartpole equations')
 

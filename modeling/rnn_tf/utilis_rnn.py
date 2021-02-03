@@ -754,14 +754,6 @@ class Dataset(keras.utils.Sequence):
         else:
             return features, targets
 
-    def get_all_targets(self):
-        all_targets = []
-        for i in range(self.number_of_samples):
-            _, targets = self.get_series(i)
-            all_targets.append(targets)
-        all_targets = np.stack(all_targets)
-        return all_targets
-
     def __getitem__(self, idx_batch):
 
         features_batch = []

@@ -443,8 +443,8 @@ class Cart:
             # You can change here with which initial parameters you wish to start the simulation
             self.s.position = 0.0
             self.s.positionD = 0.0
-            self.s.angle = (2.0 * random.normal() - 1.0) * pi / 180.0
-            self.s.angleD = 0.0
+            self.s.angle = np.pi/2.0 # (2.0 * random.normal() - 1.0) * pi / 180.0
+            self.s.angleD = 1.0
             self.s.angleDD = 0.0
 
             self.Q = 0.0
