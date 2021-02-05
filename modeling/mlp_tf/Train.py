@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Jun 19 06:21:32 2020
-
 @author: Marcin
 """
-
-
 # Various
-
 # Custom functions
 from modeling.mlp_tf.utilis_mlp import *
 # Parameters of NN

@@ -21,6 +21,7 @@ import pandas as pd
 from time import sleep
 
 import timeit
+from tensorflow.keras.layers import Dense
 
 
 # Set seeds everywhere required to make results reproducible
@@ -42,10 +43,10 @@ def print_parameter_count(model):
     print('')
 
 
-def load_pretrained_rnn(net, ckpt_path):
+def load_pretrained_nn(net, ckpt_path):
     """
-    A function loading parameters (weights and biases) from a previous training to a net RNN instance
-    :param net: An instance of RNN
+    A function loading parameters (weights and biases) from a previous training to a net NN instance
+    :param net: An instance of NN
     :param ckpt_path: path to .ckpt file storing weights and biases
     :return: No return. Modifies net in place.
     """
@@ -73,16 +74,16 @@ def load_pretrained_rnn(net, ckpt_path):
 #     print('')
 
 
-def create_rnn_instance(args=None, rnn_name=None, inputs_list=None, outputs_list=None, load_rnn=None, path_save=None,
+def create_nn_instance(args=None, nn_name=None, inputs_list=None, outputs_list=None, load_nn=None, path_save=None,
                         warm_up_len=1, return_sequence=False, stateful=False, batchSize=None):
-    if rnn_name is None and args is not None:
-        rnn_name = args.rnn_name
+    if nn_name is None and args is not None:
+        nn_name = args.mlp_name
     if inputs_list is None and args is not None:
         inputs_list = args.inputs_list
     if outputs_list is None and args is not None:
         outputs_list = args.outputs_list
-    if load_rnn is None and args is not None:
-        load_rnn = args.load_rnn
+    if load_nn is None and args is not None:
+        load_nn = args.load_nn
     if path_save is None and args is not None:
         path_save = args.path_save
     if warm_up_len == 1 and args is not None:
@@ -92,14 +93,14 @@ def create_rnn_instance(args=None, rnn_name=None, inputs_list=None, outputs_list
     # if stateful is False and args is not None:
     #     stateful = args.stateful
 
-    if load_rnn is not None and load_rnn != 'last':
+    if load_nn is not None and load_nn != 'last':
         # 1) Find csv with this name if exists load name, inputs and outputs list
         #       if it does not exist raise error
         # 2) Create corresponding net
         # 3) Load parameters from corresponding ckpt file
 
-        filename = load_rnn
-        print('Loading a pretrained RNN with the full name: {}'.format(filename))
+        filename = load_nn
+        print('Loading a pretrained NN with the full name: {}'.format(filename))
         print('')
         txt_filename = filename + '.txt'
         ckpt_filename = filename + '.ckpt'
@@ -117,29 +118,29 @@ def create_rnn_instance(args=None, rnn_name=None, inputs_list=None, outputs_list
 
         f = open(txt_path, 'r')
         lines = f.readlines()
-        rnn_name = lines[1].rstrip("\n")
+        nn_name = lines[1].rstrip("\n")
         inputs_list = lines[7].rstrip("\n").split(sep=', ')
         outputs_list = lines[10].rstrip("\n").split(sep=', ')
         f.close()
 
-        print('Inputs to the loaded RNN: {}'.format(', '.join(map(str, inputs_list))))
-        print('Outputs from the loaded RNN: {}'.format(', '.join(map(str, outputs_list))))
+        print('Inputs to the loaded NN: {}'.format(', '.join(map(str, inputs_list))))
+        print('Outputs from the loaded NN: {}'.format(', '.join(map(str, outputs_list))))
         print('')
 
-        # Construct the requested RNN
-        net = myNN(rnn_name=rnn_name, inputs_list=inputs_list, outputs_list=outputs_list,
+        # Construct the requested NN
+        net = myNN(nn_name=nn_name, inputs_list=inputs_list, outputs_list=outputs_list,
                    warm_up_len=warm_up_len, return_sequence=return_sequence,
                    stateful=stateful, batchSize=batchSize)
-        net.rnn_full_name = load_rnn
+        net.nn_full_name = load_nn
 
         # Load the parameters
-        load_pretrained_rnn(net, ckpt_path)
+        load_pretrained_nn(net, ckpt_path)
 
         ## TODO: Load Normalization
         normalization_info = load_normalization_info(path_save, filename)
 
 
-    elif load_rnn == 'last':
+    elif load_nn == 'last':
         files_found = False
         while (not files_found):
             try:
@@ -151,13 +152,13 @@ def create_rnn_instance(args=None, rnn_name=None, inputs_list=None, outputs_list
 
             f = open(txt_path, 'r')
             lines = f.readlines()
-            rnn_name = lines[1].rstrip("\n")
-            pre_rnn_full_name = lines[4].rstrip("\n")
+            nn_name = lines[1].rstrip("\n")
+            pre_nn_full_name = lines[4].rstrip("\n")
             inputs_list = lines[7].rstrip("\n").split(sep=', ')
             outputs_list = lines[10].rstrip("\n").split(sep=', ')
             f.close()
 
-            ckpt_path = path_save + pre_rnn_full_name + '.ckpt'
+            ckpt_path = path_save + pre_nn_full_name + '.ckpt'
             if not os.path.isfile(ckpt_path + '.index'):
                 print('The .ckbt file is missing (information about weights and biases) at the location {}'.format(
                     ckpt_path))
@@ -167,51 +168,51 @@ def create_rnn_instance(args=None, rnn_name=None, inputs_list=None, outputs_list
             else:
                 files_found = True
 
-        print('Full name of the loaded RNN is {}'.format(pre_rnn_full_name))
-        print('Inputs to the loaded RNN: {}'.format(', '.join(map(str, inputs_list))))
-        print('Outputs from the loaded RNN: {}'.format(', '.join(map(str, outputs_list))))
+        print('Full name of the loaded NN is {}'.format(pre_nn_full_name))
+        print('Inputs to the loaded NN: {}'.format(', '.join(map(str, inputs_list))))
+        print('Outputs from the loaded NN: {}'.format(', '.join(map(str, outputs_list))))
         print('')
 
-        # Construct the requested RNN
-        net = myNN(rnn_name=rnn_name, inputs_list=inputs_list, outputs_list=outputs_list,
+        # Construct the requested NN
+        net = myNN(nn_name=nn_name, inputs_list=inputs_list, outputs_list=outputs_list,
                    warm_up_len=warm_up_len, return_sequence=return_sequence,
                    stateful=stateful, batchSize=batchSize)
-        net.rnn_full_name = pre_rnn_full_name
+        net.nn_full_name = pre_nn_full_name
 
         # Load the parameters
-        load_pretrained_rnn(net, ckpt_path)
+        load_pretrained_nn(net, ckpt_path)
 
         ## TODO: Load Normalization
-        normalization_info = load_normalization_info(path_save, pre_rnn_full_name)
+        normalization_info = load_normalization_info(path_save, pre_nn_full_name)
 
 
-    else:  # args.load_rnn is None
+    else:  # args.load_nn is None
         print('No pretrained network specified. I will train a network from scratch.')
         print('')
-        # Construct the requested RNN
-        net = myNN(rnn_name=rnn_name, inputs_list=inputs_list, outputs_list=outputs_list,
+        # Construct the requested NN
+        net = myNN(nn_name=nn_name, inputs_list=inputs_list, outputs_list=outputs_list,
                    warm_up_len=warm_up_len, return_sequence=return_sequence,
                    stateful=stateful, batchSize=batchSize)
         normalization_info = None
 
 
-    return net, rnn_name, inputs_list, outputs_list, normalization_info
+    return net, nn_name, inputs_list, outputs_list, normalization_info
 
 
-def create_log_file(rnn_name, inputs_list, outputs_list, path_save):
-    rnn_full_name = rnn_name[:4] + str(len(inputs_list)) + 'IN-' + rnn_name[4:] + '-' + str(len(outputs_list)) + 'OUT'
+def create_log_file(nn_name, inputs_list, outputs_list, path_save):
+    nn_full_name = nn_name[:4] + str(len(inputs_list)) + 'IN-' + nn_name[4:] + '-' + str(len(outputs_list)) + 'OUT'
 
     net_index = 0
     while True:
 
-        txt_path = path_save + rnn_full_name + '-' + str(net_index) + '.txt'
+        txt_path = path_save + nn_full_name + '-' + str(net_index) + '.txt'
         if os.path.isfile(txt_path):
             pass
         else:
-            rnn_full_name += '-' + str(net_index)
+            nn_full_name += '-' + str(net_index)
             f = open(txt_path, 'w')
-            f.write('RNN NAME: \n' + rnn_name + '\n\n')
-            f.write('RNN FULL NAME: \n' + rnn_full_name + '\n\n')
+            f.write('NN NAME: \n' + nn_name + '\n\n')
+            f.write('NN FULL NAME: \n' + nn_full_name + '\n\n')
             f.write('INPUTS: \n' + ', '.join(map(str, inputs_list)) + '\n\n')
             f.write('OUTPUTS: \n' + ', '.join(map(str, outputs_list)) + '\n\n')
             f.close()
@@ -219,41 +220,36 @@ def create_log_file(rnn_name, inputs_list, outputs_list, path_save):
 
         net_index += 1
 
-    print('Full name given to the currently trained network is {}.'.format(rnn_full_name))
+    print('Full name given to the currently trained network is {}.'.format(nn_full_name))
     print('')
-    return rnn_full_name
+    return nn_full_name
 
 
 class myNN(keras.Sequential):
     """"
-    Our RNN class.
+    Our NN class.
     """
 
     def __init__(self,
-                 rnn_name,
+                 nn_name,
                  inputs_list,
                  outputs_list,
-                 warm_up_len,
-                 return_sequence=False,
-                 batchSize=None,
-                 stateful=False):
+                 batchSize=None):
         super(myNN, self).__init__()
-        """Initialization of an RNN instance
+        """Initialization of an NN instance
         We assume that inputs may be both commands and state variables, whereas outputs are always state variables
         """
 
-        self.rnn_name = rnn_name
-        self.rnn_full_name = None
-        self.warm_up_len = warm_up_len
+        self.nn_name = nn_name
+        self.nn_full_name = None
 
         self.inputs_list = inputs_list
         self.outputs_list = outputs_list
 
-        self.skip_warm_up_in_output = True
 
         # Get the information about network architecture from the network name
         # Split the names into "LSTM/GRU", "128H1", "64H2" etc.
-        names = rnn_name.split('-')
+        names = nn_name.split('-')
         layers = ['H1', 'H2', 'H3', 'H4', 'H5']
         self.h_size = []  # Hidden layers sizes
         for name in names:
@@ -263,147 +259,33 @@ class myNN(keras.Sequential):
                     self.h_size.append(int(name[:-2]))
 
         if not self.h_size:
-            raise ValueError('You have to provide the size of at least one hidden layer in rnn name')
+            raise ValueError('You have to provide the size of at least one hidden layer in nn name')
 
         self.h_number = len(self.h_size)
 
-        if 'GRU' in names:
-            self.rnn_type = 'GRU'
-            self.rnn_layer = keras.layers.GRU
-        elif 'LSTM' in names:
-            self.rnn_type = 'LSTM'
-            self.rnn_layer = keras.layers.LSTM
-        else:
-            self.rnn_type = 'RNN-Basic'
-            self.rnn_layer = keras.layers.SimpleRNN
-
+            
+        self.nn_type = 'Dense'
+        self.nn_layer = keras.layers.Dense
         # Construct network
-        # Define first layer
-        if self.h_number == 1:
-            self.add(self.rnn_layer(
+        self.add(self.nn_layer(
+                batch_input_shape=(batchSize, len(inputs_list)),
                 units=self.h_size[0],
-                batch_input_shape=(batchSize, warm_up_len, len(inputs_list)),
-                return_sequences=return_sequence,
-                stateful=stateful
             ))
-        else:
-            self.add(self.rnn_layer(
-                units=self.h_size[0],
-                batch_input_shape=(batchSize, warm_up_len, len(inputs_list)),
-                return_sequences=True,
-                stateful=stateful
-            ))
-            # Define following layers
-            # The for loop will only executed if there is MORE than 2 hidden layers
-            for i in range(len(self.h_size) - 2):
-                self.add(self.rnn_layer(
-                    units=self.h_size[i + 1],
-                    return_sequences=True,
-                    stateful=stateful
+        if(len(self.h_size) > 1): 
+            for i in range(len(self.h_size)-1):
+                self.add(self.nn_layer(
+                    units=self.h_size[i+1],
                 ))
-            # Last RNN layer
-            self.add(self.rnn_layer(
-                units=self.h_size[-1],
-                return_sequences=return_sequence,
-                stateful=stateful
-            ))
 
         # self.add(keras.layers.Dense(units=len(outputs_list), activation='tanh'))
         self.add(keras.layers.Dense(units=len(outputs_list)))
 
         print('Constructed a neural network of type {}, with {} hidden layers with sizes {} respectively.'
-              .format(self.rnn_type, len(self.h_size), ', '.join(map(str, self.h_size))))
+              .format(self.nn_type, len(self.h_size), ', '.join(map(str, self.h_size))))
         print('The inputs are (in this order): {}'.format(', '.join(map(str, inputs_list))))
         print('The outputs are (in this order): {}'.format(', '.join(map(str, outputs_list))))
 
-def get_internal_states(net):
-    states_list = []
-    for layer in net.layers:
-        if (('gru' in layer.name) or
-                ('lstm' in layer.name) or
-                    ('rnn' in layer.name)):
-            single_states = []
-            for single_state in layer.states:
-                captured_single_state = copy.deepcopy(single_state).numpy()
-                single_states.append(captured_single_state)
-
-            states_list.append(single_states)
-        else:
-            states_list.append(None)
-    return states_list
-
-from tensorflow.python.keras import backend as K
-from tensorflow.python.util import nest
-from tensorflow.python.framework import tensor_shape
-def my_reset_states(layer, states=None):
-
-    spec_shape = None
-
-    if layer.input_spec is not None:
-      spec_shape = nest.flatten(layer.input_spec[0])[0].shape
-
-    if spec_shape is None:
-      batch_size = None
-    else:
-      batch_size = spec_shape[1] if layer.time_major else spec_shape[0]
-
-    if states is None:
-      for state, size in zip(nest.flatten(layer.states),
-                             nest.flatten(layer.cell.state_size)):
-        K.set_value(state, np.zeros([batch_size] +
-                                    tensor_shape.as_shape(size).as_list()))
-    else:
-      flat_states = nest.flatten(layer.states)
-      flat_input_states = nest.flatten(states)
-      set_value_tuples = []
-      for i, (value, state) in enumerate(zip(flat_input_states,
-                                             flat_states)):
-
-        set_value_tuples.append((state, value))
-      K.batch_set_value(set_value_tuples)
-
-def load_internal_states(net, states):
-
-    for layer, state in zip(net.layers, states):
-        if (('gru' in layer.name) or
-                ('lstm' in layer.name) or
-                    ('rnn' in layer.name)):
-            layer.reset_states(state[0])
-            # my_reset_states(layer, state[0])
-
-# def load_internal_states(net, states):
-#
-#     for idx_layer, state in zip(np.arange(len(net.layers)), states):
-#         # print(layer)
-#         # print(state)
-#         layer =  net.layers[idx_layer]
-#         layer_name = net.layers[idx_layer].name
-#         if (('gru' in layer_name) or
-#                 ('lstm' in layer_name) or
-#                     ('rnn' in layer_name)):
-#             # layer.reset_states(state[0])
-#             layer_states = net.layers[idx_layer].states
-#             for idx_state, state_saved in zip(np.arange(len(layer_states)), state):
-#                 net.layers[idx_layer].states[idx_state] = state_saved
-#                 new_state = net.layers[idx_layer]
-#                 pass
-
-
-# def load_internal_states(net, states):
-#
-#     for layer, state in zip(net.layers, states):
-#         # print(layer)
-#         # print(state)
-#         layer_name = layer.name
-#         if (('gru' in layer_name) or
-#                 ('lstm' in layer_name) or
-#                     ('rnn' in layer_name)):
-#             # layer.reset_states(state[0])
-#             for substate, state_saved in zip(layer.states, state):
-#                 substate = state_saved
-
-
-def load_data(args, filepath=None, columns_list=None, norm_inf=False, rnn_full_name=None):
+def load_data(args, filepath=None, columns_list=None, norm_inf=False, nn_full_name=None):
     if filepath is None and args.filepath is not None:
         filepath = args.val_file_name
 
@@ -475,7 +357,7 @@ def load_data(args, filepath=None, columns_list=None, norm_inf=False, rnn_full_n
 
 # This way of doing normalization is fine for long data sets and (relatively) short sequence lengths
 # The points from the edges of the datasets count too little
-def calculate_normalization_info(df, path_save, rnn_full_name):
+def calculate_normalization_info(df, path_save, nn_full_name):
     if type(df) is list:
         df_total = pd.concat(df)
     else:
@@ -492,7 +374,7 @@ def calculate_normalization_info(df, path_save, rnn_full_name):
     frame = {'mean': df_mean, 'std': df_std, 'max': df_max, 'min': df_min}
     df_norm_info = pd.DataFrame(frame).transpose()
 
-    df_norm_info.to_csv(path_save + rnn_full_name + '-norm' + '.csv')
+    df_norm_info.to_csv(path_save + nn_full_name + '-norm' + '.csv')
 
     # Plot historgrams to make the firs check about gaussian assumption
     # for feature in df_total.columns:
@@ -503,8 +385,8 @@ def calculate_normalization_info(df, path_save, rnn_full_name):
     return df_norm_info
 
 
-def load_normalization_info(path_save, rnn_full_name):
-    return pd.read_csv(path_save + rnn_full_name + '-norm' + '.csv', index_col=0)
+def load_normalization_info(path_save, nn_full_name):
+    return pd.read_csv(path_save + nn_full_name + '-norm' + '.csv', index_col=0)
 
 
 def normalize_feature(feature, normalization_info, normalization_type='minmax_sym', name=None):
@@ -595,7 +477,6 @@ class Dataset(keras.utils.Sequence):
                  batch_size=None,
                  time_axes=None,
                  exp_len=None,
-                 warm_up_len=None,
                  shuffle=True):
         'Initialization - divide data in features and labels'
 
@@ -626,7 +507,6 @@ class Dataset(keras.utils.Sequence):
         self.args = args
 
         self.exp_len = None
-        self.warm_up_len = self.args.warm_up_len
         self.df_lengths = []
         self.df_lengths_cs = []
         self.number_of_samples = 0
@@ -698,7 +578,7 @@ class Dataset(keras.utils.Sequence):
         # In TF it must return the number of batches
         return self.number_of_batches
 
-    def get_series(self, idx, get_time_axis=False, targets_type='first_after_warm_up'):
+    def get_series(self, idx, get_time_axis=False):
         """
         Requires the self.data to be a list of pandas dataframes
         """
@@ -713,29 +593,11 @@ class Dataset(keras.utils.Sequence):
         features = None
         targets = None
 
-        if targets_type == 'first_after_warm_up':
-            features = self.data[idx_data_set].to_numpy()[idx:idx + self.warm_up_len, :]
-            # After feeding the whole sequence we just compare the final output of the RNN with the state following afterwards
-            targets = self.labels[idx_data_set].to_numpy()[idx + self.warm_up_len-1]
-        elif targets_type == 'all':
-            features = self.data[idx_data_set].to_numpy()[idx:idx + self.exp_len, :]
-            # Every point in features has its target value corresponding to the next time step:
-            targets = self.labels[idx_data_set].to_numpy()[idx:idx + self.exp_len]
-        elif targets_type == 'all after warm-up':
-            features = self.data[idx_data_set].to_numpy()[idx:idx + self.exp_len, :]
-            # Every point in features has its target value corresponding to the next time step:
-            targets = self.labels[idx_data_set].to_numpy()[idx+self.warm_up_len:idx + self.exp_len]
-        else:
-            raise('Non-existent target_type')
-
-        # mix_position = True
-        # if mix_position and targets_type == 'all after warm-up':
-        #     random_pos = np.random.uniform(-40.0, 40.0)
-        #     features[:,self.idx_pos_in] = features[:,self.idx_pos_in]+random_pos
-        #     features[:,self.idx_target_pos_in] = features[:,self.idx_target_pos_in]+random_pos
-        #     targets[self.idx_pos_out] = targets[self.idx_pos_out]+random_pos
-
-        # If get_time_axis try to obtain a vector of time data for the chosen sample
+        features = self.data[idx_data_set].to_numpy()[idx, :]
+        # After feeding the whole sequence we just compare the final output of the NN with the state following afterwards
+        # TODO: Check if idx-1 is needed or idx
+        targets = self.labels[idx_data_set].to_numpy()[idx]
+        
         if get_time_axis:
             try:
                 # As targets and features are shifted by one timestep we have to make time_axis accordingly longer to cover both
@@ -749,13 +611,13 @@ class Dataset(keras.utils.Sequence):
         else:
             return features, targets
 
-    def get_all_targets(self):
-        all_targets = []
-        for i in range(self.number_of_samples):
-            _, targets = self.get_series(i)
-            all_targets.append(targets)
-        all_targets = np.stack(all_targets)
-        return all_targets
+    # def get_all_targets(self):
+    #     all_targets = []
+    #     for i in range(self.number_of_samples):
+    #         _, targets = self.get_series(i)
+    #         all_targets.append(targets)
+    #     all_targets = np.stack(all_targets)
+    #     return all_targets
 
     def __getitem__(self, idx_batch):
 
@@ -781,9 +643,6 @@ class Dataset(keras.utils.Sequence):
     def on_epoch_end(self):
         if self.shuffle:
             np.random.shuffle(self.indexes)
-
-
-
 
 from types import SimpleNamespace
 from predictores.predictor_ideal import predictor_ideal
@@ -871,7 +730,7 @@ class DatasetRandom(keras.utils.Sequence):
 
         if targets_type == 'first_after_warm_up':
             features = data.to_numpy()[0:self.warm_up_len, :]
-            # After feeding the whole sequence we just compare the final output of the RNN with the state following afterwards
+            # After feeding the whole sequence we just compare the final output of the NN with the state following afterwards
             targets = labels.to_numpy()[self.warm_up_len-1]
         elif targets_type == 'all':
             features = data.to_numpy()[0:self.exp_len, :]
@@ -911,22 +770,22 @@ def plot_results(net,
                  outputs_list=None,
                  closed_loop_list=None,
                  exp_len=None,
-                 warm_up_len=None,
+                 # warm_up_len=None,
                  closed_loop_enabled=False,
                  comment='',
-                 rnn_full_name=None,
+                 nn_full_name=None,
                  save=False,
                  close_loop_idx=None,
                  path_save=None,
                  start_at = None):
     """
-    This function accepts RNN instance, arguments and CartPole instance.
+    This function accepts NN instance, arguments and CartPole instance.
     It runs one random experiment with CartPole,
-    inputs the data into RNN and check how well RNN predicts CartPole state one time step ahead of time
+    inputs the data into NN and check how well NN predicts CartPole state one time step ahead of time
     """
 
-    rnn_full_name = net.rnn_full_name
-    rnn_name = net.rnn_name
+    nn_full_name = net.nn_full_name
+    nn_name = net.nn_name
     inputs_list = net.inputs_list
     outputs_list = net.outputs_list
 
@@ -938,9 +797,6 @@ def plot_results(net,
         if type(testset_filepath) == list:
             testset_filepath = testset_filepath[0]
 
-    if warm_up_len is None:
-        warm_up_len = args.warm_up_len
-
     if exp_len is None:
         exp_len = args.exp_len
 
@@ -949,22 +805,19 @@ def plot_results(net,
     if closed_loop_enabled and (closed_loop_list is None):
         closed_loop_list = args.close_loop_for
         if closed_loop_list is None:
-            raise ValueError('RNN closed-loop-inputs not provided!')
+            raise ValueError('NN closed-loop-inputs not provided!')
 
     if close_loop_idx is None:
         close_loop_idx = exp_len//2
 
     # Create new model which will return after every time step
 
-    net_predict = myNN(rnn_name,
+    net_predict = myNN(nn_name,
                        inputs_list,
                        outputs_list,
-                       warm_up_len=1,
-                       return_sequence=False,
                        batchSize=1,
-                       stateful=True
                        )
-    net_predict.rnn_full_name = rnn_full_name
+    net_predict.nn_full_name = nn_full_name
 
     net_predict.set_weights(net.get_weights())
 
@@ -976,7 +829,7 @@ def plot_results(net,
     # net_predict.set_weights(net.get_weights())
 
     if normalization_info is None:
-        normalization_info = load_normalization_info(path_save, rnn_full_name)
+        normalization_info = load_normalization_info(path_save, nn_full_name)
 
     if dataset is None or dataset.time_axes is None:
         test_dfs, time_axes = load_data(args, testset_filepath, columns_list=columns_list)
@@ -999,7 +852,7 @@ def plot_results(net,
     features_pd = pd.DataFrame(data=features, columns=inputs_list, dtype=np.float32)
     targets_pd = pd.DataFrame(data=targets, columns=outputs_list, dtype=np.float32)
 
-    rnn_outputs = pd.DataFrame(columns=outputs_list, dtype=np.float32)
+    nn_outputs = pd.DataFrame(columns=outputs_list, dtype=np.float32)
 
     idx_cl = 0
     close_the_loop = False
@@ -1020,30 +873,30 @@ def plot_results(net,
             # for state in states:
             #     print(state)
             #     print()
-            print('p: {}'.format(normalized_rnn_output))
+            print('p: {}'.format(normalized_nn_output))
 
 
         # states = get_internal_states(net_predict)
-        rnn_input = pd.DataFrame(copy.deepcopy(row)).transpose().reset_index(drop=True)
+        nn_input = pd.DataFrame(copy.deepcopy(row)).transpose().reset_index(drop=True)
 
-        if closed_loop_enabled and close_the_loop and (normalized_rnn_output is not None):
-            rnn_input[closed_loop_list] = normalized_rnn_output[closed_loop_list]
-        rnn_input = np.squeeze(rnn_input.to_numpy())
-        rnn_input = rnn_input[np.newaxis, np.newaxis, :]
+        if closed_loop_enabled and close_the_loop and (normalized_nn_output is not None):
+            nn_input[closed_loop_list] = normalized_nn_output[closed_loop_list]
+        nn_input = np.squeeze(nn_input.to_numpy())
+        nn_input = nn_input[np.newaxis, np.newaxis, :]
         # t2 = timeit.default_timer()
-        normalized_rnn_output = net_predict.predict_on_batch(rnn_input)
+        normalized_nn_output = net_predict.predict_on_batch(nn_input)
         # t3 = timeit.default_timer()
         # print('t3 evaluation {} ms'.format((t3 - t2) * 1000.0))
-        normalized_rnn_output = np.squeeze(normalized_rnn_output).tolist()
-        normalized_rnn_output = copy.deepcopy(pd.DataFrame(data=[normalized_rnn_output], columns=outputs_list))
+        normalized_nn_output = np.squeeze(normalized_nn_output).tolist()
+        normalized_nn_output = copy.deepcopy(pd.DataFrame(data=[normalized_nn_output], columns=outputs_list))
 
-        rnn_outputs = rnn_outputs.append(copy.deepcopy(normalized_rnn_output), ignore_index=True)
+        nn_outputs = nn_outputs.append(copy.deepcopy(normalized_nn_output), ignore_index=True)
         idx_cl += 1
 
     features_pd_denorm = denormalize_df(features_pd, normalization_info)
     targets_pd_denorm = denormalize_df(targets_pd, normalization_info)
-    rnn_outputs_denorm = denormalize_df(rnn_outputs, normalization_info)
-    figs = plot_results_specific(targets_pd_denorm, rnn_outputs_denorm, features_pd_denorm, time_axis, comment, closed_loop_enabled,
+    nn_outputs_denorm = denormalize_df(nn_outputs, normalization_info)
+    figs = plot_results_specific(targets_pd_denorm, nn_outputs_denorm, features_pd_denorm, time_axis, comment, closed_loop_enabled,
                                      close_loop_idx)
 
     plt.show()
@@ -1060,7 +913,7 @@ def plot_results(net,
         for i in range(len(figs)):
             fig = figs[i]
             figNrStr = '-'+str(i)+''
-            if rnn_full_name is not None:
-                fig.savefig('./save_plots_tf/' + rnn_full_name + figNrStr +timestampStr + '.png')
+            if nn_full_name is not None:
+                fig.savefig('./save_plots_tf/' + nn_full_name + figNrStr +timestampStr + '.png')
             else:
                 fig.savefig('./save_plots_tf/' + figNrStr + timestampStr + '.png')
