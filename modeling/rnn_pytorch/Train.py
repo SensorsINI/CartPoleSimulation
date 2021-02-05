@@ -29,9 +29,9 @@ import re
 import time
 
 # Custom functions
-from modeling.rnn.utilis_rnn import *
+from modeling.rnn_pytorch.utilis_rnn import *
 # Parameters of RNN
-from modeling.rnn.ParseArgs import args
+from modeling.rnn_pytorch.ParseArgs import args
 
 print('')
 
@@ -104,7 +104,7 @@ def train_network():
     print('')
 
 
-    plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=1024,
+    plot_results(net=net, args=args, dataset=dev_set, seq_len=1024,
                  comment='This is the network at the beginning of the training',
                  inputs_list=inputs_list, outputs_list=outputs_list,
                  save=True,
@@ -332,7 +332,7 @@ def train_network():
             print('')
 
             plot_string = 'This is the network after {} training epoch'.format(epoch + 1)
-            plot_results(net=net, args=args, dataset=dev_set, filepath='./data/data_rnn-3.csv', seq_len=1024,
+            plot_results(net=net, args=args, dataset=dev_set, seq_len=1024,
                          comment=plot_string,
                          inputs_list=inputs_list, outputs_list=outputs_list, save=True,
                          closed_loop_enabled=True)

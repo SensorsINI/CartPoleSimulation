@@ -11,7 +11,7 @@ import random as rnd
 
 import copy
 
-from modeling.rnn.utilis_rnn_specific import *
+from modeling.rnn_pytorch.utilis_rnn_specific import *
 
 from tqdm import tqdm
 

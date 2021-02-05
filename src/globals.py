@@ -1,25 +1,8 @@
 """Parameters of CartPole system and simulation, Ground Truth equations of CartPole"""
 
-import numpy as np
-from types import SimpleNamespace
+from cartpole_model import *
 
-# You can choose CartPole dynamical equations you want to use in simulation by setting CARTPOLE_EQUATIONS variable
-# The possible choices and their explanation are listed below
-# Notice that any set of equation require setting the convention for the angle
-# to draw a CartPole correctly in the CartPole GUI
-CARTPOLE_EQUATIONS = 'Marcin-Sharpneat'
-""" 
-Possible choices: 'Marcin-Sharpneat'
-'Marcin-Sharpneat' is done on the basis of:
-https://sharpneat.sourceforge.io/research/cart-pole/cart-pole-equations.html
-Required angle convention: CLOCK-NEG
-"""
 
-ANGLE_CONVENTION = 'CLOCK-NEG'
-"""Defines if a clockwise angle change is negative ('CLOCK-NEG') or positive ('CLOCK-POS')
-
-The 0-angle state is always defined as pole in upright position. This currently cannot be changed
-"""
 
 # Variables settings parameters CartPole GUI starts with
 # This is useful if you need to many times restart the GUI to some particular settings
@@ -57,7 +40,7 @@ speedup_globals = 1.0  # Multiplicative factor by which the simulation seen by t
 #   it may lead to unstable MPC instead of just making simulation run on the fastest achievable speed
 
 # Variables used for physical simulation
-dt_main_simulation_globals = 0.020  # Time step of CartPole simulation
+dt_main_simulation_globals = 0.00020  # Time step of CartPole simulation
 
 # MPC
 dt_mpc_simulation_globals = 0.2  # Time step used by MPC controller
@@ -66,30 +49,6 @@ dt_mpc_simulation_globals = 0.2  # Time step used by MPC controller
 # TODO: Add dt information to .txt file associated with and describing each RNN
 mpc_horizon_globals = 10  # Number of steps into future MPC controller simulates at each evaluation
 
-# Parameters of the CartPole
-p_globals = SimpleNamespace()  # p like parameters
-p_globals.m = 2.0  # mass of pend, kg
-p_globals.M = 1.0  # mass of cart, kg
-p_globals.L = 1.0  # HALF (!!!) length of pend, m
-p_globals.u_max = 200.0  # max cart force, N
-p_globals.M_fric = 1.0  # cart friction, N/m/s
-p_globals.J_fric = 2.0  # friction coefficient on angular velocity, Nm/rad/s
-p_globals.v_max = 10.0  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model
-p_globals.controlDisturbance = 0.0  # disturbance, as factor of u_maxTODO:probably not implemented yet
-p_globals.sensorNoise = 0.0  # noise, as factor of max values,
-
-p_globals.g = 9.81  # absolute value of gravity acceleration, m/s^2
-p_globals.k = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
-# (I = k*m*L^2) (with L being half if the length)
-
-# Container for Cartpole state filled with 0.0
-s0 = SimpleNamespace()  # s like state
-s0.position = 0.0
-s0.positionD = 0.0
-s0.positionDD = 0.0
-s0.angle = 0.0
-s0.angleD = 0.0
-s0.angleDD = 0.0
 
 # Jacobian-UP (check it)
 Jacobian_UP_f = lambda p: np.array([
@@ -148,54 +107,6 @@ def cartpole_integration(s, dt):
     s_next.angleD = s.angleD + s.angleDD * dt
 
     return s_next
-
-
-def cartpole_ode(p, s, u):
-    """Calculates current values of second derivative of angle and position
-    from current value of angle and position, and their first derivatives
-
-
-    """
-    ca = np.cos(s.angle)
-    sa = np.sin(s.angle)
-
-    if CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
-        # Clockwise rotation is defined as negative
-        # force and cart movement to the right are defined as positive
-        # g (gravitational acceleration) is positive (absolute value)
-        # Checked independently by Marcin and Krishna
-
-        A = (p.k + 1) * (p.M + p.m) - p.m * (ca ** 2)
-
-        positionDD = (
-                             + p.m * p.g * sa * ca*0.0
-                             + ((p.J_fric * s.angleD * ca) / (p.L))*0.0
-                             - (p.k + 1) * (p.m * p.L * (s.angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                             - (p.k + 1) * p.M_fric * s.positionD
-                     ) / A \
-                                + ((p.k + 1) / A) * u *0.0 # effect of force applied to cart
-
-        angleDD = (
-                          + p.g * (p.m + p.M) * sa*0.0
-                          - ((p.J_fric * (p.m + p.M) * s.angleD) / (p.L * p.m))*0.0  # Friction of the pole in its joint
-                          - p.m * p.L * (s.angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                          - ca * p.M_fric * s.positionD  # Friction of the cart on the track
-                          ) / (A * p.L) \
-                                + (ca / (A * p.L)) * u  *0.0
-
-    else:
-        raise ValueError('An undefined name for Cartpole equations')
-
-    return angleDD, positionDD
-
-
-def Q2u(Q, p):
-    """Converts dimensionless motor power [-1,1] to a physical force acting on a cart.
-
-    In future there might be implemented here a more sophisticated model of a motor driving CartPole
-    """
-    u = p.u_max * Q + p.controlDisturbance * np.random.normal() * p.u_max  # Q is drive -1:1 range, add noise on control
-    return u
 
 
 def mpc_next_state(s, p, u, dt):

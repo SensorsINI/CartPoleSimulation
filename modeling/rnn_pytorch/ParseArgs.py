@@ -8,16 +8,12 @@ Created on Fri Jun 19 08:29:29 2020
 
 
 import argparse
+import glob
 
 path_save = './save/'
-TRAIN_file_name = [#'./data/data_rnn_big-2.csv',
-                   #'./data/data_rnn_big-1.csv',
-                   #'./data/data_rnn_big.csv',
-                   './data/data_rnn.csv',
-                   # './data/data_rnn-1.csv',
-                   # './data/data_rnn-2.csv'
-                   ]
-VAL_file_name = './data/data_rnn-3.csv'
+TRAIN_file_name = glob.glob('./data/train/' + '*.csv')
+VAL_file_name = glob.glob('./data/validate/' + '*.csv')
+
 
 '''
 FIXME: To tailor input list, output list and closed loop list according to cartpole
