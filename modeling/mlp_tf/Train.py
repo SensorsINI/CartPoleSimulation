@@ -5,6 +5,7 @@ Created on Fri Jun 19 06:21:32 2020
 """
 # Various
 # Custom functions
+#Test string
 from modeling.mlp_tf.utilis_mlp import *
 # Parameters of NN
 from modeling.mlp_tf.ParseArgs import args
