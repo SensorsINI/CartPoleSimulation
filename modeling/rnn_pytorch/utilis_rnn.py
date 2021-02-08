@@ -12,6 +12,7 @@ import random as rnd
 import copy
 
 from modeling.rnn_pytorch.utilis_rnn_specific import *
+from modeling.utilis import load_normalization_info, load_data, normalize_df, denormalize_df
 
 from tqdm import tqdm
 
@@ -338,147 +339,147 @@ class Sequence(nn.Module):
 
 import pandas as pd
 
-
-def load_data(args, filepath=None, columns_list=None, norm_inf=False, rnn_full_name=None, downsample=1):
-    if filepath is None:
-        filepath = args.val_file_name
-
-    if columns_list is None:
-        columns_list = list(set(args.inputs_list).union(set(args.outputs_list)))
-
-    if type(filepath) == list:
-        filepaths = filepath
-    else:
-        filepaths = [filepath]
-
-    all_dfs = []  # saved separately to get normalization
-    all_time_axes = []
-
-    for one_filepath in filepaths:
-        # Load dataframe
-        print('loading data from ' + str(one_filepath))
-        print('')
-        df = pd.read_csv(one_filepath, comment='#')
-        df=df.iloc[::downsample].reset_index()
-
-        # You can shift dt by one time step to know "now" the timestep till the next row
-        if args.cheat_dt:
-            if 'dt' in df:
-                df['dt'] = df['dt'].shift(-1)
-                df = df[:-1]
-
-        # FIXME: Make calculation of dt compatible with downsampling
-        # Get time axis as separate Dataframe
-        if 'time' in df.columns:
-            t = df['time']
-        elif 'dt' in df.columns:
-            dt = df['dt']
-            t = dt.cumsum()
-            t.rename('time', inplace=True)
-        else:
-            t = pd.Series([])
-            t.rename('time', inplace=True)
-
-        time_axis = t
-        all_time_axes.append(time_axis)
-
-        # Get only relevant subset of columns
-        if columns_list == 'all':
-            pass
-        else:
-            df = df[columns_list]
-
-        all_dfs.append(df)
-
-
-    return all_dfs, all_time_axes
-
-
-
-# This way of doing normalization is fine for long data sets and (relatively) short sequence lengths
-# The points from the edges of the datasets count too little
-def calculate_normalization_info(df, path_save, rnn_full_name):
-    if type(df) is list:
-        df_total = pd.concat(df)
-    else:
-        df_total = df
-
-    if 'time' in df_total.columns:
-        df_total.drop('time',
-                      axis='columns', inplace=True)
-
-    df_mean = df_total.mean(axis=0)
-    df_std = df_total.std(axis=0)
-    df_max = df_total.max(axis=0)
-    df_min = df_total.min(axis=0)
-    frame = {'mean': df_mean, 'std': df_std, 'max': df_max, 'min': df_min}
-    df_norm_info = pd.DataFrame(frame).transpose()
-
-    df_norm_info.to_csv(path_save + rnn_full_name + '-norm' + '.csv')
-
-    # Plot historgrams to make the firs check about gaussian assumption
-    # for feature in df_total.columns:
-    #     plt.hist(df_total[feature].to_numpy(), 50, density=True, facecolor='g', alpha=0.75)
-    #     plt.title(feature)
-    #     plt.show()
-
-    return df_norm_info
+#
+# def load_data(args, filepath=None, columns_list=None, norm_inf=False, rnn_full_name=None, downsample=1):
+#     if filepath is None:
+#         filepath = args.val_file_name
+#
+#     if columns_list is None:
+#         columns_list = list(set(args.inputs_list).union(set(args.outputs_list)))
+#
+#     if type(filepath) == list:
+#         filepaths = filepath
+#     else:
+#         filepaths = [filepath]
+#
+#     all_dfs = []  # saved separately to get normalization
+#     all_time_axes = []
+#
+#     for one_filepath in filepaths:
+#         # Load dataframe
+#         print('loading data from ' + str(one_filepath))
+#         print('')
+#         df = pd.read_csv(one_filepath, comment='#')
+#         df=df.iloc[::downsample].reset_index()
+#
+#         # You can shift dt by one time step to know "now" the timestep till the next row
+#         if args.cheat_dt:
+#             if 'dt' in df:
+#                 df['dt'] = df['dt'].shift(-1)
+#                 df = df[:-1]
+#
+#         # FIXME: Make calculation of dt compatible with downsampling
+#         # Get time axis as separate Dataframe
+#         if 'time' in df.columns:
+#             t = df['time']
+#         elif 'dt' in df.columns:
+#             dt = df['dt']
+#             t = dt.cumsum()
+#             t.rename('time', inplace=True)
+#         else:
+#             t = pd.Series([])
+#             t.rename('time', inplace=True)
+#
+#         time_axis = t
+#         all_time_axes.append(time_axis)
+#
+#         # Get only relevant subset of columns
+#         if columns_list == 'all':
+#             pass
+#         else:
+#             df = df[columns_list]
+#
+#         all_dfs.append(df)
+#
+#
+#     return all_dfs, all_time_axes
 
 
-def load_normalization_info(path_save, rnn_full_name):
-    return pd.read_csv(path_save + rnn_full_name + '-norm' + '.csv', index_col=0)
-
-
-def normalize_df(dfs, normalization_info, normalization_type='minmax_sym'):
-    if normalization_type == 'gaussian':
-        def normalize_feature(col):
-            col_mean = normalization_info.loc['mean', col.name]
-            col_std = normalization_info.loc['std', col.name]
-            return (col - col_mean) / col_std
-    elif normalization_type == 'minmax_pos':
-        def normalize_feature(col):
-            col_min = normalization_info.loc['min', col.name]
-            col_max = normalization_info.loc['max', col.name]
-            return (col - col_min) / (col_max - col_min)
-    elif normalization_type == 'minmax_sym':
-        def normalize_feature(col):
-            col_min = normalization_info.loc['min', col.name]
-            col_max = normalization_info.loc['max', col.name]
-            return -1.0 + 2.0 * (col - col_min) / (col_max - col_min)
-
-    if type(dfs) is list:
-        for i in range(len(dfs)):
-            dfs[i] = dfs[i].apply(normalize_feature, axis=0)
-    else:
-        dfs = dfs.apply(normalize_feature, axis=0)
-
-    return dfs
-
-
-def denormalize_df(dfs, normalization_info, normalization_type='minmax_sym'):
-    if normalization_type == 'gaussian':
-        def denormalize_feature(col):
-            col_mean = normalization_info.loc['mean', col.name]
-            col_std = normalization_info.loc['std', col.name]
-            return col * col_std + col_mean
-    elif normalization_type == 'minmax_pos':
-        def denormalize_feature(col):
-            col_min = normalization_info.loc['min', col.name]
-            col_max = normalization_info.loc['max', col.name]
-            return col * (col_max - col_min) + col_min
-    elif normalization_type == 'minmax_sym':
-        def denormalize_feature(col):
-            col_min = normalization_info.loc['min', col.name]
-            col_max = normalization_info.loc['max', col.name]
-            return ((col + 1.0) / 2.0) * (col_max - col_min) + col_min
-
-    if type(dfs) is list:
-        for i in range(len(dfs)):
-            dfs[i] = dfs[i].apply(denormalize_feature, axis=0)
-    else:
-        dfs = dfs.apply(denormalize_feature, axis=0)
-
-    return dfs
+#
+# # This way of doing normalization is fine for long data sets and (relatively) short sequence lengths
+# # The points from the edges of the datasets count too little
+# def calculate_normalization_info(df, path_save, rnn_full_name):
+#     if type(df) is list:
+#         df_total = pd.concat(df)
+#     else:
+#         df_total = df
+#
+#     if 'time' in df_total.columns:
+#         df_total.drop('time',
+#                       axis='columns', inplace=True)
+#
+#     df_mean = df_total.mean(axis=0)
+#     df_std = df_total.std(axis=0)
+#     df_max = df_total.max(axis=0)
+#     df_min = df_total.min(axis=0)
+#     frame = {'mean': df_mean, 'std': df_std, 'max': df_max, 'min': df_min}
+#     df_norm_info = pd.DataFrame(frame).transpose()
+#
+#     df_norm_info.to_csv(path_save + rnn_full_name + '-norm' + '.csv')
+#
+#     # Plot historgrams to make the firs check about gaussian assumption
+#     # for feature in df_total.columns:
+#     #     plt.hist(df_total[feature].to_numpy(), 50, density=True, facecolor='g', alpha=0.75)
+#     #     plt.title(feature)
+#     #     plt.show()
+#
+#     return df_norm_info
+#
+#
+# def load_normalization_info(path_save, rnn_full_name):
+#     return pd.read_csv(path_save + rnn_full_name + '-norm' + '.csv', index_col=0)
+#
+#
+# def normalize_df(dfs, normalization_info, normalization_type='minmax_sym'):
+#     if normalization_type == 'gaussian':
+#         def normalize_feature(col):
+#             col_mean = normalization_info.loc['mean', col.name]
+#             col_std = normalization_info.loc['std', col.name]
+#             return (col - col_mean) / col_std
+#     elif normalization_type == 'minmax_pos':
+#         def normalize_feature(col):
+#             col_min = normalization_info.loc['min', col.name]
+#             col_max = normalization_info.loc['max', col.name]
+#             return (col - col_min) / (col_max - col_min)
+#     elif normalization_type == 'minmax_sym':
+#         def normalize_feature(col):
+#             col_min = normalization_info.loc['min', col.name]
+#             col_max = normalization_info.loc['max', col.name]
+#             return -1.0 + 2.0 * (col - col_min) / (col_max - col_min)
+#
+#     if type(dfs) is list:
+#         for i in range(len(dfs)):
+#             dfs[i] = dfs[i].apply(normalize_feature, axis=0)
+#     else:
+#         dfs = dfs.apply(normalize_feature, axis=0)
+#
+#     return dfs
+#
+#
+# def denormalize_df(dfs, normalization_info, normalization_type='minmax_sym'):
+#     if normalization_type == 'gaussian':
+#         def denormalize_feature(col):
+#             col_mean = normalization_info.loc['mean', col.name]
+#             col_std = normalization_info.loc['std', col.name]
+#             return col * col_std + col_mean
+#     elif normalization_type == 'minmax_pos':
+#         def denormalize_feature(col):
+#             col_min = normalization_info.loc['min', col.name]
+#             col_max = normalization_info.loc['max', col.name]
+#             return col * (col_max - col_min) + col_min
+#     elif normalization_type == 'minmax_sym':
+#         def denormalize_feature(col):
+#             col_min = normalization_info.loc['min', col.name]
+#             col_max = normalization_info.loc['max', col.name]
+#             return ((col + 1.0) / 2.0) * (col_max - col_min) + col_min
+#
+#     if type(dfs) is list:
+#         for i in range(len(dfs)):
+#             dfs[i] = dfs[i].apply(denormalize_feature, axis=0)
+#     else:
+#         dfs = dfs.apply(denormalize_feature, axis=0)
+#
+#     return dfs
 
 
 class Dataset(data.Dataset):
