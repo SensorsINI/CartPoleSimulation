@@ -12,6 +12,8 @@ from modeling.mlp_tf.ParseArgs import args
 
 import tensorflow.keras as keras
 
+import timeit
+
 print('')
 
 args = args()
@@ -96,7 +98,7 @@ def train_network():
         def on_epoch_end(self, epoch, logs=None):
             # if epoch==4:
             if epoch >= 0:
-                plot_string = 'This is the network after {} training epoch(s), warm_up={}'.format(epoch +1, args.warm_up_len)
+                plot_string = 'This is the network after {} training epoch(s)'.format(epoch +1)
                 plot_results(net=net, args=args, dataset=test_set,
                              comment=plot_string,
                              save=True,

@@ -14,6 +14,7 @@ import torch.utils.data.dataloader
 from torch.optim import lr_scheduler
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
+from modeling.utilis import calculate_normalization_info
 import torch.nn as nn
 import matplotlib.pyplot as plt
 from itertools import product

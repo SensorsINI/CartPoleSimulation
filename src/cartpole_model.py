@@ -96,6 +96,66 @@ def cartpole_ode(p, s, u):
     return angleDD, positionDD
 
 
+def cartpole_jacobian(p, s, u):
+    """Jacobian of cartpole ode"""
+    ca = np.cos(s.angle)
+    sa = np.sin(s.angle)
+
+    if CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
+        pass
+        # ______________| position |positionD | angle | angleD |  u  |
+        # position  (x) |    xx         xv       xt       xo      xu
+        # positionD (v) |    vx         vv       vt       vo      vu
+        # angle     (t) |    tx         tv       tt       to      tu
+        # angleD    (o) |    ox         ov       ot       oo      ou
+
+
+        # xx =
+        #
+        # xv =
+        #
+        # xt =
+        #
+        # xo =
+        #
+        # xu =
+        #
+        # vx =
+        #
+        # vv =
+        #
+        # vt =
+        #
+        # vo =
+        #
+        # vu =
+        #
+        # tx =
+        #
+        # tv =
+        #
+        # tt =
+        #
+        # to =
+        #
+        # tu =
+        #
+        # ox =
+        #
+        # ov =
+        #
+        # ot =
+        #
+        # oo =
+        #
+        # ou =
+
+
+
+
+
+
+
 def Q2u(Q, p):
     """Converts dimensionless motor power [-1,1] to a physical force acting on a cart.
 

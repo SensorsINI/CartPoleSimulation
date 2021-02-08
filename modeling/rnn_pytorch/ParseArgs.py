@@ -64,6 +64,9 @@ def args():
 
     parser.add_argument('--warm_up_len', default=10, type=int, help='Number of timesteps for a warm-up sequence')
     parser.add_argument('--seq_len', default=50, type=int, help='Number of timesteps in a sequence')
+    parser.add_argument('--downsampling', default=1, type=int,
+                        help='Take every n-th point of callected dataset to make dt bigger')
+
 
     # Training parameters
     parser.add_argument('--num_epochs', default=3, type=int, help='Number of epochs of training')
