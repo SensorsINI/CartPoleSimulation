@@ -18,7 +18,9 @@ VAL_file_name = glob.glob('./data/validate/' + '*.csv')
 FIXME: To tailor input list, output list and closed loop list according to cartpole
 angleD_next, positionD_next = cartpole_ode(p, s, Q2u(Q,p))
 '''
-RNN_name = 'GRU-64H1-64H2'
+
+
+NN_name = 'dense-64H1-64H2'
 # inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'Q']
 inputs_list = ['Q', 's.angle.sin', 's.angle.cos', 's.angleD', 's.position', 's.positionD']
 # inputs_list = ['s.position', 's.angle']
@@ -45,11 +47,11 @@ def args():
     parser = argparse.ArgumentParser(description='Train a GRU network.')
 
     # Defining the model
-    parser.add_argument('--rnn_name', nargs='?', const=RNN_name, default=None, type=str,
-                        help='Name defining the RNN.'
+    parser.add_argument('--nn_name', nargs='?', const=NN_name, default=None, type=str,
+                        help='Name defining the MLP.'
                              'It has to have the form:'
-                             '(RNN type [GRU/LSTM])-(size first hidden layer)H1-(size second hidden layer)H2-...'
-                             'e.g. GRU-64H1-64H2-32H3')
+                             '(NN type [Dense])-(size first hidden layer)H1-(size second hidden layer)H2-...'
+                             'e.g. dense-64H1-64H2-32H3')
 
     parser.add_argument('--train_file_name', default=TRAIN_file_name, type=str,
                         help='File name of the recording to be used for training the RNN'
@@ -59,9 +61,11 @@ def args():
                              'e.g. oval_easy_test.csv ')
 
     parser.add_argument('--inputs_list', nargs="?", default=None, const=inputs_list,
-                        help='List of inputs to RNN')
+                        help='List of inputs to MLP')
     parser.add_argument('--outputs_list', nargs="?", default=None, const=outputs_list,
-                        help='List of outputs from RNN')
+                        help='List of outputs from MLP')
+
+
     parser.add_argument('--close_loop_for', nargs='?', default=None, const=closed_loop_list,
                         help='In RNN forward function this features will be fed beck from output to input')
 
@@ -73,8 +77,8 @@ def args():
                         help="Give RNN during training a true (future) dt.")
 
     # Exp len>warm_up_len!f
-    parser.add_argument('--exp_len', default=21, type=int, help='Return after cosuming this number of points')
-    parser.add_argument('--warm_up_len', default=20, type=int, help='Number of timesteps for a warm-up sequence')
+    # parser.add_argument('--exp_len', default=21, type=int, help='Return after cosuming this number of points')
+   # parser.add_argument('--warm_up_len', default=20, type=int, help='Number of timesteps for a warm-up sequence')
     parser.add_argument('--downsampling', default=1, type=int, help='Take every n-th point of callected dataset to make dt bigger')
 
     # Training parameters
