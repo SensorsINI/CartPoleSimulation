@@ -1,6 +1,6 @@
 """Parameters of CartPole system and simulation, Ground Truth equations of CartPole"""
 
-from cartpole_model import *
+from src.cartpole_model import *
 
 
 
