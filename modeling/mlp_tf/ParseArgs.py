@@ -69,7 +69,7 @@ def args():
     parser.add_argument('--close_loop_for', nargs='?', default=None, const=closed_loop_list,
                         help='In RNN forward function this features will be fed beck from output to input')
 
-    parser.add_argument('--load_rnn', nargs='?', default=None, const='last', type=str,
+    parser.add_argument('--load_nn', nargs='?', default=None, const='last', type=str,
                         help='Full name defining the RNN which should be loaded without .csv nor .pt extension'
                              'e.g. GRU-8IN-64H1-64H2-3OUT-1')
 

@@ -40,7 +40,6 @@ def train_network():
     lr = args.lr  # learning rate
     batch_size = args.batch_size  # Mini-batch size
     num_epochs = args.num_epochs  # Number of epochs to train the network
-    exp_len = args.exp_len
 
     # Network architecture:
     nn_name = args.nn_name

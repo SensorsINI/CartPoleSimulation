@@ -86,8 +86,8 @@ def create_nn_instance(args=None, nn_name=None, inputs_list=None, outputs_list=N
         load_nn = args.load_nn
     if path_save is None and args is not None:
         path_save = args.path_save
-    if warm_up_len == 1 and args is not None:
-        warm_up_len = args.warm_up_len
+    # if warm_up_len == 1 and args is not None:
+    #     warm_up_len = args.warm_up_len
     # if return_sequence is False and args is not None:
     #     return_sequence = args.return_sequence
     # if stateful is False and args is not None:
@@ -191,8 +191,7 @@ def create_nn_instance(args=None, nn_name=None, inputs_list=None, outputs_list=N
         print('')
         # Construct the requested NN
         net = myNN(nn_name=nn_name, inputs_list=inputs_list, outputs_list=outputs_list,
-                   warm_up_len=warm_up_len, return_sequence=return_sequence,
-                   stateful=stateful, batchSize=batchSize)
+                 batchSize=batchSize)
         normalization_info = None
 
 
@@ -506,7 +505,7 @@ class Dataset(keras.utils.Sequence):
 
         self.args = args
 
-        self.exp_len = None
+        # self.exp_len = None
         self.df_lengths = []
         self.df_lengths_cs = []
         self.number_of_samples = 0
@@ -520,7 +519,7 @@ class Dataset(keras.utils.Sequence):
         self.shuffle = shuffle
         self.indexes = []
 
-        self.reset_exp_len(exp_len=exp_len)
+        # self.reset_exp_len(exp_len=exp_len)
         self.reset_batch_size(batch_size=batch_size)
 
         # Here we imnplement a trial to change the target position and current positions
@@ -530,36 +529,36 @@ class Dataset(keras.utils.Sequence):
         if 'target_position' in inputs_list:
             self.idx_target_pos_in = inputs_list.index('target_position')
 
-    def reset_exp_len(self, exp_len=None):
-        """
-        This method should be used if the user wants to change the exp_len without creating new Dataset
-        Please remember that one can reset it again to come back to old configuration (from ParseArgs)
-        :param exp_len: Gives new user defined exp_len. Call empty to come back to default.
-        """
-        if exp_len is None:
-            self.exp_len = self.args.exp_len  # Sequence length
-        else:
-            self.exp_len = exp_len
+    # def reset_exp_len(self, exp_len=None):
+    #     """
+    #     This method should be used if the user wants to change the exp_len without creating new Dataset
+    #     Please remember that one can reset it again to come back to old configuration (from ParseArgs)
+    #     :param exp_len: Gives new user defined exp_len. Call empty to come back to default.
+    #     """
+    #     if exp_len is None:
+    #         self.exp_len = self.args.exp_len  # Sequence length
+    #     else:
+    #         self.exp_len = exp_len
 
-        self.df_lengths = []
-        self.df_lengths_cs = []
-        if type(self.data) == list:
-            for data_set in self.data:
-                self.df_lengths.append(data_set.shape[0] - self.exp_len)
-                if not self.df_lengths_cs:
-                    self.df_lengths_cs.append(self.df_lengths[0])
-                else:
-                    self.df_lengths_cs.append(self.df_lengths_cs[-1] + self.df_lengths[-1])
-            self.number_of_samples = self.df_lengths_cs[-1]
+    #     self.df_lengths = []
+    #     self.df_lengths_cs = []
+    #     if type(self.data) == list:
+    #         for data_set in self.data:
+    #             self.df_lengths.append(data_set.shape[0] - self.exp_len)
+    #             if not self.df_lengths_cs:
+    #                 self.df_lengths_cs.append(self.df_lengths[0])
+    #             else:
+    #                 self.df_lengths_cs.append(self.df_lengths_cs[-1] + self.df_lengths[-1])
+    #         self.number_of_samples = self.df_lengths_cs[-1]
 
-        else:
-            self.number_of_samples = self.data.shape[0] - self.exp_len
+    #     else:
+    #         self.number_of_samples = self.data.shape[0] - self.exp_len
 
-        self.number_of_batches = int(np.ceil(self.number_of_samples / float(self.batch_size)))
+    #     self.number_of_batches = int(np.ceil(self.number_of_samples / float(self.batch_size)))
 
-        self.indexes = np.arange(self.number_of_samples)
-        if self.shuffle:
-            np.random.shuffle(self.indexes)
+    #     self.indexes = np.arange(self.number_of_samples)
+    #     if self.shuffle:
+    #         np.random.shuffle(self.indexes)
 
     def reset_batch_size(self, batch_size=None):
 
