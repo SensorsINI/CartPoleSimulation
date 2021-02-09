@@ -40,7 +40,7 @@ speedup_globals = 1.0  # Multiplicative factor by which the simulation seen by t
 #   it may lead to unstable MPC instead of just making simulation run on the fastest achievable speed
 
 # Variables used for physical simulation
-dt_main_simulation_globals = 0.00020  # Time step of CartPole simulation
+dt_main_simulation_globals = 0.0020  # Time step of CartPole simulation
 
 # MPC
 dt_mpc_simulation_globals = 0.2  # Time step used by MPC controller
@@ -48,26 +48,6 @@ dt_mpc_simulation_globals = 0.2  # Time step used by MPC controller
 # make sure that it is trained to predict future states with this timestep
 # TODO: Add dt information to .txt file associated with and describing each RNN
 mpc_horizon_globals = 10  # Number of steps into future MPC controller simulates at each evaluation
-
-
-# Jacobian-UP (check it)
-Jacobian_UP_f = lambda p: np.array([
-    [0.0, 1.0, 0.0, 0.0],
-    [0.0, (-(1 + p.k) * p.M_fric) / (-p.m + (1 + p.k) * (p.m + p.M)), (p.g * p.m) / (-p.m + (1 + p.k) * (p.m + p.M)),
-     (-p.J_fric) / (p.L * (-p.m + (1 + p.k) * (p.m + p.M)))],
-    [0.0, 0.0, 0.0, 1.0],
-    [0.0, (-p.M_fric) / (p.L * (-p.m + (1 + p.k) * (p.m + p.M))),
-     (p.g * (p.M + p.m)) / (p.L * (-p.m + (1 + p.k) * (p.m + p.M))),
-     -p.m * (p.M + p.m) * p.J_fric / (p.L * p.L * (-p.m + (1 + p.k) * (p.m + p.M)))],
-])
-
-# Array gathering control around UP equilibrium
-B_f = lambda p: p.u_max * np.array([
-    [0.0],
-    [(1 + p.k) / (-p.m + (1 + p.k) * (p.m + p.M))],
-    [0.0],
-    [1.0 / (p.L * (-p.m + (1 + p.k) * (p.m + p.M)))],
-])
 
 # Variables for random trace generation
 # Complexity of the random trace, number of turning points used for interpolation

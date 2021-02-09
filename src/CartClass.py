@@ -99,16 +99,6 @@ class Cart:
         # Physical parameters of the cart
         self.p = p_globals
 
-        # Jacobian of the system linearized around upper equilibrium position
-        # x' = f(x)
-        # x = [x, v, theta, omega]
-        # TODO if parameters change in runtime this Jacobian wont be updated
-        self.Jacobian_UP = Jacobian_UP_f(self.p)
-
-        # Array gathering control around equilibrium
-        self.B = B_f(self.p)
-
-
         self.controller = None
         self.controller_name = ''
         controller_files = glob.glob(PATH_TO_CONTROLLERS + 'controller_' + '*.py')
@@ -443,8 +433,8 @@ class Cart:
             # You can change here with which initial parameters you wish to start the simulation
             self.s.position = 0.0
             self.s.positionD = 0.0
-            self.s.angle = np.pi/2.0 # (2.0 * random.normal() - 1.0) * pi / 180.0
-            self.s.angleD = 1.0
+            self.s.angle = (2.0 * random.normal() - 1.0) * pi / 180.0  # np.pi/2.0 #
+            self.s.angleD = 0.0 # 1.0
             self.s.angleDD = 0.0
 
             self.Q = 0.0
@@ -670,10 +660,7 @@ class Cart:
             path_import = PATH_TO_CONTROLLERS[2:].replace('/','.').replace(r'\\', '.')
             import_str = 'from ' + path_import + controller_full_name + ' import ' + controller_full_name
             exec(import_str)
-            if self.controller_name == 'lqr':
-                self.controller = eval(controller_full_name + '(self.Jacobian_UP, self.B)')
-            else:
-                self.controller = eval(controller_full_name + '()')
+            self.controller = eval(controller_full_name + '()')
 
         # Set the maximal allowed value of the slider
         if self.controller_name == 'manual-stabilization':
