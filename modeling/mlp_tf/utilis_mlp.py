@@ -634,7 +634,7 @@ class Dataset(keras.utils.Sequence):
             raise Exception('No time information available!')
         if idx is None:
             idx = np.random.randint(0, self.number_of_samples)
-        return self.get_series(idx, get_time_axis=True, targets_type=targets_type)
+        return self.get_series(idx, get_time_axis=True)#, targets_type=targets_type)
 
     def on_epoch_end(self):
         if self.shuffle:
@@ -642,6 +642,7 @@ class Dataset(keras.utils.Sequence):
 
 from types import SimpleNamespace
 from predictores.predictor_ideal import predictor_ideal
+
 class DatasetRandom(keras.utils.Sequence):
     def __init__(self,
                  args=None,
@@ -845,8 +846,8 @@ def plot_results(net,
         targets = targets[start_at:]
         time_axis = time_axis[start_at:]
 
-    features_pd = pd.DataFrame(data=features, columns=inputs_list, dtype=np.float32)
-    targets_pd = pd.DataFrame(data=targets, columns=outputs_list, dtype=np.float32)
+    features_pd = pd.DataFrame(data=[features], columns=inputs_list, dtype=np.float32)
+    targets_pd = pd.DataFrame(data=[targets], columns=outputs_list, dtype=np.float32)
 
     nn_outputs = pd.DataFrame(columns=outputs_list, dtype=np.float32)
 
