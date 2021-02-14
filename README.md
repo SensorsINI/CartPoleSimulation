@@ -52,6 +52,18 @@ Run Test.py to evaluate an RNN predicting future states of a random CartPole exp
 
 Both Train.py and Test.py generate data from data generated on the fly from random CartPole experiments. You do not have to provide preprepared data.
 
+## Parameter exploration with NNI
+
+For intellegent parameter space exploration with NNI, we have 3 files : 
+
+1. modeling/rnn_tf/Train_nni : Adapted from Train.py to train with parameter exploration
+2. modeling/rnn_tf/search_space.json : Search space for parameter search
+3. config.yml : Configuring the NNI experiments. 
+
+To run the exploration experiment :
+
+Step 1 : nnictl create --config config.yml
+Step 2 : Open the url as displayed on terminal after step 1
 
 ## Next step TODO:
 Better description of recorded files (controller, git revision, )
