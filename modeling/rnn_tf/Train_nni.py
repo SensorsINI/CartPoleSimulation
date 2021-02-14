@@ -31,7 +31,8 @@ print(args.__dict__)
 # Warning! It may affect performance. I would discourage you to use it for long training tasks
 # @profile(precision=4)
 def train_network(params):
-
+    
+    #We take the shape of RNN layers i.e. H1 and H2 from the NNI step params 
     args.rnn_name = 'GRU-'+str(params['h1'])+'H1-'+str(params['h2'])+'H2'
     # "warm_up_len":{"_type": "randint", "_value": [5, 20]},
 
@@ -153,6 +154,8 @@ def train_network(params):
     # Calculate the total time it took to run the function
     stop = timeit.default_timer()
     total_time = stop - start
+    
+    #Report the trial accuracy to NNI
     nni.report_final_result(history.history['val_loss'][-1])
     # Return the total time it took to run the function
     return total_time
@@ -171,6 +174,8 @@ if __name__ == '__main__':
     #     args.exp_len = warm_up_lens[warm_up_len_idx]+5
     #     time_to_accomplish = train_network()
     #     print('Total time of training the network: ' + str(time_to_accomplish))
+    
+    # Get parameters for next trial. Refer to search_space.json for determining the scope of search
     params = nni.get_next_parameter()
     time_to_accomplish = train_network(params)
     print('Total time of training the network: ' + str(time_to_accomplish))
