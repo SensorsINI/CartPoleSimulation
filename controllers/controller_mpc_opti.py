@@ -1,9 +1,7 @@
 """mpc controller"""
 
-from src.globals import *
+import numpy as np
 from types import SimpleNamespace
-
-from src.utilis import wrap_angle_rad
 
 import matplotlib.pyplot as plt
 
@@ -11,6 +9,12 @@ import casadi
 
 from copy import deepcopy
 
+from CartPole.cartpole_model import p_globals, Q2u
+
+from src.utilis import mpc_next_state
+
+dt_mpc_simulation = 0.2
+mpc_horizon = 10
 
 class controller_mpc_opti:
     def __init__(self):
@@ -27,8 +31,8 @@ class controller_mpc_opti:
 
         self.target_position = 0.0
 
-        self.mpc_horizon = mpc_horizon_globals
-        self.dt = dt_mpc_simulation_globals
+        self.mpc_horizon = mpc_horizon
+        self.dt = dt_mpc_simulation
 
         self.yp_hat = np.zeros(self.mpc_horizon, dtype=object)  # MPC prediction of future states
         self.Q_hat = np.zeros(self.mpc_horizon)  # MPC prediction of future control inputs

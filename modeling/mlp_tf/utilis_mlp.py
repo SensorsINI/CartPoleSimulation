@@ -8,7 +8,7 @@ import random as rnd
 
 import copy
 
-from modeling.rnn_tf.utilis_rnn_specific import *
+from modeling.mlp_tf.utilis_mlp_specific import *
 
 from tqdm import trange
 
@@ -574,7 +574,7 @@ class Dataset(keras.utils.Sequence):
         # In TF it must return the number of batches
         return self.number_of_batches
 
-    def get_series(self, idx, get_time_axis=False):
+    def get_series(self, idx, get_time_axis=False, targets_type='first_after_warm_up'):
         """
         Requires the self.data to be a list of pandas dataframes
         """
@@ -589,11 +589,22 @@ class Dataset(keras.utils.Sequence):
         features = None
         targets = None
 
-        features = self.data[idx_data_set].to_numpy()[idx, :]
-        # After feeding the whole sequence we just compare the final output of the NN with the state following afterwards
-        # TODO: Check if idx-1 is needed or idx
-        targets = self.labels[idx_data_set].to_numpy()[idx]
-        
+        if targets_type == 'first_after_warm_up':
+            features = self.data[idx_data_set].to_numpy()[idx, :]
+            # After feeding the whole sequence we just compare the final output of the RNN with the state following afterwards
+            targets = self.labels[idx_data_set].to_numpy()[idx]
+        elif targets_type == 'all':
+            features = self.data[idx_data_set].to_numpy()[idx:idx + self.exp_len, :]
+            # Every point in features has its target value corresponding to the next time step:
+            targets = self.labels[idx_data_set].to_numpy()[idx:idx + self.exp_len]
+        elif targets_type == 'all after warm-up':
+            features = self.data[idx_data_set].to_numpy()[idx:idx + self.exp_len, :]
+            # Every point in features has its target value corresponding to the next time step:
+            targets = self.labels[idx_data_set].to_numpy()[idx:idx + self.exp_len]
+        else:
+            raise('Non-existent target_type')
+
+        # If get_time_axis try to obtain a vector of time data for the chosen sample
         if get_time_axis:
             try:
                 # As targets and features are shifted by one timestep we have to make time_axis accordingly longer to cover both
@@ -606,14 +617,6 @@ class Dataset(keras.utils.Sequence):
             return features, targets, time_axis
         else:
             return features, targets
-
-    # def get_all_targets(self):
-    #     all_targets = []
-    #     for i in range(self.number_of_samples):
-    #         _, targets = self.get_series(i)
-    #         all_targets.append(targets)
-    #     all_targets = np.stack(all_targets)
-    #     return all_targets
 
     def __getitem__(self, idx_batch):
 

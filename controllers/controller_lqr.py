@@ -8,7 +8,7 @@ import numpy as np
 
 from copy import deepcopy
 
-from src.cartpole_model import cartpole_jacobian, p_globals, s0
+from CartPole.cartpole_model import cartpole_jacobian, p_globals, s0
 
 class controller_lqr:
     def __init__(self):

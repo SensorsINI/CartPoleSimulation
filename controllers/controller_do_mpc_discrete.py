@@ -1,12 +1,15 @@
 """do-mpc controller"""
 
 import do_mpc
+import numpy as np
 
-from src.globals import *
 from types import SimpleNamespace
 
-from copy import deepcopy
+from CartPole.cartpole_model import Q2u, p_globals
+from src.utilis import mpc_next_state
 
+dt_mpc_simulation = 0.2  # s
+mpc_horizon = 10
 
 
 class controller_do_mpc_discrete:
@@ -44,7 +47,7 @@ class controller_do_mpc_discrete:
 
         target_position = self.model.set_variable('_tvp', 'target_position')
 
-        s_next = mpc_next_state(s, p, Q2u(Q,p), dt=dt_mpc_simulation_globals)
+        s_next = mpc_next_state(s, p, Q2u(Q,p), dt=dt_mpc_simulation)
 
         self.model.set_rhs('s.position', s_next.position)
         self.model.set_rhs('s.angle', s_next.angle)
@@ -70,8 +73,8 @@ class controller_do_mpc_discrete:
         self.mpc = do_mpc.controller.MPC(self.model)
 
         setup_mpc = {
-            'n_horizon': mpc_horizon_globals,
-            't_step': dt_mpc_simulation_globals,
+            'n_horizon': mpc_horizon,
+            't_step': dt_mpc_simulation,
             'n_robust': 0,
             'store_full_solution': False,
             'store_lagr_multiplier': False,
@@ -85,7 +88,7 @@ class controller_do_mpc_discrete:
         lterm = - self.model.aux['E_pot'] +\
                 20 * distance_difference +\
                 5 * self.model.aux['E_kin_pol']
-        mterm = (5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart'])
+        mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
         self.mpc.set_rterm(Q=0.1)
 
         # Horizon 5

@@ -274,40 +274,52 @@ class myNN(keras.Sequential):
         elif 'LSTM' in names:
             self.rnn_type = 'LSTM'
             self.rnn_layer = keras.layers.LSTM
+        elif 'Dense' in names:
+            self.rnn_type = 'Dense'
+            self.rnn_layer = keras.layers.Dense
         else:
             self.rnn_type = 'RNN-Basic'
             self.rnn_layer = keras.layers.SimpleRNN
 
         # Construct network
-        # Define first layer
-        if self.h_number == 1:
-            self.add(self.rnn_layer(
-                units=self.h_size[0],
-                batch_input_shape=(batchSize, warm_up_len, len(inputs_list)),
-                return_sequences=return_sequence,
-                stateful=stateful
-            ))
-        else:
-            self.add(self.rnn_layer(
-                units=self.h_size[0],
-                batch_input_shape=(batchSize, warm_up_len, len(inputs_list)),
-                return_sequences=True,
-                stateful=stateful
-            ))
-            # Define following layers
-            # The for loop will only executed if there is MORE than 2 hidden layers
-            for i in range(len(self.h_size) - 2):
+        # Either dense...
+        if self.rnn_type == 'Dense':
+            self.add(tf.keras.Input(shape=(len(inputs_list),)))
+            for i in range(len(self.h_size)):
                 self.add(self.rnn_layer(
-                    units=self.h_size[i + 1],
+                    units=self.h_size[i], activation='tanh'
+                ))
+        else:
+            # Or RNN...
+            # Define first layer
+            if self.h_number == 1:
+                self.add(self.rnn_layer(
+                    units=self.h_size[0],
+                    batch_input_shape=(batchSize, warm_up_len, len(inputs_list)),
+                    return_sequences=return_sequence,
+                    stateful=stateful
+                ))
+            else:
+                self.add(self.rnn_layer(
+                    units=self.h_size[0],
+                    batch_input_shape=(batchSize, warm_up_len, len(inputs_list)),
                     return_sequences=True,
                     stateful=stateful
                 ))
-            # Last RNN layer
-            self.add(self.rnn_layer(
-                units=self.h_size[-1],
-                return_sequences=return_sequence,
-                stateful=stateful
-            ))
+                # Define following layers
+                # The for loop will only executed if there is MORE than 2 hidden layers
+                for i in range(len(self.h_size) - 2):
+                    self.add(self.rnn_layer(
+                        units=self.h_size[i + 1],
+                        return_sequences=True,
+                        stateful=stateful
+                    ))
+                # Last RNN layer
+                self.add(self.rnn_layer(
+                    units=self.h_size[-1],
+                    return_sequences=return_sequence,
+                    stateful=stateful
+                ))
 
         # self.add(keras.layers.Dense(units=len(outputs_list), activation='tanh'))
         self.add(keras.layers.Dense(units=len(outputs_list)))

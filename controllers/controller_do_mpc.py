@@ -2,9 +2,13 @@
 
 import do_mpc
 
-from src.globals import *
-from types import SimpleNamespace
+import numpy as np
 
+from CartPole.cartpole_model import p_globals, s0, cartpole_ode, Q2u
+
+
+dt_mpc_simulation = 0.2  # s
+mpc_horizon = 10
 
 class controller_do_mpc:
     def __init__(self,
@@ -21,12 +25,8 @@ class controller_do_mpc:
         # Physical parameters of the cart
         p = p_globals
 
-        # State of the cart
-        s = SimpleNamespace()  # s like state
-        s.position = 0.0
-        s.positionD = 0.0
-        s.angle = 0.0
-        s.angleD = 0.0
+        # Container for the state of the cart
+        s = s0  # s like state
 
         model_type = 'continuous'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
@@ -67,8 +67,8 @@ class controller_do_mpc:
         self.mpc = do_mpc.controller.MPC(self.model)
 
         setup_mpc = {
-            'n_horizon': mpc_horizon_globals,
-            't_step': dt_mpc_simulation_globals,
+            'n_horizon': mpc_horizon,
+            't_step': dt_mpc_simulation,
             'n_robust': 0,
             'store_full_solution': False,
             'store_lagr_multiplier': False,
@@ -87,7 +87,7 @@ class controller_do_mpc:
         mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
         self.mpc.set_rterm(Q=0.1)
 
-        # # Alternative versions to get data for training
+        # # Alternative versions of cost function to get more diverse data for learning cartpole model
         # lterm = 20.0 * distance_difference
         # mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
         # self.mpc.set_rterm(Q=0.2)
@@ -103,14 +103,11 @@ class controller_do_mpc:
         self.mpc.bounds['lower', '_u', 'Q'] = -1.0
         self.mpc.bounds['upper', '_u', 'Q'] = 1.0
 
-        # self.mpc.bounds['lower', '_x', 's.angle'] = - 0.5 * np.pi
-        # self.mpc.bounds['upper', '_x', 's.angle'] =   0.5 * np.pi
-
         self.tvp_template = self.mpc.get_tvp_template()
 
         self.mpc.set_tvp_fun(self.tvp_fun)
 
-        # Suppress IPOPT outputs
+        # Suppress IPOPT outputs (optimizer info printed to the console)
         suppress_ipopt = {'ipopt.print_level': 0, 'ipopt.sb': 'yes', 'print_time': 0}
         self.mpc.set_param(nlpsol_opts=suppress_ipopt)
 
