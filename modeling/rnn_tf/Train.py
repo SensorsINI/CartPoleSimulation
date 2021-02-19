@@ -15,6 +15,8 @@ from modeling.rnn_tf.ParseArgs import args
 
 import tensorflow.keras as keras
 
+from modeling.utilis import calculate_normalization_info, load_normalization_info
+
 print('')
 
 args = args()
@@ -90,11 +92,12 @@ def train_network():
 
     del train_dfs, test_dfs, train_dfs_norm, test_dfs_norm
 
-    net.summary()
+
     net.compile(
         loss='mean_squared_error',
         optimizer=keras.optimizers.Adam(0.001)
     )
+    net.summary()
 
     class CustomCallback(keras.callbacks.Callback):
         def on_epoch_end(self, epoch, logs=None):

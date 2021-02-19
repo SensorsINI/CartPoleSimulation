@@ -1,38 +1,28 @@
-
-import scipy
-import numpy as np
-from modeling.rnn.utilis_rnn import *
+from modeling.rnn_tf.utilis_rnn import *
 
 
-RNN_FULL_NAME = 'GRU-5IN-32H1-32H2-1OUT-0'
-INPUTS_LIST = ['s.position', 's.angle']
+RNN_FULL_NAME = 'GRU-5IN-64H1-64H2-1OUT-0'
+INPUTS_LIST = ['s.position', 's.angle', 's.positionD', 's.angleD', 'target_position']
 OUTPUTS_LIST = ['Q']
-PATH_SAVE = './save/nets/rnn_as_mpc_pt/'
+PATH_SAVE = './controllers/nets/rnn_as_mpc_tf/'
 
-from copy import deepcopy
-
-class controller_rnn_as_mpc:
+# TODO: For this moment it is just copied Pytorch version
+class controller_rnn_as_mpc_tf:
     def __init__(self):
-
-        self.rnn_full_name = RNN_FULL_NAME
-        self.path_save = PATH_SAVE
-
-        self.device = get_device()
 
         # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
         self.net, self.rnn_name, self.inputs_list, self.outputs_list \
-            = create_rnn_instance(load_rnn=self.rnn_full_name, path_save=self.path_save, device=self.device)
+            = create_rnn_instance(load_rnn=RNN_FULL_NAME, path_save=PATH_SAVE,
+                                  return_sequence=False, stateful=True,
+                                  warm_up_len=1, batchSize=1)
 
-        self.normalization_info = load_normalization_info(self.path_save, self.rnn_full_name)
-
-        self.net.reset()
-        self.net.eval()
+        self.normalization_info = load_normalization_info(PATH_SAVE, RNN_FULL_NAME)
 
         self.rnn_input = pd.DataFrame(columns=self.inputs_list)
         self.rnn_output = pd.DataFrame(columns=self.outputs_list)
 
 
-    def step(self, s, target_position):
+    def step(self, s, target_position, time=None):
 
         # Copy state and target_position into rnn_input
 
@@ -48,12 +38,11 @@ class controller_rnn_as_mpc:
             self.rnn_input['target_position'] = [target_position]
 
         rnn_input_normed = normalize_df(self.rnn_input, self.normalization_info)
-
-        rnn_input_torch = torch.tensor(rnn_input_normed.values).float().unsqueeze(0).to(self.device)
-        normalized_rnn_output = self.net(rnn_input=rnn_input_torch)
-        normalized_rnn_output = normalized_rnn_output.detach().cpu().squeeze().tolist()
-        normalized_rnn_output = pd.DataFrame(data=[normalized_rnn_output], columns=self.outputs_list)
-
+        rnn_input_normed = np.squeeze(rnn_input_normed.to_numpy())
+        rnn_input_normed = rnn_input_normed[np.newaxis, np.newaxis, :]
+        normalized_rnn_output = self.net.predict_on_batch(rnn_input_normed)
+        normalized_rnn_output = np.squeeze(normalized_rnn_output).tolist()
+        normalized_rnn_output = copy.deepcopy(pd.DataFrame(data=[normalized_rnn_output], columns=self.outputs_list))
         denormalized_rnn_output = denormalize_df(normalized_rnn_output, self.normalization_info)
 
         Q = float(denormalized_rnn_output['Q'])

@@ -1,15 +1,37 @@
 """mpc controller"""
 
-from src.globals import *
+import numpy as np
 from types import SimpleNamespace
-
-from src.utilis import wrap_angle_rad
 
 import matplotlib.pyplot as plt
 
 import casadi
 
 from copy import deepcopy
+
+from CartPole.cartpole_model import p_globals, Q2u, cartpole_ode
+
+
+def mpc_next_state(s, p, u, dt):
+    """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
+    """
+
+    s_next = s
+
+    s_next.angleDD, s_next.positionDD = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
+
+    # Calculate NEXT state:
+    s_next.position = s.position + s.positionD * dt
+    s_next.positionD = s.positionD + s.positionDD * dt
+
+    s_next.angle = s.angle + s.angleD * dt
+    s_next.angleD = s.angleD + s.angleDD * dt
+
+    return s_next
+
+
+dt_mpc_simulation = 0.2
+mpc_horizon = 10
 
 
 class controller_mpc_opti:
@@ -27,8 +49,8 @@ class controller_mpc_opti:
 
         self.target_position = 0.0
 
-        self.mpc_horizon = mpc_horizon_globals
-        self.dt = dt_mpc_simulation_globals
+        self.mpc_horizon = mpc_horizon
+        self.dt = dt_mpc_simulation
 
         self.yp_hat = np.zeros(self.mpc_horizon, dtype=object)  # MPC prediction of future states
         self.Q_hat = np.zeros(self.mpc_horizon)  # MPC prediction of future control inputs
@@ -83,7 +105,7 @@ class controller_mpc_opti:
 
         return cost
 
-    def step(self, s, target_position):
+    def step(self, s, target_position, time=None):
 
         self.s = deepcopy(s)
         self.target_position = deepcopy(target_position)

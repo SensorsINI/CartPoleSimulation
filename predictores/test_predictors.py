@@ -5,10 +5,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.utilis import pd_plotter_simple
+from predictores.predictor_tests_plotting_helpers import pd_plotter_simple
 
 from predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
-from predictores.predictor_ideal import predictor_ideal
 
 tested_predictor = predictor_autoregressive_tf
 

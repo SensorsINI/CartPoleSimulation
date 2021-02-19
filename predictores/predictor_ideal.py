@@ -34,14 +34,16 @@ Using predictor:
 
 
 from modeling.utilis import load_normalization_info, normalize_df
+from CartPole.cartpole_model import p_globals, Q2u
+from predictores.predictor_tests_plotting_helpers import mpc_next_state
 
-from src.globals import *
+from types import SimpleNamespace
+
+import numpy as np
 from copy import deepcopy
 import pandas as pd
 import copy
 import timeit
-
-import matplotlib.pyplot as plt
 
 RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0' # You need it to get normalization info
 RNN_PATH = './save_tf/'

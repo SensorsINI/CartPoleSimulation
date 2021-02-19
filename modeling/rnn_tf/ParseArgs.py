@@ -18,7 +18,7 @@ VAL_file_name = glob.glob('./data/validate/' + '*.csv')
 FIXME: To tailor input list, output list and closed loop list according to cartpole
 angleD_next, positionD_next = cartpole_ode(p, s, Q2u(Q,p))
 '''
-RNN_name = 'GRU-64H1-64H2'
+RNN_name = 'Dense-64H1-64H2'
 # inputs_list = ['s.position', 's.positionD', 's.angle', 's.angleD', 'Q']
 inputs_list = ['Q', 's.angle.sin', 's.angle.cos', 's.angleD', 's.position', 's.positionD']
 # inputs_list = ['s.position', 's.angle']
@@ -73,8 +73,8 @@ def args():
                         help="Give RNN during training a true (future) dt.")
 
     # Exp len>warm_up_len!f
-    parser.add_argument('--exp_len', default=21, type=int, help='Return after cosuming this number of points')
-    parser.add_argument('--warm_up_len', default=20, type=int, help='Number of timesteps for a warm-up sequence')
+    parser.add_argument('--exp_len', default=11, type=int, help='Return after cosuming this number of points')
+    parser.add_argument('--warm_up_len', default=10, type=int, help='Number of timesteps for a warm-up sequence')
     parser.add_argument('--downsampling', default=1, type=int, help='Take every n-th point of callected dataset to make dt bigger')
 
     # Training parameters

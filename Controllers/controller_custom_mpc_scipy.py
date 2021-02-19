@@ -11,6 +11,8 @@ from predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
 from predictores.predictor_ideal import predictor_ideal
 
 predictor = predictor_ideal
+# WARNING: if using RNN to provide CartPole model to MPC
+# make sure that it is trained to predict future states with this timestep
 DT = 0.2
 
 # method = 'L-BFGS-B'
@@ -41,7 +43,7 @@ m2 /= w_sum
 m3 /= w_sum
 m4 /= w_sum
 
-class controller_custom_mpc:
+class controller_custom_mpc_scipy:
     def __init__(self):
 
 
@@ -125,7 +127,7 @@ class controller_custom_mpc:
 
         return cost
 
-    def step(self, s, target_position):
+    def step(self, s, target_position, time=None):
         # TODO: Step should get already a dataframe/dataseries from which it should pick the columns it needs
         #   Optimally you should operate on the normed values all the time, try to eliminate devisions
         # IMPORTANT: take care how often it is called!!!
