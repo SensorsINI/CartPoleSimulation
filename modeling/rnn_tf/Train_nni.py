@@ -18,6 +18,9 @@ import tensorflow.keras as keras
 
 import nni
 
+import os
+print(os.getcwd())
+os.system('say '+str(os.getcwd()))
 
 from tensorboard.plugins.hparams import api as hp
 

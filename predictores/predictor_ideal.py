@@ -35,7 +35,6 @@ Using predictor:
 
 from modeling.utilis import load_normalization_info, normalize_df
 from CartPole.cartpole_model import p_globals, Q2u
-from predictores.predictor_tests_plotting_helpers import mpc_next_state
 
 from types import SimpleNamespace
 
@@ -45,10 +44,30 @@ import pandas as pd
 import copy
 import timeit
 
+from CartPole.cartpole_model import cartpole_ode
+
 RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0' # You need it to get normalization info
 RNN_PATH = './save_tf/'
 # RNN_PATH = './controllers/nets/mpc_on_rnn_tf/'
 PREDICTION_FEATURES_NAMES = ['s.angle.cos', 's.angle.sin', 's.angle', 's.angleD', 's.position', 's.positionD']
+
+
+def mpc_next_state(s, p, u, dt):
+    """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
+    """
+
+    s_next = s
+
+    s_next.angleDD, s_next.positionDD = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
+
+    # Calculate NEXT state:
+    s_next.position = s.position + s.positionD * dt
+    s_next.positionD = s.positionD + s.positionDD * dt
+
+    s_next.angle = s.angle + s.angleD * dt
+    s_next.angleD = s.angleD + s.angleDD * dt
+
+    return s_next
 
 
 class predictor_ideal:

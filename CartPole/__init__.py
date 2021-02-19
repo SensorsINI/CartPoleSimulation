@@ -329,7 +329,6 @@ class CartPole:
         if mode == 'init':
 
             # Make folder to save data (if not yet existing)
-            os.makedirs(PATH_TO_EXPERIMENT_RECORDINGS[:-1])
             try:
                 os.makedirs(PATH_TO_EXPERIMENT_RECORDINGS[:-1])
             except FileExistsError:

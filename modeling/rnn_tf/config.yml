@@ -5,7 +5,7 @@ maxExecDuration: 10h
 maxTrialNum: 20
 #choice: local, remote, pai
 trainingServicePlatform: local
-searchSpacePath: ./modeling/rnn_tf/search_space.json
+searchSpacePath: ../../modeling/rnn_tf/search_space.json
 #choice: true, false
 useAnnotation: false
 tuner:
@@ -17,5 +17,5 @@ tuner:
     optimize_mode: minimize
 trial:
   command: python modeling/rnn_tf/Train_nni.py --num_epochs=5 --rnn_name --inputs_list --outputs_list --close_loop_for --cheat_dt
-  codeDir: .
+  codeDir: ../../
   gpuNum: 0
