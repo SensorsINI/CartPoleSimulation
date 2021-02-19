@@ -11,7 +11,7 @@ import sys
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QIcon
 # Import custom made elements of GUI
-from CartPoleGUI._CartPoleGUI_MainWindow import MainWindow
+from GUI._CartPoleGUI_MainWindow import MainWindow
 
 # This piece of code gives a custom ID to our application
 # It is essential for packaging
@@ -39,7 +39,7 @@ def run_gui():
     # Every PyQt5 application has to contain this line
     app = QApplication(sys.argv)
     # Set the default icon to use for all the windows of our application
-    app.setWindowIcon(QIcon('CartPoleGUI/gui_icon.ico'))  # GUI Icon, feel free to change
+    app.setWindowIcon(QIcon('GUI/gui_icon.ico'))  # GUI Icon, feel free to change
     # Create an instance of the GUI window.
     window = MainWindow()
     window.show()

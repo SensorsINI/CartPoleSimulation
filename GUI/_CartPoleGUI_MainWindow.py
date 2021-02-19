@@ -26,10 +26,10 @@ from time import sleep
 # related to CartPole which are not related to PyQt5 GUI
 from CartPole import CartPole
 
-from CartPoleGUI.gui_default_params import *
-from CartPoleGUI.loop_timer import loop_timer
-from CartPoleGUI._CartPoleGUI_worker_template import Worker
-from CartPoleGUI._CartPoleGUI_summary_window import SummaryWindow
+from GUI.gui_default_params import *
+from GUI.loop_timer import loop_timer
+from GUI._CartPoleGUI_worker_template import Worker
+from GUI._CartPoleGUI_summary_window import SummaryWindow
 
 
 # Class implementing the main window of CartPole GUI

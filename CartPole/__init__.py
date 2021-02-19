@@ -48,7 +48,8 @@ rc('font', **font)
 
 # endregion
 
-PATH_TO_CONTROLLERS = './controllers/'  # Path where controllers are stored
+PATH_TO_CONTROLLERS = './Controllers/'  # Path where controllers are stored
+PATH_TO_EXPERIMENT_RECORDINGS = './ExperimentRecordings/' # Path where the experiments data is stored
 
 
 class CartPole:
@@ -328,17 +329,18 @@ class CartPole:
         if mode == 'init':
 
             # Make folder to save data (if not yet existing)
+            os.makedirs(PATH_TO_EXPERIMENT_RECORDINGS[:-1])
             try:
-                os.makedirs('./data')
+                os.makedirs(PATH_TO_EXPERIMENT_RECORDINGS[:-1])
             except FileExistsError:
                 pass
 
             # Set path where to save the data
             if csv_name is None or csv_name == '':
-                self.csv_filepath = './data/' + 'CP_' + self.controller_name + str(
+                self.csv_filepath = PATH_TO_EXPERIMENT_RECORDINGS + 'CP_' + self.controller_name + str(
                     datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')) + '.csv'
             else:
-                self.csv_filepath = './data/' + csv_name
+                self.csv_filepath = PATH_TO_EXPERIMENT_RECORDINGS + csv_name
                 if csv_name[-4:] != '.csv':
                     self.csv_filepath += '.csv'
 
@@ -425,7 +427,7 @@ class CartPole:
                 if not os.path.isfile(file_path):
                     print(
                         'Cannot load: There is no experiment recording file with name {} at local folder or in {}'.format(
-                            filename, './data/'))
+                            filename, PATH_TO_EXPERIMENT_RECORDINGS))
                     return False
 
         # Get race recording
