@@ -22,7 +22,7 @@ class controller_rnn_as_mpc_tf:
         self.rnn_output = pd.DataFrame(columns=self.outputs_list)
 
 
-    def step(self, s, target_position):
+    def step(self, s, target_position, time=None):
 
         # Copy state and target_position into rnn_input
 

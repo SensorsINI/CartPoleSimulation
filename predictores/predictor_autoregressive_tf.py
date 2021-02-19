@@ -40,7 +40,6 @@ Using predictor:
 
 
 from modeling.rnn_tf.utilis_rnn import *
-from src.utilis import pd_plotter_simple
 import numpy as np
 
 

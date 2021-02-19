@@ -127,7 +127,7 @@ class controller_custom_mpc_scipy:
 
         return cost
 
-    def step(self, s, target_position):
+    def step(self, s, target_position, time=None):
         # TODO: Step should get already a dataframe/dataseries from which it should pick the columns it needs
         #   Optimally you should operate on the normed values all the time, try to eliminate devisions
         # IMPORTANT: take care how often it is called!!!

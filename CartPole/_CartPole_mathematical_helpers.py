@@ -4,7 +4,9 @@ This file was necessary to make CartPole module self-contained.
 """
 
 from math import fmod
+
 import numpy as np
+
 
 # Wraps the angle into range [-π, π]
 def wrap_angle_rad(angle):

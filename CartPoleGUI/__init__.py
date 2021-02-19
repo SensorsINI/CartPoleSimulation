@@ -1,7 +1,7 @@
 """
 Top level script in CartPoleGUI folder.
 It defines the function run_gui() by calling which you can run the CartPole gui.
-You can either run this script as main, or import run_gui() function whereever you wish.
+You can either run this script as main, or import run_gui() function wherever you wish.
 """
 
 # Import module to interact with OS

@@ -3,11 +3,11 @@
 # e.g. while testing new controller
 
 # TIME SCALES - timescales cannot be changed after starting the program
-dt_main_simulation = 0.02  # s, time step of CartPole simulation if run through GUI
+dt_simulation = 0.02  # s, time step of CartPole simulation if run through GUI
 controller_update_interval = 0.02  # s, sets how often the control input should be calculated
-# The last variable must be in practice the multiple of dt_main_simulation
+# The last variable must be in practice the multiple of dt_simulation
 # Hence the provided value is translated to interval given in the number of time steps of main simulation
-# controller_update_interval_steps =  np.rint(controller_update_interval/dt_main_simulation_init)
+# controller_update_interval_steps =  np.rint(controller_update_interval/dt_simulation)
 # 0 is treated the same as 1 with controller updated at every simulation time step
 save_interval = 0.02  # s, How often to save the results of simulation
 # The same considerations as for controller_update_interval apply
@@ -34,8 +34,11 @@ Possible choices for CartPole controller:
 save_history_init = True  # Save experiment history as CSV (after experiment finished, online saving for Data Generator only)
 show_experiment_summary_init = True  # If true a window plotting the experiment history will be displayed after experiment ended
 stop_at_90_init = False  # Block the pole if it reaches +/-90 deg (horizontal position)
-load_recording_init = False  # Start/Stop button: True: load and replay a recording; False: start new experiment
 slider_on_click_init = False  # True: update slider only on click, False: update slider while hoovering over it
+simulator_mode_init = 'Slider-Controlled Experiment'  # Effects Start/Stop button:
+# 'Slider-Controlled Experiment': Run experiment controlled by user (through slider)
+# 'Random Experiment': Run experiment with random target position
+# 'Replay': load and replay a recording; False: start new experiment
 speedup_init = 1.0  # Multiplicative factor by which the simulation seen by the user differs from real time
 # E.g. 2.0 means that you watch simulation double speed
 # WARNING: This is the target value, max speedup is limited by speed of performing CartPole simulation

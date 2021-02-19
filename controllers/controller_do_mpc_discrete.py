@@ -5,8 +5,26 @@ import numpy as np
 
 from types import SimpleNamespace
 
-from CartPole.cartpole_model import Q2u, p_globals
-from src.utilis import mpc_next_state
+from CartPole.cartpole_model import Q2u, p_globals, cartpole_ode
+
+
+def mpc_next_state(s, p, u, dt):
+    """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
+    """
+
+    s_next = s
+
+    s_next.angleDD, s_next.positionDD = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
+
+    # Calculate NEXT state:
+    s_next.position = s.position + s.positionD * dt
+    s_next.positionD = s.positionD + s.positionDD * dt
+
+    s_next.angle = s.angle + s.angleD * dt
+    s_next.angleD = s.angleD + s.angleDD * dt
+
+    return s_next
+
 
 dt_mpc_simulation = 0.2  # s
 mpc_horizon = 10
@@ -156,7 +174,7 @@ class controller_do_mpc_discrete:
         return self.tvp_template
 
 
-    def step(self, s, target_position):
+    def step(self, s, target_position, time=None):
 
         self.x0['s.position'] = s.position
         self.x0['s.positionD'] = s.positionD

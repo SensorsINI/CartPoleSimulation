@@ -52,6 +52,10 @@ Run Test.py to evaluate an RNN predicting future states of a random CartPole exp
 
 Both Train.py and Test.py generate data from data generated on the fly from random CartPole experiments. You do not have to provide preprepared data.
 
+## Folding convention
+Files regions are folded with #region #endregion syntax
+For Pycharm default, for Atom install
+
 
 ## Next step TODO:
 Better description of recorded files (controller, git revision, )

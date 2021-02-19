@@ -13,7 +13,6 @@ While designing the controller you just chose the predictor you want,
 
 
 from modeling.rnn_tf.utilis_rnn import *
-from src.utilis import pd_plotter_simple
 import numpy as np
 from modeling.rnn_tf.rnn_numpy import create_rnn_instance_numpy
 

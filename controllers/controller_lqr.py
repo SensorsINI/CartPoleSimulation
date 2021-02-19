@@ -66,7 +66,7 @@ class controller_lqr:
         self.X = X
         self.eigVals = eigVals
 
-    def step(self, state, PositionTarget):
+    def step(self, state, PositionTarget, time=None):
 
         s = deepcopy(state)
 

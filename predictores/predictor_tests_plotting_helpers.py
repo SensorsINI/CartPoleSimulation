@@ -12,29 +12,6 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 
-from CartPole.cartpole_model import cartpole_ode
-
-
-def mpc_next_state(s, p, u, dt):
-    """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
-    """
-
-    s_next = s
-
-    s_next.angleDD, s_next.positionDD = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
-
-    # Calculate NEXT state:
-    s_next.position = s.position + s.positionD * dt
-    s_next.positionD = s.positionD + s.positionDD * dt
-
-    s_next.angle = s.angle + s.angleD * dt
-    s_next.angleD = s.angleD + s.angleDD * dt
-
-    return s_next
-
-
-
-
 def pd_plotter_simple(df, x_name=None, y_name=None, idx_range=None,
                       color='blue', dt=None, marker=None, vline=None, title=''):
 
@@ -99,7 +76,6 @@ def pd_plotter_compare_1(d_ground, df, x_name=None, y_name=None, idx_range=None,
     plt.show()
 
 
-
 def pd_plotter_compare_2(d_ground, dfs, names, x_name=None, y_name=None, idx_range=None,
                       colors=None, dt=None, marker=None, vline=None, title=''):
 
@@ -138,6 +114,7 @@ def pd_plotter_compare_2(d_ground, dfs, names, x_name=None, y_name=None, idx_ran
     plt.xticks(fontsize=16)
 
     plt.show()
+
 
 def get_predictions(predictor, df, autoregres_at_after_start, N_predictions, horizon, prediction_denorm=True):
     for row_number in range(autoregres_at_after_start):

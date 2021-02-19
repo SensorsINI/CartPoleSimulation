@@ -1,7 +1,8 @@
 
 import scipy
 import numpy as np
-from modeling.rnn.utilis_rnn import *
+import pandas as pd
+from modeling.rnn_pytorch.utilis_rnn import *
 
 
 RNN_FULL_NAME = 'GRU-5IN-32H1-32H2-1OUT-0'
@@ -32,7 +33,7 @@ class controller_rnn_as_mpc:
         self.rnn_output = pd.DataFrame(columns=self.outputs_list)
 
 
-    def step(self, s, target_position):
+    def step(self, s, target_position, time=None):
 
         # Copy state and target_position into rnn_input
 

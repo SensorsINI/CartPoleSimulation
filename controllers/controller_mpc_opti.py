@@ -9,12 +9,30 @@ import casadi
 
 from copy import deepcopy
 
-from CartPole.cartpole_model import p_globals, Q2u
+from CartPole.cartpole_model import p_globals, Q2u, cartpole_ode
 
-from src.utilis import mpc_next_state
+
+def mpc_next_state(s, p, u, dt):
+    """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
+    """
+
+    s_next = s
+
+    s_next.angleDD, s_next.positionDD = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
+
+    # Calculate NEXT state:
+    s_next.position = s.position + s.positionD * dt
+    s_next.positionD = s.positionD + s.positionDD * dt
+
+    s_next.angle = s.angle + s.angleD * dt
+    s_next.angleD = s.angleD + s.angleDD * dt
+
+    return s_next
+
 
 dt_mpc_simulation = 0.2
 mpc_horizon = 10
+
 
 class controller_mpc_opti:
     def __init__(self):
@@ -87,7 +105,7 @@ class controller_mpc_opti:
 
         return cost
 
-    def step(self, s, target_position):
+    def step(self, s, target_position, time=None):
 
         self.s = deepcopy(s)
         self.target_position = deepcopy(target_position)

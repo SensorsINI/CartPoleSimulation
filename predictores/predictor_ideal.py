@@ -35,7 +35,7 @@ Using predictor:
 
 from modeling.utilis import load_normalization_info, normalize_df
 from CartPole.cartpole_model import p_globals, Q2u
-from src.utilis import mpc_next_state
+from predictores.predictor_tests_plotting_helpers import mpc_next_state
 
 from types import SimpleNamespace
 

@@ -6,6 +6,8 @@ import numpy as np
 
 from CartPole.cartpole_model import p_globals, s0, cartpole_ode, Q2u
 
+from copy import deepcopy
+
 
 dt_mpc_simulation = 0.2  # s
 mpc_horizon = 10
@@ -26,7 +28,7 @@ class controller_do_mpc:
         p = p_globals
 
         # Container for the state of the cart
-        s = s0  # s like state
+        s = deepcopy(s0)  # s like state
 
         model_type = 'continuous'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
@@ -127,7 +129,7 @@ class controller_do_mpc:
         return self.tvp_template
 
 
-    def step(self, s, target_position):
+    def step(self, s, target_position, time=None):
 
         self.x0['s.position'] = s.position
         self.x0['s.positionD'] = s.positionD
