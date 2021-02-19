@@ -29,7 +29,7 @@ from scipy.interpolate import BPoly, interp1d
 from tqdm import trange
 
 # check memory usage of chosen methods. Commented by default
-from memory_profiler import profile
+# from memory_profiler import profile
 
 # region Graphics imports
 import matplotlib.pyplot as plt
@@ -410,7 +410,7 @@ class CartPole:
         if csv_name is None or csv_name == '':
             # get the latest file
             try:
-                list_of_files = glob.glob('./data/' + '/*.csv')
+                list_of_files = glob.glob(PATH_TO_EXPERIMENT_RECORDINGS + '/*.csv')
                 file_path = max(list_of_files, key=os.path.getctime)
             except FileNotFoundError:
                 print('Cannot load: No experiment recording found in data folder ' + './data/')
@@ -422,7 +422,7 @@ class CartPole:
 
             # check if file found in DATA_FOLDER_NAME or at local starting point
             if not os.path.isfile(filename):
-                file_path = os.path.join('data', filename)
+                file_path = os.path.join(PATH_TO_EXPERIMENT_RECORDINGS, filename)
                 if not os.path.isfile(file_path):
                     print(
                         'Cannot load: There is no experiment recording file with name {} at local folder or in {}'.format(

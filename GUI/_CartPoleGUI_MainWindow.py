@@ -554,7 +554,7 @@ class MainWindow(QMainWindow):
     # Set parameters from gui_default_parameters related to generating a random experiment target position
     def set_random_experiment_generator_init_params(self):
         self.CartPoleInstance.track_relative_complexity = track_relative_complexity_globals
-        self.CartPoleInstance.random_length = random_length_globals
+        self.CartPoleInstance.length_of_experiment = random_length_globals
         self.CartPoleInstance.interpolation_type = interpolation_type_globals
         self.CartPoleInstance.turning_points_period = turning_points_period_globals
         self.CartPoleInstance.start_random_target_position_at = start_random_target_position_at_globals

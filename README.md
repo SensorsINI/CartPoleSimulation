@@ -3,9 +3,16 @@
 
 ## Installation:
 
+Get the code from Github: 
+
 Create conda environment with 
 
-	conda create -n CartPoleSimulation python=3.8 matplotlib pyqt pandas tqdm scipy ipython memory_profiler
+	conda create -n CartPoleSimulation python=3.8 matplotlib pyqt pandas tqdm scipy ipython
+    pip install do_mpc
+
+Optionally:
+
+    conda install memory_profiler
 
 
 Choose right installation command for Pytorch
@@ -14,7 +21,7 @@ https://pytorch.org/get-started/locally/
 
 If environment already created:
 
-    conda install matplotlib pyqt pandas tqdm scipy ipython memory_profiler
+    conda install matplotlib pyqt pandas tqdm scipy ipython do_mpc
     pip install do_mpc gekko tensorflow
  
 (For Mac without CUDA:)
@@ -56,18 +63,8 @@ Both Train.py and Test.py generate data from data generated on the fly from rand
 Files regions are folded with #region #endregion syntax
 For Pycharm default, for Atom install
 
-## Parameter exploration with NNI
-
-For intellegent parameter space exploration with NNI, we have 3 files : 
-
-1. modeling/rnn_tf/Train_nni : Adapted from Train.py to train with parameter exploration
-2. modeling/rnn_tf/search_space.json : Search space for parameter search
-3. config.yml : Configuring the NNI experiments. 
-
-To run the exploration experiment :
-
-Step 1 : nnictl create --config config.yml
-Step 2 : Open the url as displayed on terminal after step 1
 
 ## Next step TODO:
-Better description of recorded files (controller, git revision, )
+Better description of recorded files - add git revision number
+Check if stop button does the job in every mode - make sure you can stop random experiment and replaying
+Show the summary window after replay
