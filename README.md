@@ -3,68 +3,85 @@
 
 ## Installation:
 
-Get the code from Github: 
+Get the code from Github: https://github.com/SensorsINI/CartPoleSimulation/tree/Baseline
 
 Create conda environment with 
 
-	conda create -n CartPoleSimulation python=3.8 matplotlib pyqt pandas tqdm scipy ipython
+	conda create -n CartPoleSimulation python=3.8 matplotlib pyqt pandas tqdm scipy
     pip install do_mpc
 
 Optionally:
 
     conda install memory_profiler
 
+If environment already created, install packages with:
 
-Choose right installation command for Pytorch
-https://pytorch.org/get-started/locally/
-(Sensitive to whether you have CUDA (GPU) in your computer or not)
+    conda install matplotlib pyqt pandas tqdm scipy
+    pip install do_mpc
 
-If environment already created:
+Optionally:
 
-    conda install matplotlib pyqt pandas tqdm scipy ipython do_mpc
-    pip install do_mpc gekko tensorflow
+    conda install memory_profiler
  
-(For Mac without CUDA:)
+Alternatively to set up the environment you can use
+requirement.txt (created in maxOS with "conda list -e > requirements.txt")
+or
+requirements_for_pip.txt (created from requirements.txt with "pip freeze > requirements.txt")
+)
 
-    conda install pytorch torchvision torchaudio -c pytorch
+## Structure:
 
+The CartPole class in CartPole folder corresponds to a physical cartpole.
+It contains methods for setting cartpole parameters, calculating dynamical equation, drawing cartpole and many more.
 
-## Running the project files:
+To perform an experiment CartPole needs an "environment". This environment is provided with CartPole GUI - suitable to visualize dynamical evolution and impact of parameter change -
+and Data Generator, with which user can easily generate hours of experimental data. 
+  They can be started by running run_cartpole_gui.py and run_data_generator.py respectively.
 
-You may run 3 different files: main.py, Train.py and Test.py
+The CartPole loads controllers from Controllers folder.
+One can specify in GUI or in Data Generator which controller should be used.
+Adding controllers is easy:
+They just have to fit the template provided in Controllers/template_controller.py.
+If a file in Controllers folder is named controller_....py and contains the function with the same name (controller_...)
+it will be automatically detected and added to the list of possible controllers.
 
+## Operation hints:
+  
+While the documentation of parameters is still missing in Readme,
+they are extensively commented CartPole/cartpole_model.py, GUI/gui_default_params.py and run_data_generator.py
+Look inside for more details
 
+In the “Manual Stabilization” mode you can provide the control input (motor power related to the force acting on the cart)
+by hovering/clicking with your mouse over the lower chart.
+Due current Cart-Pole system parameters everything happens to fast to make it doable now.
+Try to change length of the pole and make motor power weaker in cartpole_model.py to make this task feasible.
 
-Run main.py to start the GUI of CartPole.
+In the “LQR-Stabilization” mode an automatic (LQR) controller takes care that the Pole stays in the upright position.
+You can provide the target position of the cart by hovering or clicking with your mouse over the lower chart.
+The same is true for do-mpc controller which is mpc implementation based on true cartpole ODE
+done with do-mpc python library
 
-Run Train.py to train RNN and Test.py to test it. The data is for both produced on the fly from the CartPole model.
+Quit button is provided
+because when launched from some IDEs (e.g. Spyder on Windows 10)
+the standard cross in the window corner may not work correctly.
 
-In the “Manual Stabilization” mode you can provide the control input (motor power related to the force acting on the cart) by hovering with your mouse over the lower chart. Due to some bug (or maybe rather specific Cart-Pole system parameters) everything happens to fast to make it doable now.
-
-In the “LQR-Stabilization” mode an automatic (LQR) controller takes care that the Pole stays in the upright position. You can provide the target position of the cart by hovering with your mouse over the lower chart.
-
-Click start button to start the game and stop to stop it.
-Quit button is provided because when launch from some IDEs (e.g. Spyder on Windows 10) the standard cross in the window corner may not work correctly.
-Generate Trace if clicked in “LQR-Stabilization” mode generates a random target position over time trace and runs a CartPole experiment with LQR controller.
-
-Switch off “Real time simulation” checkbox to make the simulation run faster.
-
-All the experiment recording are saved as .csv data files in the “save” folder.\
-
-
-
-Run Train.py to train an RNN to predict future states of a CartPole
-
-Run Test.py to evaluate an RNN predicting future states of a random CartPole experiments
-
-Both Train.py and Test.py generate data from data generated on the fly from random CartPole experiments. You do not have to provide preprepared data.
+The "CSV file name" text box is used for naming both - file to be saved and to be loaded.
+If left empty while saving the default name is given.
+If left empty while loading data the last (newest) experiment will be loaded
 
 ## Folding convention
-Files regions are folded with #region #endregion syntax
-For Pycharm default, for Atom install
+Files regions are folded with # region # endregion syntax.
+
+For Pycharm and VS Code it is default syntax, for Atom should work with custom-folds package (not checked)
+We strongly recommend that you make sure your editor is folding
+these custom regions and possibly also the method bodies.
+This makes navigating in huge CartPole and GUI classes much easier.
 
 
-## Next step TODO:
-Better description of recorded files - add git revision number
-Check if stop button does the job in every mode - make sure you can stop random experiment and replaying
-Show the summary window after replay
+## Next steps TODO:
+Better description of recorded files - add git revision number.
+
+Check if stop button does the job in every mode - make sure you can stop random experiment and replaying.
+
+Show the summary window after replay.
+
