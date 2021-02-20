@@ -11,6 +11,8 @@ do-mpc=4.1.1=pypi_0
 expat=2.2.10=hb1e8313_2
 freetype=2.10.4=ha233b18_0
 gettext=0.19.8.1=hb0f4f8b_2
+gitdb=4.0.5=pypi_0
+gitpython=3.1.13=pypi_0
 glib=2.67.4=hdf23fa2_1
 icu=58.2=h0a44026_3
 intel-openmp=2019.4=233
@@ -51,6 +53,7 @@ scipy=1.6.0=py38h2515648_0
 setuptools=52.0.0=py38hecd8cb5_0
 sip=4.19.8=py38h0a44026_0
 six=1.15.0=py38hecd8cb5_0
+smmap=3.0.5=pypi_0
 sqlite=3.33.0=hffcf06c_0
 tk=8.6.10=hb0a8c7a_0
 tornado=6.1=py38h9ed2024_0

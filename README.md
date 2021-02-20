@@ -7,16 +7,16 @@ Get the code from Github: https://github.com/SensorsINI/CartPoleSimulation/tree/
 
 Create conda environment with 
 
-	conda create -n CartPoleSimulation python=3.8 matplotlib pyqt pandas tqdm scipy
+	conda create -n CartPoleSimulation python=3.8 matplotlib pyqt pandas tqdm scipy gitpython
     pip install do_mpc
 
-Optionally:
+Optionally to measure memory usage:
 
     conda install memory_profiler
 
 If environment already created, install packages with:
 
-    conda install matplotlib pyqt pandas tqdm scipy
+    conda install matplotlib pyqt pandas tqdm scipy gitpython
     pip install do_mpc
 
 Optionally:
