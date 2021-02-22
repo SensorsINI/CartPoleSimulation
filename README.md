@@ -14,6 +14,10 @@ Optionally to measure memory usage:
 
     conda install memory_profiler
 
+Optionally to create gifs:
+
+    conda install imageio
+
 If environment already created, install packages with:
 
     conda install matplotlib pyqt pandas tqdm scipy gitpython
@@ -21,7 +25,7 @@ If environment already created, install packages with:
 
 Optionally:
 
-    conda install memory_profiler
+    conda install memory_profiler imageio
  
 Alternatively to set up the environment you can use
 requirement.txt (created in maxOS with "conda list -e > requirements.txt")

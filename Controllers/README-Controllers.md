@@ -14,6 +14,8 @@ List of available controllers with description:
     - lqr:
         linear quadratic regulator controller, our very first well working controller
 
+    
+
     - controller_rnn_as_mpc(_tf):
         RNN imitating MPC (E2E learning). Version for Pytorch RNN and Tensorflow
         Working in revision:

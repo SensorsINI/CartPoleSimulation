@@ -1,18 +1,56 @@
 """do-mpc controller"""
 
 import do_mpc
-
+from copy import deepcopy
 import numpy as np
 
-from CartPole.cartpole_model import p_globals, s0, cartpole_ode, Q2u
-
-from copy import deepcopy
-
+from CartPole.cartpole_model import p_globals, s0, Q2u, cartpole_ode
+from types import SimpleNamespace
 
 dt_mpc_simulation = 0.2  # s
 mpc_horizon = 10
 
-class controller_do_mpc:
+
+def mpc_next_state(s, p, u, dt):
+    """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
+
+    TODO: This might be combined with cartpole_integration,
+        although the order of cartpole_ode and cartpole_integration is different than in CartClass
+        For some reaseon it does not work at least not with do-mpc discreate
+    """
+
+    s_next = s
+
+    s_next.angleDD, s_next.positionDD = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
+
+    # Calculate NEXT state:
+    s_next = cartpole_integration(s_next, dt)
+
+    return s_next
+
+
+
+def cartpole_integration(s, dt):
+    """Simple single step integration of CartPole state by dt
+
+    Takes state as SimpleNamespace, but returns as separate variables
+    # TODO: Consider changing it to return a SimpleNamepece for consistency
+
+    :param s: state of the CartPole (contains: s.position, s.positionD, s.angle and s.angleD)
+    :param dt: time step by which the CartPole state should be integrated
+    """
+    s_next = SimpleNamespace()
+
+    s_next.position = s.position + s.positionD * dt
+    s_next.positionD = s.positionD + s.positionDD * dt
+
+    s_next.angle = s.angle + s.angleD * dt
+    s_next.angleD = s.angleD + s.angleDD * dt
+
+    return s_next
+
+
+class controller_do_mpc_discrete:
     def __init__(self,
                  position_init=0.0,
                  positionD_init=0.0,
@@ -25,12 +63,13 @@ class controller_do_mpc:
         """
 
         # Physical parameters of the cart
-        p = p_globals  # p like parameters
+        p = p_globals
 
         # Container for the state of the cart
         s = deepcopy(s0)  # s like state
 
-        model_type = 'continuous'  # either 'discrete' or 'continuous'
+
+        model_type = 'discrete'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
 
         s.position = self.model.set_variable(var_type='_x', var_name='s.position', shape=(1, 1))
@@ -43,13 +82,13 @@ class controller_do_mpc:
 
         target_position = self.model.set_variable('_tvp', 'target_position')
 
-        self.model.set_rhs('s.position', s.positionD)
-        self.model.set_rhs('s.angle', s.angleD)
+        s_next = mpc_next_state(s, p, Q2u(Q,p), dt=dt_mpc_simulation)
 
-        angleD_next, positionD_next = cartpole_ode(p, s, Q2u(Q,p))
+        self.model.set_rhs('s.position', s_next.position)
+        self.model.set_rhs('s.angle', s_next.angle)
 
-        self.model.set_rhs('s.positionD', positionD_next)
-        self.model.set_rhs('s.angleD', angleD_next)
+        self.model.set_rhs('s.positionD',s_next.positionD)
+        self.model.set_rhs('s.angleD', s_next.angleD)
 
         # Simplified, normalized expressions for E_kin and E_pot as a port of cost function
         E_kin_cart = (s.positionD / p.v_max) ** 2
@@ -63,7 +102,6 @@ class controller_do_mpc:
         self.model.set_expression('E_pot', E_pot)
         self.model.set_expression('distance_difference', distance_difference)
 
-
         self.model.setup()
 
         self.mpc = do_mpc.controller.MPC(self.model)
@@ -74,33 +112,20 @@ class controller_do_mpc:
             'n_robust': 0,
             'store_full_solution': False,
             'store_lagr_multiplier': False,
-            'store_solver_stats': []
+            'store_solver_stats': [],
+            'state_discretization': 'discrete'
         }
         self.mpc.set_param(**setup_mpc)
-        # self.mpc.set_param(nlpsol_opts={'ipopt.linear_solver': 'mumps'})
-        # Other possible linear solvers from hsl library
-        # The give better performance 2-3 times.
-        # However if simulating at max speedup the simulation blocks. Issue with memory leak?
-        # self.mpc.set_param(nlpsol_opts={'ipopt.linear_solver': 'mumps'})
-        self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'MA57'})
+        self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'ma27'})
 
-        # # Standard version
-        lterm = - self.model.aux['E_pot'] + 20.0 * distance_difference
-        mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
-        self.mpc.set_rterm(Q=0.1)
+        lterm = - self.model.aux['E_pot'] +\
+                20 * distance_difference +\
+                5 * self.model.aux['E_kin_pol']
 
-        # # Alternative versions of cost function to get more diverse data for learning cartpole model
-        # lterm = 20.0 * distance_difference
-        # mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
-        # self.mpc.set_rterm(Q=0.2)
-        #
-        # lterm = 20.0 * distance_difference + 5 * self.model.aux['E_kin_cart']
-        # mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot'] + 200.0 * distance_difference
-        # self.mpc.set_rterm(Q=0.2)
-
+        mterm = (5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart'])
 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
-
+        self.mpc.set_rterm(Q=0.1)
 
         self.mpc.bounds['lower', '_u', 'Q'] = -1.0
         self.mpc.bounds['upper', '_u', 'Q'] = 1.0
@@ -109,7 +134,7 @@ class controller_do_mpc:
 
         self.mpc.set_tvp_fun(self.tvp_fun)
 
-        # Suppress IPOPT outputs (optimizer info printed to the console)
+        # Suppress IPOPT outputs
         suppress_ipopt = {'ipopt.print_level': 0, 'ipopt.sb': 'yes', 'print_time': 0}
         self.mpc.set_param(nlpsol_opts=suppress_ipopt)
 
@@ -121,6 +146,8 @@ class controller_do_mpc:
         self.x0['s.positionD'] = positionD_init
         self.x0['s.angle'] = angle_init
         self.x0['s.angleD'] = angleD_init
+
+
         self.mpc.x0 = self.x0
 
         self.mpc.set_initial_guess()
