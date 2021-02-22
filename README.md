@@ -79,8 +79,7 @@ This makes navigating in huge CartPole and GUI classes much easier.
 
 
 ## Next steps TODO:
-Better description of recorded files - add git revision number.
-
+Disable the radio buttons while running
 Check if stop button does the job in every mode - make sure you can stop random experiment and replaying.
 
 Show the summary window after replay.
