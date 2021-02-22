@@ -79,8 +79,6 @@ This makes navigating in huge CartPole and GUI classes much easier.
 
 
 ## Next steps TODO:
-Disable the radio buttons while running
-Check if stop button does the job in every mode - make sure you can stop random experiment and replaying.
-
-Show the summary window after replay.
+User time timer is not precise - seems to get frozen sometimes. Different implementation needed
+How does plot display when not in Pycharm?
 

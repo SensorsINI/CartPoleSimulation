@@ -47,19 +47,19 @@ speedup_init = 1.0  # Multiplicative factor by which the simulation seen by the 
 
 # Variables for random trace generation - GUI only
 # Data Generator sets these parameters independently
-track_relative_complexity_globals = 0.5  # randomly placed target points/s, 0.5 is normal default
-random_length_globals = 100.0e1  # seconds, length of the random length trace
-interpolation_type_globals = 'previous'  # Sets how to interpolate between turning points of random trace
+track_relative_complexity_init = 0.5  # randomly placed target points/s, 0.5 is normal default
+length_of_experiment_init = 100.0e1  # seconds, length of the random length trace
+interpolation_type_init = 'previous'  # Sets how to interpolate between turning points of random trace
 # Possible choices: '0-derivative-smooth', 'linear', 'previous'
-turning_points_period_globals = 'regular'  # How turning points should be distributed
+turning_points_period_init = 'regular'  # How turning points should be distributed
 # Possible choices: 'regular', 'random'
 # Regular means that they are equidistant from each other
 # Random means we pick randomly points at time axis at which we place turning points
 # Where the target position of the random experiment starts and end:
-start_random_target_position_at_globals = 10.0
-end_random_target_position_at_globals = 10.0
+start_random_target_position_at_init = 10.0
+end_random_target_position_at_init = 10.0
 # Alternatively you can provide a list of target positions.
 # e.g. turning_points_globals = [10.0, 0.0, 0.0]
 # If not None this variable has precedence -
 # track_relative_complexity, start/end_random_target_position_at_globals have no effect.
-turning_points_globals = None
+turning_points_init = None

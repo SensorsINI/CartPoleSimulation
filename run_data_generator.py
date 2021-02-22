@@ -22,7 +22,7 @@ dt_save_DataGen = 0.1
 length_of_experiment_DataGen = 10.0  # Length of each experiment in s
 controller_DataGen = 'do-mpc'  # Controller which should be used in generated experiment
 # Possible options for controller:
-# 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'rnn_as_mpc_tf'
+# 'manual-stabilization', 'do-mpc', 'lqr'
 track_relative_complexity_DataGen = 0.5  # randomly placed target points/s
 interpolation_type_DataGen = '0-derivative-smooth'  # Sets how to interpolate between turning points of random trace
 # Possible choices: '0-derivative-smooth', 'linear', 'previous'
@@ -103,4 +103,4 @@ for i in range(number_of_experiments):
     gen_dt = (gen_end - gen_start) * 1000.0
     print('time to generate data: {} ms'.format(gen_dt))
 
-os.system('say "Antonio! Todo ha terminado!"')
+# os.system('say "Antonio! Todo ha terminado!"')
