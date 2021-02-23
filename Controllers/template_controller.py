@@ -23,3 +23,10 @@ class template_controller:
     def controller_report(self):
         pass
 
+    # Optionally: reset the controller after an experiment
+    # May be useful for stateful controllers, like these containing RNN,
+    # To reload the hidden states e.g. if the controller went unstable in the previous run.
+    # It is called after an experiment,
+    # but only if the controller is supposed to be reused without reloading (e.g. in GUI)
+    def controller_reset(self):
+        pass

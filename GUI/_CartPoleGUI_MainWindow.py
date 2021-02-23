@@ -527,7 +527,7 @@ class MainWindow(QMainWindow):
         self.CartPoleInstance.use_pregenerated_target_position = False
 
         # Some controllers may collect they own statistics about their usage and print it after experiment terminated
-        if self.simulator_mode != 'replay':
+        if self.simulator_mode != 'Replay':
             try:
                 self.CartPoleInstance.controller.controller_report()
             except:
@@ -536,6 +536,14 @@ class MainWindow(QMainWindow):
         if self.show_experiment_summary:
             self.CartPoleInstance.summary_plots()
             self.w_summary = SummaryWindow(summary_plots=self.CartPoleInstance.summary_plots)
+
+        # Some controllers may need reset before being reused in the next experiment without reloading
+        if self.simulator_mode != 'Replay':
+            try:
+                self.CartPoleInstance.controller.controller_reset()
+            except:
+                pass
+
 
         # Reset variables and redraw the figures
         self.reset_variables(0)
