@@ -2,6 +2,12 @@
 Main window (and main class) of CartPole GUI
 """
 
+# Necessary only for debugging in Visual Studio Code IDE
+try:
+    import ptvsd
+except:
+    pass
+
 import numpy as np
 
 # region Imports needed to create layout of the window in __init__ method
@@ -15,9 +21,13 @@ from PyQt5.QtCore import QThreadPool, QTimer
 # Some more functions needed for interaction of matplotlib with PyQt5
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+# This import mus go before pyplot so also before our scripts
+from matplotlib import use, get_backend
+# Use Agg if not in scientific mode of Pycharm
+if get_backend() != 'module://backend_interagg':
+    use('Agg')
 
 # endregion
-
 
 # Import functions to measure time intervals and to pause a thread for a given time
 from time import sleep
@@ -364,6 +374,13 @@ class MainWindow(QMainWindow):
     # It iteratively updates  CartPole state and save data to a .csv file
     # It also put simulation time in relation to user time
     def experiment_thread(self):
+
+        # Necessary only for debugging in Visual Studio Code IDE
+        try:
+            ptvsd.debug_this_thread()
+        except:
+            pass
+
         self.looper.start_loop()
         while not self.terminate_experiment_or_replay_thread:
 
@@ -398,6 +415,12 @@ class MainWindow(QMainWindow):
 
     # region Thread replaying a saved experiment recording
     def replay_thread(self):
+
+        # Necessary only for debugging in Visual Studio Code IDE
+        try:
+            ptvsd.debug_this_thread()
+        except:
+            pass
 
         # Check what is in the csv textbox
         csv_name = self.textbox.text()
@@ -534,7 +557,6 @@ class MainWindow(QMainWindow):
                 pass
 
         if self.show_experiment_summary:
-            self.CartPoleInstance.summary_plots()
             self.w_summary = SummaryWindow(summary_plots=self.CartPoleInstance.summary_plots)
 
         # Some controllers may need reset before being reused in the next experiment without reloading

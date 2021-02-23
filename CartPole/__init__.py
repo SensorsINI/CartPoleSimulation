@@ -460,32 +460,34 @@ class CartPole:
     # Method plotting the dynamic evolution over time of the CartPole
     # It should be called after an experiment and only if experiment data was saved
     def summary_plots(self):
-        fig, axs = plt.subplots(4, 1, figsize=(18, 14), sharex=True)  # share x axis so zoom zooms all plots
+        fontsize_labels = 14
+        fontsize_ticks = 12
+        fig, axs = plt.subplots(4, 1, figsize=(16, 9), sharex=True)  # share x axis so zoom zooms all plots
 
         # Plot angle error
-        axs[0].set_ylabel("Angle (deg)", fontsize=18)
+        axs[0].set_ylabel("Angle (deg)", fontsize=fontsize_labels)
         axs[0].plot(np.array(self.dict_history['time']), np.array(self.dict_history['s.angle']) * 180.0 / np.pi,
                     'b', markersize=12, label='Ground Truth')
-        axs[0].tick_params(axis='both', which='major', labelsize=16)
+        axs[0].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
         # Plot position
-        axs[1].set_ylabel("position (m)", fontsize=18)
+        axs[1].set_ylabel("position (m)", fontsize=fontsize_labels)
         axs[1].plot(self.dict_history['time'], self.dict_history['s.position'], 'g', markersize=12,
                     label='Ground Truth')
-        axs[1].tick_params(axis='both', which='major', labelsize=16)
+        axs[1].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
         # Plot motor input command
-        axs[2].set_ylabel("motor (N)", fontsize=18)
+        axs[2].set_ylabel("motor (N)", fontsize=fontsize_labels)
         axs[2].plot(self.dict_history['time'], self.dict_history['u'], 'r', markersize=12,
                     label='motor')
-        axs[2].tick_params(axis='both', which='major', labelsize=16)
+        axs[2].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
         # Plot target position
-        axs[3].set_ylabel("position target (m)", fontsize=18)
+        axs[3].set_ylabel("position target (m)", fontsize=fontsize_labels)
         axs[3].plot(self.dict_history['time'], self.dict_history['target_position'], 'k')
-        axs[3].tick_params(axis='both', which='major', labelsize=16)
+        axs[3].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
-        axs[3].set_xlabel('Time (s)', fontsize=18)
+        axs[3].set_xlabel('Time (s)', fontsize=fontsize_labels)
 
         fig.align_ylabels()
 
