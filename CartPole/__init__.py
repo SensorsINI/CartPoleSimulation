@@ -27,8 +27,11 @@ from datetime import datetime
 from scipy.interpolate import BPoly, interp1d
 # Run range() automatically adding progress bar in terminal
 from tqdm import trange
-# Use gitpython to get a current revision number and use it in description of experimental data
-from git import Repo
+try:
+    # Use gitpython to get a current revision number and use it in description of experimental data
+    from git import Repo
+except:
+    pass
 
 # check memory usage of chosen methods. Commented by default
 # from memory_profiler import profile
@@ -191,6 +194,11 @@ class CartPole:
 
         # Update target position depending on the mode of operation
         if self.use_pregenerated_target_position:
+
+            # If time exceeds the max time for which target position was defined
+            if self.time >= self.t_max_pre:
+                return
+
             self.target_position = self.random_track_f(self.time)
             self.slider_value = self.target_position  # Assign target position to slider to display it
         else:
