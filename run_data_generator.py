@@ -2,7 +2,6 @@ from CartPole import CartPole
 from CartPole.cartpole_model import s0, p_globals
 TrackHalfLength = p_globals.TrackHalfLength
 
-import os
 from time import sleep
 import timeit
 
@@ -11,7 +10,7 @@ import numpy as np
 # User defined simulation settings
 csv = 'test_K'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
 number_of_experiments = 1  # How many experiments will be generated
-save_mode = 'online'  # It was intended to save memory usage, but it doesn't seems to help. Leave it false.
+save_mode = 'offline'  # It was intended to save memory usage, but it doesn't seems to help. Leave it false.
 
 # Timescales
 dt_simulation_DataGen = 0.02  # simulation timestep

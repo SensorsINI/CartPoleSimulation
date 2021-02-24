@@ -18,6 +18,11 @@ Optionally to create gifs:
 
     conda install imageio
 
+Optionally if you work in Visual Studio Code IDE:
+(Don't install otherwise you will get a lot of ugly warnings)
+
+    pip install ptvsd
+
 If environment already created, install packages with:
 
     conda install matplotlib pyqt pandas tqdm scipy gitpython
@@ -26,6 +31,7 @@ If environment already created, install packages with:
 Optionally:
 
     conda install memory_profiler imageio
+    pip install ptvsd
  
 Alternatively to set up the environment you can use
 requirement.txt (created in maxOS with "conda list -e > requirements.txt")
