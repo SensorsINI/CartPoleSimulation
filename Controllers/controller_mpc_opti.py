@@ -128,7 +128,7 @@ class controller_mpc_opti:
         self.s = deepcopy(s)
         self.target_position = deepcopy(target_position)
 
-        opti = casadi.Opti();
+        opti = casadi.Opti()
         Q = opti.variable(len(self.Q_hat0))
         opti.minimize(self.cost_function(Q))
         opti.subject_to(Q <= 1)
