@@ -41,7 +41,7 @@ class controller_mppi:
         self.Q_bounds = [(-1, 1)] * self.mpc_horizon
 
         self.Q = np.diag([10.0, 1.0, 1.0, 1.0])  # How much to punish x, v, theta, omega
-        self.R = 1  # How much to punish Q
+        self.R = 1.0e0  # How much to punish Q
         self.l = 10  # cost parameter lambda
         self.nu = 1.0e3
         self.rho_sqrt_inv = 0.01
@@ -56,14 +56,13 @@ class controller_mppi:
         # if np.abs(u + delta_u) > 1.0:
         #     return 1.0e5
         q = (
-            50 * self.distance_difference(s)
+            self.distance_difference(s)
             + 500 * self.E_pot_cost(s) ** 2
             + self.E_kin_pol(s)
             + self.E_kin_cart(s)
         )
-        q = (
-            q
-            + 0.5 * (1 - 1.0 / self.nu) * self.R * (delta_u ** 2)
+        q += (
+            0.5 * (1 - 1.0 / self.nu) * self.R * (delta_u ** 2)
             + self.R * u * delta_u
             + 0.5 * self.R * (u ** 2)
         )
