@@ -1,8 +1,3 @@
-"""
-This is a linear-quadratic regulator
-It assumes that the input relation is u = Q*p.u_max (no fancy motor model) !
-"""
-
 from CartPole.cartpole_model import cartpole_jacobian, cartpole_ode, p_globals, s0
 
 
