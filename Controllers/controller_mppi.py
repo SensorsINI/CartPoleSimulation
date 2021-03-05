@@ -13,7 +13,6 @@ mc_samples = 1000
 
 
 class controller_mppi:
-
     def __init__(self):
         # Physical parameters of the cart
         self.p = p_globals
@@ -28,29 +27,27 @@ class controller_mppi:
         self.mpc_samples = int(self.mpc_horizon / self.dt)
         self.mc_samples = mc_samples
 
-        # self.yp_hat = np.zeros(self.mpc_horizon, dtype=object)  # MPC prediction of future states
-        # self.Q_hat = np.zeros(self.mpc_horizon)  # MPC prediction of future control inputs
-        # self.Q_hat0 = np.zeros(self.mpc_horizon)  # initial guess for future control inputs to be predicted
-        # self.Q_previous = 0.0
-
         self.E_kin_cart = lambda s: (s.positionD / self.p.v_max) ** 2
         self.E_kin_pol = lambda s: (s.angleD / (2 * np.pi)) ** 2
-        self.E_pot_cost = lambda s: 1-np.cos(s.angle)
-        self.distance_difference = lambda s: (((s.position - self.target_position) / 50.0)) ** 2
+        self.E_pot_cost = lambda s: 1 - np.cos(s.angle)
+        self.distance_difference = (
+            lambda s: (((s.position - self.target_position) / 50.0)) ** 2
+        )
 
         self.Q_bounds = [(-1, 1)] * self.mpc_horizon
 
         self.Q = np.diag([10.0, 1.0, 1.0, 1.0])  # How much to punish x, v, theta, omega
         self.R = 1.0e0  # How much to punish Q
         self.l = 10  # cost parameter lambda
-        self.nu = 1.0e3
+        self.nu = 1.0e1  # Exploration variance
         self.rho_sqrt_inv = 0.01
+        self.avg_cost = []
 
         self.s_horizon = []  # list of states s
         self.u = np.zeros((self.mpc_samples), dtype=float)
         self.delta_u = np.zeros((self.mc_samples, self.mpc_samples), dtype=float)
         self.S_tilde = np.zeros((self.mc_samples, self.mpc_samples), dtype=float)
-        self.S_t_k = np.zeros((self.mc_samples), dtype=float)
+        self.S_tilde_k = np.zeros((self.mc_samples), dtype=float)
 
     def q(self, p, s, u, delta_u):
         # if np.abs(u + delta_u) > 1.0:
@@ -86,17 +83,20 @@ class controller_mppi:
         dx = s.positionD
         da = s.angleD
         dda, ddx = cartpole_ode(p, s, p.u_max * u)  # cartpole_ode(p, s, Q2u(u,p))
-        
+
         return dx, ddx, da, dda
 
     def step(self, s, target_position, time=None):
         self.s = deepcopy(s)
         self.target_position = deepcopy(target_position).item()
 
-        self.delta_u = np.random.normal(size=np.shape(self.delta_u)) * self.rho_sqrt_inv / (np.sqrt(self.dt))  # N(mean=0, var=1/(rho*dt))
-        # self.delta_u = np.random.normal(size=np.shape(self.delta_u))
+        self.delta_u = (
+            np.random.normal(size=np.shape(self.delta_u))
+            * self.rho_sqrt_inv
+            / (np.sqrt(self.dt))
+        )  # N(mean=0, var=1/(rho*dt))
         self.S_tilde = np.zeros_like(self.S_tilde)
-        self.S_t_k = np.zeros_like(self.S_t_k)
+        self.S_tilde_k = np.zeros_like(self.S_tilde_k)
 
         # TODO: Parallelize loop over k
         for k in range(self.mc_samples):
@@ -113,18 +113,24 @@ class controller_mppi:
                 s_next.angleD = s_last.angleD + dda * self.dt
 
                 self.s_horizon.append(s_next)
-                self.S_tilde[k, i+1] = (
+                self.S_tilde[k, i + 1] = (
                     self.S_tilde[k, i]
                     + self.q(self.p, s_next, self.u[i], self.delta_u[k, i]) * self.dt
                 )
-                self.S_t_k[k] += self.q(self.p, s_next, self.u[i], self.delta_u[k, i])
-        
-        # avg_cost = np.mean(self.S_tilde, axis=0)[-1]
+                self.S_tilde_k[k] += self.q(
+                    self.p, s_next, self.u[i], self.delta_u[k, i]
+                )
+
+        self.avg_cost.append(np.mean(self.S_tilde, axis=0)[-1])
 
         for i in range(self.mpc_samples):
-            # self.u[i] += self.reward_weighted_average(self.S_tilde[:, -1] - self.S_tilde[:, i], self.delta_u[:, i])
-            self.u[i] += self.reward_weighted_average(self.S_t_k, self.delta_u[:, i])
-        
+            # self.u[i] += self.reward_weighted_average(
+            #     self.S_tilde[:, -1] - self.S_tilde[:, i], self.delta_u[:, i]
+            # )
+            self.u[i] += self.reward_weighted_average(
+                self.S_tilde_k, self.delta_u[:, i]
+            )
+
         # Q = np.clip(self.u[0], -1, 1)
         Q = self.u[0]
 
@@ -133,7 +139,6 @@ class controller_mppi:
         # self.u[-1] = 0
 
         return Q  # normed control input in the range [-1,1]
-
 
     # Optionally: A method called after an experiment.
     # May be used to print some statistics about controller performance (e.g. number of iter. to converge)
