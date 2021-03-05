@@ -2,6 +2,12 @@
 Main window (and main class) of CartPole GUI
 """
 
+# Necessary only for debugging in Visual Studio Code IDE
+try:
+    import ptvsd
+except:
+    pass
+
 import numpy as np
 
 # region Imports needed to create layout of the window in __init__ method
@@ -15,9 +21,13 @@ from PyQt5.QtCore import QThreadPool, QTimer
 # Some more functions needed for interaction of matplotlib with PyQt5
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+# This import mus go before pyplot so also before our scripts
+from matplotlib import use, get_backend
+# Use Agg if not in scientific mode of Pycharm
+if get_backend() != 'module://backend_interagg':
+    use('Agg')
 
 # endregion
-
 
 # Import functions to measure time intervals and to pause a thread for a given time
 from time import sleep
@@ -83,11 +93,15 @@ class MainWindow(QMainWindow):
 
         # region Variables controlling the state of various processes (DO NOT MODIFY)
 
-        self.run_experiment_thread = False  # True if experiment thread is running
+        self.terminate_experiment_or_replay_thread = False  # True: gives signal causing thread to terminate
         self.run_set_labels_thread = True  # True if gauges (labels) keep being repeatedly updated
         # Stop threads by setting False
 
-        self.saved = False  # Flag indicating that saving of experiment recording to csv file has finished
+        # Flag indicating if the "Start! / Stop!" button should act as start or as stop when pressed.
+        # Can take values "Start!" or "Stop!"
+        self.start_or_stop_action = "Start!"
+        # Flag indicating that saving of experiment recording to csv file has finished
+        self.experiment_or_replay_thread_terminated = False
 
         self.user_time_counter = 0  # Measures the user time
 
@@ -158,7 +172,7 @@ class MainWindow(QMainWindow):
         # User time
         self.labTime = QLabel("User's time (s): ")
         self.timer = QTimer()
-        self.timer.setInterval(100)
+        self.timer.setInterval(100) # Tick every 1/10 of the second
         self.timer.timeout.connect(self.set_user_time_label)
         self.timer.start()
         ld.addWidget(self.labTime)
@@ -356,18 +370,22 @@ class MainWindow(QMainWindow):
         # endregion
 
 
-    # region This method performs CartPole experiment
+    # region Thread performing CartPole experiment, slider-controlled or random
     # It iteratively updates  CartPole state and save data to a .csv file
     # It also put simulation time in relation to user time
     def experiment_thread(self):
+
+        # Necessary only for debugging in Visual Studio Code IDE
+        try:
+            ptvsd.debug_this_thread()
+        except:
+            pass
+
         self.looper.start_loop()
-        while (self.run_experiment_thread):
+        while not self.terminate_experiment_or_replay_thread:
 
             # Calculations of the Cart state in the next timestep
             self.CartPoleInstance.update_state()
-
-            # Ensure that the animation drawing function can access CartPoleInstance at this moment
-            QApplication.processEvents()
 
             # Terminate thread if random experiment reached it maximal length
             if (
@@ -375,7 +393,7 @@ class MainWindow(QMainWindow):
                     and
                     (self.CartPoleInstance.time >= self.CartPoleInstance.t_max_pre)
             ):
-                self.run_experiment_thread = 0
+                self.terminate_experiment_or_replay_thread = True
 
             # FIXME: when Speedup empty in GUI I expected inf speedup but got error Loop timer was not initialized properly
             self.looper.sleep_leftover_time()
@@ -390,82 +408,27 @@ class MainWindow(QMainWindow):
                                                        decimals=2))
             self.CartPoleInstance.save_history_csv(csv_name=csv_name,
                                                    mode='save offline')
-            self.saved = True
+
+        self.experiment_or_replay_thread_terminated = True
 
     # endregion
 
-    # region "START/STOP" button -> run slider-controlled experiment, random experiment or replay experiment recording
+    # region Thread replaying a saved experiment recording
+    def replay_thread(self):
 
-    # Actions to be taken when start/stop button is clicked
-    def start_stop_button(self):
-        # Start/stop a new user controller experiment
-        if self.simulator_mode == 'Slider-Controlled Experiment':
-            self.play()
-        # Or start a random experiment
-        elif self.simulator_mode == 'Random Experiment':
-            self.generate_random_experiment()
-        # Or launch a replay function (immediately in a new thread)...
-        elif self.simulator_mode == 'Replay':
-            worker_replay = Worker(self.thread_replay)
-            self.threadpool.start(worker_replay)
-        else:
-            raise ValueError('Not a proper value for self.simulator_mode')
+        # Necessary only for debugging in Visual Studio Code IDE
+        try:
+            ptvsd.debug_this_thread()
+        except:
+            pass
 
-
-    # Effect of start button if "load data" check box is unchecked
-    def play(self):
-
-        # Terminate experiment if it was running
-        if self.run_experiment_thread == 1:
-            self.run_experiment_thread = 0
-            # If user is saving data wait till data is saved
-            if self.save_history:
-                while not self.saved:
-                    sleep(0.001)
-
-            self.CartPoleInstance.use_pregenerated_target_position = False
-
-            # If
-            try:
-                self.CartPoleInstance.controller.controller_summary()
-            except:
-                pass
-
-            if self.show_experiment_summary:
-                self.CartPoleInstance.summary_plots()
-                self.w_summary = SummaryWindow(summary_plots=self.CartPoleInstance.summary_plots)
-            # Reset variables and redraw the figures
-            self.reset_variables(0)
-            # Draw figures
-            self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
-            self.canvas.draw()
-            self.cb_save_history.setEnabled(True)
-            self.cb_show_experiment_summary.setEnabled(True)
-
-        # Start experiment if it was not running
-        elif self.run_experiment_thread == 0:
-            self.cb_save_history.setEnabled(False)
-            self.cb_show_experiment_summary.setEnabled(False)
-            speedup_updated = self.get_speedup()
-            try:
-                self.CartPoleInstance.controller.reset()
-            except:
-                print('Controller reset not done')
-            if speedup_updated:
-                self.reset_variables(1)
-                self.looper.dt_target = self.CartPoleInstance.dt_simulation / self.speedup
-                self.run_experiment_thread = 1
-                # Pass the function to execute
-                worker_calculations = Worker(self.experiment_thread)
-                # Execute
-                self.threadpool.start(worker_calculations)
-
-    # Effect of start button if "load data" check box is checked
-    def thread_replay(self):
         # Check what is in the csv textbox
         csv_name = self.textbox.text()
+
+        # Load experiment history
         history_pd = self.CartPoleInstance.load_history_csv(csv_name=csv_name)
 
+        # Augment the experiment history with simulation time step size
         dt = []
         row_iterator = history_pd.iterrows()
         _, last = next(row_iterator)  # take first item from row_iterator
@@ -475,13 +438,10 @@ class MainWindow(QMainWindow):
         dt.append(dt[-1])
         history_pd['dt'] = np.array(dt)
 
-        # Check speedup which user provided with GUI
-        self.get_speedup()
-
-        # Define loop timer for now with arbitrary dt
+        # Initialize loop timer (with arbitrary dt)
         replay_looper = loop_timer(dt_target=0.0)
 
-        # Start looper
+        # Start looping over history
         replay_looper.start_loop()
         for index, row in history_pd.iterrows():
             self.CartPoleInstance.s.position = row['s.position']
@@ -499,53 +459,130 @@ class MainWindow(QMainWindow):
 
             replay_looper.sleep_leftover_time()
 
-        dict_history = history_pd.to_dict(orient='list')
-        self.CartPoleInstance.dict_history = dict_history
-        self.CartPoleInstance.summary_plots()
+            if self.terminate_experiment_or_replay_thread:  # Means that stop button was pressed
+                break
+
+        if self.show_experiment_summary:
+            self.CartPoleInstance.dict_history = history_pd.loc[:index].to_dict(orient='list')
+
+        self.experiment_or_replay_thread_terminated = True
+
+    # endregion
+
+    # region "START! / STOP!" button -> run/stop slider-controlled experiment, random experiment or replay experiment recording
+
+    # Actions to be taken when "Start! / Stop!" button is clicked
+    def start_stop_button(self):
+
+        # If "Start! / Stop!" button in "Start!" mode...
+        if self.start_or_stop_action == 'Start!':
+            self.start_thread()
+
+        # If "Start! / Stop!" button in "Stop!" mode...
+        elif self.start_or_stop_action == 'Stop!':
+            # This flag is periodically checked by thread. It terminates if set True.
+            self.terminate_experiment_or_replay_thread = True
+            # The stop_thread function is called automatically by the thread when it terminates
+            # It is implemented this way, because thread my terminate not only due "Stop!" button
+            # (e.g. replay thread when whole experiment is replayed)
+
+    # Run thread. works for all simulator modes.
+    def start_thread(self):
+
+        # Check if value provided in speed-up textbox makes sense
+        # If not abort start
+        speedup_updated = self.get_speedup()
+        if not speedup_updated:
+            return
+
+        # Disable GUI elements for features which must not be changed in runtime
+        # For other features changing in runtime may not cause errors, but will stay without effect for current run
+        self.cb_save_history.setEnabled(False)
+        for rb in self.rbs_simulator_mode:
+            rb.setEnabled(False)
+        for rb in self.rbs_controllers:
+            rb.setEnabled(False)
+        if self.simulator_mode != 'Replay':
+            self.cb_show_experiment_summary.setEnabled(False)
+
+        # Set some random initial values for state (or its part) of the CartPole
+        # Search implementation for more detail
+        self.reset_variables(1)
+
+        if self.simulator_mode == 'Random Experiment':
+
+            self.CartPoleInstance.use_pregenerated_target_position = True
+
+            if self.textbox_length.text() == '':
+                self.CartPoleInstance.length_of_experiment = length_of_experiment_init
+            else:
+                self.CartPoleInstance.length_of_experiment = float(self.textbox_length.text())
+
+            turning_points_list = []
+            if self.textbox_turning_points.text() != '':
+                for turning_point in self.textbox_turning_points.text().split(', '):
+                    turning_points_list.append(float(turning_point))
+            self.CartPoleInstance.turning_points = turning_points_list
+
+            self.CartPoleInstance.Generate_Random_Trace_Function()
+
+        self.looper.dt_target = self.CartPoleInstance.dt_simulation / self.speedup
+        # Pass the function to execute
+        if self.simulator_mode == "Replay":
+            worker = Worker(self.replay_thread)
+        elif self.simulator_mode == 'Slider-Controlled Experiment' or self.simulator_mode == 'Random Experiment':
+            worker = Worker(self.experiment_thread)
+        worker.signals.finished.connect(self.finish_thread)
+        # Execute
+        self.threadpool.start(worker)
+
+
+        # Determine what should happen when "Start! / Stop!" is pushed NEXT time
+        self.start_or_stop_action = "Stop!"
+
+    # finish_threads works for all simulation modes
+    # Some lines mya be redundant for replay,
+    # however as they do not take much computation time we leave them here
+    # As it my code shorter, while hopefully still clear.
+    # It is called automatically at the end of experiment_thread
+    def finish_thread(self):
+
+        self.CartPoleInstance.use_pregenerated_target_position = False
+
+        # Some controllers may collect they own statistics about their usage and print it after experiment terminated
+        if self.simulator_mode != 'Replay':
+            try:
+                self.CartPoleInstance.controller.controller_report()
+            except:
+                pass
+
+        if self.show_experiment_summary:
+            self.w_summary = SummaryWindow(summary_plots=self.CartPoleInstance.summary_plots)
+
+        # Some controllers may need reset before being reused in the next experiment without reloading
+        if self.simulator_mode != 'Replay':
+            try:
+                self.CartPoleInstance.controller.controller_reset()
+            except:
+                pass
+
+
+        # Reset variables and redraw the figures
         self.reset_variables(0)
 
-    # Generate experiment with random target position trace
-    def generate_random_experiment(self):
+        # Draw figures
+        self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
+        self.canvas.draw()
 
-        self.cb_save_history.setEnabled(False)
-        if self.textbox_length.text() == '':
-            self.CartPoleInstance.random_length = random_length_globals
-        else:
-            self.CartPoleInstance.random_length = float(self.textbox_length.text())
+        # Enable back all elements of GUI:
+        self.cb_save_history.setEnabled(True)
+        self.cb_show_experiment_summary.setEnabled(True)
+        for rb in self.rbs_simulator_mode:
+            rb.setEnabled(True)
+        for rb in self.rbs_controllers:
+            rb.setEnabled(True)
 
-        turning_points_list = []
-        if self.textbox_turning_points.text() != '':
-            for turning_point in self.textbox_turning_points.text().split(', '):
-                turning_points_list.append(float(turning_point))
-        self.CartPoleInstance.turning_points = turning_points_list
-
-        self.CartPoleInstance.Generate_Random_Trace_Function()
-        if self.run_experiment_thread == 1:
-            print('First reset the previous run')
-        else:
-            self.CartPoleInstance.use_pregenerated_target_position = True
-            self.run_experiment_thread = 1
-            # Pass the function to execute
-            worker_experiment = Worker(self.experiment_thread)
-            # Execute
-            self.threadpool.start(worker_experiment)
-            while (self.run_experiment_thread == 1):
-                QApplication.processEvents()
-            # If user is saving data wait till data is saved
-            if self.save_history:
-                while not self.saved:
-                    QApplication.processEvents()
-                    sleep(0.001)
-
-            self.CartPoleInstance.use_pregenerated_target_position = False
-            self.CartPoleInstance.summary_plots()
-            self.w_summary = SummaryWindow(summary_plots=self.CartPoleInstance.summary_plots)
-            # Reset all the variables which change during an experiment run
-            self.reset_variables(0)
-            # Draw figures
-            self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
-            self.canvas.draw()
-            self.cb_save_history.setEnabled(True)
+        self.start_or_stop_action = "Start!"  # What should happen when "Start! / Stop!" is pushed NEXT time
 
     # endregion
 
@@ -553,13 +590,13 @@ class MainWindow(QMainWindow):
 
     # Set parameters from gui_default_parameters related to generating a random experiment target position
     def set_random_experiment_generator_init_params(self):
-        self.CartPoleInstance.track_relative_complexity = track_relative_complexity_globals
-        self.CartPoleInstance.random_length = random_length_globals
-        self.CartPoleInstance.interpolation_type = interpolation_type_globals
-        self.CartPoleInstance.turning_points_period = turning_points_period_globals
-        self.CartPoleInstance.start_random_target_position_at = start_random_target_position_at_globals
-        self.CartPoleInstance.end_random_target_position_at = end_random_target_position_at_globals
-        self.CartPoleInstance.turning_points = turning_points_globals
+        self.CartPoleInstance.track_relative_complexity = track_relative_complexity_init
+        self.CartPoleInstance.length_of_experiment = length_of_experiment_init
+        self.CartPoleInstance.interpolation_type = interpolation_type_init
+        self.CartPoleInstance.turning_points_period = turning_points_period_init
+        self.CartPoleInstance.start_random_target_position_at = start_random_target_position_at_init
+        self.CartPoleInstance.end_random_target_position_at = end_random_target_position_at_init
+        self.CartPoleInstance.turning_points = turning_points_init
 
     # Method resetting variables which change during experimental run
     def reset_variables(self, reset_mode=1):
@@ -571,7 +608,8 @@ class MainWindow(QMainWindow):
             self.labt.setText("Time (s): " + str(float(self.user_time_counter) / 10.0))
         except:
             pass
-        self.saved = False
+        self.experiment_or_replay_thread_terminated = False  # This is a flag informing thread terminated
+        self.terminate_experiment_or_replay_thread = False  # This is a command to terminate a thread
         self.looper.first_call_done = False
 
     ######################################################################################################
@@ -612,7 +650,7 @@ class MainWindow(QMainWindow):
     #   It seems it sometimes counting time to slow. Consider replacing in future
     def set_user_time_label(self):
         # "If": Increment time counter only if simulation is running
-        if self.run_experiment_thread == 1:
+        if self.start_or_stop_action == "Stop!": # indicates what start button was pressed and some process is running
             self.user_time_counter += 1
             # The updates are done smoother if the label is updated here
             # and not in the separate thread
@@ -626,7 +664,7 @@ class MainWindow(QMainWindow):
         self.anim._stop()
         # Stops the two threads updating the GUI labels and updating the state of Cart instance
         self.run_set_labels_thread = False
-        self.run_experiment_thread = False
+        self.terminate_experiment_or_replay_thread = True
         # Closes the GUI window
         self.close()
         # The standard command
@@ -646,23 +684,25 @@ class MainWindow(QMainWindow):
     # If the mouse cursor is over the lower chart it reads the corresponding value
     # and updates the slider
     def on_mouse_movement(self, event):
-        if event.xdata == None or event.ydata == None:
-            pass
-        else:
-            if event.inaxes == self.fig.AxSlider:
-                self.slider_instant_value = event.xdata
-                if not self.slider_on_click:
-                    self.CartPoleInstance.update_slider(mouse_position=event.xdata)
+        if self.simulator_mode == 'Slider-Controlled Experiment':
+            if event.xdata == None or event.ydata == None:
+                pass
+            else:
+                if event.inaxes == self.fig.AxSlider:
+                    self.slider_instant_value = event.xdata
+                    if not self.slider_on_click:
+                        self.CartPoleInstance.update_slider(mouse_position=event.xdata)
 
     # Function evoked at a mouse click
     # If the mouse cursor is over the lower chart it reads the corresponding value
     # and updates the slider
     def on_mouse_click(self, event):
-        if event.xdata == None or event.ydata == None:
-            pass
-        else:
-            if event.inaxes == self.fig.AxSlider:
-                self.CartPoleInstance.update_slider(mouse_position=event.xdata)
+        if self.simulator_mode == 'Slider-Controlled Experiment':
+            if event.xdata == None or event.ydata == None:
+                pass
+            else:
+                if event.inaxes == self.fig.AxSlider:
+                    self.CartPoleInstance.update_slider(mouse_position=event.xdata)
 
     # endregion
 

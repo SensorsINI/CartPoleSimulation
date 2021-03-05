@@ -32,7 +32,7 @@ Run main.py to start the GUI of CartPole.
 
 Run Train.py to train RNN and Test.py to test it. The data is for both produced on the fly from the CartPole model.
 
-In the “Manual Stabilization” mode you can provide the control input (motor power related to the force acting on the cart) by hovering with your mouse over the lower chart. Due to some bug (or maybe rather specific Cart-Pole system parameters) everything happens to fast to make it doable now.
+n the “Manual Stabilization” mode you can provide the control input (motor power related to the force acting on the cart) by hovering with your mouse over the lower chart. Due to some bug (or maybe rather specific Cart-Pole system parameters) everything happens to fast to make it doable now.
 
 In the “LQR-Stabilization” mode an automatic (LQR) controller takes care that the Pole stays in the upright position. You can provide the target position of the cart by hovering with your mouse over the lower chart.
 

@@ -98,12 +98,14 @@ class loop_timer():
 
         self.last_iteration_start_time = timer()
 
+        # You need buffers not only for diagnostics, but also to measure speed-up
         self.circ_buffer_dt.append(dt)
         self.circ_buffer_leftover.append(leftover_time)
         self.circ_buffer_dt_real.append(dt_real)
 
         # Main functionality ends here. Lines below are just for diagnostics
         if self.do_diagnostics:
+
             if now - self.last_log_time > self.LOG_INTERVAL_SEC:
                 self.last_log_time = now
                 if leftover_time > 0:

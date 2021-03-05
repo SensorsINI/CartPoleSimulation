@@ -1,5 +1,4 @@
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QPushButton
-
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 

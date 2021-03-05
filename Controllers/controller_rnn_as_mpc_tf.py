@@ -1,4 +1,4 @@
-from modeling.rnn_tf.utilis_rnn import *
+from Modeling.TF.TF_Functions.Network import *
 
 
 RNN_FULL_NAME = 'GRU-5IN-64H1-64H2-1OUT-0'
@@ -14,7 +14,7 @@ class controller_rnn_as_mpc_tf:
         self.net, self.rnn_name, self.inputs_list, self.outputs_list \
             = create_rnn_instance(load_rnn=RNN_FULL_NAME, path_save=PATH_SAVE,
                                   return_sequence=False, stateful=True,
-                                  warm_up_len=1, batchSize=1)
+                                  wash_out_len=1, batch_size=1)
 
         self.normalization_info = load_normalization_info(PATH_SAVE, RNN_FULL_NAME)
 

@@ -1,19 +1,24 @@
 """mpc controller"""
 
-import numpy as np
+from CartPole.cartpole_model import p_globals, s0, Q2u, cartpole_ode
 from types import SimpleNamespace
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 import casadi
 
 from copy import deepcopy
 
-from CartPole.cartpole_model import p_globals, Q2u, cartpole_ode
-
+dt_mpc_simulation = 0.2  # s
+mpc_horizon = 10
 
 def mpc_next_state(s, p, u, dt):
     """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
+
+    TODO: This might be combined with cartpole_integration,
+        although the order of cartpole_ode and cartpole_integration is different than in CartClass
+        For some reaseon it does not work at least not with do-mpc discreate
     """
 
     s_next = s
@@ -21,6 +26,23 @@ def mpc_next_state(s, p, u, dt):
     s_next.angleDD, s_next.positionDD = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
 
     # Calculate NEXT state:
+    s_next = cartpole_integration(s_next, dt)
+
+    return s_next
+
+
+
+def cartpole_integration(s, dt):
+    """Simple single step integration of CartPole state by dt
+
+    Takes state as SimpleNamespace, but returns as separate variables
+    # TODO: Consider changing it to return a SimpleNamepece for consistency
+
+    :param s: state of the CartPole (contains: s.position, s.positionD, s.angle and s.angleD)
+    :param dt: time step by which the CartPole state should be integrated
+    """
+    s_next = SimpleNamespace()
+
     s_next.position = s.position + s.positionD * dt
     s_next.positionD = s.positionD + s.positionDD * dt
 
@@ -28,10 +50,6 @@ def mpc_next_state(s, p, u, dt):
     s_next.angleD = s.angleD + s.angleDD * dt
 
     return s_next
-
-
-dt_mpc_simulation = 0.2
-mpc_horizon = 10
 
 
 class controller_mpc_opti:

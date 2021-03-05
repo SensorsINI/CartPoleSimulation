@@ -2,27 +2,26 @@ from CartPole import CartPole
 from CartPole.cartpole_model import s0, p_globals
 TrackHalfLength = p_globals.TrackHalfLength
 
-import os
 from time import sleep
 import timeit
 
 import numpy as np
 
 # User defined simulation settings
-csv = 'test_K'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
-number_of_experiments = 1  # How many experiments will be generated
-save_mode = 'online'  # It was intended to save memory usage, but it doesn't seems to help. Leave it false.
+csv = 'Test'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
+number_of_experiments = 2  # How many experiments will be generated
+save_mode = 'offline'  # It was intended to save memory usage, but it doesn't seems to help. Leave it false.
 
 # Timescales
 dt_simulation_DataGen = 0.02  # simulation timestep
-dt_controller_update_DataGen = 0.2
+dt_controller_update_DataGen = 0.1
 dt_save_DataGen = 0.1
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
-length_of_experiment_DataGen = 10.0  # Length of each experiment in s
+length_of_experiment_DataGen = 100.0  # Length of each experiment in s
 controller_DataGen = 'do-mpc'  # Controller which should be used in generated experiment
 # Possible options for controller:
-# 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'rnn_as_mpc_tf'
+# 'manual-stabilization', 'do-mpc', 'lqr'
 track_relative_complexity_DataGen = 0.5  # randomly placed target points/s
 interpolation_type_DataGen = '0-derivative-smooth'  # Sets how to interpolate between turning points of random trace
 # Possible choices: '0-derivative-smooth', 'linear', 'previous'
@@ -103,4 +102,4 @@ for i in range(number_of_experiments):
     gen_dt = (gen_end - gen_start) * 1000.0
     print('time to generate data: {} ms'.format(gen_dt))
 
-os.system('say "Antonio! Todo ha terminado!"')
+# os.system('say "Antonio! Todo ha terminado!"')

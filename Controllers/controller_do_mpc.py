@@ -25,7 +25,7 @@ class controller_do_mpc:
         """
 
         # Physical parameters of the cart
-        p = p_globals
+        p = p_globals  # p like parameters
 
         # Container for the state of the cart
         s = deepcopy(s0)  # s like state

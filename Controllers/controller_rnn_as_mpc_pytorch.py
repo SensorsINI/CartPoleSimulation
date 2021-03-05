@@ -2,7 +2,7 @@
 import scipy
 import numpy as np
 import pandas as pd
-from modeling.rnn_pytorch.utilis_rnn import *
+from Modeling.Pytorch.utilis_rnn import *
 
 
 RNN_FULL_NAME = 'GRU-5IN-32H1-32H2-1OUT-0'

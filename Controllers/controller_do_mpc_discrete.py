@@ -1,15 +1,22 @@
 """do-mpc controller"""
 
 import do_mpc
+from copy import deepcopy
 import numpy as np
 
+from CartPole.cartpole_model import p_globals, s0, Q2u, cartpole_ode
 from types import SimpleNamespace
 
-from CartPole.cartpole_model import Q2u, p_globals, cartpole_ode
+dt_mpc_simulation = 0.2  # s
+mpc_horizon = 10
 
 
 def mpc_next_state(s, p, u, dt):
     """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
+
+    TODO: This might be combined with cartpole_integration,
+        although the order of cartpole_ode and cartpole_integration is different than in CartClass
+        For some reaseon it does not work at least not with do-mpc discreate
     """
 
     s_next = s
@@ -17,6 +24,23 @@ def mpc_next_state(s, p, u, dt):
     s_next.angleDD, s_next.positionDD = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
 
     # Calculate NEXT state:
+    s_next = cartpole_integration(s_next, dt)
+
+    return s_next
+
+
+
+def cartpole_integration(s, dt):
+    """Simple single step integration of CartPole state by dt
+
+    Takes state as SimpleNamespace, but returns as separate variables
+    # TODO: Consider changing it to return a SimpleNamepece for consistency
+
+    :param s: state of the CartPole (contains: s.position, s.positionD, s.angle and s.angleD)
+    :param dt: time step by which the CartPole state should be integrated
+    """
+    s_next = SimpleNamespace()
+
     s_next.position = s.position + s.positionD * dt
     s_next.positionD = s.positionD + s.positionDD * dt
 
@@ -24,10 +48,6 @@ def mpc_next_state(s, p, u, dt):
     s_next.angleD = s.angleD + s.angleDD * dt
 
     return s_next
-
-
-dt_mpc_simulation = 0.2  # s
-mpc_horizon = 10
 
 
 class controller_do_mpc_discrete:
@@ -45,12 +65,9 @@ class controller_do_mpc_discrete:
         # Physical parameters of the cart
         p = p_globals
 
-        # State of the cart
-        s = SimpleNamespace()  # s like state
-        s.position = 0.0
-        s.positionD = 0.0
-        s.angle = 0.0
-        s.angleD = 0.0
+        # Container for the state of the cart
+        s = deepcopy(s0)  # s like state
+
 
         model_type = 'discrete'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
@@ -85,7 +102,6 @@ class controller_do_mpc_discrete:
         self.model.set_expression('E_pot', E_pot)
         self.model.set_expression('distance_difference', distance_difference)
 
-
         self.model.setup()
 
         self.mpc = do_mpc.controller.MPC(self.model)
@@ -102,48 +118,14 @@ class controller_do_mpc_discrete:
         self.mpc.set_param(**setup_mpc)
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'ma27'})
 
-        # Works with horizon 10
         lterm = - self.model.aux['E_pot'] +\
                 20 * distance_difference +\
                 5 * self.model.aux['E_kin_pol']
-        mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
-        self.mpc.set_rterm(Q=0.1)
 
-        # Horizon 5
-        # weights
-        # wr = 0.1  # rterm
-        # l1 = 0.0  # -pot
-        # l2 = 50.0  # distance
-        # l3 = 0.0  # kin_pol
-        # m1 = 0.0  # kin_pol
-        # m2 = 50.0  # -pot
-        # m3 = 0.0  # kin_cart
-        # m4 = 0.0# 20.0*10.0  # distance
-        #
-        # w_sum = wr + l1 + l2 + l3 + m1 + m2 + m3
-        #
-        # wr /= w_sum
-        # l1 /= w_sum
-        # l2 /= w_sum
-        # l3 /= w_sum
-        # m1 /= w_sum
-        # m2 /= w_sum
-        # m3 /= w_sum
-        # m4 /= w_sum
-
-        # print(distance_difference)
-        # lterm = -l1 * self.model.aux['E_pot'] +\
-        #         l2 * distance_difference +\
-        #         l3 * self.model.aux['E_kin_pol']
-        # mterm = m1 * self.model.aux['E_kin_pol']\
-        #         - m2 * self.model.aux['E_pot']\
-        #         + m3 * self.model.aux['E_kin_cart']\
-        #         + m4 * distance_difference
-        #
-        # self.mpc.set_objective(mterm=mterm, lterm=lterm)
-        # self.mpc.set_rterm(Q=wr)
+        mterm = (5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart'])
 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
+        self.mpc.set_rterm(Q=0.1)
 
         self.mpc.bounds['lower', '_u', 'Q'] = -1.0
         self.mpc.bounds['upper', '_u', 'Q'] = 1.0

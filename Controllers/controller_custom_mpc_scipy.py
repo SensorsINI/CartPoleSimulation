@@ -6,9 +6,8 @@ import scipy.optimize
 
 from copy import deepcopy
 
-from modeling.rnn_tf.utilis_rnn import *
-from predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
-from predictores.predictor_ideal import predictor_ideal
+from Modeling.TF.TF_Functions.Network import *
+from Predictores.predictor_ideal import predictor_ideal
 
 predictor = predictor_ideal
 # WARNING: if using RNN to provide CartPole model to MPC

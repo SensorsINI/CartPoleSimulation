@@ -27,9 +27,14 @@ from datetime import datetime
 from scipy.interpolate import BPoly, interp1d
 # Run range() automatically adding progress bar in terminal
 from tqdm import trange
+try:
+    # Use gitpython to get a current revision number and use it in description of experimental data
+    from git import Repo
+except:
+    pass
 
 # check memory usage of chosen methods. Commented by default
-from memory_profiler import profile
+# from memory_profiler import profile
 
 # region Graphics imports
 import matplotlib.pyplot as plt
@@ -189,6 +194,11 @@ class CartPole:
 
         # Update target position depending on the mode of operation
         if self.use_pregenerated_target_position:
+
+            # If time exceeds the max time for which target position was defined
+            if self.time >= self.t_max_pre:
+                return
+
             self.target_position = self.random_track_f(self.time)
             self.slider_value = self.target_position  # Assign target position to slider to display it
         else:
@@ -361,7 +371,15 @@ class CartPole:
 
                 writer.writerow(['# ' + 'This is CartPole experiment from {} at time {}'
                                 .format(datetime.now().strftime('%d.%m.%Y'), datetime.now().strftime('%H:%M:%S'))])
+                try:
+                    repo  = Repo()
+                    git_revision = repo.head.object.hexsha
+                except:
+                    git_revision = 'unknown'
+                writer.writerow(['# ' + 'Done with git-revision: {}'
+                                .format(git_revision)])
 
+                writer.writerow(['#'])
                 writer.writerow(['# Length of experiment: {} s'.format(str(length_of_experiment))])
 
                 writer.writerow(['#'])
@@ -401,6 +419,7 @@ class CartPole:
                                      for key, value in self.dict_history.items()}
                 writer.writerows(zip(*self.dict_history.values()))
             self.save_now = False
+            # Another possibility to save data.
             # DF_history = pd.DataFrame.from_dict(self.dict_history).round(self.rounding_decimals)
             # DF_history.to_csv(self.csv_filepath, index=False, header=False, mode='a') # Mode (a)ppend
 
@@ -410,7 +429,7 @@ class CartPole:
         if csv_name is None or csv_name == '':
             # get the latest file
             try:
-                list_of_files = glob.glob('./data/' + '/*.csv')
+                list_of_files = glob.glob(PATH_TO_EXPERIMENT_RECORDINGS + '/*.csv')
                 file_path = max(list_of_files, key=os.path.getctime)
             except FileNotFoundError:
                 print('Cannot load: No experiment recording found in data folder ' + './data/')
@@ -422,7 +441,7 @@ class CartPole:
 
             # check if file found in DATA_FOLDER_NAME or at local starting point
             if not os.path.isfile(filename):
-                file_path = os.path.join('data', filename)
+                file_path = os.path.join(PATH_TO_EXPERIMENT_RECORDINGS, filename)
                 if not os.path.isfile(file_path):
                     print(
                         'Cannot load: There is no experiment recording file with name {} at local folder or in {}'.format(
@@ -442,32 +461,34 @@ class CartPole:
     # Method plotting the dynamic evolution over time of the CartPole
     # It should be called after an experiment and only if experiment data was saved
     def summary_plots(self):
-        fig, axs = plt.subplots(4, 1, figsize=(18, 14), sharex=True)  # share x axis so zoom zooms all plots
+        fontsize_labels = 14
+        fontsize_ticks = 12
+        fig, axs = plt.subplots(4, 1, figsize=(16, 9), sharex=True)  # share x axis so zoom zooms all plots
 
         # Plot angle error
-        axs[0].set_ylabel("Angle (deg)", fontsize=18)
+        axs[0].set_ylabel("Angle (deg)", fontsize=fontsize_labels)
         axs[0].plot(np.array(self.dict_history['time']), np.array(self.dict_history['s.angle']) * 180.0 / np.pi,
                     'b', markersize=12, label='Ground Truth')
-        axs[0].tick_params(axis='both', which='major', labelsize=16)
+        axs[0].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
         # Plot position
-        axs[1].set_ylabel("position (m)", fontsize=18)
+        axs[1].set_ylabel("position (m)", fontsize=fontsize_labels)
         axs[1].plot(self.dict_history['time'], self.dict_history['s.position'], 'g', markersize=12,
                     label='Ground Truth')
-        axs[1].tick_params(axis='both', which='major', labelsize=16)
+        axs[1].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
         # Plot motor input command
-        axs[2].set_ylabel("motor (N)", fontsize=18)
+        axs[2].set_ylabel("motor (N)", fontsize=fontsize_labels)
         axs[2].plot(self.dict_history['time'], self.dict_history['u'], 'r', markersize=12,
                     label='motor')
-        axs[2].tick_params(axis='both', which='major', labelsize=16)
+        axs[2].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
         # Plot target position
-        axs[3].set_ylabel("position target (m)", fontsize=18)
+        axs[3].set_ylabel("position target (m)", fontsize=fontsize_labels)
         axs[3].plot(self.dict_history['time'], self.dict_history['target_position'], 'k')
-        axs[3].tick_params(axis='both', which='major', labelsize=16)
+        axs[3].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
-        axs[3].set_xlabel('Time (s)', fontsize=18)
+        axs[3].set_xlabel('Time (s)', fontsize=fontsize_labels)
 
         fig.align_ylabels()
 
