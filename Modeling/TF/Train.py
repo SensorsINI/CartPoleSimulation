@@ -4,9 +4,13 @@ Created on Fri Jun 19 06:21:32 2020
 
 @author: Marcin
 """
+import nni
 
 import matplotlib.pyplot as plt
 from tensorflow import keras
+
+import os
+print(os.getcwd())
 
 import timeit
 from warnings import warn as warning
@@ -33,6 +37,9 @@ print('')
 # Warning! It may affect performance. I would discourage you to use it for long training tasks
 # @profile(precision=4)
 def train_network(nni_parameters=None):
+
+
+
     # region Start measuring time - to evaluate performance of the training function
     start = timeit.default_timer()
     # endregion
@@ -137,21 +144,16 @@ def train_network(nni_parameters=None):
     # region Define callbacks to be used in training
 
     callbacks_for_training = []
-
     class CustomCallback(keras.callbacks.Callback):
         def on_epoch_end(self, epoch, logs=None):
-            # if epoch==4:
-            if epoch >= 0:
-                # region If NNI enabled send intermediate report
-                if nni_parameters is not None:
-                    nni.report_intermeidate_result(history.history['val_loss'])
-                # endregion
-                plot_string = 'This is the network after {} training epoch(s), warm_up={}'.format(epoch + 1, a.wash_out_len)
-                # open_loop_prediction_experiment(net=net, args=a, dataset=test_set,
-                #                                 comment=plot_string,
-                #                                 save=True,
-                #                                 closed_loop_enabled=True,
-                #                                 exp_len=120 // a.downsampling)
+            pass
+            # endregion
+            # plot_string = 'This is the network after {} training epoch(s), warm_up={}'.format(epoch + 1, a.wash_out_len)
+            # open_loop_prediction_experiment(net=net, args=a, dataset=test_set,
+            #                                 comment=plot_string,
+            #                                 save=True,
+            #                                 closed_loop_enabled=True,
+            #                                 exp_len=120 // a.downsampling)
     custom_callback = CustomCallback()
 
     callbacks_for_training.append(custom_callback)
@@ -227,10 +229,9 @@ if __name__ == '__main__':
     print("Training script last modified: %s" % time.ctime(os.path.getmtime(file)))
 
     # Run the training function and measure time of execution
-    train_network()
+    # train_network()
 
     # Use the call below instead of train_network() if you want to use NNI
-    import nni
-    nni_parameters = nni.get_next_parameter()
-    train_network(nni_parameters)
+    # nni_parameters = nni.get_next_parameter()
+    # train_network(nni_parameters)
 

@@ -8,6 +8,7 @@ trainingServicePlatform: local
 searchSpacePath: search_space.json
 #choice: true, false
 useAnnotation: false
+logDir: ./NNI_Results
 tuner:
   #choice: TPE, Random, Anneal, Evolution, BatchTuner, MetisTuner
   #SMAC (SMAC should be installed through nnictl)
@@ -16,6 +17,6 @@ tuner:
     #choice: maximize, minimize
     optimize_mode: minimize
 trial:
-  command: python /Users/Anonymous/Desktop/Telluride/CartPoleSimulation/modeling/TF/Train.py --num_epochs=5
-  codeDir: ../
+  command: python -m Modeling.TF.Train --num_epochs=5
+  codeDir: ../../../
   gpuNum: 0

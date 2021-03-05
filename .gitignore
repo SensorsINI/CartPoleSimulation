@@ -5,3 +5,4 @@
 *.txt
 *.ckpt.*
 *.pt
+/Modeling/TF/NNI/

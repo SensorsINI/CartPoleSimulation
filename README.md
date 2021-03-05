@@ -58,16 +58,24 @@ For Pycharm default, for Atom install
 
 ## Parameter exploration with NNI
 
-For intellegent parameter space exploration with NNI, we have 3 files : 
+For intellegent parameter space exploration with NNI, we have 2 special files : 
 
-1. modeling/rnn_tf/Train_nni : Adapted from Train.py to train with parameter exploration
-2. modeling/rnn_tf/search_space.json : Search space for parameter search
-3. config.yml : Configuring the NNI experiments. 
+1. modeling/rnn_tf/search_space.json : Search space for parameter search
+2. config.yml : Configuring the NNI experiments. 
 
 To run the exploration experiment :
 
-Step 1 : nnictl create --config config.yml
-Step 2 : Open the url as displayed on terminal after step 1
+Step 1: In Modeling/TF/Train.py comment line:
+
+        train_network()
+
+and uncomment lines:
+
+        nni_parameters = nni.get_next_parameter()
+        train_network(nni_parameters)
+
+Step 2 : nnictl create --config Modeling/TF/NNI/config.yml
+Step 3 : Open the url as displayed on terminal after Step 1
 
 ## Next step TODO:
 Better description of recorded files (controller, git revision, )
