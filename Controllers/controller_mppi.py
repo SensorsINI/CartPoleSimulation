@@ -8,7 +8,7 @@ from copy import deepcopy
 from types import SimpleNamespace
 
 dt_mpc_simulation = 0.02  # s
-mpc_horizon = 1
+mpc_horizon = 2
 mc_samples = 1000
 
 
@@ -42,6 +42,11 @@ class controller_mppi:
         self.nu = 1.0e1  # Exploration variance
         self.rho_sqrt_inv = 0.01
         self.avg_cost = []
+        self.distance_differences = []
+        self.E_pots = []
+        self.E_kins_pole = []
+        self.E_kins_cart = []
+        self.num_timesteps = 0
 
         self.s_horizon = []  # list of states s
         self.u = np.zeros((self.mpc_samples), dtype=float)
@@ -52,12 +57,16 @@ class controller_mppi:
     def q(self, p, s, u, delta_u):
         # if np.abs(u + delta_u) > 1.0:
         #     return 1.0e5
-        q = (
-            self.distance_difference(s)
-            + 500 * self.E_pot_cost(s) ** 2
-            + self.E_kin_pol(s)
-            + self.E_kin_cart(s)
-        )
+        dd = 10 * self.distance_difference(s)
+        ep = self.E_pot_cost(s) ** 2
+        ekp = self.E_kin_pol(s)
+        ekc = self.E_kin_cart(s)
+        q = dd + ep + ekp + ekc
+        self.distance_differences.append(dd)
+        self.E_pots.append(ep)
+        self.E_kins_pole.append(ekp)
+        self.E_kins_cart.append(ekc)
+
         q += (
             0.5 * (1 - 1.0 / self.nu) * self.R * (delta_u ** 2)
             + self.R * u * delta_u
@@ -90,11 +99,14 @@ class controller_mppi:
         self.s = deepcopy(s)
         self.target_position = deepcopy(target_position).item()
 
-        self.delta_u = (
-            np.random.normal(size=np.shape(self.delta_u))
-            * self.rho_sqrt_inv
-            / (np.sqrt(self.dt))
-        )  # N(mean=0, var=1/(rho*dt))
+        self.num_timesteps += 1
+
+        # self.delta_u = (
+        #     np.random.normal(size=np.shape(self.delta_u))
+        #     * self.rho_sqrt_inv
+        #     / (np.sqrt(self.dt))
+        # )  # N(mean=0, var=1/(rho*dt))
+        self.delta_u = np.random.normal(size=np.shape(self.delta_u)) * 0.2
         self.S_tilde = np.zeros_like(self.S_tilde)
         self.S_tilde_k = np.zeros_like(self.S_tilde_k)
 
@@ -113,15 +125,15 @@ class controller_mppi:
                 s_next.angleD = s_last.angleD + dda * self.dt
 
                 self.s_horizon.append(s_next)
-                self.S_tilde[k, i + 1] = (
-                    self.S_tilde[k, i]
-                    + self.q(self.p, s_next, self.u[i], self.delta_u[k, i]) * self.dt
-                )
+                # self.S_tilde[k, i + 1] = (
+                #     self.S_tilde[k, i]
+                #     + self.q(self.p, s_next, self.u[i], self.delta_u[k, i]) * self.dt
+                # )
                 self.S_tilde_k[k] += self.q(
                     self.p, s_next, self.u[i], self.delta_u[k, i]
                 )
 
-        self.avg_cost.append(np.mean(self.S_tilde, axis=0)[-1])
+        self.avg_cost.append(np.mean(self.S_tilde_k, axis=0))
 
         for i in range(self.mpc_samples):
             # self.u[i] += self.reward_weighted_average(
@@ -131,8 +143,8 @@ class controller_mppi:
                 self.S_tilde_k, self.delta_u[:, i]
             )
 
-        # Q = np.clip(self.u[0], -1, 1)
-        Q = self.u[0]
+        Q = np.clip(self.u[0], -1, 1)
+        # Q = self.u[0]
 
         # Index shift inputs
         self.u[:-1] = self.u[1:]
@@ -144,7 +156,46 @@ class controller_mppi:
     # May be used to print some statistics about controller performance (e.g. number of iter. to converge)
     def controller_report(self):
         # TODO: Graph the running cost per iteration to see if the controller minimizes it
-        pass
+        time_axis = self.dt * 10 * np.arange(start=0, stop=len(self.avg_cost))
+        plt.figure(num=2, figsize=(8, 8))
+        plt.plot(time_axis, self.avg_cost)
+        plt.ylabel("avg_cost")
+        plt.xlabel("time")
+        plt.title("Cost over iterations")
+        plt.show()
+
+        self.num_timesteps -= 1
+
+        self.distance_differences = np.reshape(
+            np.array(
+                self.distance_differences[self.mc_samples * (self.mpc_samples - 1) :]
+            ),
+            (self.num_timesteps, self.mc_samples, self.mpc_samples - 1),
+        )
+        self.E_pots = np.reshape(
+            np.array(self.E_pots[self.mc_samples * (self.mpc_samples - 1) :]),
+            (self.num_timesteps, self.mc_samples, self.mpc_samples - 1),
+        )
+        self.E_kins_pole = np.reshape(
+            np.array(self.E_kins_pole[self.mc_samples * (self.mpc_samples - 1) :]),
+            (self.num_timesteps, self.mc_samples, self.mpc_samples - 1),
+        )
+        self.E_kins_cart = np.reshape(
+            np.array(self.E_kins_cart[self.mc_samples * (self.mpc_samples - 1) :]),
+            (self.num_timesteps, self.mc_samples, self.mpc_samples - 1),
+        )
+
+        plt.figure(num=3, figsize=(12, 8))
+        plt.plot(
+            np.mean(self.distance_differences[:, :, -1], axis=1),
+            label="Distance difference cost",
+        )
+        plt.plot(np.mean(self.E_pots[:, :, -1], axis=1), label="E_pot cost")
+        plt.plot(np.mean(self.E_kins_pole[:, :, -1], axis=1), label="E_kin_pole cost")
+        plt.plot(np.mean(self.E_kins_cart[:, :, -1], axis=1), label="E_kin_cart cost")
+        plt.title("Cost components over time")
+        plt.legend()
+        plt.show()
 
     # Optionally: reset the controller after an experiment
     # May be useful for stateful controllers, like these containing RNN,
