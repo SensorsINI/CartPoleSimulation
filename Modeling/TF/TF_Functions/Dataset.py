@@ -76,7 +76,7 @@ class Dataset(keras.utils.Sequence):
         :param exp_len: Gives new user defined exp_len. Call empty to come back to default.
         """
         if exp_len is None:
-            self.exp_len = self.args.exp_len  # Sequence length
+            self.exp_len = self.args.wash_out_len+self.args.post_wash_out_len  # Sequence length
         else:
             self.exp_len = exp_len
 
@@ -117,7 +117,7 @@ class Dataset(keras.utils.Sequence):
         # In TF it must return the number of batches
         return self.number_of_batches
 
-    def get_series(self, idx, get_time_axis=False, targets_type='first_after_warm_up'):
+    def get_series(self, idx, get_time_axis=False, targets_type='all'):
         """
         Requires the self.data to be a list of pandas dataframes
         """

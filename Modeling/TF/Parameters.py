@@ -22,7 +22,7 @@ TEST_FILES = './ExperimentRecordings/Test/'
 
 # endregion
 
-net_name = 'GRU-64H1-64H2'
+net_name = 'Dense-64H1-64H2'
 
 # region Set inputs and outputs
 
@@ -72,9 +72,13 @@ def args():
     parser.add_argument('--close_loop_for', default=closed_loop_list,
                         help='In RNN forward function this features will be fed beck from output to input')
 
-    # Exp len>wash_out_len!f
-    parser.add_argument('--exp_len', default=11, type=int, help='Return after cosuming this number of points')
-    parser.add_argument('--wash_out_len', default=10, type=int, help='Number of timesteps for a warm-up sequence')
+    # Experiment length - number of time steps to take for testing
+    parser.add_argument('--test_len', default=11, type=int, help='Number of time steps to take for testing')
+
+    # Training only:
+    parser.add_argument('--wash_out_len', default=10, type=int, help='Number of timesteps for a wash-out sequence')
+    parser.add_argument('--post_wash_out_len', default=10, type=int,
+                        help='Number of timesteps after wash-out sequence (this is used to calculate loss)')
 
     # Training parameters
     parser.add_argument('--num_epochs', default=15, type=int, help='Number of epochs of training')

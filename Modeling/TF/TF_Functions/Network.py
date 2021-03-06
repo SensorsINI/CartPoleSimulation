@@ -24,15 +24,14 @@ def load_pretrained_net_weights(net, ckpt_path):
     net.load_weights(ckpt_path)
 
 
-
-
 def compose_net_from_net_name(net_name,
                               inputs_list,
                               outputs_list,
                               wash_out_len=None,
-                              return_sequence=False,
+                              post_wash_out_len=None,
                               batch_size=None,
                               stateful=False):
+    return_sequence = True
     # Get the information about network architecture from the network name
     # Split the names into "LSTM/GRU", "128H1", "64H2" etc.
     names = net_name.split('-')
@@ -67,48 +66,20 @@ def compose_net_from_net_name(net_name,
     # Construct network
     # Either dense...
     if net_type == 'Dense':
-        net.add(tf.keras.Input(shape=(len(inputs_list),)))
-        if h_number == 1:
+        net.add(tf.keras.Input(shape=(wash_out_len+post_wash_out_len, len(inputs_list))))
+        for i in range(h_number - 1):
             net.add(layer_type(
-                units=h_size[0], activation=None
-            ))
-        else:
-            for i in range(h_number - 1):
-                net.add(layer_type(
-                    units=h_size[i], activation='tanh'
-                ))
-            net.add(layer_type(
-                units=h_size[-1], activation=None
+                units=h_size[i], activation='tanh', batch_size=batch_size
             ))
     else:
         # Or RNN...
-        # Define first layer
-        if h_number == 1:
+        net.add(tf.keras.Input(shape=(wash_out_len+post_wash_out_len, len(inputs_list))))
+        # Define following layers
+        for i in range(len(h_size)):
             net.add(layer_type(
-                units=h_size[0],
-                batch_input_shape=(batch_size, wash_out_len, len(inputs_list)),
-                return_sequences=return_sequence,
-                stateful=stateful
-            ))
-        else:
-            net.add(layer_type(
-                units=h_size[0],
-                batch_input_shape=(batch_size, wash_out_len, len(inputs_list)),
+                units=h_size[i],
+                batch_size=batch_size,
                 return_sequences=True,
-                stateful=stateful
-            ))
-            # Define following layers
-            # The for loop will only executed if there is MORE than 2 hidden layers
-            for i in range(len(h_size) - 2):
-                net.add(layer_type(
-                    units=h_size[i + 1],
-                    return_sequences=True,
-                    stateful=stateful
-                ))
-            # Last RNN layer
-            net.add(layer_type(
-                units=h_size[-1],
-                return_sequences=return_sequence,
                 stateful=stateful
             ))
 

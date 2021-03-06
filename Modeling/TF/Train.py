@@ -21,7 +21,7 @@ from Modeling.TF.Parameters import args
 # Custom functions
 from Modeling.TF.TF_Functions.Initialization import set_seed, create_full_name, create_log_file, get_net_and_norm_info
 from Modeling.TF.TF_Functions.Test_open_loop_prediction import open_loop_prediction_experiment
-from Modeling.TF.TF_Functions.Network import compose_net_from_net_name
+from Modeling.TF.TF_Functions.Loss import loss_msr_sequence_customizable
 from Modeling.TF.TF_Functions.Dataset import Dataset, DatasetRandom
 from Modeling.load_and_normalize import load_data, load_normalization_info, normalize_df,\
     get_sampling_interval_from_datafile, get_paths_to_datafiles, get_sampling_interval_from_normalization_info
@@ -133,9 +133,14 @@ def train_network(nni_parameters=None):
 
     # endregion
 
-    # region Define loss and optimizer for training
+
+
+
+
     net.compile(
-        loss='mean_squared_error',
+        loss=loss_msr_sequence_customizable(wash_out_len=a.wash_out_len,
+                                            post_wash_out_len=a.post_wash_out_len,
+                                            discount_factor=1.0),
         optimizer=keras.optimizers.Adam(0.001)
     )
     net.summary()
@@ -229,7 +234,7 @@ if __name__ == '__main__':
     print("Training script last modified: %s" % time.ctime(os.path.getmtime(file)))
 
     # Run the training function and measure time of execution
-    # train_network()
+    train_network()
 
     # Use the call below instead of train_network() if you want to use NNI
     # nni_parameters = nni.get_next_parameter()

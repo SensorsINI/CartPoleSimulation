@@ -138,7 +138,8 @@ def get_net_and_norm_info(a):
 
             # Recreate network architecture
             net, net_info = compose_net_from_net_name(net_name, inputs, outputs,
-                                                      a.wash_out_len, return_sequence=False,
+                                                      wash_out_len=a.wash_out_len,
+                                                      post_wash_out_len=a.post_wash_out_len,
                                                       batch_size=None, stateful=False)
 
             # region Try to load weights from checkpoint file
@@ -186,7 +187,8 @@ def get_net_and_norm_info(a):
         print('')
 
         net, net_info = compose_net_from_net_name(a.net_name, a.inputs, a.outputs,
-                                                  a.wash_out_len, return_sequence=False,
+                                                  wash_out_len=a.wash_out_len,
+                                                  post_wash_out_len=a.post_wash_out_len,
                                                   batch_size=None, stateful=False)
 
         # endregion
