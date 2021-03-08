@@ -55,8 +55,8 @@ class controller_mppi:
         self.S_tilde_k = np.zeros((self.mc_samples), dtype=float)
 
     def q(self, p, s, u, delta_u):
-        # if np.abs(u + delta_u) > 1.0:
-        #     return 1.0e5
+        if np.abs(u + delta_u) > 1.0:
+            return 1.0e5
         dd = 10 * self.distance_difference(s)
         ep = self.E_pot_cost(s) ** 2
         ekp = self.E_kin_pol(s)
@@ -81,8 +81,10 @@ class controller_mppi:
         pass
 
     def reward_weighted_average(self, S_i, delta_u_i):
-        a = np.sum(np.exp(-1.0 / self.l * S_i))
-        b = np.sum(np.multiply(np.exp(-1.0 / self.l * S_i), delta_u_i) / a)
+        rho = np.min(S_i)  # for numerical stability
+        exp_s = np.exp(-1.0 / self.l * (S_i - rho))
+        a = np.sum(exp_s)
+        b = np.sum(np.multiply(exp_s, delta_u_i) / a)
         return b
 
     def motion_derivatives(self, p, s, u):
