@@ -8,6 +8,10 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib import colors
 
+from tqdm import trange
+
+import copy
+
 from Modeling.load_and_normalize import denormalize_df, load_data, load_normalization_info, normalize_df, denormalize_numpy_array
 from Modeling.TF.TF_Functions.Network import get_internal_states, load_internal_states
 
@@ -42,18 +46,17 @@ def open_loop_prediction_experiment(net_for_inference,
 
     # Get features, target, and time axis
     # Format the experiment data
-    features, targets, time_axis = dataset.get_experiment(0)  # Put number in brackets to get the same idx at every run
+    features, targets, time_axis = dataset.get_experiment(1)  # Put number in brackets to get the same idx at every run
     time_axis = time_axis[:-1]
 
     # Make a prediction
     net_outputs = np.zeros(shape=(max_horizon, targets.shape[0], targets.shape[1]))
     normalized_net_output = np.zeros(shape=(max_horizon, targets.shape[0], targets.shape[1]))
 
-    for timestep in range(features.shape[0]-max_horizon):
+    for timestep in trange(features.shape[0]-max_horizon):
 
         # Make prediction based on true data
-        net_input = features[timestep, :]
-        net_input = net_input[np.newaxis, np.newaxis, :]
+        net_input = copy.deepcopy(features[np.newaxis, np.newaxis, timestep, :])
         # t2 = timeit.default_timer()
         normalized_net_output[0, timestep, :] = np.squeeze(net_for_inference.predict_on_batch(net_input))
         # t3 = timeit.default_timer()
@@ -67,8 +70,8 @@ def open_loop_prediction_experiment(net_for_inference,
         for i in range(1, max_horizon):
             # We assume control input is the first variable
             # All other variables are in closed loop
-            net_input = features[np.newaxis, np.newaxis, timestep + i, :]
-            net_input[..., 1:] = normalized_net_output[i-1, timestep, :]
+            net_input = copy.deepcopy(features[np.newaxis, np.newaxis, timestep + i, :])
+            net_input[..., 1:] = copy.deepcopy(normalized_net_output[i-1, timestep, :])
             normalized_net_output[i, timestep, :] = \
                 np.squeeze(net_for_inference.predict_on_batch(net_input))
 
@@ -80,40 +83,51 @@ def open_loop_prediction_experiment(net_for_inference,
 
     features_denormalized = denormalize_numpy_array(features, net_for_inference_info.inputs, normalization_info)
     targets_denormalized = denormalize_numpy_array(targets, net_for_inference_info.outputs, normalization_info)
-    net_outputs_denormalized = denormalize_numpy_array(net_outputs, net_for_inference_info.outputs, normalization_info)
+    net_outputs_denormalized = denormalize_numpy_array(normalized_net_output, net_for_inference_info.outputs, normalization_info)
 
     # Data tailored for plotting
     ground_truth = features_denormalized
     net_outputs = net_outputs_denormalized
 
     # time_axis is a time axis for ground truth
-    return ground_truth, net_outputs, time_axis
+    return ground_truth[:-max_horizon, :], net_outputs[:, :-max_horizon, :], time_axis[:-max_horizon]
+
 
 def brunton_widget(inputs, outputs, ground_truth, net_outputs, time_axis,
-                   starting_point_at_timeaxis=None, max_horizon=10, plot_all=False):
+                   starting_point_at_timeaxis=None, max_horizon=10, plot_all=True):
 
     # Start at should be done bu widget (slider)
     if starting_point_at_timeaxis is None:
         starting_point_at_timeaxis = ground_truth.shape[0]//2
-    feature = 's.position'
-    
-    # Todo: Find feature_idx for ground truth and target for
+    feature = 's.angle.cos'
+
     feature_idx = inputs.index(feature)
     target_idx = outputs.index(feature)
 
     # Brunton Plot
-    fig, axs = plt.subplots(2, 1, figsize=(18, 10), sharex=True)
-    axs[0].plot(time_axis, ground_truth[:, feature_idx], 'k:', markersize=12, label='Ground Truth')
+    fig, axs = plt.subplots(1, 1, figsize=(18, 10), sharex=True)
+    axs.plot(time_axis, ground_truth[:, feature_idx], 'k:', markersize=12, label='Ground Truth')
+    axs.plot(time_axis[starting_point_at_timeaxis], ground_truth[starting_point_at_timeaxis, feature_idx],
+                'g.', markersize=16, label='Start')
+    prediction_distance = []
+    axs.set_ylabel(feature, fontsize=18)
+    axs.set_xlabel('Time [s]', fontsize=18)
     if not plot_all:
-        axs[0].plot(time_axis[starting_point_at_timeaxis], ground_truth[starting_point_at_timeaxis, feature_idx],
-                    'g.', markersize=16, label='Start')
-        prediction_distance = []
         for i in range(max_horizon):
             prediction_distance.append(net_outputs[i, starting_point_at_timeaxis, target_idx])
-            axs[0].plot(time_axis[starting_point_at_timeaxis+i+1], prediction_distance[i],
+            axs.plot(time_axis[i+1], prediction_distance[i],
                         c=cmap(float(i)/max_horizon),
                         marker='.')
-        plt.show()
+
+    else:
+        for i in range(max_horizon):
+            prediction_distance.append(net_outputs[i, :-(i+1), target_idx])
+            axs.plot(time_axis[i+1:], prediction_distance[i],
+                        c=cmap(float(i)/max_horizon),
+                        marker='.', linestyle = '')
+
+    plt.show()
+
     
 
 

@@ -72,12 +72,16 @@ def compose_net_from_net_name(net_name,
             ))
     else:
         # Or RNN...
-        net.add(tf.keras.Input(shape=(batch_size, time_series_length, len(inputs_list))))
+        net.add(layer_type(
+            units=h_size[0],
+            batch_input_shape=(batch_size, time_series_length, len(inputs_list)),
+            return_sequences=True,
+            stateful=stateful
+        ))
         # Define following layers
         for i in range(1, len(h_size)):
             net.add(layer_type(
                 units=h_size[i],
-                batch_size=batch_size,
                 return_sequences=True,
                 stateful=stateful
             ))
