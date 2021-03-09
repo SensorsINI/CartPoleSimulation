@@ -29,7 +29,12 @@ def set_seed(args):
     tf.random.set_seed(seed)
 
 
-def get_net_and_norm_info(a):
+def get_net_and_norm_info(a,
+                          # If any of arguments provided it overwrite what is given in a
+                          time_series_length=None,
+                          batch_size=None,
+                          stateful=False
+                          ):
     """
     A quite big (too big?) chunk of creating a network, its associated net_info variable
     and loading associated normalization info.
@@ -43,6 +48,12 @@ def get_net_and_norm_info(a):
     The action to take is decided based on provided net_name.
     It also deletes the folder if txt or ckpt file is missing.
     """
+
+    # region If length of timeseries to be fed into net not provided get it as a sum: wash_out_len + post_wash_out_len
+    if time_series_length is None:
+        time_series_length = a.wash_out_len+a.post_wash_out_len
+    # endregion
+
 
     # region Load/create rnn instance, its log and normalization
 
@@ -138,9 +149,8 @@ def get_net_and_norm_info(a):
 
             # Recreate network architecture
             net, net_info = compose_net_from_net_name(net_name, inputs, outputs,
-                                                      wash_out_len=a.wash_out_len,
-                                                      post_wash_out_len=a.post_wash_out_len,
-                                                      batch_size=None, stateful=False)
+                                                      time_series_length=time_series_length,
+                                                      batch_size=batch_size, stateful=stateful)
 
             # region Try to load weights from checkpoint file
             ckpt_filename = parent_net_name + '.ckpt'
@@ -187,9 +197,8 @@ def get_net_and_norm_info(a):
         print('')
 
         net, net_info = compose_net_from_net_name(a.net_name, a.inputs, a.outputs,
-                                                  wash_out_len=a.wash_out_len,
-                                                  post_wash_out_len=a.post_wash_out_len,
-                                                  batch_size=None, stateful=False)
+                                                  time_series_length=time_series_length,
+                                                  batch_size=batch_size, stateful=stateful)
 
         # endregion
 

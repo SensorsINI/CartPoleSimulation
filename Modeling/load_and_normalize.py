@@ -68,7 +68,6 @@ def get_paths_to_datafiles(paths_to_data_information):
     return sorted(list_of_paths_to_datafiles)
 
 
-
 def load_data(list_of_paths_to_datafiles=None):
 
     all_dfs = []  # saved separately to get normalization
@@ -77,7 +76,7 @@ def load_data(list_of_paths_to_datafiles=None):
     sleep(0.1)
     for file_number in trange(len(list_of_paths_to_datafiles)):
         filepath = list_of_paths_to_datafiles[file_number]
-        df = pd.read_csv(filepath, comment='#')
+        df = pd.read_csv(filepath, comment='#', dtype=np.float32)
         all_dfs.append(df)
 
     return all_dfs
@@ -252,6 +251,7 @@ def calculate_normalization_info(paths_to_data_information=None, plot_histograms
     # endregion
 
     # region Transform original dataframe to comment by adding "comment column" and "space columns"
+    df_norm_info_from_data = df_norm_info_from_data.reindex(sorted(df_norm_info_from_data.columns), axis=1)
     df_norm_info_from_data = df_norm_info_from_data.round(normalization_rounding_decimals)
     df_index = df_norm_info_from_data.index
     df_norm_info_from_data.insert(0, "      ", df_index, True)
@@ -270,8 +270,8 @@ def calculate_normalization_info(paths_to_data_information=None, plot_histograms
 
     # region Write the .csv file
     date_now = datetime.now().strftime('%Y-%m-%d')
-    time_now = datetime.now().strftime('%H:%M:%S')
-    csv_filepath = PATH_TO_NORMALIZATION_INFO + 'NI' + date_now + '.csv'
+    time_now = datetime.now().strftime('%H-%M-%S')
+    csv_filepath = PATH_TO_NORMALIZATION_INFO + 'NI_' + date_now + '_' + time_now + '.csv'
 
     with open(csv_filepath, "a") as outfile:
         writer = csv.writer(outfile)
@@ -314,6 +314,7 @@ def calculate_normalization_info(paths_to_data_information=None, plot_histograms
 
         writer.writerow(['# Normalization Information:'])
 
+    df_norm_info = df_norm_info.reindex(sorted(df_norm_info.columns), axis=1)
     df_norm_info.to_csv(csv_filepath, index=True, header=True, mode='a')  # Mode (a)ppend
 
     # endregion
@@ -333,6 +334,10 @@ def calculate_normalization_info(paths_to_data_information=None, plot_histograms
 
 def load_normalization_info(path_to_normalization_info):
     return pd.read_csv(path_to_normalization_info, index_col=0, comment='#')
+
+
+
+
 
 
 def normalize_feature(feature, normalization_info, normalization_type='minmax_sym', name=None):
@@ -394,17 +399,22 @@ def denormalize_feature(feature, normalization_info, normalization_type='minmax_
         pass
 
     if normalization_type == 'gaussian':
-        col_mean = normalization_info.loc['mean', name]
-        col_std = normalization_info.loc['std', name]
-        return feature * col_std + col_mean
+        # col_mean = normalization_info.loc['mean', name]
+        # col_std = normalization_info.loc['std', name]
+        # return feature * col_std + col_mean
+        return feature * normalization_info.loc['std', name] + normalization_info.loc['mean', name]
     elif normalization_type == 'minmax_pos':
-        col_min = normalization_info.loc['min', name]
-        col_max = normalization_info.loc['max', name]
-        return feature * (col_max - col_min) + col_min
+        # col_min = normalization_info.loc['min', name]
+        # col_max = normalization_info.loc['max', name]
+        # return feature * (col_max - col_min) + col_min
+        # return feature * col_std + col_mean
+        return feature * (normalization_info.loc['max', name] - normalization_info.loc['min', name]) + normalization_info.loc['min', name]
     elif normalization_type == 'minmax_sym':
-        col_min = normalization_info.loc['min', name]
-        col_max = normalization_info.loc['max', name]
-        return ((feature + 1.0) / 2.0) * (col_max - col_min) + col_min
+        # col_min = normalization_info.loc['min', name]
+        # col_max = normalization_info.loc['max', name]
+        # return ((feature + 1.0) / 2.0) * (col_max - col_min) + col_min
+        return ((feature + 1.0) / 2.0) * (normalization_info.loc['max', name] - normalization_info.loc['min', name]) \
+               + normalization_info.loc['min', name]
 
 
 def denormalize_df(dfs, normalization_info, normalization_type='minmax_sym'):
@@ -419,6 +429,28 @@ def denormalize_df(dfs, normalization_info, normalization_type='minmax_sym'):
                         normalization_type=normalization_type)
 
     return dfs
+
+def denormalize_numpy_array(normalized_array,
+                            features,
+                            normalization_info,
+                            normalization_type='minmax_sym'):
+
+    denormalized_array = np.zeros_like(normalized_array)
+    for feature_idx in range(len(features)):
+        if normalization_type == 'gaussian':
+            denormalized_array[..., feature_idx] =  normalized_array[..., feature_idx] * \
+                                                    normalization_info.loc['std', features[feature_idx]] + \
+                                                    normalization_info.loc['mean', features[feature_idx]]
+        elif normalization_type == 'minmax_pos':
+            denormalized_array[..., feature_idx] =  normalized_array[..., feature_idx]\
+                                                    * (normalization_info.loc['max', features[feature_idx]] - normalization_info.loc['min', features[feature_idx]]) + \
+                                                    normalization_info.loc['min', features[feature_idx]]
+        elif normalization_type == 'minmax_sym':
+            denormalized_array[..., feature_idx] = ((normalized_array[..., feature_idx] + 1.0) / 2.0) * \
+                                                   (normalization_info.loc['max', features[feature_idx]] - normalization_info.loc['min', features[feature_idx]]) \
+                                                   + normalization_info.loc['min', features[feature_idx]]
+
+    return denormalized_array
 
 
 

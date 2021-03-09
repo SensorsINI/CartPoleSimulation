@@ -8,12 +8,11 @@ Created on Fri Jun 19 08:29:29 2020
 
 
 import argparse
-import glob
 
 # Path to trained models and their logs
 PATH_TO_MODELS = './Modeling/TF/Models/'
 
-PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'NI_2021-03-04_17-29-53.csv'
+PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'NI_2021-03-08_12-36-48.csv'
 
 # The following paths to dictionaries may be replaced by the list of paths to data files.
 TRAINING_FILES = './ExperimentRecordings/Train/'
@@ -22,7 +21,7 @@ TEST_FILES = './ExperimentRecordings/Test/'
 
 # endregion
 
-net_name = 'Dense-64H1-64H2'
+net_name = 'GRU-64H1-64H2'
 
 # region Set inputs and outputs
 
@@ -73,7 +72,7 @@ def args():
                         help='In RNN forward function this features will be fed beck from output to input')
 
     # Experiment length - number of time steps to take for testing
-    parser.add_argument('--test_len', default=11, type=int, help='Number of time steps to take for testing')
+    parser.add_argument('--test_len', default=100, type=int, help='Number of time steps to take for testing')
 
     # Training only:
     parser.add_argument('--wash_out_len', default=10, type=int, help='Number of timesteps for a wash-out sequence')

@@ -10,37 +10,29 @@ class Dataset(keras.utils.Sequence):
     def __init__(self,
                  dfs,
                  args,
-                 inputs_list=None, outputs_list=None,
+                 inputs=None, outputs=None,
                  batch_size=None,
-                 time_axes=None,
                  exp_len=None,
-                 warm_up_len=None,
                  shuffle=True):
         'Initialization - divide data in features and labels'
 
-        if inputs_list is None and args.inputs_list is not None:
-            inputs_list = args.inputs_list
-        if outputs_list is None and args.outputs_list is not None:
-            outputs_list = args.outputs_list
+        if inputs is None and args.inputs is not None:
+            self.inputs = args.inputs
+        else:
+            self.inputs = inputs
+        if outputs is None and args.outputs is not None:
+            self.outputs = args.outputs
+        else:
+            self.outputs = outputs
 
         self.data = []
         self.labels = []
+        self.time_axes = []
 
         for df in dfs:
-            # Get Raw Data
-            features = copy.deepcopy(df)
-            targets = copy.deepcopy(df)
-
-            features.drop(features.tail(1).index, inplace=True)  # Drop last row
-            targets.drop(targets.head(1).index, inplace=True)
-            features = features.reset_index()  # Reset index
-            targets = targets.reset_index()
-
-            features = features[inputs_list]
-            targets = targets[outputs_list]
-
-            self.data.append(features)
-            self.labels.append(targets)
+            self.time_axes.append(df['time'])
+            self.data.append(df[self.inputs])
+            self.labels.append(df[self.outputs])
 
         self.args = args
 
@@ -49,8 +41,6 @@ class Dataset(keras.utils.Sequence):
         self.df_lengths = []
         self.df_lengths_cs = []
         self.number_of_samples = 0
-
-        self.time_axes = time_axes
 
         # NEW PART FOR TENSORFLOW:
         # __get_item__ must return a batch
@@ -61,13 +51,6 @@ class Dataset(keras.utils.Sequence):
 
         self.reset_exp_len(exp_len=exp_len)
         self.reset_batch_size(batch_size=batch_size)
-
-        # Here we imnplement a trial to change the target position and current positions
-        # for ease of implementation we assume that both input and output has s.position, only input has target position
-        self.idx_pos_in = inputs_list.index('s.position')
-        self.idx_pos_out = outputs_list.index('s.position')
-        if 'target_position' in inputs_list:
-            self.idx_target_pos_in = inputs_list.index('target_position')
 
     def reset_exp_len(self, exp_len=None):
         """
@@ -84,7 +67,7 @@ class Dataset(keras.utils.Sequence):
         self.df_lengths_cs = []
         if type(self.data) == list:
             for data_set in self.data:
-                self.df_lengths.append(data_set.shape[0] - self.exp_len)
+                self.df_lengths.append(data_set.shape[0] - self.exp_len-1)
                 if not self.df_lengths_cs:
                     self.df_lengths_cs.append(self.df_lengths[0])
                 else:
@@ -92,7 +75,7 @@ class Dataset(keras.utils.Sequence):
             self.number_of_samples = self.df_lengths_cs[-1]
 
         else:
-            self.number_of_samples = self.data.shape[0] - self.exp_len
+            self.number_of_samples = self.data.shape[0] - self.exp_len-1
 
         self.number_of_batches = int(np.ceil(self.number_of_samples / float(self.batch_size)))
 
@@ -117,7 +100,7 @@ class Dataset(keras.utils.Sequence):
         # In TF it must return the number of batches
         return self.number_of_batches
 
-    def get_series(self, idx, get_time_axis=False, targets_type='all'):
+    def get_series(self, idx, get_time_axis=False):
         """
         Requires the self.data to be a list of pandas dataframes
         """
@@ -128,31 +111,12 @@ class Dataset(keras.utils.Sequence):
         else:
             idx -= self.df_lengths_cs[idx_data_set - 1]
 
-        # Get data
-        features = None
-        targets = None
 
-        if targets_type == 'first_after_warm_up':
-            features = self.data[idx_data_set].to_numpy()[idx:idx + self.warm_up_len, :]
-            # After feeding the whole sequence we just compare the final output of the RNN with the state following afterwards
-            targets = self.labels[idx_data_set].to_numpy()[idx + self.warm_up_len-1]
-        elif targets_type == 'all':
-            features = self.data[idx_data_set].to_numpy()[idx:idx + self.exp_len, :]
-            # Every point in features has its target value corresponding to the next time step:
-            targets = self.labels[idx_data_set].to_numpy()[idx:idx + self.exp_len]
-        elif targets_type == 'all after warm-up':
-            features = self.data[idx_data_set].to_numpy()[idx:idx + self.exp_len, :]
-            # Every point in features has its target value corresponding to the next time step:
-            targets = self.labels[idx_data_set].to_numpy()[idx+self.warm_up_len:idx + self.exp_len]
-        else:
-            raise('Non-existent target_type')
 
-        # mix_position = True
-        # if mix_position and targets_type == 'all after warm-up':
-        #     random_pos = np.random.uniform(-40.0, 40.0)
-        #     features[:,self.idx_pos_in] = features[:,self.idx_pos_in]+random_pos
-        #     features[:,self.idx_target_pos_in] = features[:,self.idx_target_pos_in]+random_pos
-        #     targets[self.idx_pos_out] = targets[self.idx_pos_out]+random_pos
+        features = self.data[idx_data_set].to_numpy()[idx:idx + self.exp_len, :]
+        # Every point in features has its target value corresponding to the next time step:
+        targets = self.labels[idx_data_set].to_numpy()[idx+1:idx + self.exp_len+1, :]
+
 
         # If get_time_axis try to obtain a vector of time data for the chosen sample
         if get_time_axis:
@@ -182,12 +146,12 @@ class Dataset(keras.utils.Sequence):
 
         return features_batch, targets_batch
 
-    def get_experiment(self, idx=None, targets_type='all'):
+    def get_experiment(self, idx=None):
         if self.time_axes is None:
             raise Exception('No time information available!')
         if idx is None:
             idx = np.random.randint(0, self.number_of_samples)
-        return self.get_series(idx, get_time_axis=True, targets_type=targets_type)
+        return self.get_series(idx, get_time_axis=True)
 
     def on_epoch_end(self):
         if self.shuffle:

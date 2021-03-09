@@ -27,11 +27,10 @@ def load_pretrained_net_weights(net, ckpt_path):
 def compose_net_from_net_name(net_name,
                               inputs_list,
                               outputs_list,
-                              wash_out_len=None,
-                              post_wash_out_len=None,
+                              time_series_length,
                               batch_size=None,
                               stateful=False):
-    return_sequence = True
+
     # Get the information about network architecture from the network name
     # Split the names into "LSTM/GRU", "128H1", "64H2" etc.
     names = net_name.split('-')
@@ -66,16 +65,16 @@ def compose_net_from_net_name(net_name,
     # Construct network
     # Either dense...
     if net_type == 'Dense':
-        net.add(tf.keras.Input(shape=(wash_out_len+post_wash_out_len, len(inputs_list))))
+        net.add(tf.keras.Input(shape=(time_series_length, len(inputs_list))))
         for i in range(h_number - 1):
             net.add(layer_type(
                 units=h_size[i], activation='tanh', batch_size=batch_size
             ))
     else:
         # Or RNN...
-        net.add(tf.keras.Input(shape=(wash_out_len+post_wash_out_len, len(inputs_list))))
+        net.add(tf.keras.Input(shape=(batch_size, time_series_length, len(inputs_list))))
         # Define following layers
-        for i in range(len(h_size)):
+        for i in range(1, len(h_size)):
             net.add(layer_type(
                 units=h_size[i],
                 batch_size=batch_size,
