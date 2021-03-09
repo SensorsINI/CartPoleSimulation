@@ -18,12 +18,12 @@ dt_controller_update_DataGen = 0.2
 dt_save_DataGen = 0.1
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
-length_of_experiment_DataGen = 10.0  # Length of each experiment in s
-controller_DataGen = 'do-mpc'  # Controller which should be used in generated experiment
+length_of_experiment_DataGen = 20.0  # Length of each experiment in s
+controller_DataGen = 'mppi'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'lqr'
 track_relative_complexity_DataGen = 0.5  # randomly placed target points/s
-interpolation_type_DataGen = '0-derivative-smooth'  # Sets how to interpolate between turning points of random trace
+interpolation_type_DataGen = 'previous'  # Sets how to interpolate between turning points of random trace
 # Possible choices: '0-derivative-smooth', 'linear', 'previous'
 turning_points_period_DataGen = 'regular'  # How turning points should be distributed
 # Possible choices: 'regular', 'random'
@@ -97,6 +97,11 @@ for i in range(number_of_experiments):
         csv=csv,
         save_mode=save_mode
     )
+
+    try:
+        CartPoleInstance.controller.controller_report()
+    except:
+        pass
 
     gen_end = timeit.default_timer()
     gen_dt = (gen_end - gen_start) * 1000.0
