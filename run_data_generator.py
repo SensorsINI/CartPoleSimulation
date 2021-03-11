@@ -98,6 +98,11 @@ for i in range(number_of_experiments):
         save_mode=save_mode
     )
 
+    try:
+        CartPoleInstance.controller.controller_report()
+    except:
+        pass
+
     gen_end = timeit.default_timer()
     gen_dt = (gen_end - gen_start) * 1000.0
     print('time to generate data: {} ms'.format(gen_dt))
