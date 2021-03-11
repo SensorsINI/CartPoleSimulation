@@ -17,7 +17,8 @@ try:
 except:
     pass
 
-from Modeling.TF.TF_Functions.Network import compose_net_from_net_name, load_pretrained_net_weights
+from Modeling.TF.TF_Functions.Network import compose_net_from_net_name, load_pretrained_net_weights, \
+    get_internal_states, load_internal_states
 from Modeling.load_and_normalize import load_normalization_info, get_sampling_interval_from_normalization_info
 
 
@@ -152,7 +153,7 @@ def get_net_and_norm_info(a,
                                                       time_series_length=time_series_length,
                                                       batch_size=batch_size, stateful=stateful)
 
-            # region Try to load weights from checkpoint file
+            # region Load weights from checkpoint file
             ckpt_filename = parent_net_name + '.ckpt'
             ckpt_path = a.path_to_models + parent_net_name + '/' + ckpt_filename
             if not os.path.isfile(ckpt_path + '.index'):
@@ -207,6 +208,22 @@ def get_net_and_norm_info(a,
         # endregion
 
         net_info.parent_net_name = 'Network trained from scratch'
+
+    # endregion
+
+    # region Make a single call on an zero array to make the console output clean
+    # (just aesthetic effect to throw possible warning here and not at the beginning of training)
+
+    # Save internal state
+    states = get_internal_states(net)
+
+    # Run test input
+    test_input = np.zeros(shape=(batch_size, time_series_length, len(net_info.inputs)))
+    net.predict_on_batch(test_input)
+
+    # Restore initial hidden state
+    net.reset_states()
+    load_internal_states(net, states)
 
     # endregion
 

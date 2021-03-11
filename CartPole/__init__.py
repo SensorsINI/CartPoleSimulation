@@ -27,6 +27,7 @@ from datetime import datetime
 from scipy.interpolate import BPoly, interp1d
 # Run range() automatically adding progress bar in terminal
 from tqdm import trange
+
 try:
     # Use gitpython to get a current revision number and use it in description of experimental data
     from git import Repo
@@ -42,7 +43,7 @@ from matplotlib import animation
 # rc sets global parameters for matplotlib; transforms is used to rotate the Mast
 from matplotlib import rc, transforms
 # Shapes used to draw a Cart and the slider
-from matplotlib.patches import Circle, FancyBboxPatch, Rectangle
+from matplotlib.patches import Circle, FancyBboxPatch, Rectangle, FancyArrowPatch
 # Angle convention to rotate the mast in right direction - depends on used Equation
 from CartPole.cartpole_model import ANGLE_CONVENTION
 
@@ -54,7 +55,7 @@ rc('font', **font)
 # endregion
 
 PATH_TO_CONTROLLERS = './Controllers/'  # Path where controllers are stored
-PATH_TO_EXPERIMENT_RECORDINGS = './ExperimentRecordings/' # Path where the experiments data is stored
+PATH_TO_EXPERIMENT_RECORDINGS = './ExperimentRecordings/'  # Path where the experiments data is stored
 
 
 class CartPole:
@@ -111,7 +112,6 @@ class CartPole:
         self.controller_name = ''  # Placeholder for the currently used controller name
         self.controller_idx = None  # Placeholder for the currently used controller index
         self.controller_names = self.get_available_controller_names()  # list of controllers available in controllers folder
-        self.set_controller('manual-stabilization')  # Initialize CartPole in manual-stabilization mode
         # endregion
 
         # region Variables for generating experiments with random target trace
@@ -150,7 +150,6 @@ class CartPole:
 
         self.dict_history = {}  # Dictionary holding the experiment history
 
-        # THE REMAINING PART OF __init__ METHOD CONCERNS DRAWING SETTINGS ONLY
         # region Variables initialization for drawing/animating a CartPole
         # DIMENSIONS OF THE DRAWING ONLY!!!
         # NOTHING TO DO WITH THE SIMULATION AND NOT INTENDED TO BE MANIPULATED BY USER !!!
@@ -176,10 +175,23 @@ class CartPole:
         self.WheelLeft = None
         self.WheelRight = None
 
-        self.Slider = None  # Placeholder for slider (graphics)
+        # Arrow indicating acceleration (=motor power)
+        self.Acceleration_Arrow = None
+
+        self.y_acceleration_arrow = None
+        self.scaling_dx_acceleration_arrow = None
+        self.x_acceleration_arrow = None
+
+        # Depending on mode, slider may be displayed either as bar or as an arrow
+        self.Slider_Bar = None
+        self.Slider_Arrow = None
         self.t2 = None  # An abstract container for the transform rotating the mast
 
         self.init_graphical_elements()  # Assign proper object to the above variables
+        # endregion
+
+        # region Initialize CartPole in manual-stabilization mode
+        self.set_controller('manual-stabilization')
         # endregion
 
     # region 1. Methods related to dynamic evolution of CartPole system
@@ -372,7 +384,7 @@ class CartPole:
                 writer.writerow(['# ' + 'This is CartPole experiment from {} at time {}'
                                 .format(datetime.now().strftime('%d.%m.%Y'), datetime.now().strftime('%H:%M:%S'))])
                 try:
-                    repo  = Repo()
+                    repo = Repo()
                     git_revision = repo.head.object.hexsha
                 except:
                     git_revision = 'unknown'
@@ -754,8 +766,10 @@ class CartPole:
         # Set the maximal allowed value of the slider - relevant only for GUI
         if self.controller_name == 'manual-stabilization':
             self.slider_max = 1.0
+            self.Slider_Arrow.set_positions((0, 0), (0, 0))
         else:
             self.slider_max = self.p.TrackHalfLength
+            self.Slider_Bar.set_width(0.0)
 
     # This method resets the internal state of the CartPole instance
     # The starting state (for t = 0) may be
@@ -884,6 +898,14 @@ class CartPole:
         self.MastThickness = 0.05
         self.HalfLength = 50.0  # Length of the track
 
+        self.y_acceleration_arrow = 1.5 * self.WheelRadius
+        self.scaling_dx_acceleration_arrow = 20.0
+        self.x_acceleration_arrow = (
+                                   self.s.position +
+                                   # np.sign(self.Q) * (self.CartLength / 2.0) +
+                                   self.scaling_dx_acceleration_arrow * self.Q
+        )
+
         # Initialize elements of the drawing
         self.Mast = FancyBboxPatch(xy=(self.s.position - (self.MastThickness / 2.0), 1.25 * self.WheelRadius),
                                    width=self.MastThickness,
@@ -907,7 +929,14 @@ class CartPole:
                                  ec='k',
                                  lw=5)
 
-        self.Slider = Rectangle((0.0, 0.0), self.slider_value, 1.0)
+        self.Acceleration_Arrow = FancyArrowPatch((self.s.position, self.y_acceleration_arrow),
+                                                  (self.x_acceleration_arrow, self.y_acceleration_arrow),
+                                                  arrowstyle='simple', mutation_scale=10,
+                                                  facecolor='gold', edgecolor='orange')
+
+        self.Slider_Arrow = FancyArrowPatch((self.slider_value, 0), (self.slider_value, 0),
+                                            arrowstyle='fancy', mutation_scale=50)
+        self.Slider_Bar = Rectangle((0.0, 0.0), self.slider_value, 1.0)
         self.t2 = transforms.Affine2D().rotate(0.0)  # An abstract container for the transform rotating the mast
 
     # This method accepts the mouse position and updated the slider value accordingly
@@ -970,6 +999,15 @@ class CartPole:
     # e.g. animation function from matplotlib package
     def update_drawing(self):
 
+        self.x_acceleration_arrow = (
+                                   self.s.position +
+                                   # np.sign(self.Q) * (self.CartLength / 2.0) +
+                                   self.scaling_dx_acceleration_arrow * self.Q
+        )
+
+        self.Acceleration_Arrow.set_positions((self.s.position, self.y_acceleration_arrow),
+                                             (self.x_acceleration_arrow, self.y_acceleration_arrow))
+
         # Draw mast
         mast_position = (self.s.position - (self.MastThickness / 2.0))
         self.Mast.set_x(mast_position)
@@ -989,9 +1027,13 @@ class CartPole:
         self.WheelLeft.center = (self.s.position - self.WheelToMiddle, self.y_wheel)
         self.WheelRight.center = (self.s.position + self.WheelToMiddle, self.y_wheel)
         # Draw SLider
-        self.Slider.set_width(self.slider_value)
+        if self.controller_name == 'manual-stabilization':
+            self.Slider_Bar.set_width(self.slider_value)
+        else:
+            self.Slider_Arrow.set_positions((self.slider_value, 0), (self.slider_value, 1.0))
 
-        return self.Mast, self.t2, self.Chassis, self.WheelRight, self.WheelLeft, self.Slider
+        return self.Mast, self.t2, self.Chassis, self.WheelRight, self.WheelLeft,\
+               self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow
 
     # A function redrawing the changing elements of the Figure
     def run_animation(self, fig):
@@ -1001,8 +1043,11 @@ class CartPole:
             fig.AxCart.add_patch(self.Chassis)
             fig.AxCart.add_patch(self.WheelLeft)
             fig.AxCart.add_patch(self.WheelRight)
-            fig.AxSlider.add_patch(self.Slider)
-            return self.Mast, self.Chassis, self.WheelLeft, self.WheelRight, self.Slider
+            fig.AxCart.add_patch(self.Acceleration_Arrow)
+            fig.AxSlider.add_patch(self.Slider_Bar)
+            fig.AxSlider.add_patch(self.Slider_Arrow)
+            return self.Mast, self.Chassis, self.WheelLeft, self.WheelRight,\
+                   self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow
 
         def animationManage(i):
             # Updating variable elements
@@ -1010,7 +1055,8 @@ class CartPole:
             # Special care has to be taken of the mast rotation
             self.t2 = self.t2 + fig.AxCart.transData
             self.Mast.set_transform(self.t2)
-            return self.Mast, self.Chassis, self.WheelLeft, self.WheelRight, self.Slider
+            return self.Mast, self.Chassis, self.WheelLeft, self.WheelRight,\
+                   self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow
 
         # Initialize animation object
         anim = animation.FuncAnimation(fig, animationManage,

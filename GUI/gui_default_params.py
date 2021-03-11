@@ -16,7 +16,7 @@ save_interval = 0.1  # s, How often to save the results of simulation
 
 
 # Starting setting of the CartPole GUI (can be changed in GUI)
-controller_init = 'do-mpc'  # Defines which controller is loaded at the start of the program
+controller_init = 'manual-stabilization'  # Defines which controller is loaded at the start of the program
 
 """
 Possible choices for CartPole controller:

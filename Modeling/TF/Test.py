@@ -1,33 +1,27 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jun 19 06:21:32 2020
-
-@author: Marcin
-
-The file generates an CartPole experiments and loads pretrained RNN network. It feeds
+Testing network predictions for CartPole
 """
-from Modeling.TF.TF_Functions.Test_open_loop_prediction import open_loop_prediction_experiment
-from Modeling.TF.TF_Functions.Network import *
-# Parameters of RNN
-from Modeling.TF.Parameters import args as my_args
-import glob
 
-# testset_filepath = './data/data_rnn_big.csv'
-# testset_filepath = './data/small_test.csv'
-# testset_filepath = './data/fall_test.csv' # exp_len 1000//...
-# testset_filepath = './data/validate/free.csv'
-testset_filepath = glob.glob('./data/validate/' + '*.csv')[0]
+# "Command line" parameters
+from Modeling.TF.Parameters import args
 
-# Get arguments as default or from terminal line
-args = my_args()
-# Print the arguments
-print(args.__dict__)
-
-exp_len = 230//args.downsampling
-start_at = 200
+# Custom functions
+from Modeling.TF.TF_Functions.Initialization import set_seed, create_full_name, create_log_file, get_net_and_norm_info
+from Modeling.TF.TF_Functions.Loss import loss_msr_sequence_customizable
+from Modeling.TF.TF_Functions.Dataset import Dataset, DatasetRandom
+from Modeling.load_and_normalize import load_data, normalize_df, \
+    get_sampling_interval_from_datafile, get_paths_to_datafiles
+from Modeling.TF.TF_Functions.Test_predictions import open_loop_prediction_experiment, run_test_gui
 
 
-MULTIPLE_PICTURES = False
+# region Import and print "command line" arguments
+print('')
+a = args()  # 'a' like arguments
+print(a.__dict__)
+print('')
+# endregion
+
 
 
 def test_network():
@@ -37,38 +31,30 @@ def test_network():
     The actual work of evaluation prediction results is done in open_loop_prediction_experiment function
     """
 
-    # Network architecture:
-    rnn_name = args.rnn_name
-    inputs_list = args.inputs_list
-    outputs_list = args.outputs_list
+    # Create a copy of the network suitable for inference (stateful and with sequence length one)
+    net_for_inference, net_for_inference_info, normalization_info = \
+        get_net_and_norm_info(a, time_series_length=1,
+                              batch_size=1, stateful=True)
 
-    # load_rnn = a.load_rnn  # If specified this is the name of pretrained RNN which should be loaded
-    load_rnn_path = args.PATH_TO_EXPERIMENT_RECORDINGS
-    # load_rnn_path = './controllers/nets/mpc_on_rnn_tf/'
-    # load_rnn = 'GRU-7IN-8H1-8H2-5OUT-0'
-    # load_rnn = 'GRU-4IN-1024H1-1024H2-2OUT-1'
-    load_rnn = 'last'
 
-    # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
-    net, rnn_name, inputs_list, outputs_list, normalization_info \
-        = create_rnn_instance(args=args, rnn_name=rnn_name,
-                              inputs_list=inputs_list, outputs_list=outputs_list,
-                              load_rnn=load_rnn, path_save=load_rnn_path)
-    title = 'Testing RNN: {}'.format(rnn_name)
-    if MULTIPLE_PICTURES:
-        for i in range(exp_len//20):
-            close_loop_idx = (exp_len//4)+i*20
-            open_loop_prediction_experiment(net=net, args=args, dataset=None, testset_filepath=testset_filepath, exp_len=exp_len,
-                                            comment=title, path_save=load_rnn_path,
-                                            inputs_list=inputs_list, outputs_list=outputs_list, save=True,
-                                            closed_loop_enabled=True, close_loop_idx=close_loop_idx, start_at=start_at)
-    else:
-        close_loop_idx = 20
-        open_loop_prediction_experiment(net=net, args=args, dataset=None, testset_filepath=testset_filepath, exp_len=exp_len,
-                                        comment=title, path_save=load_rnn_path,
-                                        inputs_list=inputs_list, outputs_list=outputs_list, save=True,
-                                        closed_loop_enabled=True, close_loop_idx=close_loop_idx, start_at=start_at)
+    # region In either case testing is done on a data collected offline
+    paths_to_datafiles_test = get_paths_to_datafiles(a.test_files)
+    test_dfs = load_data(paths_to_datafiles_test)
+    test_dfs_norm = normalize_df(test_dfs, normalization_info)
+    test_set = Dataset(test_dfs_norm, a, shuffle=False,
+                       inputs=net_for_inference_info.inputs, outputs=net_for_inference_info.outputs)
 
+    ground_truth, net_outputs, time_axis = \
+        open_loop_prediction_experiment(net_for_inference, net_for_inference_info,
+                                        test_set, normalization_info,
+                                        experiment_length=a.test_len)
+
+
+
+
+    run_test_gui(net_for_inference_info.inputs, net_for_inference_info.outputs,
+                   ground_truth, net_outputs, time_axis
+                   )
 
 if __name__ == '__main__':
     test_network()

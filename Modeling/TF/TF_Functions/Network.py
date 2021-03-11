@@ -21,7 +21,7 @@ def load_pretrained_net_weights(net, ckpt_path):
     print("Loading Model: ", ckpt_path)
     print('')
 
-    net.load_weights(ckpt_path)
+    net.load_weights(ckpt_path).expect_partial()
 
 
 def compose_net_from_net_name(net_name,

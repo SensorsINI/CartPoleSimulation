@@ -24,16 +24,13 @@ from Modeling.TF.TF_Functions.Loss import loss_msr_sequence_customizable
 from Modeling.TF.TF_Functions.Dataset import Dataset, DatasetRandom
 from Modeling.load_and_normalize import load_data, normalize_df, \
     get_sampling_interval_from_datafile, get_paths_to_datafiles
-from Modeling.TF.TF_Functions.Network import compose_net_from_net_name
-from Modeling.TF.TF_Functions.Test_open_loop_prediction import open_loop_prediction_experiment, brunton_widget
+from Modeling.TF.TF_Functions.Test_predictions import open_loop_prediction_experiment, brunton_widget
 
 # region Import and print "command line" arguments
 print('')
 a = args()  # 'a' like arguments
 print(a.__dict__)
 print('')
-
-
 # endregion
 
 # Uncomment the @profile(precision=4) to get the report on memory usage after the training
