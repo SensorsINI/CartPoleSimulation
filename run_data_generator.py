@@ -14,15 +14,15 @@ save_mode = 'offline'  # It was intended to save memory usage, but it doesn't se
 
 # Timescales
 dt_simulation_DataGen = 0.02  # simulation timestep
-dt_controller_update_DataGen = 0.2
+dt_controller_update_DataGen = 0.02
 dt_save_DataGen = 0.1
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
-length_of_experiment_DataGen = 20.0  # Length of each experiment in s
+length_of_experiment_DataGen = 5.0  # Length of each experiment in s
 controller_DataGen = 'mppi'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'lqr'
-track_relative_complexity_DataGen = 0.5  # randomly placed target points/s
+track_relative_complexity_DataGen = 0.3  # randomly placed target points/s
 interpolation_type_DataGen = 'previous'  # Sets how to interpolate between turning points of random trace
 # Possible choices: '0-derivative-smooth', 'linear', 'previous'
 turning_points_period_DataGen = 'regular'  # How turning points should be distributed
