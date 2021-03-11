@@ -1,5 +1,6 @@
 """mpc controller"""
 
+from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import p_globals, s0, Q2u, cartpole_ode
 from types import SimpleNamespace
 
@@ -52,7 +53,7 @@ def cartpole_integration(s, dt):
     return s_next
 
 
-class controller_mpc_opti:
+class controller_mpc_opti(template_controller):
     def __init__(self):
 
         """
