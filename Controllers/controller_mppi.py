@@ -20,6 +20,8 @@ class controller_mppi:
         # State of the cart
         self.s = SimpleNamespace()  # s like state
 
+        np.random.seed(123)
+
         self.target_position = 0.0
 
         self.mpc_horizon = mpc_horizon
