@@ -2,16 +2,16 @@
 This is a linear-quadratic regulator
 It assumes that the input relation is u = Q*p.u_max (no fancy motor model) !
 """
-
+from abc import ABC, abstractmethod
 from CartPole.cartpole_model import cartpole_jacobian, cartpole_ode, p_globals, s0
 
 
-class template_controller:
+class template_controller(ABC):
 
     def __init__(self):
         pass
-
-
+    
+    @abstractmethod
     def step(self, s, target_position, time=None):
         Q = None  # This line is not obligatory. ;-) Just to indicate that Q must me defined and returned
         pass
@@ -21,7 +21,7 @@ class template_controller:
     # Optionally: A method called after an experiment.
     # May be used to print some statistics about controller performance (e.g. number of iter. to converge)
     def controller_report(self):
-        pass
+        raise NotImplementedError
 
     # Optionally: reset the controller after an experiment
     # May be useful for stateful controllers, like these containing RNN,
@@ -29,4 +29,4 @@ class template_controller:
     # It is called after an experiment,
     # but only if the controller is supposed to be reused without reloading (e.g. in GUI)
     def controller_reset(self):
-        pass
+        raise NotImplementedError

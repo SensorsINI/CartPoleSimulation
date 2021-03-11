@@ -8,9 +8,10 @@ import numpy as np
 
 from copy import deepcopy
 
+from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import cartpole_jacobian, p_globals, s0
 
-class controller_lqr:
+class controller_lqr(template_controller):
     def __init__(self):
         # From https://github.com/markwmuller/controlpy/blob/master/controlpy/synthesis.py#L8
         """Solve the continuous time LQR controller for a continuous time system.
@@ -30,7 +31,7 @@ class controller_lqr:
         """
         # ref Bertsekas, p.151
 
-        # Calculate Jacobian around equlibrium
+        # Calculate Jacobian around equilibrium
         # Set point around which the Jacobian should be linearized
         # It can be here either pole up (all zeros) or pole down
         s = s0
