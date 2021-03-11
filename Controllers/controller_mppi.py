@@ -7,7 +7,7 @@ import numpy as np
 from copy import deepcopy
 from types import SimpleNamespace
 
-dt_mpc_simulation = 0.02  # s
+dt_mpc_simulation = 0.2  # s
 mpc_horizon = 2
 mc_samples = 1000
 

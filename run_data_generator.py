@@ -14,7 +14,7 @@ save_mode = 'offline'  # It was intended to save memory usage, but it doesn't se
 
 # Timescales
 dt_simulation_DataGen = 0.02  # simulation timestep
-dt_controller_update_DataGen = 0.02
+dt_controller_update_DataGen = 0.2
 dt_save_DataGen = 0.1
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
