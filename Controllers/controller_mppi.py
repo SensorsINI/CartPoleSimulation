@@ -1,3 +1,4 @@
+from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import cartpole_jacobian, cartpole_ode, p_globals, s0, Q2u
 from types import SimpleNamespace
 
@@ -100,7 +101,7 @@ def q(p, s, u, delta_u, target_position):
     return q
 
 
-class controller_mppi:
+class controller_mppi(template_controller):
     def __init__(self):
         # Physical parameters of the cart
         self.p = p_globals
