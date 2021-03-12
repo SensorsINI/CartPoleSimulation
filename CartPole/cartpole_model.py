@@ -37,12 +37,12 @@ The 0-angle state is always defined as pole in upright position. This currently 
 
 # Parameters of the CartPole
 p_globals = SimpleNamespace()  # "p" like parameters
-p_globals.m = 2.0  # mass of pend, kg
-p_globals.M = 1.0  # mass of cart, kg
-p_globals.L = 1.0  # HALF (!!!) length of pend, m
-p_globals.u_max = 200.0  # max force produced by the motor, N
-p_globals.M_fric = 1.0  # cart friction on track, N/m/s
-p_globals.J_fric = 2.0  # friction coefficient on angular velocity in pole joint, Nm/rad/s
+p_globals.m = 0.087  # mass of pole, kg # Checked by Antonio
+p_globals.M = 0.230  # mass of cart, kg # Checked by Antonio
+p_globals.L = 0.39/2.0  # HALF (!!!) length of pend, m # Checked by Antonio
+p_globals.u_max = 2.0  # max force produced by the motor, N
+p_globals.M_fric = 1.0e-2  # cart friction on track, N/m/s
+p_globals.J_fric = 2.0e-2  # friction coefficient on angular velocity in pole joint, Nm/rad/s
 p_globals.v_max = 10.0  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented yet
 
 p_globals.TrackHalfLength = 50.0  # m, length of the track on which CartPole can move, from 0 to edge, track is symmetric
