@@ -3,13 +3,101 @@ from types import SimpleNamespace
 
 import matplotlib.pyplot as plt
 import numpy as np
+from numba import jit
 
 from copy import deepcopy
 from types import SimpleNamespace
 
-dt_mpc_simulation = 0.2  # s
+dt_mpc_simulation = 0.02  # s
 mpc_horizon = 2
 mc_samples = 1000
+
+
+E_kin_cart = lambda s: (s.positionD / self.p.v_max) ** 2
+E_kin_pol = lambda s: (s.angleD / (2 * np.pi)) ** 2
+E_pot_cost = lambda s: 1 - np.cos(s.angle)
+distance_difference = (
+    lambda s, target_position: (((s.position - target_position) / 50.0)) ** 2
+)
+
+
+def state_to_array(s):
+    state_list = [s.position, s.positionD, s.positionDD, s.angle, s.angleD, s.angleDD]
+    return np.array(state_list)
+
+
+def array_to_state(s):
+    state = SimpleNamespace()
+    state.position = s[0]
+    state.positionD = s[1]
+    state.positionDD = s[2]
+    state.angle = s[3]
+    state.angleD = s[4]
+    state.angleDD = s[5]
+    return state
+
+
+@jit(nopython=True)
+def trajectory_rollouts(
+    s, S_tilde_k, u, delta_u, mc_samples, mpc_samples, p, dt, target_position
+):
+    for k in range(mc_samples):
+        s_horizon = np.zeros((mpc_samples, s.size))
+        s_horizon[0, :] = s
+        for i in range(1, mpc_samples):
+            s_last = s_horizon[i - 1, :]
+            derivatives =  motion_derivatives(
+                p, array_to_state(s_last), u[i] + delta_u[k, i]
+            )
+            s_next = s_last + derivatives * dt
+            # s_next = SimpleNamespace()
+            # s_next.position = s_last.position + dx * self.dt
+            # s_next.positionD = s_last.positionD + ddx * self.dt
+            # s_next.angle = s_last.angle + da * self.dt
+            # s_next.angleD = s_last.angleD + dda * self.dt
+
+            # s_horizon.append(s_next)
+            s_horizon[i, :] = s_next
+            # self.S_tilde[k, i + 1] = (
+            #     self.S_tilde[k, i]
+            #     + self.q(self.p, s_next, self.u[i], self.delta_u[k, i]) * self.dt
+            # )
+            S_tilde_k[k] += q(
+                p, array_to_state(s_next), u[i], delta_u[k, i], target_position
+            )
+    return s_horizon, S_tilde_k
+
+
+def motion_derivatives(p, s, u):
+    """
+    :return: The time derivative vector d/dt([x, dx/dt, theta, dtheta/dt])
+    """
+    dx = s[1]
+    da = s[4]
+    dda, ddx = cartpole_ode(p, array_to_state(s), p.u_max * u)  # cartpole_ode(p, s, Q2u(u,p))
+
+    return np.array([dx, ddx, 0, da, dda, 0])
+
+
+def q(p, s, u, delta_u, target_position):
+    if np.abs(u + delta_u) > 1.0:
+        return 1.0e5
+    dd = 10 * distance_difference(s, target_position)
+    ep = E_pot_cost(s) ** 2
+    ekp = E_kin_pol(s)
+    ekc = E_kin_cart(s)
+    q = dd + ep + ekp + ekc
+    # self.distance_differences.append(dd)
+    # self.E_pots.append(ep)
+    # self.E_kins_pole.append(ekp)
+    # self.E_kins_cart.append(ekc)
+
+    q += (
+        0.5 * (1 - 1.0 / self.nu) * self.R * (delta_u ** 2)
+        + self.R * u * delta_u
+        + 0.5 * self.R * (u ** 2)
+    )
+    return q
 
 
 class controller_mppi:
@@ -28,13 +116,6 @@ class controller_mppi:
         self.dt = dt_mpc_simulation
         self.mpc_samples = int(self.mpc_horizon / self.dt)
         self.mc_samples = mc_samples
-
-        self.E_kin_cart = lambda s: (s.positionD / self.p.v_max) ** 2
-        self.E_kin_pol = lambda s: (s.angleD / (2 * np.pi)) ** 2
-        self.E_pot_cost = lambda s: 1 - np.cos(s.angle)
-        self.distance_difference = (
-            lambda s: (((s.position - self.target_position) / 50.0)) ** 2
-        )
 
         self.Q_bounds = [(-1, 1)] * self.mpc_horizon
 
@@ -56,26 +137,6 @@ class controller_mppi:
         self.S_tilde = np.zeros((self.mc_samples, self.mpc_samples), dtype=float)
         self.S_tilde_k = np.zeros((self.mc_samples), dtype=float)
 
-    def q(self, p, s, u, delta_u):
-        if np.abs(u + delta_u) > 1.0:
-            return 1.0e5
-        dd = 10 * self.distance_difference(s)
-        ep = self.E_pot_cost(s) ** 2
-        ekp = self.E_kin_pol(s)
-        ekc = self.E_kin_cart(s)
-        q = dd + ep + ekp + ekc
-        self.distance_differences.append(dd)
-        self.E_pots.append(ep)
-        self.E_kins_pole.append(ekp)
-        self.E_kins_cart.append(ekc)
-
-        q += (
-            0.5 * (1 - 1.0 / self.nu) * self.R * (delta_u ** 2)
-            + self.R * u * delta_u
-            + 0.5 * self.R * (u ** 2)
-        )
-        return q
-
     def q_tilde(self):
         pass
 
@@ -88,16 +149,6 @@ class controller_mppi:
         a = np.sum(exp_s)
         b = np.sum(np.multiply(exp_s, delta_u_i) / a)
         return b
-
-    def motion_derivatives(self, p, s, u):
-        """
-        :return: The time derivative vector d/dt([x, dx/dt, theta, dtheta/dt])
-        """
-        dx = s.positionD
-        da = s.angleD
-        dda, ddx = cartpole_ode(p, s, p.u_max * u)  # cartpole_ode(p, s, Q2u(u,p))
-
-        return dx, ddx, da, dda
 
     def step(self, s, target_position, time=None):
         self.s = deepcopy(s)
@@ -115,27 +166,17 @@ class controller_mppi:
         self.S_tilde_k = np.zeros_like(self.S_tilde_k)
 
         # TODO: Parallelize loop over k
-        for k in range(self.mc_samples):
-            self.s_horizon = [self.s]
-            for i in range(self.mpc_samples - 1):
-                s_last = deepcopy(self.s_horizon[-1])
-                dx, ddx, da, dda = self.motion_derivatives(
-                    self.p, s_last, self.u[i] + self.delta_u[k, i]
-                )
-                s_next = SimpleNamespace()
-                s_next.position = s_last.position + dx * self.dt
-                s_next.positionD = s_last.positionD + ddx * self.dt
-                s_next.angle = s_last.angle + da * self.dt
-                s_next.angleD = s_last.angleD + dda * self.dt
-
-                self.s_horizon.append(s_next)
-                # self.S_tilde[k, i + 1] = (
-                #     self.S_tilde[k, i]
-                #     + self.q(self.p, s_next, self.u[i], self.delta_u[k, i]) * self.dt
-                # )
-                self.S_tilde_k[k] += self.q(
-                    self.p, s_next, self.u[i], self.delta_u[k, i]
-                )
+        self.s_horizon, self.S_tilde_k = trajectory_rollouts(
+            state_to_array(self.s),
+            self.S_tilde_k,
+            self.u,
+            self.delta_u,
+            self.mc_samples,
+            self.mpc_samples,
+            self.p,
+            self.dt,
+            self.target_position,
+        )
 
         self.avg_cost.append(np.mean(self.S_tilde_k, axis=0))
 
