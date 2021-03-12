@@ -10,7 +10,7 @@ Create conda environment with
 	conda create -n CartPoleSimulation python=3.8 matplotlib pyqt pandas tqdm scipy gitpython
     pip install do_mpc
 
-Optionally to measure memory usage:
+n the “Manual Stabilization” mode you can provide the control input (motor power related to the force acting on the cart) by hovering with your mouse over the lower chart. Due to some bug (or maybe rather specific Cart-Pole system parameters) everything happens to fast to make it doable now.
 
     conda install memory_profiler
 
@@ -80,15 +80,26 @@ If left empty while saving the default name is given.
 If left empty while loading data the last (newest) experiment will be loaded
 
 ## Folding convention
-Files regions are folded with # region # endregion syntax.
+Files regions are folded with #region #endregion syntax
+For Pycharm default, for Atom install
 
-For Pycharm and VS Code it is default syntax, for Atom should work with custom-folds package (not checked)
-We strongly recommend that you make sure your editor is folding
-these custom regions and possibly also the method bodies.
-This makes navigating in huge CartPole and GUI classes much easier.
+## Parameter exploration with NNI
+
+For intellegent parameter space exploration with NNI, we have 2 special files : 
+
+1. modeling/rnn_tf/search_space.json : Search space for parameter search
+2. config.yml : Configuring the NNI experiments. 
 
 
-## Next steps TODO:
-User time timer is not precise - seems to get frozen sometimes. Different implementation needed
-How does plot display when not in Pycharm?
+Step 1: In Modeling/TF/Train.py comment line:
+
+        train_network()
+
+and uncomment lines:
+
+        nni_parameters = nni.get_next_parameter()
+        train_network(nni_parameters)
+
+Step 2 : nnictl create --config Modeling/TF/NNI/config.yml
+Step 3 : Open the url as displayed on terminal after Step 1
 

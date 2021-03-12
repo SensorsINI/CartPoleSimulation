@@ -4,6 +4,7 @@ import do_mpc
 from copy import deepcopy
 import numpy as np
 
+from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import p_globals, s0, Q2u, cartpole_ode
 from types import SimpleNamespace
 
@@ -50,7 +51,7 @@ def cartpole_integration(s, dt):
     return s_next
 
 
-class controller_do_mpc_discrete:
+class controller_do_mpc_discrete(template_controller):
     def __init__(self,
                  position_init=0.0,
                  positionD_init=0.0,

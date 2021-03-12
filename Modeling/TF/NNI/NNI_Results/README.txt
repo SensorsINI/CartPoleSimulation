@@ -1,0 +1,1 @@
+In this folder the results of NNI runs are being saved.

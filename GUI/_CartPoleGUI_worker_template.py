@@ -24,10 +24,10 @@ class Worker(QRunnable):
     @pyqtSlot()
     def run(self):
         '''
-        Initialise the runner function with passed args, kwargs.
+        Initialise the runner function with passed a, kwargs.
         '''
 
-        # Retrieve args/kwargs here; and fire processing using them
+        # Retrieve a/kwargs here; and fire processing using them
         try:
             result = self.fn(*self.args, **self.kwargs)
         except:

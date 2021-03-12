@@ -1,0 +1,22 @@
+authorName: Nikhil
+experimentName: cartpole
+trialConcurrency: 2
+maxExecDuration: 10h
+maxTrialNum: 20
+#choice: local, remote, pai
+trainingServicePlatform: local
+searchSpacePath: search_space.json
+#choice: true, false
+useAnnotation: false
+logDir: ./NNI_Results
+tuner:
+  #choice: TPE, Random, Anneal, Evolution, BatchTuner, MetisTuner
+  #SMAC (SMAC should be installed through nnictl)
+  builtinTunerName: TPE
+  classArgs:
+    #choice: maximize, minimize
+    optimize_mode: minimize
+trial:
+  command: python -m Modeling.TF.Train --num_epochs=5
+  codeDir: ../../../
+  gpuNum: 0

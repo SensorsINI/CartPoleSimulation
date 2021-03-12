@@ -127,6 +127,7 @@ class MainWindow(QMainWindow):
         self.canvas = FigureCanvas(self.fig)
         self.fig.AxCart = self.canvas.figure.add_subplot(211)
         self.fig.AxSlider = self.canvas.figure.add_subplot(212)
+        self.fig.AxSlider.set_ylim(0, 1)
 
         self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
 
@@ -320,14 +321,14 @@ class MainWindow(QMainWindow):
 
         self.rbs_simulator_mode[self.available_simulator_modes.index(self.simulator_mode)].setChecked(True)
 
-        # endregion
-
-        # region - Add checkboxes to layout
         l_cb.addStretch(1)
         l_cb.addLayout(lr_sm)
         l_cb.addStretch(1)
-        layout.addLayout(l_cb)
 
+        # endregion
+
+        # region - Add checkboxes to layout
+        layout.addLayout(l_cb)
         # endregion
 
         # region - Create an instance of a GUI window

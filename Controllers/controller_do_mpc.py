@@ -4,6 +4,7 @@ import do_mpc
 
 import numpy as np
 
+from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import p_globals, s0, cartpole_ode, Q2u
 
 from copy import deepcopy
@@ -12,7 +13,7 @@ from copy import deepcopy
 dt_mpc_simulation = 0.2  # s
 mpc_horizon = 10
 
-class controller_do_mpc:
+class controller_do_mpc(template_controller):
     def __init__(self,
                  position_init=0.0,
                  positionD_init=0.0,

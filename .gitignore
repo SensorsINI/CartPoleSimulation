@@ -5,5 +5,6 @@
 *.txt
 *.ckpt.*
 *.pt
-*env
-.vscode
+*.env
+*.vscode
+/Modeling/TF/NNI/NNI_Results
