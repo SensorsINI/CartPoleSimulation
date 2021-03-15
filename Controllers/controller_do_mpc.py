@@ -1,13 +1,11 @@
 """do-mpc controller"""
 
 import do_mpc
-
 import numpy as np
 
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import p_globals, s0, cartpole_ode, Q2u
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
-
 
 dt_mpc_simulation = 0.2  # s
 mpc_horizon = 10
