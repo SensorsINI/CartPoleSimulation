@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from Modeling.Pytorch.utilis_rnn import *
 
+from Controllers.template_controller import template_controller
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 
 
@@ -13,7 +14,7 @@ OUTPUTS_LIST = ['Q']
 PATH_SAVE = './save/nets/rnn_as_mpc_pt/'
 
 
-class controller_rnn_as_mpc:
+class controller_rnn_as_mpc_pytorch(template_controller):
     def __init__(self):
 
         self.rnn_full_name = RNN_FULL_NAME
