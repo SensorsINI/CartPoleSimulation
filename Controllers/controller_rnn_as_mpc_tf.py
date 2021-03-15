@@ -1,5 +1,6 @@
 from Modeling.TF.TF_Functions.Network import *
 
+from Controllers.template_controller import template_controller
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 
 
@@ -9,7 +10,7 @@ OUTPUTS_LIST = ['Q']
 PATH_SAVE = './controllers/nets/rnn_as_mpc_tf/'
 
 # TODO: For this moment it is just copied Pytorch version
-class controller_rnn_as_mpc_tf:
+class controller_rnn_as_mpc_tf(template_controller):
     def __init__(self):
 
         # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
