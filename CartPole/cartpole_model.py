@@ -14,7 +14,7 @@ import numpy as np
 # The possible choices and their explanation are listed below
 # Notice that any set of equation require setting the convention for the angle
 # to draw a CartPole correctly in the CartPole GUI
-CARTPOLE_EQUATIONS = 'Marcin-Sharpneat'
+CARTPOLE_EQUATIONS = 'Marcin-Sharpneat-Recommended'
 """ 
 Possible choices: 'Marcin-Sharpneat', (currently no more choices available)
 'Marcin-Sharpneat' is derived by Marcin, checked by Krishna, coincide with:
@@ -82,21 +82,49 @@ def _cartpole_ode(angle, angleD, position, positionD, u, k, M, m, g, J_fric, M_f
         A = (k + 1) * (M + m) - m * (ca ** 2)
 
         positionDD = (
-                             + m * g * sa * ca  # Movement of the cart due to gravity
-                             + ((J_fric * angleD * ca) / (L))  # Movement of the cart due to pend' s friction in the joint
-                             - (k + 1) * (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                             - (k + 1) * M_fric * positionD  # Braking of the cart due its friction
-                     ) / A \
-                                + ((k + 1) / A) * u  # Effect of force applied to cart
+            (
+                + m * g * sa * ca  # Movement of the cart due to gravity
+                + ((J_fric * angleD * ca) / (L))  # Movement of the cart due to pend' s friction in the joint
+                - (k + 1) * (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                - (k + 1) * M_fric * positionD  # Braking of the cart due its friction
+            ) / A
+            + ((k + 1) / A) * u  # Effect of force applied to cart
+        )
 
         angleDD = (
-                          + g * (m + M) * sa  # Movement of the pole due to gravity
-                          - ((J_fric * (m + M) * angleD) / (L * m))  # Braking of the pole due friction in its joint
-                          - m * L * (angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                          - ca * M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
-                          ) / (A * L) \
-                                + (ca / (A * L)) * u  # Effect of force applied to cart
+            (
+                + g * (m + M) * sa  # Movement of the pole due to gravity
+                - ((J_fric * (m + M) * angleD) / (L * m))  # Braking of the pole due friction in its joint
+                - m * L * (angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                - ca * M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
+            ) / (A * L) 
+            + (ca / (A * L)) * u  # Effect of force applied to cart
+        )
 
+    elif CARTPOLE_EQUATIONS == 'Marcin-Sharpneat-Recommended':
+        # Distribute pole mass uniformly across pole 
+        # Eq. (56) & (57)
+        positionDD = (
+            (
+                m * g * (-sa) * ca 
+                - 7/3 * (
+                    u 
+                    + m * L * (angleD ** 2) * (-sa)
+                    - M_fric * positionD
+                )
+                - J_fric * (-angleD) * ca / L
+            ) / (
+                m * (ca ** 2)
+                - 7/3 * (M + m)
+            )
+        )
+        angleDD = - (
+            3 / (7 * L) * (
+                g * (-sa)
+                - positionDD * ca
+                - J_fric * (-angleD) / (m * L)
+            )
+        )
     else:
         raise ValueError('An undefined name for Cartpole equations')
 
