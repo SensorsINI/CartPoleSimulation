@@ -1,86 +1,88 @@
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import cartpole_jacobian, cartpole_ode, p_globals, s0, Q2u
-from types import SimpleNamespace
+from CartPole.cartpole_model import (
+    cartpole_ode_array,
+    p_globals,
+    Q2u,
+)
+from CartPole._CartPole_mathematical_helpers import (
+    create_cartpole_state,
+    cartpole_state_varname_to_index,
+)
 
 import matplotlib.pyplot as plt
 import numpy as np
 from numba import jit
 
 from copy import deepcopy
-from types import SimpleNamespace
 
 dt_mpc_simulation = 0.02  # s
 mpc_horizon = 2
 mc_samples = 1000
 
+k = p_globals.k
+M = p_globals.M
+m = p_globals.m
+g = p_globals.g
+J_fric = p_globals.J_fric
+M_fric = p_globals.M_fric
+L = p_globals.L
+v_max = p_globals.v_max
+u_max = p_globals.u_max
 
-E_kin_cart = lambda s: (s.positionD / self.p.v_max) ** 2
-E_kin_pol = lambda s: (s.angleD / (2 * np.pi)) ** 2
-E_pot_cost = lambda s: 1 - np.cos(s.angle)
+R = 1.0e0  # How much to punish Q
+lbd = 10  # cost parameter lambda
+nu = 1.0e1  # Exploration variance
+
+E_kin_cart = lambda s: (s[cartpole_state_varname_to_index("positionD")] / v_max) ** 2
+E_kin_pol = lambda s: (s[cartpole_state_varname_to_index("angleD")] / (2 * np.pi)) ** 2
+E_pot_cost = lambda s: 1 - np.cos(s[cartpole_state_varname_to_index("angle")])
 distance_difference = (
-    lambda s, target_position: (((s.position - target_position) / 50.0)) ** 2
+    lambda s, target_position: (
+        ((s[cartpole_state_varname_to_index("position")] - target_position) / 50.0)
+    )
+    ** 2
 )
 
 
-def state_to_array(s):
-    state_list = [s.position, s.positionD, s.positionDD, s.angle, s.angleD, s.angleDD]
-    return np.array(state_list)
-
-
-def array_to_state(s):
-    state = SimpleNamespace()
-    state.position = s[0]
-    state.positionD = s[1]
-    state.positionDD = s[2]
-    state.angle = s[3]
-    state.angleD = s[4]
-    state.angleDD = s[5]
-    return state
-
-
-@jit(nopython=True)
+# @jit(nopython=True)
 def trajectory_rollouts(
-    s, S_tilde_k, u, delta_u, mc_samples, mpc_samples, p, dt, target_position
+    s, S_tilde_k, u, delta_u, mc_samples, mpc_samples, dt, target_position
 ):
     for k in range(mc_samples):
         s_horizon = np.zeros((mpc_samples, s.size))
         s_horizon[0, :] = s
         for i in range(1, mpc_samples):
             s_last = s_horizon[i - 1, :]
-            derivatives =  motion_derivatives(
-                p, array_to_state(s_last), u[i] + delta_u[k, i]
-            )
+            derivatives = motion_derivatives(s_last, u[i] + delta_u[k, i])
             s_next = s_last + derivatives * dt
-            # s_next = SimpleNamespace()
-            # s_next.position = s_last.position + dx * self.dt
-            # s_next.positionD = s_last.positionD + ddx * self.dt
-            # s_next.angle = s_last.angle + da * self.dt
-            # s_next.angleD = s_last.angleD + dda * self.dt
 
-            # s_horizon.append(s_next)
             s_horizon[i, :] = s_next
-            # self.S_tilde[k, i + 1] = (
-            #     self.S_tilde[k, i]
-            #     + self.q(self.p, s_next, self.u[i], self.delta_u[k, i]) * self.dt
-            # )
-            S_tilde_k[k] += q(
-                p, array_to_state(s_next), u[i], delta_u[k, i], target_position
-            )
+
+            S_tilde_k[k] += q(s_next, u[i], delta_u[k, i], target_position)
+
     return s_horizon, S_tilde_k
 
 
-def motion_derivatives(p, s, u):
+def motion_derivatives(s: np.ndarray, u: float):
     """
-    :return: The time derivative vector d/dt([x, dx/dt, theta, dtheta/dt])
+    :return: The time derivative vector dstate/dt
     """
-    dx = s[1]
-    da = s[4]
-    dda, ddx = cartpole_ode(p, array_to_state(s), p.u_max * u)  # cartpole_ode(p, s, Q2u(u,p))
+    s_dot = create_cartpole_state()
+    s_dot[cartpole_state_varname_to_index("position")] = s[
+        cartpole_state_varname_to_index("positionD")
+    ]
+    s_dot[cartpole_state_varname_to_index("angle")] = s[
+        cartpole_state_varname_to_index("angleD")
+    ]
+    (
+        s_dot[cartpole_state_varname_to_index("angleD")],
+        s_dot[cartpole_state_varname_to_index("positionD")],
+    ) = cartpole_ode_array(k, M, m, g, J_fric, M_fric, L, s, u_max * u)
 
-    return np.array([dx, ddx, 0, da, dda, 0])
+    return s_dot
 
 
-def q(p, s, u, delta_u, target_position):
+def q(s, u, delta_u, target_position):
     if np.abs(u + delta_u) > 1.0:
         return 1.0e5
     dd = 10 * distance_difference(s, target_position)
@@ -94,20 +96,15 @@ def q(p, s, u, delta_u, target_position):
     # self.E_kins_cart.append(ekc)
 
     q += (
-        0.5 * (1 - 1.0 / self.nu) * self.R * (delta_u ** 2)
-        + self.R * u * delta_u
-        + 0.5 * self.R * (u ** 2)
+        0.5 * (1 - 1.0 / nu) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
     return q
 
 
 class controller_mppi(template_controller):
     def __init__(self):
-        # Physical parameters of the cart
-        self.p = p_globals
-
         # State of the cart
-        self.s = SimpleNamespace()  # s like state
+        self.s = create_cartpole_state()
 
         np.random.seed(123)
 
@@ -120,10 +117,6 @@ class controller_mppi(template_controller):
 
         self.Q_bounds = [(-1, 1)] * self.mpc_horizon
 
-        self.Q = np.diag([10.0, 1.0, 1.0, 1.0])  # How much to punish x, v, theta, omega
-        self.R = 1.0e0  # How much to punish Q
-        self.l = 10  # cost parameter lambda
-        self.nu = 1.0e1  # Exploration variance
         self.rho_sqrt_inv = 0.01
         self.avg_cost = []
         self.distance_differences = []
@@ -132,28 +125,22 @@ class controller_mppi(template_controller):
         self.E_kins_cart = []
         self.num_timesteps = 0
 
-        self.s_horizon = []  # list of states s
+        self.s_horizon = np.zeros(())  # list of states s
         self.u = np.zeros((self.mpc_samples), dtype=float)
         self.delta_u = np.zeros((self.mc_samples, self.mpc_samples), dtype=float)
         self.S_tilde = np.zeros((self.mc_samples, self.mpc_samples), dtype=float)
         self.S_tilde_k = np.zeros((self.mc_samples), dtype=float)
 
-    def q_tilde(self):
-        pass
-
-    def cost_to_go(self):
-        pass
-
     def reward_weighted_average(self, S_i, delta_u_i):
         rho = np.min(S_i)  # for numerical stability
-        exp_s = np.exp(-1.0 / self.l * (S_i - rho))
+        exp_s = np.exp(-1.0 / lbd * (S_i - rho))
         a = np.sum(exp_s)
         b = np.sum(np.multiply(exp_s, delta_u_i) / a)
         return b
 
     def step(self, s, target_position, time=None):
-        self.s = deepcopy(s)
-        self.target_position = deepcopy(target_position).item()
+        self.s = s
+        self.target_position = target_position.item()
 
         self.num_timesteps += 1
 
@@ -168,13 +155,12 @@ class controller_mppi(template_controller):
 
         # TODO: Parallelize loop over k
         self.s_horizon, self.S_tilde_k = trajectory_rollouts(
-            state_to_array(self.s),
+            self.s,
             self.S_tilde_k,
             self.u,
             self.delta_u,
             self.mc_samples,
             self.mpc_samples,
-            self.p,
             self.dt,
             self.target_position,
         )
