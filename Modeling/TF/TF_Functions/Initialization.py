@@ -121,6 +121,9 @@ def get_net_and_norm_info(a,
                 if lines[i] == 'NET NAME:':
                     net_name = lines[i + 1].rstrip("\n")
                     continue
+                if lines[i] == 'NET FULL NAME:':
+                    net_full_name = lines[i + 1].rstrip("\n")
+                    continue
                 if lines[i] == 'INPUTS:':
                     inputs = lines[i + 1].rstrip("\n").split(sep=', ')
                     continue
@@ -187,6 +190,8 @@ def get_net_and_norm_info(a,
             # endregion
 
             net_info.parent_net_name = parent_net_name
+            # This is the full name of pretrained net. A new full name will be given if the training is resumed
+            net_info.net_full_name = net_full_name
 
 
     else:
