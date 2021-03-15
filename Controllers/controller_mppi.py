@@ -16,8 +16,8 @@ from numba import jit
 from copy import deepcopy
 
 dt_mpc_simulation = 0.02  # s
-mpc_horizon = 2
-mc_samples = 1000
+mpc_horizon = 1.0
+mc_samples = 4000
 
 k = p_globals.k
 M = p_globals.M
@@ -44,51 +44,92 @@ distance_difference = (
 )
 
 
-# @jit(nopython=True)
+@jit(nopython=True)
+def _cartpole_ode(angle, angleD, position, positionD, u, k, M, m, g, J_fric, M_fric, L):
+    ca = np.cos(angle)
+    sa = np.sin(angle)
+
+    A = (k + 1) * (M + m) - m * (ca ** 2)
+
+    positionDD = (
+        (
+            +m * g * sa * ca  # Movement of the cart due to gravity
+            + (
+                (J_fric * angleD * ca) / (L)
+            )  # Movement of the cart due to pend' s friction in the joint
+            - (k + 1)
+            * (
+                m * L * (angleD ** 2) * sa
+            )  # Keeps the Cart-Pole center of mass fixed when pole rotates
+            - (k + 1) * M_fric * positionD  # Braking of the cart due its friction
+        )
+        / A
+        + ((k + 1) / A) * u  # Effect of force applied to cart
+    )
+
+    angleDD = (
+        (
+            +g * (m + M) * sa  # Movement of the pole due to gravity
+            - (
+                (J_fric * (m + M) * angleD) / (L * m)
+            )  # Braking of the pole due friction in its joint
+            - m
+            * L
+            * (angleD ** 2)
+            * sa
+            * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
+            - ca
+            * M_fric
+            * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
+        )
+        / (A * L)
+        + (ca / (A * L)) * u  # Effect of force applied to cart
+    )
+
+    return angleDD, positionDD
+
+
+@jit
 def trajectory_rollouts(
     s, S_tilde_k, u, delta_u, mc_samples, mpc_samples, dt, target_position
 ):
+    s_horizon = np.zeros((mc_samples, mpc_samples, s.size))
     for k in range(mc_samples):
-        s_horizon = np.zeros((mpc_samples, s.size))
-        s_horizon[0, :] = s
+        s_horizon[k, 0, :] = s
         for i in range(1, mpc_samples):
-            s_last = s_horizon[i - 1, :]
+            s_last = s_horizon[k, i - 1, :]
             derivatives = motion_derivatives(s_last, u[i] + delta_u[k, i])
             s_next = s_last + derivatives * dt
-
-            s_horizon[i, :] = s_next
+            s_horizon[k, i, :] = s_next
 
             S_tilde_k[k] += q(s_next, u[i], delta_u[k, i], target_position)
 
-    return s_horizon, S_tilde_k
+    return S_tilde_k
 
 
+@jit(nopython=True)
 def motion_derivatives(s: np.ndarray, u: float):
     """
     :return: The time derivative vector dstate/dt
     """
-    s_dot = create_cartpole_state()
-    s_dot[cartpole_state_varname_to_index("position")] = s[
-        cartpole_state_varname_to_index("positionD")
-    ]
-    s_dot[cartpole_state_varname_to_index("angle")] = s[
-        cartpole_state_varname_to_index("angleD")
-    ]
-    (
-        s_dot[cartpole_state_varname_to_index("angleD")],
-        s_dot[cartpole_state_varname_to_index("positionD")],
-    ) = cartpole_ode_array(k, M, m, g, J_fric, M_fric, L, s, u_max * u)
+    s_dot = np.zeros_like(s)
+    s_dot[5] = s[6]
+    s_dot[0] = s[1]
+    (s_dot[1], s_dot[6]) = _cartpole_ode(
+        s[0], s[1], s[5], s[6], u_max * u, k, M, m, g, J_fric, M_fric, L
+    )
 
     return s_dot
 
 
+@jit(nopython=True)
 def q(s, u, delta_u, target_position):
     if np.abs(u + delta_u) > 1.0:
         return 1.0e5
-    dd = 10 * distance_difference(s, target_position)
-    ep = E_pot_cost(s) ** 2
-    ekp = E_kin_pol(s)
-    ekc = E_kin_cart(s)
+    dd = 10 * ((s[5] - target_position) / 50.0) ** 2
+    ep = 10 * (1 - np.cos(s[0])) ** 2
+    ekp = (s[1] / (2 * np.pi)) ** 2
+    ekc = (s[6] / v_max) ** 2
     q = dd + ep + ekp + ekc
     # self.distance_differences.append(dd)
     # self.E_pots.append(ep)
@@ -114,8 +155,6 @@ class controller_mppi(template_controller):
         self.dt = dt_mpc_simulation
         self.mpc_samples = int(self.mpc_horizon / self.dt)
         self.mc_samples = mc_samples
-
-        self.Q_bounds = [(-1, 1)] * self.mpc_horizon
 
         self.rho_sqrt_inv = 0.01
         self.avg_cost = []
@@ -154,7 +193,7 @@ class controller_mppi(template_controller):
         self.S_tilde_k = np.zeros_like(self.S_tilde_k)
 
         # TODO: Parallelize loop over k
-        self.s_horizon, self.S_tilde_k = trajectory_rollouts(
+        self.S_tilde_k = trajectory_rollouts(
             self.s,
             self.S_tilde_k,
             self.u,
