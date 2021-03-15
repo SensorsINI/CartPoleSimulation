@@ -9,7 +9,6 @@ import numpy as np
 
 import casadi
 
-from copy import deepcopy
 
 dt_mpc_simulation = 0.2  # s
 mpc_horizon = 10
@@ -126,10 +125,10 @@ class controller_mpc_opti(template_controller):
 
     def step(self, s, target_position, time=None):
 
-        self.s = deepcopy(s)
-        self.target_position = deepcopy(target_position)
+        self.s = s
+        self.target_position = target_position
 
-        opti = casadi.Opti();
+        opti = casadi.Opti()
         Q = opti.variable(len(self.Q_hat0))
         opti.minimize(self.cost_function(Q))
         opti.subject_to(Q <= 1)

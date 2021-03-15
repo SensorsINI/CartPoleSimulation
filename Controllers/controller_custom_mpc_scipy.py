@@ -2,8 +2,6 @@
 
 import scipy.optimize
 
-from copy import deepcopy
-
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 from Modeling.TF.TF_Functions.Network import *
 from Predictores.predictor_ideal import predictor_ideal
@@ -132,8 +130,8 @@ class controller_custom_mpc_scipy:
 
         # get initial state
 
-        self.s = deepcopy(s)
-        self.target_position = deepcopy(target_position)
+        self.s = s
+        self.target_position = target_position
 
         self.initial_state['s.angle.cos'] = [np.cos(s[cartpole_state_varname_to_index('angle')])]
         self.initial_state['s.angle.sin'] = [np.sin(s[cartpole_state_varname_to_index('angle')])]

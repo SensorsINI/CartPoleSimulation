@@ -1,7 +1,6 @@
 """do-mpc controller"""
 
 import do_mpc
-from copy import deepcopy
 import numpy as np
 
 from Controllers.template_controller import template_controller
@@ -67,7 +66,7 @@ class controller_do_mpc_discrete(template_controller):
         p = p_globals
 
         # Container for the state of the cart
-        s = deepcopy(s0)  # s like state
+        s = s0
 
 
         model_type = 'discrete'  # either 'discrete' or 'continuous'

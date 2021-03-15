@@ -12,7 +12,6 @@ INPUTS_LIST = ['s.position', 's.angle']
 OUTPUTS_LIST = ['Q']
 PATH_SAVE = './save/nets/rnn_as_mpc_pt/'
 
-from copy import deepcopy
 
 class controller_rnn_as_mpc:
     def __init__(self):

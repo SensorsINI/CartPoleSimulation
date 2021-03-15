@@ -8,8 +8,6 @@ from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import p_globals, s0, cartpole_ode, Q2u
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 
-from copy import deepcopy
-
 
 dt_mpc_simulation = 0.2  # s
 mpc_horizon = 10
@@ -30,7 +28,7 @@ class controller_do_mpc(template_controller):
         p = p_globals  # p like parameters
 
         # Container for the state of the cart
-        s = deepcopy(s0)  # s like state
+        s = s0  # s like state
 
         model_type = 'continuous'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)

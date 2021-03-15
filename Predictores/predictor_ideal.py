@@ -38,7 +38,6 @@ from CartPole.cartpole_model import p_globals, Q2u
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 
 import numpy as np
-from copy import deepcopy
 import pandas as pd
 import copy
 import timeit
@@ -137,8 +136,8 @@ class predictor_ideal:
 
         for k in range(self.horizon):
             if k == 0:
-                yp_hat[0] = deepcopy(self.s)
-                s_next = deepcopy(self.s)
+                yp_hat[0] = self.s
+                s_next = self.s
 
             t0 = timeit.default_timer()
             s_next = mpc_next_state(s_next, self.p, Q2u(Q_hat[k], self.p), dt=self.dt)

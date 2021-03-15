@@ -6,8 +6,6 @@ It assumes that the input relation is u = Q*p.u_max (no fancy motor model) !
 import scipy
 import numpy as np
 
-from copy import deepcopy
-
 from Controllers.template_controller import template_controller
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 from CartPole.cartpole_model import cartpole_jacobian, p_globals, s0
@@ -70,7 +68,7 @@ class controller_lqr(template_controller):
 
     def step(self, state, PositionTarget, time=None):
 
-        s = deepcopy(state)
+        s = state
 
         state = np.array(
             [[s[cartpole_state_varname_to_index('position')] - PositionTarget], [s[cartpole_state_varname_to_index('positionD')]], [s[cartpole_state_varname_to_index('angle')]], [s[cartpole_state_varname_to_index('angleD')]]])
