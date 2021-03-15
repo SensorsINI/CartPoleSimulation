@@ -1,11 +1,12 @@
 """do-mpc controller"""
 
 import do_mpc
-from copy import deepcopy
 import numpy as np
 
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import p_globals, s0, Q2u, cartpole_ode
+from CartPole.cartpole_model import p_globals, s0, Q2u, cartpole_ode_namespace
+from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index, cartpole_state_vector_to_namespace
+
 from types import SimpleNamespace
 
 dt_mpc_simulation = 0.2  # s
@@ -22,7 +23,7 @@ def mpc_next_state(s, p, u, dt):
 
     s_next = s
 
-    s_next.angleDD, s_next.positionDD = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
+    s_next.angleDD, s_next.positionDD = cartpole_ode_namespace(p, s_next, u)  # Calculates CURRENT second derivatives
 
     # Calculate NEXT state:
     s_next = cartpole_integration(s_next, dt)
@@ -32,12 +33,12 @@ def mpc_next_state(s, p, u, dt):
 
 
 def cartpole_integration(s, dt):
-    """Simple single step integration of CartPole state by dt
+    """
+    Simple single step integration of CartPole state by dt
 
-    Takes state as SimpleNamespace, but returns as separate variables
-    # TODO: Consider changing it to return a SimpleNamepece for consistency
+    Takes state as numpy array.
 
-    :param s: state of the CartPole (contains: s.position, s.positionD, s.angle and s.angleD)
+    :param s: state of the CartPole (position, positionD, angle, angleD must be set). Array order follows global definition.
     :param dt: time step by which the CartPole state should be integrated
     """
     s_next = SimpleNamespace()
@@ -67,8 +68,7 @@ class controller_do_mpc_discrete(template_controller):
         p = p_globals
 
         # Container for the state of the cart
-        s = deepcopy(s0)  # s like state
-
+        s = SimpleNamespace()
 
         model_type = 'discrete'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
@@ -158,6 +158,8 @@ class controller_do_mpc_discrete(template_controller):
 
 
     def step(self, s, target_position, time=None):
+
+        s = cartpole_state_vector_to_namespace(s)
 
         self.x0['s.position'] = s.position
         self.x0['s.positionD'] = s.positionD

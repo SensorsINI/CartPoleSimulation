@@ -1,5 +1,6 @@
 from CartPole import CartPole
 from CartPole.cartpole_model import s0, p_globals
+from CartPole._CartPole_mathematical_helpers import cartpole_state_varname_to_index
 TrackHalfLength = p_globals.TrackHalfLength
 
 from time import sleep
@@ -39,28 +40,28 @@ turning_points_DataGen = None
 initial_state = [None, None, None, None]
 initial_state_DataGen = s0
 if initial_state[0] is None:
-    initial_state_DataGen.position = np.random.uniform(low=-TrackHalfLength / 2.0,
+    initial_state_DataGen[cartpole_state_varname_to_index('position')] = np.random.uniform(low=-TrackHalfLength / 2.0,
                                           high=TrackHalfLength / 2.0)
 else:
-    initial_state_DataGen.position = initial_state[0]
+    initial_state_DataGen[cartpole_state_varname_to_index('position')] = initial_state[0]
 
 if initial_state[1] is None:
-    initial_state_DataGen.positionD = np.random.uniform(low=-1.0,
+    initial_state_DataGen[cartpole_state_varname_to_index('positionD')] = np.random.uniform(low=-1.0,
                                            high=1.0)
 else:
-    initial_state_DataGen.positionD = initial_state[1]
+    initial_state_DataGen[cartpole_state_varname_to_index('positionD')] = initial_state[1]
 
 if initial_state[2] is None:
-    initial_state_DataGen.angle = np.random.uniform(low=-3.5 * (np.pi / 180.0),
+    initial_state_DataGen[cartpole_state_varname_to_index('angle')] = np.random.uniform(low=-3.5 * (np.pi / 180.0),
                                        high=3.5 * (np.pi / 180.0))
 else:
-    initial_state_DataGen.angle = initial_state[2]
+    initial_state_DataGen[cartpole_state_varname_to_index('angle')] = initial_state[2]
 
 if initial_state[3] is None:
-    initial_state_DataGen.angleD = np.random.uniform(low=-3.0 * (np.pi / 180.0),
+    initial_state_DataGen[cartpole_state_varname_to_index('angleD')] = np.random.uniform(low=-3.0 * (np.pi / 180.0),
                                         high=3.0 * (np.pi / 180.0))
 else:
-    initial_state_DataGen.angleD = initial_state[3]
+    initial_state_DataGen[cartpole_state_varname_to_index('angleD')] = initial_state[3]
 
 for i in range(number_of_experiments):
 

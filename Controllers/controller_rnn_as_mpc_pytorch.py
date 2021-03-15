@@ -4,15 +4,17 @@ import numpy as np
 import pandas as pd
 from Modeling.Pytorch.utilis_rnn import *
 
+from Controllers.template_controller import template_controller
+from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
+
 
 RNN_FULL_NAME = 'GRU-5IN-32H1-32H2-1OUT-0'
 INPUTS_LIST = ['s.position', 's.angle']
 OUTPUTS_LIST = ['Q']
 PATH_SAVE = './save/nets/rnn_as_mpc_pt/'
 
-from copy import deepcopy
 
-class controller_rnn_as_mpc:
+class controller_rnn_as_mpc_pytorch(template_controller):
     def __init__(self):
 
         self.rnn_full_name = RNN_FULL_NAME
@@ -38,13 +40,13 @@ class controller_rnn_as_mpc:
         # Copy state and target_position into rnn_input
 
         if 's.position' in self.rnn_input:
-            self.rnn_input['s.position'] = [s.position]
+            self.rnn_input['s.position'] = [s[cartpole_state_varname_to_index('position')]]
         if 's.angle' in self.rnn_input:
-            self.rnn_input['s.angle'] = [s.angle]
+            self.rnn_input['s.angle'] = [s[cartpole_state_varname_to_index('angle')]]
         if 's.positionD' in self.rnn_input:
-            self.rnn_input['s.positionD'] = [s.positionD]
+            self.rnn_input['s.positionD'] = [s[cartpole_state_varname_to_index('positionD')]]
         if 's.angleD' in self.rnn_input:
-            self.rnn_input['s.angleD'] = [s.angleD]
+            self.rnn_input['s.angleD'] = [s[cartpole_state_varname_to_index('angleD')]]
         if 'target_position' in self.rnn_input:
             self.rnn_input['target_position'] = [target_position]
 

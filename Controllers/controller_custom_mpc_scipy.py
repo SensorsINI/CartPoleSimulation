@@ -1,11 +1,8 @@
 """mpc controller"""
 
-from types import SimpleNamespace
-
 import scipy.optimize
 
-from copy import deepcopy
-
+from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 from Modeling.TF.TF_Functions.Network import *
 from Predictores.predictor_ideal import predictor_ideal
 
@@ -59,7 +56,7 @@ class controller_custom_mpc_scipy:
         """
 
         # State of the cart
-        self.s = SimpleNamespace()  # s like state
+        self.s = create_cartpole_state()  # s like state
 
         self.target_position = 0.0
         self.target_position_normed = 0.0
@@ -133,14 +130,14 @@ class controller_custom_mpc_scipy:
 
         # get initial state
 
-        self.s = deepcopy(s)
-        self.target_position = deepcopy(target_position)
+        self.s = s
+        self.target_position = target_position
 
-        self.initial_state['s.angle.cos'] = [np.cos(s.angle)]
-        self.initial_state['s.angle.sin'] = [np.sin(s.angle)]
-        self.initial_state['s.angleD'] = [s.angleD]
-        self.initial_state['s.position'] = [s.position]
-        self.initial_state['s.positionD'] = [s.positionD]
+        self.initial_state['s.angle.cos'] = [np.cos(s[cartpole_state_varname_to_index('angle')])]
+        self.initial_state['s.angle.sin'] = [np.sin(s[cartpole_state_varname_to_index('angle')])]
+        self.initial_state['s.angleD'] = [s[cartpole_state_varname_to_index('angleD')]]
+        self.initial_state['s.position'] = [s[cartpole_state_varname_to_index('position')]]
+        self.initial_state['s.positionD'] = [s[cartpole_state_varname_to_index('positionD')]]
 
         # Setup Predictor
         self.Predictor.setup(initial_state=self.initial_state, prediction_denorm=False)
@@ -166,7 +163,7 @@ class controller_custom_mpc_scipy:
             self.Q_hat0 = np.hstack((self.Q_hat[1:], self.Q_hat[-1]))
             # self.plot_prediction()
         else:
-            self.Q_previous = Q0 = -np.sin(s.angle) * 0.2
+            self.Q_previous = Q0 = -np.sin(s[cartpole_state_varname_to_index('angle')]) * 0.2
             self.step_number = self.step_number + 1
 
 

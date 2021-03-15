@@ -1,14 +1,13 @@
 """do-mpc controller"""
 
 import do_mpc
-
 import numpy as np
 
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import p_globals, s0, cartpole_ode, Q2u
+from CartPole.cartpole_model import p_globals, s0, cartpole_ode_namespace, Q2u
+from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index, cartpole_state_namespace_to_vector, cartpole_state_vector_to_namespace
 
-from copy import deepcopy
-
+from types import SimpleNamespace
 
 dt_mpc_simulation = 0.2  # s
 mpc_horizon = 10
@@ -29,7 +28,7 @@ class controller_do_mpc(template_controller):
         p = p_globals  # p like parameters
 
         # Container for the state of the cart
-        s = deepcopy(s0)  # s like state
+        s = SimpleNamespace()  # s like state
 
         model_type = 'continuous'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
@@ -47,7 +46,7 @@ class controller_do_mpc(template_controller):
         self.model.set_rhs('s.position', s.positionD)
         self.model.set_rhs('s.angle', s.angleD)
 
-        angleD_next, positionD_next = cartpole_ode(p, s, Q2u(Q,p))
+        angleD_next, positionD_next = cartpole_ode_namespace(p, s, Q2u(Q,p))
 
         self.model.set_rhs('s.positionD', positionD_next)
         self.model.set_rhs('s.angleD', angleD_next)
@@ -131,6 +130,8 @@ class controller_do_mpc(template_controller):
 
 
     def step(self, s, target_position, time=None):
+
+        s = cartpole_state_vector_to_namespace(s)
 
         self.x0['s.position'] = s.position
         self.x0['s.positionD'] = s.positionD
