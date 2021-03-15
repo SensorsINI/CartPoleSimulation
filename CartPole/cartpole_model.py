@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import Union
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index, cartpole_state_index_to_varname
 
 import numpy as np
@@ -59,22 +60,30 @@ p_globals.k = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
 s0 = create_cartpole_state()
 
 
-def cartpole_ode(p: SimpleNamespace, s: np.ndarray, u: float):
+def cartpole_ode(p: SimpleNamespace, s: Union[np.ndarray, SimpleNamespace], u: float):
     """
     Calculates current values of second derivative of angle and position
     from current value of angle and position, and their first derivatives
 
     :param p: Namespace containing environment variables such track length, cart mass and pole mass
-    :param s: State vector following the globally defined variable order
+    :param s: State vector or namespace
     :param u: Force applied on cart in unnormalized range
 
     :returns: angular acceleration, horizontal acceleration
     """
-    ca = np.cos(s[cartpole_state_varname_to_index('angle')])
-    sa = np.sin(s[cartpole_state_varname_to_index('angle')])
+    if isinstance(s, np.ndarray):
+        angle = s[cartpole_state_varname_to_index('angle')]
+        angleD = s[cartpole_state_varname_to_index('angleD')]
+        position = s[cartpole_state_varname_to_index('position')]
+        positionD = s[cartpole_state_varname_to_index('positionD')]
+    elif isinstance(s, SimpleNamespace):
+        angle = s.angle
+        angleD = s.angleD
+        position = s.position
+        positionD = s.positionD
 
-    s[cartpole_state_varname_to_index('angle_cos')] = ca
-    s[cartpole_state_varname_to_index('angle_sin')] = sa
+    ca = np.cos(angle)
+    sa = np.sin(angle)
 
     if CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
         # Clockwise rotation is defined as negative
@@ -86,17 +95,17 @@ def cartpole_ode(p: SimpleNamespace, s: np.ndarray, u: float):
 
         positionDD = (
                              + p.m * p.g * sa * ca  # Movement of the cart due to gravity
-                             + ((p.J_fric * s[cartpole_state_varname_to_index('angleD')] * ca) / (p.L))  # Movement of the cart due to pend' s friction in the joint
-                             - (p.k + 1) * (p.m * p.L * (s[cartpole_state_varname_to_index('angleD')] ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                             - (p.k + 1) * p.M_fric * s[cartpole_state_varname_to_index('positionD')]  # Braking of the cart due its friction
+                             + ((p.J_fric * angleD * ca) / (p.L))  # Movement of the cart due to pend' s friction in the joint
+                             - (p.k + 1) * (p.m * p.L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                             - (p.k + 1) * p.M_fric * positionD  # Braking of the cart due its friction
                      ) / A \
                                 + ((p.k + 1) / A) * u  # Effect of force applied to cart
 
         angleDD = (
                           + p.g * (p.m + p.M) * sa  # Movement of the pole due to gravity
-                          - ((p.J_fric * (p.m + p.M) * s[cartpole_state_varname_to_index('angleD')]) / (p.L * p.m))  # Braking of the pole due friction in its joint
-                          - p.m * p.L * (s[cartpole_state_varname_to_index('angleD')] ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                          - ca * p.M_fric * s[cartpole_state_varname_to_index('positionD')]  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
+                          - ((p.J_fric * (p.m + p.M) * angleD) / (p.L * p.m))  # Braking of the pole due friction in its joint
+                          - p.m * p.L * (angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                          - ca * p.M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
                           ) / (A * p.L) \
                                 + (ca / (A * p.L)) * u  # Effect of force applied to cart
 
@@ -106,7 +115,7 @@ def cartpole_ode(p: SimpleNamespace, s: np.ndarray, u: float):
     return angleDD, positionDD
 
 
-def cartpole_jacobian(p: SimpleNamespace, s: np.ndarray, u: float):
+def cartpole_jacobian(p: SimpleNamespace, s: Union[np.ndarray, SimpleNamespace], u: float):
     """
     Jacobian of cartpole ode with the following structure:
 
@@ -122,9 +131,20 @@ def cartpole_jacobian(p: SimpleNamespace, s: np.ndarray, u: float):
 
     :returns: A 4x5 numpy.ndarray with all partial derivatives
     """
+    if isinstance(s, np.ndarray):
+        angle = s[cartpole_state_varname_to_index('angle')]
+        angleD = s[cartpole_state_varname_to_index('angleD')]
+        position = s[cartpole_state_varname_to_index('position')]
+        positionD = s[cartpole_state_varname_to_index('positionD')]
+    elif isinstance(s, SimpleNamespace):
+        angle = s.angle
+        angleD = s.angleD
+        position = s.position
+        positionD = s.positionD
+    
     J = np.zeros(shape=(4, 5), dtype=np.float32)  # Array to keep Jacobian
-    ca = np.cos(s[cartpole_state_varname_to_index('angle')])
-    sa = np.sin(s[cartpole_state_varname_to_index('angle')])
+    ca = np.cos(angle)
+    sa = np.sin(angle)
 
     if CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
         # Helper function
@@ -148,17 +168,17 @@ def cartpole_jacobian(p: SimpleNamespace, s: np.ndarray, u: float):
         J[1, 2] = (    # vt
                      -2.0 * (1.0+p.k) * u * ca * sa * p.m
                      - 2.0 * ca * sa * p.m * (
-                             -(1.0+p.k) * p.L * (s[cartpole_state_varname_to_index('angleD')]**2) * sa * p.m
-                             + p.g * ca * sa * p.m - (1.0+p.k) * s[cartpole_state_varname_to_index('positionD')] * p.M_fric
-                             + (s[cartpole_state_varname_to_index('angleD')] * ca * p.J_fric/p.L)
+                             -(1.0+p.k) * p.L * (angleD**2) * sa * p.m
+                             + p.g * ca * sa * p.m - (1.0+p.k) * positionD * p.M_fric
+                             + (angleD * ca * p.J_fric/p.L)
                                                                 ))/(A**2) \
              + (
-                     -(1.0+p.k) * p.L * (s[cartpole_state_varname_to_index('angleD')]**2) * ca * p.m
+                     -(1.0+p.k) * p.L * (angleD**2) * ca * p.m
                      +  p.g * ((ca**2)-(sa**2)) * p.m
-                     - (s[cartpole_state_varname_to_index('angleD')] * sa * p.J_fric)/p.L
+                     - (angleD * sa * p.J_fric)/p.L
                                                                 )/ A
 
-        J[1, 3] = (-2.0 * (1.0+p.k) * p.L * s[cartpole_state_varname_to_index('angleD')] * sa * p.m  # vo
+        J[1, 3] = (-2.0 * (1.0+p.k) * p.L * angleD * sa * p.m  # vo
               + (ca * p.J_fric / p.L)) / A
 
         J[1, 4] = (1.0+p.k) / A  # vu
@@ -180,20 +200,20 @@ def cartpole_jacobian(p: SimpleNamespace, s: np.ndarray, u: float):
         J[3, 2] = (  # ot
                     - 2.0 * u * (ca**2) * sa * p.m
                     - 2.0 * ca * sa * p.m * (
-                            -p.L * (s[cartpole_state_varname_to_index('angleD')]**2) * ca * sa * p.m
+                            -p.L * (angleD**2) * ca * sa * p.m
                             + p.g * sa * (p.M + p.m)
-                            - s[cartpole_state_varname_to_index('positionD')] * ca * p.M_fric
-                            - (s[cartpole_state_varname_to_index('angleD')] * (p.M+p.m) * p.J_fric)/(p.L*p.m))
+                            - positionD * ca * p.M_fric
+                            - (angleD * (p.M+p.m) * p.J_fric)/(p.L*p.m))
                                     )/(p.L*(A**2)) \
              + (
                      -u * sa
-                     + p.L * (s[cartpole_state_varname_to_index('angleD')]**2) * ((sa**2)-(ca**2)) * p.m
+                     + p.L * (angleD**2) * ((sa**2)-(ca**2)) * p.m
                      + p.g*ca*(p.M+p.m)
-                     + s[cartpole_state_varname_to_index('positionD')] * sa * p.M_fric
+                     + positionD * sa * p.M_fric
                                     )/(p.L*A)
 
         J[3, 3] = (  # oo
-                     -2.0*p.L*s[cartpole_state_varname_to_index('angleD')]*ca * sa * p.m
+                     -2.0*p.L*angleD*ca * sa * p.m
                      - ((p.M+p.m) * p.J_fric)/(p.L*p.m)
                                     ) / (p.L * A)
 
