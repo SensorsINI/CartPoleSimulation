@@ -17,7 +17,7 @@ import numpy as np
 CARTPOLE_EQUATIONS = 'Marcin-Sharpneat'
 """ 
 Possible choices: 'Marcin-Sharpneat', (currently no more choices available)
-'Marcin-Sharpneat' is derived by Marcin, checked by Krishna, coinside with:
+'Marcin-Sharpneat' is derived by Marcin, checked by Krishna, coincide with:
 https://sharpneat.sourceforge.io/research/cart-pole/cart-pole-equations.html
 (The friction terms not compared attentively but calculated and checked carefully,
 the rest should be the same up to the angle-direction-convention and notation changes.)
@@ -28,7 +28,6 @@ Cart movement to the right is positive
 Clockwise angle rotation is defined as negative
 
 Required angle convention for CartPole GUI: CLOCK-NEG
-
 """
 
 ANGLE_CONVENTION = 'CLOCK-NEG'
@@ -60,28 +59,17 @@ p_globals.k = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
 s0 = create_cartpole_state()
 
 
-def cartpole_ode(p: SimpleNamespace, s: Union[np.ndarray, SimpleNamespace], u: float):
+def _cartpole_ode(angle, angleD, position, positionD, u, k, M, m, g, J_fric, M_fric, L):
     """
     Calculates current values of second derivative of angle and position
     from current value of angle and position, and their first derivatives
 
-    :param p: Namespace containing environment variables such track length, cart mass and pole mass
-    :param s: State vector or namespace
+    :param angle, angleD, position, positionD: Essential state information of cart
     :param u: Force applied on cart in unnormalized range
+    :param k, M, m, g, J_fric, M_fric, L: Environment variables such as inertial moment, cart mass and pole mass
 
     :returns: angular acceleration, horizontal acceleration
     """
-    if isinstance(s, np.ndarray):
-        angle = s[cartpole_state_varname_to_index('angle')]
-        angleD = s[cartpole_state_varname_to_index('angleD')]
-        position = s[cartpole_state_varname_to_index('position')]
-        positionD = s[cartpole_state_varname_to_index('positionD')]
-    elif isinstance(s, SimpleNamespace):
-        angle = s.angle
-        angleD = s.angleD
-        position = s.position
-        positionD = s.positionD
-
     ca = np.cos(angle)
     sa = np.sin(angle)
 
@@ -91,28 +79,48 @@ def cartpole_ode(p: SimpleNamespace, s: Union[np.ndarray, SimpleNamespace], u: f
         # g (gravitational acceleration) is positive (absolute value)
         # Checked independently by Marcin and Krishna
 
-        A = (p.k + 1) * (p.M + p.m) - p.m * (ca ** 2)
+        A = (k + 1) * (M + m) - m * (ca ** 2)
 
         positionDD = (
-                             + p.m * p.g * sa * ca  # Movement of the cart due to gravity
-                             + ((p.J_fric * angleD * ca) / (p.L))  # Movement of the cart due to pend' s friction in the joint
-                             - (p.k + 1) * (p.m * p.L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                             - (p.k + 1) * p.M_fric * positionD  # Braking of the cart due its friction
+                             + m * g * sa * ca  # Movement of the cart due to gravity
+                             + ((J_fric * angleD * ca) / (L))  # Movement of the cart due to pend' s friction in the joint
+                             - (k + 1) * (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                             - (k + 1) * M_fric * positionD  # Braking of the cart due its friction
                      ) / A \
-                                + ((p.k + 1) / A) * u  # Effect of force applied to cart
+                                + ((k + 1) / A) * u  # Effect of force applied to cart
 
         angleDD = (
-                          + p.g * (p.m + p.M) * sa  # Movement of the pole due to gravity
-                          - ((p.J_fric * (p.m + p.M) * angleD) / (p.L * p.m))  # Braking of the pole due friction in its joint
-                          - p.m * p.L * (angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                          - ca * p.M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
-                          ) / (A * p.L) \
-                                + (ca / (A * p.L)) * u  # Effect of force applied to cart
+                          + g * (m + M) * sa  # Movement of the pole due to gravity
+                          - ((J_fric * (m + M) * angleD) / (L * m))  # Braking of the pole due friction in its joint
+                          - m * L * (angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                          - ca * M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
+                          ) / (A * L) \
+                                + (ca / (A * L)) * u  # Effect of force applied to cart
 
     else:
         raise ValueError('An undefined name for Cartpole equations')
 
     return angleDD, positionDD
+
+
+def cartpole_ode_namespace(p: SimpleNamespace, s: SimpleNamespace, u: float):
+    return _cartpole_ode(
+        s.angle, s.angleD, s.position, s.positionD, u, p.k, p.M, p.m, p.g, p.J_fric, p.M_fric, p.L
+    )
+
+def cartpole_ode(p: SimpleNamespace, s: np.ndarray, u: float):
+    return _cartpole_ode(
+        s[cartpole_state_varname_to_index('angle')], s[cartpole_state_varname_to_index('angleD')],
+        s[cartpole_state_varname_to_index('position')], s[cartpole_state_varname_to_index('positionD')],
+        u, p.k, p.M, p.m, p.g, p.J_fric, p.M_fric, p.L
+    )
+
+def cartpole_ode_array(k, M, m, g, J_fric, M_fric, L, s: np.ndarray, u: float):
+    return _cartpole_ode(
+        s[cartpole_state_varname_to_index('angle')], s[cartpole_state_varname_to_index('angleD')],
+        s[cartpole_state_varname_to_index('position')], s[cartpole_state_varname_to_index('positionD')],
+        u, k, M, m, g, J_fric, M_fric, L
+    )
 
 
 def cartpole_jacobian(p: SimpleNamespace, s: Union[np.ndarray, SimpleNamespace], u: float):
