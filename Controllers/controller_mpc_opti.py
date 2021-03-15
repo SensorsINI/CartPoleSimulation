@@ -2,7 +2,7 @@
 
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import p_globals, s0, Q2u, cartpole_ode
-from types import SimpleNamespace
+from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -24,7 +24,7 @@ def mpc_next_state(s, p, u, dt):
 
     s_next = s
 
-    s_next.angleDD, s_next.positionDD = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
+    s_next[cartpole_state_varname_to_index('angleDD')], s_next[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
 
     # Calculate NEXT state:
     s_next = cartpole_integration(s_next, dt)
@@ -34,21 +34,21 @@ def mpc_next_state(s, p, u, dt):
 
 
 def cartpole_integration(s, dt):
-    """Simple single step integration of CartPole state by dt
+    """
+    Simple single step integration of CartPole state by dt
 
-    Takes state as SimpleNamespace, but returns as separate variables
-    # TODO: Consider changing it to return a SimpleNamepece for consistency
+    Takes state as numpy array.
 
-    :param s: state of the CartPole (contains: s.position, s.positionD, s.angle and s.angleD)
+    :param s: state of the CartPole (position, positionD, angle, angleD must be set). Array order follows global definition.
     :param dt: time step by which the CartPole state should be integrated
     """
-    s_next = SimpleNamespace()
+    s_next = create_cartpole_state()
 
-    s_next.position = s.position + s.positionD * dt
-    s_next.positionD = s.positionD + s.positionDD * dt
+    s_next[cartpole_state_varname_to_index('position')] = s[cartpole_state_varname_to_index('position')] + s[cartpole_state_varname_to_index('positionD')] * dt
+    s_next[cartpole_state_varname_to_index('positionD')] = s[cartpole_state_varname_to_index('positionD')] + s[cartpole_state_varname_to_index('positionDD')] * dt
 
-    s_next.angle = s.angle + s.angleD * dt
-    s_next.angleD = s.angleD + s.angleDD * dt
+    s_next[cartpole_state_varname_to_index('angle')] = s[cartpole_state_varname_to_index('angle')] + s[cartpole_state_varname_to_index('angleD')] * dt
+    s_next[cartpole_state_varname_to_index('angleD')] = s[cartpole_state_varname_to_index('angleD')] + s[cartpole_state_varname_to_index('angleDD')] * dt
 
     return s_next
 
@@ -64,7 +64,7 @@ class controller_mpc_opti(template_controller):
         self.p = p_globals
 
         # State of the cart
-        self.s = SimpleNamespace()  # s like state
+        self.s = create_cartpole_state()  # s like state
 
         self.target_position = 0.0
 
@@ -76,10 +76,10 @@ class controller_mpc_opti(template_controller):
         self.Q_hat0 = np.zeros(self.mpc_horizon)  # initial guess for future control inputs to be predicted
         self.Q_previous = 0.0
 
-        self.E_kin_cart = lambda s: (s.positionD / self.p.v_max) ** 2
-        self.E_kin_pol = lambda s: (s.angleD / (2 * np.pi)) ** 2
-        self.E_pot_cost = lambda s: 1-np.cos(s.angle)
-        self.distance_difference = lambda s: (((s.position - self.target_position) / 50.0)) ** 2
+        self.E_kin_cart = lambda s: (s[cartpole_state_varname_to_index('positionD')] / self.p.v_max) ** 2
+        self.E_kin_pol = lambda s: (s[cartpole_state_varname_to_index('angleD')] / (2 * np.pi)) ** 2
+        self.E_pot_cost = lambda s: 1-np.cos(s[cartpole_state_varname_to_index('angle')])
+        self.distance_difference = lambda s: (((s[cartpole_state_varname_to_index('position')] - self.target_position) / 50.0)) ** 2
 
         self.Q_bounds = [(-1, 1)] * self.mpc_horizon
 
@@ -162,10 +162,10 @@ class controller_mpc_opti(template_controller):
         position = []
         positionD = []
         for s in self.yp_hat:
-            angle.append(s.angle)
-            angleD.append(s.angleD)
-            position.append(s.position)
-            positionD.append(s.positionD)
+            angle.append(s[cartpole_state_varname_to_index('angle')])
+            angleD.append(s[cartpole_state_varname_to_index('angleD')])
+            position.append(s[cartpole_state_varname_to_index('position')])
+            positionD.append(s[cartpole_state_varname_to_index('positionD')])
 
         # Plot angle
         self.axs[0].set_ylabel("Angle (deg)", fontsize=18)

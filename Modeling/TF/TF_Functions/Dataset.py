@@ -160,7 +160,7 @@ class Dataset(keras.utils.Sequence):
 
 
 
-from types import SimpleNamespace
+from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 from Predictores.predictor_ideal import predictor_ideal
 class DatasetRandom(keras.utils.Sequence):
     def __init__(self,
@@ -198,29 +198,29 @@ class DatasetRandom(keras.utils.Sequence):
         """
         Requires the self.data to be a list of pandas dataframes
         """
-        s = SimpleNamespace()
+        s = create_cartpole_state()
 
-        s.position = np.random.uniform(low=-50.0,
+        s[cartpole_state_varname_to_index('position')] = np.random.uniform(low=-50.0,
                                               high=50.0)
 
-        s.positionD = np.random.uniform(low=-12.0,
+        s[cartpole_state_varname_to_index('positionD')] = np.random.uniform(low=-12.0,
                                                high=12.0)
 
-        s.angle = np.random.uniform(low=-np.pi,
+        s[cartpole_state_varname_to_index('angle')] = np.random.uniform(low=-np.pi,
                                            high= np.pi)
 
-        s.angleD = np.random.uniform(low=-3.0 * np.pi,
+        s[cartpole_state_varname_to_index('angleD')] = np.random.uniform(low=-3.0 * np.pi,
                                             high=3.0 * np.pi)
 
         initial_state = pd.DataFrame(0, index=np.arange(1),
                                           columns=['s.angle.cos', 's.angle.sin', 's.angleD', 's.position',
                                                    's.positionD'])
 
-        initial_state['s.angle.cos'] = [np.cos(s.angle)]
-        initial_state['s.angle.sin'] = [np.sin(s.angle)]
-        initial_state['s.angleD'] = [s.angleD]
-        initial_state['s.position'] = [s.position]
-        initial_state['s.positionD'] = [s.positionD]
+        initial_state['s.angle.cos'] = [np.cos(s[cartpole_state_varname_to_index('angle')])]
+        initial_state['s.angle.sin'] = [np.sin(s[cartpole_state_varname_to_index('angle')])]
+        initial_state['s.angleD'] = [s[cartpole_state_varname_to_index('angleD')]]
+        initial_state['s.position'] = [s[cartpole_state_varname_to_index('position')]]
+        initial_state['s.positionD'] = [s[cartpole_state_varname_to_index('positionD')]]
 
         Predictor = predictor_ideal((self.exp_len+1) * 5, 0.02) # This results in exp_len+2 timesteps
         Predictor.setup(initial_state=initial_state, prediction_denorm=False)

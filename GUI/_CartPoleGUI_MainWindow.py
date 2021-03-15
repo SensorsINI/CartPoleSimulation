@@ -35,6 +35,7 @@ from time import sleep
 # Import Cart class - the class keeping all the parameters and methods
 # related to CartPole which are not related to PyQt5 GUI
 from CartPole import CartPole
+from CartPole._CartPole_mathematical_helpers import cartpole_state_varname_to_index
 
 from GUI.gui_default_params import *
 from GUI.loop_timer import loop_timer
@@ -445,9 +446,9 @@ class MainWindow(QMainWindow):
         # Start looping over history
         replay_looper.start_loop()
         for index, row in history_pd.iterrows():
-            self.CartPoleInstance.s.position = row['s.position']
-            self.CartPoleInstance.s.positionD = row['s.positionD']
-            self.CartPoleInstance.s.angle = row['s.angle']
+            self.CartPoleInstance.s[cartpole_state_varname_to_index('position')] = row['s.position']
+            self.CartPoleInstance.s[cartpole_state_varname_to_index('positionD')] = row['s.positionD']
+            self.CartPoleInstance.s[cartpole_state_varname_to_index('angle')] = row['s.angle']
             self.CartPoleInstance.time = row['time']
             self.CartPoleInstance.dt = row['dt']
             self.CartPoleInstance.u = row['u']
@@ -620,9 +621,9 @@ class MainWindow(QMainWindow):
     # A thread redrawing labels (except for timer, which has its own function) of GUI every 0.1 s
     def set_labels_thread(self):
         while (self.run_set_labels_thread):
-            self.labSpeed.setText("Speed (m/s): " + str(np.around(self.CartPoleInstance.s.positionD, 2)))
+            self.labSpeed.setText("Speed (m/s): " + str(np.around(self.CartPoleInstance.s[cartpole_state_varname_to_index('positionD')], 2)))
             self.labAngle.setText(
-                "Angle (deg): " + str(np.around(self.CartPoleInstance.s.angle * 360 / (2 * np.pi), 2)))
+                "Angle (deg): " + str(np.around(self.CartPoleInstance.s[cartpole_state_varname_to_index('angle')] * 360 / (2 * np.pi), 2)))
             self.labMotor.setText("Motor power (Q): {:.3f}".format(np.around(self.CartPoleInstance.Q, 2)))
             if self.CartPoleInstance.controller_name == 'manual-stabilization':
                 self.labTargetPosition.setText("")

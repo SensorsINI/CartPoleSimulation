@@ -9,6 +9,7 @@ import numpy as np
 from copy import deepcopy
 
 from Controllers.template_controller import template_controller
+from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 from CartPole.cartpole_model import cartpole_jacobian, p_globals, s0
 
 class controller_lqr(template_controller):
@@ -35,10 +36,10 @@ class controller_lqr(template_controller):
         # Set point around which the Jacobian should be linearized
         # It can be here either pole up (all zeros) or pole down
         s = s0
-        s.position = 0.0
-        s.positionD = 0.0
-        s.angle = 0.0
-        s.angleD = 0.0
+        s[cartpole_state_varname_to_index('position')] = 0.0
+        s[cartpole_state_varname_to_index('positionD')] = 0.0
+        s[cartpole_state_varname_to_index('angle')] = 0.0
+        s[cartpole_state_varname_to_index('angleD')] = 0.0
         u = 0.0
 
         jacobian = cartpole_jacobian(p_globals, s, u)
@@ -72,7 +73,7 @@ class controller_lqr(template_controller):
         s = deepcopy(state)
 
         state = np.array(
-            [[s.position - PositionTarget], [s.positionD], [s.angle], [s.angleD]])
+            [[s[cartpole_state_varname_to_index('position')] - PositionTarget], [s[cartpole_state_varname_to_index('positionD')]], [s[cartpole_state_varname_to_index('angle')]], [s[cartpole_state_varname_to_index('angleD')]]])
 
         Q = np.asscalar(np.dot(-self.K, state))
         return Q

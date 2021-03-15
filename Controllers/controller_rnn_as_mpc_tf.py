@@ -1,5 +1,7 @@
 from Modeling.TF.TF_Functions.Network import *
 
+from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
+
 
 RNN_FULL_NAME = 'GRU-5IN-64H1-64H2-1OUT-0'
 INPUTS_LIST = ['s.position', 's.angle', 's.positionD', 's.angleD', 'target_position']
@@ -27,13 +29,13 @@ class controller_rnn_as_mpc_tf:
         # Copy state and target_position into rnn_input
 
         if 's.position' in self.rnn_input:
-            self.rnn_input['s.position'] = [s.position]
+            self.rnn_input['s.position'] = [s[cartpole_state_varname_to_index('position')]]
         if 's.angle' in self.rnn_input:
-            self.rnn_input['s.angle'] = [s.angle]
+            self.rnn_input['s.angle'] = [s[cartpole_state_varname_to_index('angle')]]
         if 's.positionD' in self.rnn_input:
-            self.rnn_input['s.positionD'] = [s.positionD]
+            self.rnn_input['s.positionD'] = [s[cartpole_state_varname_to_index('positionD')]]
         if 's.angleD' in self.rnn_input:
-            self.rnn_input['s.angleD'] = [s.angleD]
+            self.rnn_input['s.angleD'] = [s[cartpole_state_varname_to_index('angleD')]]
         if 'target_position' in self.rnn_input:
             self.rnn_input['target_position'] = [target_position]
 
