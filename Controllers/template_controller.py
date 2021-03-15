@@ -1,3 +1,5 @@
+import numpy as np
+
 from abc import ABC, abstractmethod
 from CartPole.cartpole_model import cartpole_jacobian, cartpole_ode, p_globals, s0
 
