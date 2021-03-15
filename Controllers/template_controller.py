@@ -9,7 +9,7 @@ class template_controller(ABC):
         pass
     
     @abstractmethod
-    def step(self, s: np.ndarray, target_position: float, time=None):
+    def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
         Q = None  # This line is not obligatory. ;-) Just to indicate that Q must me defined and returned
         pass
         return Q  # normed control input in the range [-1,1]
