@@ -5,7 +5,9 @@ import numpy as np
 
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import p_globals, s0, Q2u, cartpole_ode
-from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
+from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index, cartpole_state_vector_to_namespace
+
+from types import SimpleNamespace
 
 dt_mpc_simulation = 0.2  # s
 mpc_horizon = 10
@@ -21,7 +23,7 @@ def mpc_next_state(s, p, u, dt):
 
     s_next = s
 
-    s_next[cartpole_state_varname_to_index('angleDD')], s_next[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
+    s_next.angleDD, s_next.positionDD = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
 
     # Calculate NEXT state:
     s_next = cartpole_integration(s_next, dt)
@@ -39,13 +41,13 @@ def cartpole_integration(s, dt):
     :param s: state of the CartPole (position, positionD, angle, angleD must be set). Array order follows global definition.
     :param dt: time step by which the CartPole state should be integrated
     """
-    s_next = create_cartpole_state()
+    s_next = SimpleNamespace()
 
-    s_next[cartpole_state_varname_to_index('position')] = s[cartpole_state_varname_to_index('position')] + s[cartpole_state_varname_to_index('positionD')] * dt
-    s_next[cartpole_state_varname_to_index('positionD')] = s[cartpole_state_varname_to_index('positionD')] + s[cartpole_state_varname_to_index('positionDD')] * dt
+    s_next.position = s.position + s.positionD * dt
+    s_next.positionD = s.positionD + s.positionDD * dt
 
-    s_next[cartpole_state_varname_to_index('angle')] = s[cartpole_state_varname_to_index('angle')] + s[cartpole_state_varname_to_index('angleD')] * dt
-    s_next[cartpole_state_varname_to_index('angleD')] = s[cartpole_state_varname_to_index('angleD')] + s[cartpole_state_varname_to_index('angleDD')] * dt
+    s_next.angle = s.angle + s.angleD * dt
+    s_next.angleD = s.angleD + s.angleDD * dt
 
     return s_next
 
@@ -66,17 +68,16 @@ class controller_do_mpc_discrete(template_controller):
         p = p_globals
 
         # Container for the state of the cart
-        s = s0
-
+        s = SimpleNamespace()
 
         model_type = 'discrete'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
 
-        s[cartpole_state_varname_to_index('position')] = self.model.set_variable(var_type='_x', var_name='s.position', shape=(1, 1))
-        s[cartpole_state_varname_to_index('positionD')] = self.model.set_variable(var_type='_x', var_name='s.positionD', shape=(1, 1))
+        s.position = self.model.set_variable(var_type='_x', var_name='s.position', shape=(1, 1))
+        s.positionD = self.model.set_variable(var_type='_x', var_name='s.positionD', shape=(1, 1))
 
-        s[cartpole_state_varname_to_index('angle')] = self.model.set_variable(var_type='_x', var_name='s.angle', shape=(1, 1))
-        s[cartpole_state_varname_to_index('angleD')] = self.model.set_variable(var_type='_x', var_name='s.angleD', shape=(1, 1))
+        s.angle = self.model.set_variable(var_type='_x', var_name='s.angle', shape=(1, 1))
+        s.angleD = self.model.set_variable(var_type='_x', var_name='s.angleD', shape=(1, 1))
 
         Q = self.model.set_variable(var_type='_u', var_name='Q')
 
@@ -84,18 +85,18 @@ class controller_do_mpc_discrete(template_controller):
 
         s_next = mpc_next_state(s, p, Q2u(Q,p), dt=dt_mpc_simulation)
 
-        self.model.set_rhs('s.position', s_next[cartpole_state_varname_to_index('position')])
-        self.model.set_rhs('s.angle', s_next[cartpole_state_varname_to_index('angle')])
+        self.model.set_rhs('s.position', s_next.position)
+        self.model.set_rhs('s.angle', s_next.angle)
 
-        self.model.set_rhs('s.positionD',s_next[cartpole_state_varname_to_index('positionD')])
-        self.model.set_rhs('s.angleD', s_next[cartpole_state_varname_to_index('angleD')])
+        self.model.set_rhs('s.positionD',s_next.positionD)
+        self.model.set_rhs('s.angleD', s_next.angleD)
 
         # Simplified, normalized expressions for E_kin and E_pot as a port of cost function
-        E_kin_cart = (s[cartpole_state_varname_to_index('positionD')] / p.v_max) ** 2
-        E_kin_pol = (s[cartpole_state_varname_to_index('angleD')]/(2*np.pi))**2
-        E_pot = np.cos(s[cartpole_state_varname_to_index('angle')])
+        E_kin_cart = (s.positionD / p.v_max) ** 2
+        E_kin_pol = (s.angleD/(2*np.pi))**2
+        E_pot = np.cos(s.angle)
 
-        distance_difference = (((s[cartpole_state_varname_to_index('position')] - target_position)/50.0) ** 2)
+        distance_difference = (((s.position - target_position)/50.0) ** 2)
 
         self.model.set_expression('E_kin_cart', E_kin_cart)
         self.model.set_expression('E_kin_pol', E_kin_pol)
@@ -158,11 +159,13 @@ class controller_do_mpc_discrete(template_controller):
 
     def step(self, s, target_position, time=None):
 
-        self.x0['s.position'] = s[cartpole_state_varname_to_index('position')]
-        self.x0['s.positionD'] = s[cartpole_state_varname_to_index('positionD')]
+        s = cartpole_state_vector_to_namespace(s)
 
-        self.x0['s[cartpole_state_varname_to_index('angle')]'] = s[cartpole_state_varname_to_index('angle')]
-        self.x0['s.angleD'] = s[cartpole_state_varname_to_index('angleD')]
+        self.x0['s.position'] = s.position
+        self.x0['s.positionD'] = s.positionD
+
+        self.x0['s.angle'] = s.angle
+        self.x0['s.angleD'] = s.angleD
 
         self.tvp_template['_tvp', :, 'target_position'] = target_position
 
