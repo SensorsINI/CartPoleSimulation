@@ -54,7 +54,7 @@ class controller_do_mpc(template_controller):
         # Simplified, normalized expressions for E_kin and E_pot as a port of cost function
         E_kin_cart = (s.positionD / p.v_max) ** 2
         E_kin_pol = (s.angleD/(2*np.pi))**2
-        E_pot = np.cos(s.angle)
+        E_pot = np.sin(s.angle)**2
 
         distance_difference = (((s.position - target_position)/50.0) ** 2)
 
@@ -85,8 +85,10 @@ class controller_do_mpc(template_controller):
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'MA57'})
 
         # # Standard version
-        lterm = - self.model.aux['E_pot'] + 20.0 * distance_difference
-        mterm = 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
+        lterm = 1.0 * self.model.aux['E_pot'] + 5.0 * distance_difference + 0.5 * self.model.aux['E_kin_cart']
+        # mterm = 400.0 * self.model.aux['E_kin_cart']
+        mterm = 0.0 * self.model.aux['E_kin_cart']
+        # mterm = 0.0 * distance_difference # 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
         self.mpc.set_rterm(Q=0.1)
 
         # # Alternative versions of cost function to get more diverse data for learning cartpole model
