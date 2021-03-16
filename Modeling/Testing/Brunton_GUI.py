@@ -19,6 +19,7 @@ if get_backend() != 'module://backend_interagg':
 
 # Some more functions needed for interaction of matplotlib with PyQt5
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from matplotlib import pyplot as plt
 from matplotlib import colors
@@ -103,8 +104,11 @@ class MainWindow(QMainWindow):
         self.fig.Ax = self.canvas.figure.add_subplot(111)
         self.redraw_canvas()
 
+        self.toolbar = NavigationToolbar(self.canvas, self)
+
         # Attach figure to the layout
         lf = QVBoxLayout()
+        lf.addWidget(self.toolbar)
         lf.addWidget(self.canvas)
         layout.addLayout(lf)
 
@@ -175,11 +179,11 @@ class MainWindow(QMainWindow):
 
         if not ((type(datasets_titles) is list) and (len(datasets_titles)==2)):
             datasets_titles = ['Dataset 1', 'Dataset 2']
-        datasets_titles.append('Both')
+        # datasets_titles.append('Both')
 
         self.rbs_datasets.append(QRadioButton(datasets_titles[0]))
         self.rbs_datasets.append(QRadioButton(datasets_titles[1]))
-        self.rbs_datasets.append(QRadioButton(datasets_titles[2]))
+        # self.rbs_datasets.append(QRadioButton(datasets_titles[2]))
 
         # Ensures that radio buttons are exclusive
         self.datasets_buttons_group = QButtonGroup()
@@ -197,7 +201,7 @@ class MainWindow(QMainWindow):
         self.rbs_datasets[0].setChecked(True)
         if net_outputs_2 is None:
             self.rbs_datasets[1].setEnabled(False)
-            self.rbs_datasets[2].setEnabled(False)
+            # self.rbs_datasets[2].setEnabled(False)
 
         l_cb.addLayout(lr_d)
 
@@ -261,7 +265,6 @@ class MainWindow(QMainWindow):
 
         self.redraw_canvas()
 
-
     def RadioButtons_detaset_selection(self):
 
         for i in range(len(self.rbs_datasets)):
@@ -272,7 +275,6 @@ class MainWindow(QMainWindow):
                     self.dataset = self.net_outputs_2
 
         self.redraw_canvas()
-
 
     def cb_select_feature_f(self):
         self.feature_to_display = self.cb_select_feature.currentText()
