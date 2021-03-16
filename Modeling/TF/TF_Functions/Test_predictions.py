@@ -63,26 +63,22 @@ def get_predictions_TF(net_for_inference,
                        net_for_inference_info,
                        dataset=None,
                        normalization_info=None,
-                       experiment_length=None
+                       experiment_length=None,
+                       max_horizon=None
                        ):
-
-    # How far NN should predict
-    max_horizon = 10
-
-    # Reset dataset to change experiment length
-    dataset.reset_exp_len(experiment_length+max_horizon)
 
     # Get features, target, and time axis
     # Format the experiment data
-    features, targets, time_axis = dataset.get_experiment(1)  # Put number in brackets to get the same idx at every run
-    time_axis = time_axis[:-1]
+    features = dataset[net_for_inference_info.inputs]
+    time_axis = dataset['time'].to_numpy()[:experiment_length]
+
+    features = normalize_df(features, normalization_info).to_numpy()
 
     # Make a prediction
-    net_outputs = np.zeros(shape=(max_horizon, targets.shape[0], targets.shape[1]))
-    normalized_net_output = np.zeros(shape=(max_horizon, targets.shape[0], targets.shape[1]))
+    normalized_net_output = np.zeros(shape=(max_horizon, experiment_length, len(net_for_inference_info.outputs)))
 
     print('Calculating predictions...')
-    for timestep in trange(features.shape[0]-max_horizon):
+    for timestep in trange(experiment_length):
 
         # Make prediction based on true data
         net_input = copy.deepcopy(features[np.newaxis, np.newaxis, timestep, :])
@@ -99,8 +95,8 @@ def get_predictions_TF(net_for_inference,
         for i in range(1, max_horizon):
             # We assume control input is the first variable
             # All other variables are in closed loop
-            net_input = copy.deepcopy(features[np.newaxis, np.newaxis, timestep + i, :])
-            net_input[..., 1:] = copy.deepcopy(normalized_net_output[i-1, timestep, :])
+            net_input[..., 1:] = copy.deepcopy(normalized_net_output[i - 1, timestep, :])
+            net_input[..., 0] = copy.deepcopy(features[np.newaxis, np.newaxis, timestep + i, 0])
             normalized_net_output[i, timestep, :] = \
                 np.squeeze(net_for_inference.predict_on_batch(net_input))
 
@@ -109,17 +105,14 @@ def get_predictions_TF(net_for_inference,
         net_for_inference.reset_states()
         load_internal_states(net_for_inference, states)
 
-
-    features_denormalized = denormalize_numpy_array(features, net_for_inference_info.inputs, normalization_info)
-    targets_denormalized = denormalize_numpy_array(targets, net_for_inference_info.outputs, normalization_info)
     net_outputs_denormalized = denormalize_numpy_array(normalized_net_output, net_for_inference_info.outputs, normalization_info)
 
     # Data tailored for plotting
-    ground_truth = features_denormalized
+    ground_truth = features[:experiment_length]
     net_outputs = net_outputs_denormalized
 
     # time_axis is a time axis for ground truth
-    return ground_truth[:-max_horizon, :], net_outputs[:, :-max_horizon, :], time_axis[:-max_horizon]
+    return ground_truth, net_outputs, time_axis
 
 
 def get_data_for_gui_TF(a):
@@ -128,18 +121,16 @@ def get_data_for_gui_TF(a):
         get_net_and_norm_info(a, time_series_length=1,
                               batch_size=1, stateful=True)
 
-
     # region In either case testing is done on a data collected offline
     paths_to_datafiles_test = get_paths_to_datafiles(a.test_files)
     test_dfs = load_data(paths_to_datafiles_test)
-    test_dfs_norm = normalize_df(test_dfs, normalization_info)
-    test_set = Dataset(test_dfs_norm, a, shuffle=False,
-                       inputs=net_for_inference_info.inputs, outputs=net_for_inference_info.outputs)
+    dataset = test_dfs[0].iloc[a.test_start_idx:a.test_start_idx+a.test_len+a.test_max_horizon, :]
 
     ground_truth, net_outputs, time_axis = \
         get_predictions_TF(net_for_inference, net_for_inference_info,
-                           test_set, normalization_info,
-                           experiment_length=a.test_len)
+                           dataset, normalization_info,
+                           experiment_length=a.test_len,
+                           max_horizon=a.test_max_horizon)
 
     return net_for_inference_info.inputs, net_for_inference_info.outputs, net_for_inference_info.net_full_name,\
            ground_truth, net_outputs, time_axis

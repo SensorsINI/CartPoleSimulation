@@ -117,7 +117,7 @@ class MainWindow(QMainWindow):
         l_sl_p.addWidget(QLabel('"Current" point in time:'))
         self.sl_p = QSlider(Qt.Horizontal)
         self.sl_p.setMinimum(0)
-        self.sl_p.setMaximum(self.time_axis.shape[0]-self.max_horizon)
+        self.sl_p.setMaximum(self.time_axis.shape[0]-self.max_horizon-1)
         self.sl_p.setValue((self.time_axis.shape[0]-self.max_horizon)//2)
         self.sl_p.setTickPosition(QSlider.TicksBelow)
         # self.sl_p.setTickInterval(5)

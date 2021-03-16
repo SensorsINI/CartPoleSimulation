@@ -103,7 +103,7 @@ def train_network(nni_parameters=None):
         training_dfs_norm = normalize_df(training_dfs, normalization_info)
         training_dataset = Dataset(training_dfs_norm, a, shuffle=True, inputs=net_info.inputs, outputs=net_info.outputs)
 
-        validation_dfs_norm = normalize_df(training_dfs, normalization_info)
+        validation_dfs_norm = normalize_df(validation_dfs, normalization_info)
         validation_dataset = Dataset(validation_dfs_norm, a, shuffle=True, inputs=net_info.inputs,
                                      outputs=net_info.outputs)
 
