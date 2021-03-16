@@ -13,7 +13,7 @@ import casadi
 dt_mpc_simulation = 0.2  # s
 mpc_horizon = 10
 
-def mpc_next_state(s, p, u, dt):
+def mpc_next_state(s, u, dt):
     """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
 
     TODO: This might be combined with cartpole_integration,
@@ -23,7 +23,7 @@ def mpc_next_state(s, p, u, dt):
 
     s_next = s
 
-    s_next[cartpole_state_varname_to_index('angleDD')], s_next[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
+    s_next[cartpole_state_varname_to_index('angleDD')], s_next[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(s_next, u)  # Calculates CURRENT second derivatives
 
     # Calculate NEXT state:
     s_next = cartpole_integration(s_next, dt)
@@ -59,9 +59,6 @@ class controller_mpc_opti(template_controller):
         Get configured do-mpc modules:
         """
 
-        # Physical parameters of the cart
-        self.p = P_GLOBALS
-
         # State of the cart
         self.s = create_cartpole_state()  # s like state
 
@@ -75,7 +72,7 @@ class controller_mpc_opti(template_controller):
         self.Q_hat0 = np.zeros(self.mpc_horizon)  # initial guess for future control inputs to be predicted
         self.Q_previous = 0.0
 
-        self.E_kin_cart = lambda s: (s[cartpole_state_varname_to_index('positionD')] / self.p.v_max) ** 2
+        self.E_kin_cart = lambda s: (s[cartpole_state_varname_to_index('positionD')] / P_GLOBALS.v_max) ** 2
         self.E_kin_pol = lambda s: (s[cartpole_state_varname_to_index('angleD')] / (2 * np.pi)) ** 2
         self.E_pot_cost = lambda s: 1-np.cos(s[cartpole_state_varname_to_index('angle')])
         self.distance_difference = lambda s: (((s[cartpole_state_varname_to_index('position')] - self.target_position) / 50.0)) ** 2
@@ -95,7 +92,7 @@ class controller_mpc_opti(template_controller):
                 self.yp_hat[0] = self.s
 
             cost = 0.0
-            s_next = mpc_next_state(self.yp_hat[k], self.p, Q2u(Q_hat[k], self.p), dt=self.dt)
+            s_next = mpc_next_state(self.yp_hat[k], Q2u(Q_hat[k]), dt=self.dt)
 
             self.yp_hat[k + 1] = s_next
 

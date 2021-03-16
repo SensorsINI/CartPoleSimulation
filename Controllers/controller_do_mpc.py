@@ -24,9 +24,6 @@ class controller_do_mpc(template_controller):
         Get configured do-mpc modules:
         """
 
-        # Physical parameters of the cart
-        p = P_GLOBALS  # p like parameters
-
         # Container for the state of the cart
         s = SimpleNamespace()  # s like state
 
@@ -46,13 +43,13 @@ class controller_do_mpc(template_controller):
         self.model.set_rhs('s.position', s.positionD)
         self.model.set_rhs('s.angle', s.angleD)
 
-        angleD_next, positionD_next = cartpole_ode_namespace(p, s, Q2u(Q,p))
+        angleD_next, positionD_next = cartpole_ode_namespace(s, Q2u(Q))
 
         self.model.set_rhs('s.positionD', positionD_next)
         self.model.set_rhs('s.angleD', angleD_next)
 
         # Simplified, normalized expressions for E_kin and E_pot as a port of cost function
-        E_kin_cart = (s.positionD / p.v_max) ** 2
+        E_kin_cart = (s.positionD / P_GLOBALS.v_max) ** 2
         E_kin_pol = (s.angleD/(2*np.pi))**2
         E_pot = np.cos(s.angle)
 

@@ -4,7 +4,7 @@ import do_mpc
 import numpy as np
 
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import P_GLOBALS, s0, Q2u, cartpole_ode_namespace
+from CartPole.cartpole_model import v_max, s0, Q2u, cartpole_ode_namespace
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index, cartpole_state_vector_to_namespace
 
 from types import SimpleNamespace
@@ -13,7 +13,7 @@ dt_mpc_simulation = 0.2  # s
 mpc_horizon = 10
 
 
-def mpc_next_state(s, p, u, dt):
+def mpc_next_state(s, u, dt):
     """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
 
     TODO: This might be combined with cartpole_integration,
@@ -23,7 +23,7 @@ def mpc_next_state(s, p, u, dt):
 
     s_next = s
 
-    s_next.angleDD, s_next.positionDD = cartpole_ode_namespace(p, s_next, u)  # Calculates CURRENT second derivatives
+    s_next.angleDD, s_next.positionDD = cartpole_ode_namespace(s_next, u)  # Calculates CURRENT second derivatives
 
     # Calculate NEXT state:
     s_next = cartpole_integration(s_next, dt)
@@ -64,9 +64,6 @@ class controller_do_mpc_discrete(template_controller):
         Get configured do-mpc modules:
         """
 
-        # Physical parameters of the cart
-        p = P_GLOBALS
-
         # Container for the state of the cart
         s = SimpleNamespace()
 
@@ -83,7 +80,7 @@ class controller_do_mpc_discrete(template_controller):
 
         target_position = self.model.set_variable('_tvp', 'target_position')
 
-        s_next = mpc_next_state(s, p, Q2u(Q,p), dt=dt_mpc_simulation)
+        s_next = mpc_next_state(s, Q2u(Q), dt=dt_mpc_simulation)
 
         self.model.set_rhs('s.position', s_next.position)
         self.model.set_rhs('s.angle', s_next.angle)
@@ -92,7 +89,7 @@ class controller_do_mpc_discrete(template_controller):
         self.model.set_rhs('s.angleD', s_next.angleD)
 
         # Simplified, normalized expressions for E_kin and E_pot as a port of cost function
-        E_kin_cart = (s.positionD / p.v_max) ** 2
+        E_kin_cart = (s.positionD / v_max) ** 2
         E_kin_pol = (s.angleD/(2*np.pi))**2
         E_pot = np.cos(s.angle)
 

@@ -34,7 +34,7 @@ Using predictor:
 
 
 from Modeling.load_and_normalize import load_normalization_info, normalize_df
-from CartPole.cartpole_model import P_GLOBALS, Q2u
+from CartPole.cartpole_model import Q2u
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 
 import numpy as np
@@ -50,13 +50,13 @@ RNN_PATH = './save_tf/'
 PREDICTION_FEATURES_NAMES = ['s.angle.cos', 's.angle.sin', 's.angle', 's.angleD', 's.position', 's.positionD']
 PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'NI_2021-03-01_11-51-13.csv'
 
-def mpc_next_state(s, p, u, dt):
+def mpc_next_state(s, u, dt):
     """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
     """
 
     s_next = s
 
-    s_next[cartpole_state_varname_to_index('angleDD')], s_next[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(p, s_next, u)  # Calculates CURRENT second derivatives
+    s_next[cartpole_state_varname_to_index('angleDD')], s_next[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(s_next, u)  # Calculates CURRENT second derivatives
 
     # Calculate NEXT state:
     s_next[cartpole_state_varname_to_index('position')] = s[cartpole_state_varname_to_index('position')] + s[cartpole_state_varname_to_index('positionD')] * dt
@@ -72,9 +72,6 @@ class predictor_ideal:
     def __init__(self, horizon, dt):
 
         self.normalization_info = load_normalization_info(PATH_TO_NORMALIZATION_INFO)
-
-        # Physical parameters of the cart
-        self.p = P_GLOBALS
 
         # State of the cart
         self.s = create_cartpole_state()  # s like state
@@ -140,7 +137,7 @@ class predictor_ideal:
                 s_next = self.s
 
             t0 = timeit.default_timer()
-            s_next = mpc_next_state(s_next, self.p, Q2u(Q_hat[k], self.p), dt=self.dt)
+            s_next = mpc_next_state(s_next, Q2u(Q_hat[k]), dt=self.dt)
             s_next[cartpole_state_varname_to_index('angle_cos')] = np.cos(s_next[cartpole_state_varname_to_index('angle')])
             s_next[cartpole_state_varname_to_index('angle_sin')] = np.sin(s_next[cartpole_state_varname_to_index('angle')])
             t1 = timeit.default_timer()

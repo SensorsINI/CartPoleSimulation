@@ -1,12 +1,15 @@
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import (
-    cartpole_ode_array,
+    cartpole_ode_parallelize,
     P_GLOBALS,
     Q2u,
+    _cartpole_ode
 )
 from CartPole._CartPole_mathematical_helpers import (
     create_cartpole_state,
     cartpole_state_varname_to_index,
+    conditional_decorator,
+    parallelize
 )
 
 import matplotlib.pyplot as plt
@@ -19,19 +22,21 @@ dt_mpc_simulation = 0.02  # s
 mpc_horizon = 1.0
 mc_samples = 4000
 
-k = P_GLOBALS.k
-M = P_GLOBALS.M
-m = P_GLOBALS.m
-g = P_GLOBALS.g
-J_fric = P_GLOBALS.J_fric
-M_fric = P_GLOBALS.M_fric
-L = P_GLOBALS.L
-v_max = P_GLOBALS.v_max
-u_max = P_GLOBALS.u_max
+k, M, m, g, J_fric, M_fric, L, v_max, u_max = (
+    P_GLOBALS.k,
+    P_GLOBALS.M,
+    P_GLOBALS.m,
+    P_GLOBALS.g,
+    P_GLOBALS.J_fric,
+    P_GLOBALS.M_fric,
+    P_GLOBALS.L,
+    P_GLOBALS.v_max,
+    P_GLOBALS.u_max,
+)
 
 R = 1.0e0  # How much to punish Q
-lbd = 10  # cost parameter lambda
-nu = 1.0e1  # Exploration variance
+LBD = 10  # cost parameter lambda
+NU = 1.0e1  # Exploration variance
 
 E_kin_cart = lambda s: (s[cartpole_state_varname_to_index("positionD")] / v_max) ** 2
 E_kin_pol = lambda s: (s[cartpole_state_varname_to_index("angleD")] / (2 * np.pi)) ** 2
@@ -44,52 +49,7 @@ distance_difference = (
 )
 
 
-@jit(nopython=True)
-def _cartpole_ode(angle, angleD, position, positionD, u, k, M, m, g, J_fric, M_fric, L):
-    ca = np.cos(angle)
-    sa = np.sin(angle)
-
-    A = (k + 1) * (M + m) - m * (ca ** 2)
-
-    positionDD = (
-        (
-            +m * g * sa * ca  # Movement of the cart due to gravity
-            + (
-                (J_fric * angleD * ca) / (L)
-            )  # Movement of the cart due to pend' s friction in the joint
-            - (k + 1)
-            * (
-                m * L * (angleD ** 2) * sa
-            )  # Keeps the Cart-Pole center of mass fixed when pole rotates
-            - (k + 1) * M_fric * positionD  # Braking of the cart due its friction
-        )
-        / A
-        + ((k + 1) / A) * u  # Effect of force applied to cart
-    )
-
-    angleDD = (
-        (
-            +g * (m + M) * sa  # Movement of the pole due to gravity
-            - (
-                (J_fric * (m + M) * angleD) / (L * m)
-            )  # Braking of the pole due friction in its joint
-            - m
-            * L
-            * (angleD ** 2)
-            * sa
-            * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
-            - ca
-            * M_fric
-            * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
-        )
-        / (A * L)
-        + (ca / (A * L)) * u  # Effect of force applied to cart
-    )
-
-    return angleDD, positionDD
-
-
-@jit
+@conditional_decorator(jit(nopython=True), parallelize)
 def trajectory_rollouts(
     s, S_tilde_k, u, delta_u, mc_samples, mpc_samples, dt, target_position
 ):
@@ -107,7 +67,7 @@ def trajectory_rollouts(
     return S_tilde_k
 
 
-@jit(nopython=True)
+@conditional_decorator(jit(nopython=True), parallelize)
 def motion_derivatives(s: np.ndarray, u: float):
     """
     :return: The time derivative vector dstate/dt
@@ -115,19 +75,20 @@ def motion_derivatives(s: np.ndarray, u: float):
     s_dot = np.zeros_like(s)
     s_dot[5] = s[6]
     s_dot[0] = s[1]
-    (s_dot[1], s_dot[6]) = _cartpole_ode(
-        s[0], s[1], s[5], s[6], u_max * u, k, M, m, g, J_fric, M_fric, L
-    )
+    # (s_dot[1], s_dot[6]) = _cartpole_ode(
+    #     s[0], s[1], s[5], s[6], u_max * u, k, M, m, g, J_fric, M_fric, L
+    # )
+    (s_dot[1], s_dot[6]) = cartpole_ode_parallelize(s, u_max * u)
 
     return s_dot
 
 
-@jit(nopython=True)
+@conditional_decorator(jit(nopython=True), parallelize)
 def q(s, u, delta_u, target_position):
     if np.abs(u + delta_u) > 1.0:
         return 1.0e5
     dd = 10 * ((s[5] - target_position) / 50.0) ** 2
-    ep = 10 * (1 - np.cos(s[0])) ** 2
+    ep = (1 - np.cos(s[0])) ** 2
     ekp = (s[1] / (2 * np.pi)) ** 2
     ekc = (s[6] / v_max) ** 2
     q = dd + ep + ekp + ekc
@@ -137,7 +98,7 @@ def q(s, u, delta_u, target_position):
     # self.E_kins_cart.append(ekc)
 
     q += (
-        0.5 * (1 - 1.0 / nu) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
+        0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
     return q
 
@@ -164,7 +125,7 @@ class controller_mppi(template_controller):
         self.E_kins_cart = []
         self.num_timesteps = 0
 
-        self.s_horizon = np.zeros(())  # list of states s
+        self.s_horizon = np.zeros(())
         self.u = np.zeros((self.mpc_samples), dtype=float)
         self.delta_u = np.zeros((self.mc_samples, self.mpc_samples), dtype=float)
         self.S_tilde = np.zeros((self.mc_samples, self.mpc_samples), dtype=float)
@@ -172,10 +133,30 @@ class controller_mppi(template_controller):
 
     def reward_weighted_average(self, S_i, delta_u_i):
         rho = np.min(S_i)  # for numerical stability
-        exp_s = np.exp(-1.0 / lbd * (S_i - rho))
+        exp_s = np.exp(-1.0 / LBD * (S_i - rho))
         a = np.sum(exp_s)
         b = np.sum(np.multiply(exp_s, delta_u_i) / a)
         return b
+
+    def initialize_perturbations(
+        self, stdev: float = 1.0, random_walk: bool = False
+    ) -> np.ndarray:
+        """
+        Return a numpy array with the perturbations delta_u.
+        If random_walk is false, initialize with independent Gaussian samples
+        If random_walk is true, each row represents a 1D random walk with Gaussian steps.
+        """
+        if random_walk:
+            delta_u = np.zeros((self.mc_samples, self.mpc_samples), dtype=float)
+            delta_u[:, 0] = stdev * np.random.normal(size=(self.mc_samples,))
+            for i in range(1, self.mpc_samples):
+                delta_u[:, i] = delta_u[:, i - 1] + stdev * np.random.normal(
+                    size=(self.mc_samples,)
+                )
+        else:
+            delta_u = stdev * np.random.normal(size=np.shape(self.delta_u))
+
+        return delta_u
 
     def step(self, s, target_position, time=None):
         self.s = s
@@ -188,11 +169,10 @@ class controller_mppi(template_controller):
         #     * self.rho_sqrt_inv
         #     / (np.sqrt(self.dt))
         # )  # N(mean=0, var=1/(rho*dt))
-        self.delta_u = np.random.normal(size=np.shape(self.delta_u)) * 0.2
+        self.delta_u = self.initialize_perturbations(stdev=0.2, random_walk=False)
         self.S_tilde = np.zeros_like(self.S_tilde)
         self.S_tilde_k = np.zeros_like(self.S_tilde_k)
 
-        # TODO: Parallelize loop over k
         self.S_tilde_k = trajectory_rollouts(
             self.s,
             self.S_tilde_k,

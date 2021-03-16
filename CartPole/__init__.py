@@ -255,10 +255,10 @@ class CartPole:
         self.Update_Q()
 
         # Convert dimensionless motor power to a physical force acting on the Cart
-        self.u = Q2u(self.Q, self.p)
+        self.u = Q2u(self.Q)
 
         # Update second derivatives
-        self.s[cartpole_state_varname_to_index('angleDD')], self.s[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(self.p, self.s, self.u)
+        self.s[cartpole_state_varname_to_index('angleDD')], self.s[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(self.s, self.u)
 
         if zero_DD:
             self.s[cartpole_state_varname_to_index('angleDD')] = 0.0
@@ -800,8 +800,8 @@ class CartPole:
 
             self.Q = 0.0
 
-            self.u = Q2u(self.Q, self.p)
-            self.s[cartpole_state_varname_to_index('angleDD')], self.s[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(self.p, self.s, self.u)
+            self.u = Q2u(self.Q)
+            self.s[cartpole_state_varname_to_index('angleDD')], self.s[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(self.s, self.u)
 
         elif reset_mode == 2:  # Don't change it
             if (s is not None) and (Q is not None) and (target_position is not None):
@@ -809,8 +809,8 @@ class CartPole:
                 self.Q = Q
                 self.slider = self.target_position = target_position
 
-                self.u = Q2u(self.Q, self.p)  # Calculate CURRENT control input
-                self.s[cartpole_state_varname_to_index('angleDD')], self.s[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(self.p, self.s,
+                self.u = Q2u(self.Q)  # Calculate CURRENT control input
+                self.s[cartpole_state_varname_to_index('angleDD')], self.s[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(self.s,
                                                                  self.u)  # Calculate CURRENT second derivatives
             else:
                 raise ValueError('s, Q or target position not provided for initial state')

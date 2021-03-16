@@ -7,6 +7,7 @@ from math import fmod
 from types import SimpleNamespace
 
 import numpy as np
+from numba import jit
 
 
 # Wraps the angle into range [-π, π]
@@ -48,6 +49,15 @@ def create_cartpole_state(state: dict={}) -> np.ndarray:
     return s
 
 
+def conditional_decorator(dec, cond):
+    def decorator(func):
+        return dec(func) if cond else func
+    return decorator
+
+
+parallelize = True
+
+
 def cartpole_state_varname_to_index(variable_name: str) -> int:
     return np.where(STATE_VARIABLES == variable_name)[0][0]
 
@@ -68,12 +78,6 @@ def cartpole_state_vector_to_namespace(s_vector: np.ndarray) -> SimpleNamespace:
     for i, a in enumerate(STATE_VARIABLES):
         setattr(s_namespace, a, s_vector[i])
     return s_namespace
-
-
-def conditional_decorator(dec, cond):
-    def decorator(func):
-        return dec(func) if cond else func
-    return decorator
 
 
 # # Test functions

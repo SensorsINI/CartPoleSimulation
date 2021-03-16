@@ -1,7 +1,6 @@
 from CartPole import CartPole
-from CartPole.cartpole_model import s0, P_GLOBALS
+from CartPole.cartpole_model import s0, TrackHalfLength
 from CartPole._CartPole_mathematical_helpers import cartpole_state_varname_to_index
-TrackHalfLength = P_GLOBALS.TrackHalfLength
 
 from time import sleep
 import timeit
