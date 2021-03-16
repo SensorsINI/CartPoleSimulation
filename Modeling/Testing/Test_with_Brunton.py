@@ -36,23 +36,23 @@ def test_network():
     ground_truth, net_outputs, time_axis\
         = get_data_for_gui_TF(a)
 
-    # Get second dataset
-    a_new = deepcopy(a)
-    a_new.net_name = 'GRU-6IN-64H1-64H2-5OUT-0'
-    _, _, title_2,\
-    _, dataset_2, _\
-        = get_data_for_gui_TF(a_new)
+    # # Get second dataset
+    # a_new = deepcopy(a)
+    # a_new.net_name = 'GRU-6IN-64H1-64H2-5OUT-0'
+    # _, _, title_2,\
+    # _, dataset_2, _\
+    #     = get_data_for_gui_TF(a_new)
 
 
-    # inputs_euler, outputs_euler, title_2, \
-    # _, dataset_euler, _ \
-    #     = get_prediction_from_euler(a)
+    inputs_euler, outputs_euler, title_2, \
+    _, dataset_euler, _ \
+        = get_prediction_from_euler(a)
 
     # Get second dataset from Euler
-    # output_indexes = []
-    # for element in outputs:
-    #     output_indexes.append(outputs_euler.index(element))
-    # dataset_2 = dataset_euler[:, :, output_indexes]
+    output_indexes = []
+    for element in outputs:
+        output_indexes.append(outputs_euler.index(element))
+    dataset_2 = dataset_euler[:, :, output_indexes]
 
     run_test_gui(inputs, outputs,
                  ground_truth, net_outputs, time_axis,

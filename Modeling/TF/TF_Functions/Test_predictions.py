@@ -72,8 +72,7 @@ def get_predictions_TF(net_for_inference,
     features = dataset[net_for_inference_info.inputs]
     time_axis = dataset['time'].to_numpy()[:experiment_length]
 
-    features = normalize_df(features, normalization_info).to_numpy()
-
+    features_normalized = normalize_df(features, normalization_info).to_numpy()
     # Make a prediction
     normalized_net_output = np.zeros(shape=(max_horizon, experiment_length, len(net_for_inference_info.outputs)))
 
@@ -81,7 +80,7 @@ def get_predictions_TF(net_for_inference,
     for timestep in trange(experiment_length):
 
         # Make prediction based on true data
-        net_input = copy.deepcopy(features[np.newaxis, np.newaxis, timestep, :])
+        net_input = copy.deepcopy(features_normalized[np.newaxis, np.newaxis, timestep, :])
         # t2 = timeit.default_timer()
         normalized_net_output[0, timestep, :] = np.squeeze(net_for_inference.predict_on_batch(net_input))
         # t3 = timeit.default_timer()
@@ -96,7 +95,7 @@ def get_predictions_TF(net_for_inference,
             # We assume control input is the first variable
             # All other variables are in closed loop
             net_input[..., 1:] = copy.deepcopy(normalized_net_output[i - 1, timestep, :])
-            net_input[..., 0] = copy.deepcopy(features[np.newaxis, np.newaxis, timestep + i, 0])
+            net_input[..., 0] = copy.deepcopy(features_normalized[np.newaxis, np.newaxis, timestep + i, 0])
             normalized_net_output[i, timestep, :] = \
                 np.squeeze(net_for_inference.predict_on_batch(net_input))
 
@@ -108,7 +107,7 @@ def get_predictions_TF(net_for_inference,
     net_outputs_denormalized = denormalize_numpy_array(normalized_net_output, net_for_inference_info.outputs, normalization_info)
 
     # Data tailored for plotting
-    ground_truth = features[:experiment_length]
+    ground_truth = features.to_numpy()[:experiment_length, :]
     net_outputs = net_outputs_denormalized
 
     # time_axis is a time axis for ground truth
