@@ -70,6 +70,12 @@ def cartpole_state_vector_to_namespace(s_vector: np.ndarray) -> SimpleNamespace:
     return s_namespace
 
 
+def conditional_decorator(dec, cond):
+    def decorator(func):
+        return dec(func) if cond else func
+    return decorator
+
+
 # # Test functions
 # s = create_cartpole_state(dict(angleD=12.1, angleDD=-33.5, position=2.3, positionD=-19.77, positionDD=3.42))
 # s[cartpole_state_varname_to_index('positionD')] = -14.9
