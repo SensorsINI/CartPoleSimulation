@@ -37,22 +37,22 @@ The 0-angle state is always defined as pole in upright position. This currently 
 """
 
 # Parameters of the CartPole
-p_globals = SimpleNamespace()  # "p" like parameters
-p_globals.m = 0.087  # mass of pole, kg # Checked by Antonio
-p_globals.M = 0.230  # mass of cart, kg # Checked by Antonio
-p_globals.L = 0.39/2.0  # HALF (!!!) length of pend, m # Checked by Antonio
-p_globals.u_max = 2.0  # max force produced by the motor, N
-p_globals.M_fric = 1.0e-2  # cart friction on track, N/m/s
-p_globals.J_fric = 2.0e-2  # friction coefficient on angular velocity in pole joint, Nm/rad/s
-p_globals.v_max = 10.0  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented yet
+P_GLOBALS = SimpleNamespace()  # "p" like parameters
+P_GLOBALS.m = 0.087  # mass of pole, kg # Checked by Antonio
+P_GLOBALS.M = 0.230  # mass of cart, kg # Checked by Antonio
+P_GLOBALS.L = 0.39/2.0  # HALF (!!!) length of pend, m # Checked by Antonio
+P_GLOBALS.u_max = 2.0  # max force produced by the motor, N
+P_GLOBALS.M_fric = 1.0e-2  # cart friction on track, N/m/s
+P_GLOBALS.J_fric = 2.0e-2  # friction coefficient on angular velocity in pole joint, Nm/rad/s
+P_GLOBALS.v_max = 10.0  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented yet
 
-p_globals.TrackHalfLength = 50.0  # m, length of the track on which CartPole can move, from 0 to edge, track is symmetric
+P_GLOBALS.TrackHalfLength = 50.0  # m, length of the track on which CartPole can move, from 0 to edge, track is symmetric
 
-p_globals.controlDisturbance = 0.0  # disturbance, as factor of u_max
-p_globals.sensorNoise = 0.0  # sensor noise added to output of the system TODO: not implemented yet
+P_GLOBALS.controlDisturbance = 0.0  # disturbance, as factor of u_max
+P_GLOBALS.sensorNoise = 0.0  # sensor noise added to output of the system TODO: not implemented yet
 
-p_globals.g = 9.81  # absolute value of gravity acceleration, m/s^2
-p_globals.k = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
+P_GLOBALS.g = 9.81  # absolute value of gravity acceleration, m/s^2
+P_GLOBALS.k = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
 # (I = k*m*L^2) (with L being half if the length)
 
 # Create initial state vector
@@ -288,7 +288,7 @@ if __name__ == '__main__':
 
     # Calculate time necessary to evaluate cartpole ODE:
 
-    f_to_measure = 'angleDD, positionDD = cartpole_ode(p_globals, s, u)'
+    f_to_measure = 'angleDD, positionDD = cartpole_ode(P_GLOBALS, s, u)'
     number = 1  # Gives the number of times each timeit call executes the function which we want to measure
     repeat_timeit = 100000 # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)
@@ -305,7 +305,7 @@ if __name__ == '__main__':
     print()
     # Calculate time necessary for evaluation of a Jacobian:
 
-    f_to_measure = 'Jacobian = cartpole_jacobian(p_globals, s, u)'
+    f_to_measure = 'Jacobian = cartpole_jacobian(P_GLOBALS, s, u)'
     number = 1  # Gives the number of times each timeit call executes the function which we want to measure
     repeat_timeit = 100000 # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)
@@ -317,7 +317,7 @@ if __name__ == '__main__':
     print('Max time to calculate Jacobian is {} us'.format(max_time * 1.0e6))          # ca. 150 us
 
     # Calculate once more to prrint the resulting matrix
-    Jacobian = np.around(cartpole_jacobian(p_globals, s, u), decimals=6)
+    Jacobian = np.around(cartpole_jacobian(P_GLOBALS, s, u), decimals=6)
 
     print()
     print(Jacobian.dtype)

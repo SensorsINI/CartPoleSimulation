@@ -5,7 +5,7 @@ from time import sleep
 
 import glob
 import os
-from CartPole.cartpole_model import p_globals
+from CartPole.cartpole_model import P_GLOBALS
 
 import matplotlib.pyplot as plt
 
@@ -187,8 +187,8 @@ def calculate_normalization_info(paths_to_data_information=None, plot_histograms
     # User defined normalization values:
     df_norm_info.loc['mean', 's.position'] = 0.0
     df_norm_info.loc['std',  's.position'] = df_norm_info.loc['std', 's.position']  # no change
-    df_norm_info.loc['max',  's.position'] = p_globals.TrackHalfLength
-    df_norm_info.loc['min',  's.position'] = -p_globals.TrackHalfLength
+    df_norm_info.loc['max',  's.position'] = P_GLOBALS.TrackHalfLength
+    df_norm_info.loc['min',  's.position'] = -P_GLOBALS.TrackHalfLength
 
     df_norm_info.loc['mean', 's.positionD'] = 0.0
     df_norm_info.loc['std',  's.positionD'] = df_norm_info.loc['std', 's.positionD']
@@ -217,8 +217,8 @@ def calculate_normalization_info(paths_to_data_information=None, plot_histograms
 
     df_norm_info.loc['mean', 'u'] = 0.0
     df_norm_info.loc['std', 'u'] = df_norm_info.loc['std', 'u']
-    df_norm_info.loc['max', 'u'] = p_globals.u_max
-    df_norm_info.loc['min', 'u'] = - p_globals.u_max
+    df_norm_info.loc['max', 'u'] = P_GLOBALS.u_max
+    df_norm_info.loc['min', 'u'] = - P_GLOBALS.u_max
 
     df_norm_info.loc['mean', 'Q'] = 0.0
     df_norm_info.loc['std', 'Q'] = df_norm_info.loc['std', 'Q']
@@ -227,8 +227,8 @@ def calculate_normalization_info(paths_to_data_information=None, plot_histograms
 
     df_norm_info.loc['mean', 'target_position'] = 0.0
     df_norm_info.loc['std', 'target_position'] = df_norm_info.loc['std', 'target_position']
-    df_norm_info.loc['max', 'target_position'] = p_globals.TrackHalfLength
-    df_norm_info.loc['min', 'target_position'] = -p_globals.TrackHalfLength
+    df_norm_info.loc['max', 'target_position'] = P_GLOBALS.TrackHalfLength
+    df_norm_info.loc['min', 'target_position'] = -P_GLOBALS.TrackHalfLength
 
     df_norm_info.loc['mean', 's.angle.sin'] = 0.0
     df_norm_info.loc['std', 's.angle.sin'] = df_norm_info.loc['std', 's.angle.sin']

@@ -1,7 +1,7 @@
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import (
     cartpole_ode_array,
-    p_globals,
+    P_GLOBALS,
     Q2u,
 )
 from CartPole._CartPole_mathematical_helpers import (
@@ -19,15 +19,15 @@ dt_mpc_simulation = 0.02  # s
 mpc_horizon = 1.0
 mc_samples = 4000
 
-k = p_globals.k
-M = p_globals.M
-m = p_globals.m
-g = p_globals.g
-J_fric = p_globals.J_fric
-M_fric = p_globals.M_fric
-L = p_globals.L
-v_max = p_globals.v_max
-u_max = p_globals.u_max
+k = P_GLOBALS.k
+M = P_GLOBALS.M
+m = P_GLOBALS.m
+g = P_GLOBALS.g
+J_fric = P_GLOBALS.J_fric
+M_fric = P_GLOBALS.M_fric
+L = P_GLOBALS.L
+v_max = P_GLOBALS.v_max
+u_max = P_GLOBALS.u_max
 
 R = 1.0e0  # How much to punish Q
 lbd = 10  # cost parameter lambda

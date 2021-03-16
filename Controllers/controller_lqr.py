@@ -8,7 +8,7 @@ import numpy as np
 
 from Controllers.template_controller import template_controller
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
-from CartPole.cartpole_model import cartpole_jacobian, p_globals, s0
+from CartPole.cartpole_model import cartpole_jacobian, P_GLOBALS, s0
 
 class controller_lqr(template_controller):
     def __init__(self):
@@ -40,10 +40,10 @@ class controller_lqr(template_controller):
         s[cartpole_state_varname_to_index('angleD')] = 0.0
         u = 0.0
 
-        jacobian = cartpole_jacobian(p_globals, s, u)
+        jacobian = cartpole_jacobian(P_GLOBALS, s, u)
 
         A = jacobian[:, :-1]
-        B = np.reshape(jacobian[:, -1], newshape=(4, 1)) * p_globals.u_max
+        B = np.reshape(jacobian[:, -1], newshape=(4, 1)) * P_GLOBALS.u_max
 
         # Cost matrices for LQR controller
         self.Q = np.diag([10.0, 1.0, 1.0, 1.0])  # How much to punish x, v, theta, omega

@@ -10,7 +10,7 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 # region Imported modules
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad, cartpole_state_varname_to_index, cartpole_state_index_to_varname
-from CartPole.cartpole_model import Q2u, cartpole_ode, p_globals, s0
+from CartPole.cartpole_model import Q2u, cartpole_ode, P_GLOBALS, s0
 
 import numpy as np
 import pandas as pd
@@ -80,7 +80,7 @@ class CartPole:
         self.target_position = 0.0
 
         # Physical parameters of the CartPole
-        self.p = p_globals
+        self.p = P_GLOBALS
 
         # region Time scales for simulation step, controller update and saving data
         # See last paragraph of "Time scales" section for explanations

@@ -34,7 +34,7 @@ Using predictor:
 
 
 from Modeling.load_and_normalize import load_normalization_info, normalize_df
-from CartPole.cartpole_model import p_globals, Q2u
+from CartPole.cartpole_model import P_GLOBALS, Q2u
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 
 import numpy as np
@@ -74,7 +74,7 @@ class predictor_ideal:
         self.normalization_info = load_normalization_info(PATH_TO_NORMALIZATION_INFO)
 
         # Physical parameters of the cart
-        self.p = p_globals
+        self.p = P_GLOBALS
 
         # State of the cart
         self.s = create_cartpole_state()  # s like state

@@ -1,7 +1,7 @@
 """mpc controller"""
 
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import p_globals, s0, Q2u, cartpole_ode
+from CartPole.cartpole_model import P_GLOBALS, s0, Q2u, cartpole_ode
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 
 import matplotlib.pyplot as plt
@@ -60,7 +60,7 @@ class controller_mpc_opti(template_controller):
         """
 
         # Physical parameters of the cart
-        self.p = p_globals
+        self.p = P_GLOBALS
 
         # State of the cart
         self.s = create_cartpole_state()  # s like state

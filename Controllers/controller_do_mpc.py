@@ -4,7 +4,7 @@ import do_mpc
 import numpy as np
 
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import p_globals, s0, cartpole_ode_namespace, Q2u
+from CartPole.cartpole_model import P_GLOBALS, s0, cartpole_ode_namespace, Q2u
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index, cartpole_state_namespace_to_vector, cartpole_state_vector_to_namespace
 
 from types import SimpleNamespace
@@ -25,7 +25,7 @@ class controller_do_mpc(template_controller):
         """
 
         # Physical parameters of the cart
-        p = p_globals  # p like parameters
+        p = P_GLOBALS  # p like parameters
 
         # Container for the state of the cart
         s = SimpleNamespace()  # s like state
