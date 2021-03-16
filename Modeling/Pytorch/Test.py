@@ -29,7 +29,7 @@ def test_network():
 
     """
     This function create RNN instance based on parameters saved on disc and also creates the CartPole instance.
-    The actual work of evaluation prediction results is done in open_loop_prediction_experiment function
+    The actual work of evaluation prediction results is done in get_predictions function
     """
 
     # Network architecture:

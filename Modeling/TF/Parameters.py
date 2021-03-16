@@ -71,8 +71,12 @@ def args():
     parser.add_argument('--close_loop_for', default=closed_loop_list,
                         help='In RNN forward function this features will be fed beck from output to input')
 
-    # Experiment length - number of time steps to take for testing
-    parser.add_argument('--test_len', default=100, type=int, help='Number of time steps to take for testing')
+    # Only valid for graphical testing:
+    parser.add_argument('--test_len', default=100, type=int,
+                        help='For graphical testing only test_len samples from first test file is taken.')
+    parser.add_argument('--test_start_idx', default=1, type=int, help='Indicates from which point data from test file should be taken.')
+    parser.add_argument('--test_max_horizon', default=10, type=int,
+                        help='Indicates prediction horizon for testing.')
 
     # Training only:
     parser.add_argument('--wash_out_len', default=10, type=int, help='Number of timesteps for a wash-out sequence')

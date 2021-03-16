@@ -24,7 +24,7 @@ from Modeling.TF.TF_Functions.Loss import loss_msr_sequence_customizable
 from Modeling.TF.TF_Functions.Dataset import Dataset, DatasetRandom
 from Modeling.load_and_normalize import load_data, normalize_df, \
     get_sampling_interval_from_datafile, get_paths_to_datafiles
-from Modeling.TF.TF_Functions.Test_predictions import open_loop_prediction_experiment, brunton_widget
+from Modeling.TF.TF_Functions.Test_predictions import get_predictions_TF, brunton_widget
 
 # region Import and print "command line" arguments
 print('')
@@ -103,7 +103,7 @@ def train_network(nni_parameters=None):
         training_dfs_norm = normalize_df(training_dfs, normalization_info)
         training_dataset = Dataset(training_dfs_norm, a, shuffle=True, inputs=net_info.inputs, outputs=net_info.outputs)
 
-        validation_dfs_norm = normalize_df(training_dfs, normalization_info)
+        validation_dfs_norm = normalize_df(validation_dfs, normalization_info)
         validation_dataset = Dataset(validation_dfs_norm, a, shuffle=True, inputs=net_info.inputs,
                                      outputs=net_info.outputs)
 
@@ -143,9 +143,9 @@ def train_network(nni_parameters=None):
             net_for_inference.set_weights(net.get_weights())
             plot_string = 'This is the network after {} training epoch(s), warm_up={}'.format(epoch + 1, a.wash_out_len)
             ground_truth, net_outputs, time_axis = \
-                open_loop_prediction_experiment(net_for_inference, net_for_inference_info,
-                                                test_set, normalization_info,
-                                                experiment_length=a.test_len)
+                get_predictions_TF(net_for_inference, net_for_inference_info,
+                                   test_set, normalization_info,
+                                   experiment_length=a.test_len)
             brunton_widget(net_for_inference_info.inputs, net_for_inference_info.outputs,
                            ground_truth, net_outputs, time_axis,
                            )
