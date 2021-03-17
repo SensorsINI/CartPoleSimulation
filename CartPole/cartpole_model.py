@@ -1,9 +1,8 @@
 from types import SimpleNamespace
 from typing import Union
-from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index, cartpole_state_index_to_varname, conditional_decorator, parallelize
+from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 
 import numpy as np
-from numba import jit
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
@@ -75,7 +74,7 @@ k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, Tr
 # Create initial state vector
 s0 = create_cartpole_state()
 
-@conditional_decorator(jit(nopython=True), parallelize)
+
 def _cartpole_ode(angle, angleD, position, positionD, u):
     """
     Calculates current values of second derivative of angle and position
@@ -157,15 +156,6 @@ def cartpole_ode(s: np.ndarray, u: float):
     return _cartpole_ode(
         s[cartpole_state_varname_to_index('angle')], s[cartpole_state_varname_to_index('angleD')],
         s[cartpole_state_varname_to_index('position')], s[cartpole_state_varname_to_index('positionD')],
-        u
-    )
-
-
-@conditional_decorator(jit(nopython=True), parallelize)
-def cartpole_ode_parallelize(s: np.ndarray, u: float):
-    return _cartpole_ode(
-        s[0], s[1],
-        s[5], s[6],
         u
     )
 
