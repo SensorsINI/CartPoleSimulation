@@ -3,6 +3,16 @@ from CartPole.cartpole_model import (
     P_GLOBALS,
     Q2u,
     _cartpole_ode,
+    k,
+    M,
+    m,
+    g,
+    J_fric,
+    M_fric,
+    L,
+    v_max,
+    u_max,
+    TrackHalfLength,
 )
 from CartPole._CartPole_mathematical_helpers import (
     create_cartpole_state,
@@ -22,20 +32,6 @@ dt = 0.02  # s
 mpc_horizon = 1.0
 mpc_samples = int(mpc_horizon / dt)
 mc_samples = 4000
-
-
-"""Define environment properties in module's scope"""
-k, M, m, g, J_fric, M_fric, L, v_max, u_max = (
-    P_GLOBALS.k,
-    P_GLOBALS.M,
-    P_GLOBALS.m,
-    P_GLOBALS.g,
-    P_GLOBALS.J_fric,
-    P_GLOBALS.M_fric,
-    P_GLOBALS.L,
-    P_GLOBALS.v_max,
-    P_GLOBALS.u_max,
-)
 
 
 """Define indices of values in state statically"""
@@ -67,7 +63,7 @@ E_pot_cost = conditional_decorator(jit(nopython=True), parallelize)(
     lambda s: (1 - np.cos(s[ANGLE_IDX])) ** 2
 )
 distance_difference = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s, target_position: ((s[POSITION_IDX] - target_position) / 50.0) ** 2
+    lambda s, target_position: ((s[POSITION_IDX] - target_position) / TrackHalfLength) ** 2
 )
 
 
@@ -112,10 +108,13 @@ def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
     if np.abs(u + delta_u) > 1.0:
         return 1.0e5
-    dd = 10 * distance_difference(s, target_position)
-    ep = E_pot_cost(s)
+    # if np.cos(s[ANGLE_IDX]) < 0.5:
+    #     return 1.0e5
+    dd = distance_difference(s, target_position) * 1.0e4
+    ep = 500 * E_pot_cost(s)
+    # if (distance_difference(s, target_position) + ep) < 1e-4: return 0
     ekp = E_kin_pol(s)
-    ekc = E_kin_cart(s)
+    ekc = 100 * E_kin_cart(s)
     q = dd + ep + ekp + ekc
     # self.distance_differences.append(dd)
     # self.E_pots.append(ep)
@@ -179,7 +178,7 @@ class controller_mppi(template_controller):
         self.S_tilde_k = np.zeros((mc_samples), dtype=float)
 
     def initialize_perturbations(
-        self, stdev: float = 1.0, random_walk: bool = False
+        self, stdev: float = 1.0, random_walk: bool = False, uniform: bool = False
     ) -> np.ndarray:
         """
         Return a numpy array with the perturbations delta_u.
@@ -193,6 +192,10 @@ class controller_mppi(template_controller):
                 delta_u[:, i] = delta_u[:, i - 1] + stdev * np.random.normal(
                     size=(mc_samples,)
                 )
+        elif uniform:
+            delta_u = np.zeros((mc_samples, mpc_samples), dtype=float)
+            for i in range(0, mpc_samples):
+                delta_u[:, i] = np.random.uniform(low=-1.0, high=1.0, size=(mc_samples,)) - self.u[i]
         else:
             delta_u = stdev * np.random.normal(size=np.shape(self.delta_u))
 
@@ -208,7 +211,7 @@ class controller_mppi(template_controller):
         # self.delta_u = self.initialize_perturbations(
         #     stdev=self.rho_sqrt_inv / np.sqrt(dt), random_walk=False
         # )  # N(mean=0, var=1/(rho*dt))
-        self.delta_u = self.initialize_perturbations(stdev=0.2, random_walk=False)
+        self.delta_u = self.initialize_perturbations(stdev=0.2)
         self.S_tilde = np.zeros_like(self.S_tilde)
         self.S_tilde_k = np.zeros_like(self.S_tilde_k)
 
