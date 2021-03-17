@@ -446,9 +446,9 @@ class MainWindow(QMainWindow):
         # Start looping over history
         replay_looper.start_loop()
         for index, row in history_pd.iterrows():
-            self.CartPoleInstance.s[cartpole_state_varname_to_index('position')] = row['s.position']
-            self.CartPoleInstance.s[cartpole_state_varname_to_index('positionD')] = row['s.positionD']
-            self.CartPoleInstance.s[cartpole_state_varname_to_index('angle')] = row['s.angle']
+            self.CartPoleInstance.s[cartpole_state_varname_to_index('position')] = row['position']
+            self.CartPoleInstance.s[cartpole_state_varname_to_index('positionD')] = row['positionD']
+            self.CartPoleInstance.s[cartpole_state_varname_to_index('angle')] = row['angle']
             self.CartPoleInstance.time = row['time']
             self.CartPoleInstance.dt = row['dt']
             self.CartPoleInstance.u = row['u']
