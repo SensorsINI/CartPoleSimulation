@@ -275,35 +275,35 @@ class CartPole:
 
                 # Saving simulation data
                 self.dict_history['time'].append(self.time)
-                self.dict_history['s.position'].append(self.s[cartpole_state_varname_to_index('position')])
-                self.dict_history['s.positionD'].append(self.s[cartpole_state_varname_to_index('positionD')])
-                self.dict_history['s.positionDD'].append(self.s[cartpole_state_varname_to_index('positionDD')])
-                self.dict_history['s.angle'].append(self.s[cartpole_state_varname_to_index('angle')])
-                self.dict_history['s.angleD'].append(self.s[cartpole_state_varname_to_index('angleD')])
-                self.dict_history['s.angleDD'].append(self.s[cartpole_state_varname_to_index('angleDD')])
+                self.dict_history['position'].append(self.s[cartpole_state_varname_to_index('position')])
+                self.dict_history['positionD'].append(self.s[cartpole_state_varname_to_index('positionD')])
+                self.dict_history['positionDD'].append(self.s[cartpole_state_varname_to_index('positionDD')])
+                self.dict_history['angle'].append(self.s[cartpole_state_varname_to_index('angle')])
+                self.dict_history['angleD'].append(self.s[cartpole_state_varname_to_index('angleD')])
+                self.dict_history['angleDD'].append(self.s[cartpole_state_varname_to_index('angleDD')])
                 self.dict_history['u'].append(self.u)
                 self.dict_history['Q'].append(self.Q)
                 # The target_position is not always meaningful
                 # If it is not meaningful all values in this column are set to 0
                 self.dict_history['target_position'].append(self.target_position)
 
-                self.dict_history['s.angle.sin'].append(np.sin(self.s[cartpole_state_varname_to_index('angle')]))
-                self.dict_history['s.angle.cos'].append(np.cos(self.s[cartpole_state_varname_to_index('angle')]))
+                self.dict_history['angle_sin'].append(np.sin(self.s[cartpole_state_varname_to_index('angle')]))
+                self.dict_history['angle_cos'].append(np.cos(self.s[cartpole_state_varname_to_index('angle')]))
 
             else:
 
                 self.dict_history = {'time': [self.time],
-                                     's.position': [self.s[cartpole_state_varname_to_index('position')]],
-                                     's.positionD': [self.s[cartpole_state_varname_to_index('positionD')]],
-                                     's.positionDD': [self.s[cartpole_state_varname_to_index('positionDD')]],
-                                     's.angle': [self.s[cartpole_state_varname_to_index('angle')]],
-                                     's.angleD': [self.s[cartpole_state_varname_to_index('angleD')]],
-                                     's.angleDD': [self.s[cartpole_state_varname_to_index('angleDD')]],
+                                     'position': [self.s[cartpole_state_varname_to_index('position')]],
+                                     'positionD': [self.s[cartpole_state_varname_to_index('positionD')]],
+                                     'positionDD': [self.s[cartpole_state_varname_to_index('positionDD')]],
+                                     'angle': [self.s[cartpole_state_varname_to_index('angle')]],
+                                     'angleD': [self.s[cartpole_state_varname_to_index('angleD')]],
+                                     'angleDD': [self.s[cartpole_state_varname_to_index('angleDD')]],
                                      'u': [self.u],
                                      'Q': [self.Q],
                                      'target_position': [self.target_position],
-                                     's.angle.sin': [np.sin(self.s[cartpole_state_varname_to_index('angle')])],
-                                     's.angle.cos': [np.cos(self.s[cartpole_state_varname_to_index('angle')])]}
+                                     'angle_sin': [np.sin(self.s[cartpole_state_varname_to_index('angle')])],
+                                     'angle_cos': [np.cos(self.s[cartpole_state_varname_to_index('angle')])]}
 
                 self.save_flag = True
 
@@ -485,13 +485,13 @@ class CartPole:
 
         # Plot angle error
         axs[0].set_ylabel("Angle (deg)", fontsize=fontsize_labels)
-        axs[0].plot(np.array(self.dict_history['time']), np.array(self.dict_history['s.angle']) * 180.0 / np.pi,
+        axs[0].plot(np.array(self.dict_history['time']), np.array(self.dict_history['angle']) * 180.0 / np.pi,
                     'b', markersize=12, label='Ground Truth')
         axs[0].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
         # Plot position
         axs[1].set_ylabel("position (m)", fontsize=fontsize_labels)
-        axs[1].plot(self.dict_history['time'], self.dict_history['s.position'], 'g', markersize=12,
+        axs[1].plot(self.dict_history['time'], self.dict_history['position'], 'g', markersize=12,
                     label='Ground Truth')
         axs[1].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
@@ -817,17 +817,17 @@ class CartPole:
 
         # Reset the dict keeping the experiment history and save the state for t = 0
         self.dict_history = {'time': [self.time],
-                             's.position': [self.s[cartpole_state_varname_to_index('position')]],
-                             's.positionD': [self.s[cartpole_state_varname_to_index('positionD')]],
-                             's.positionDD': [self.s[cartpole_state_varname_to_index('positionDD')]],
-                             's.angle': [self.s[cartpole_state_varname_to_index('angle')]],
-                             's.angleD': [self.s[cartpole_state_varname_to_index('angleD')]],
-                             's.angleDD': [self.s[cartpole_state_varname_to_index('angleDD')]],
+                             'position': [self.s[cartpole_state_varname_to_index('position')]],
+                             'positionD': [self.s[cartpole_state_varname_to_index('positionD')]],
+                             'positionDD': [self.s[cartpole_state_varname_to_index('positionDD')]],
+                             'angle': [self.s[cartpole_state_varname_to_index('angle')]],
+                             'angleD': [self.s[cartpole_state_varname_to_index('angleD')]],
+                             'angleDD': [self.s[cartpole_state_varname_to_index('angleDD')]],
                              'u': [self.u],
                              'Q': [self.Q],
                              'target_position': [self.target_position],
-                             's.angle.sin': [np.sin(self.s[cartpole_state_varname_to_index('angle')])],
-                             's.angle.cos': [np.cos(self.s[cartpole_state_varname_to_index('angle')])]}
+                             'angle_sin': [np.sin(self.s[cartpole_state_varname_to_index('angle')])],
+                             'angle_cos': [np.cos(self.s[cartpole_state_varname_to_index('angle')])]}
 
     # region Get and set timescales
 
