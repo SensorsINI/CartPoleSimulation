@@ -343,7 +343,7 @@ def train_network():
 
         # Evaluate the performance of the current network
         # by checking its predictions on a randomly generated CartPole experiment
-        # open_loop_prediction_experiment(net, a, val_file)
+        # get_predictions(net, a, val_file)
 
     # When finished the training print the final message
     print("Training Completed...                                               ")
