@@ -128,6 +128,33 @@ def q(s, u, delta_u, target_position):
     return q
 
 
+@conditional_decorator(jit(nopython=True), parallelize)
+def reward_weighted_average(S_i, delta_u_i):
+    """Average the perturbations delta_u based on their desirability"""
+    rho = np.min(S_i)  # for numerical stability
+    exp_s = np.exp(-1.0 / LBD * (S_i - rho))
+    a = np.sum(exp_s)
+    b = np.sum(np.multiply(exp_s, delta_u_i) / a)
+    return b
+
+
+@conditional_decorator(jit(nopython=True), parallelize)
+def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
+    """
+    :param u: Sampling mean / warm started control inputs of size (,mpc_samples)
+    :param S: Cost array of size (mc_samples)
+    :param delta_u: The input perturbations that had been used, size (mc_samples, mpc_samples)
+
+    :return: Input u for the whole MPC horizon updated with reward-weighted control perturbations
+    """
+    for i in range(mpc_samples):
+        # self.u[i] += reward_weighted_average(
+        #     self.S_tilde[:, -1] - self.S_tilde[:, i], self.delta_u[:, i]
+        # )
+        u[i] += reward_weighted_average(S, delta_u[:, i])
+    return u
+
+
 class controller_mppi(template_controller):
     def __init__(self):
         # State of the cart
@@ -150,14 +177,6 @@ class controller_mppi(template_controller):
         self.delta_u = np.zeros((mc_samples, mpc_samples), dtype=float)
         self.S_tilde = np.zeros((mc_samples, mpc_samples), dtype=float)
         self.S_tilde_k = np.zeros((mc_samples), dtype=float)
-
-    def reward_weighted_average(self, S_i, delta_u_i):
-        """Average the perturbations delta_u based on their desirability"""
-        rho = np.min(S_i)  # for numerical stability
-        exp_s = np.exp(-1.0 / LBD * (S_i - rho))
-        a = np.sum(exp_s)
-        b = np.sum(np.multiply(exp_s, delta_u_i) / a)
-        return b
 
     def initialize_perturbations(
         self, stdev: float = 1.0, random_walk: bool = False
@@ -200,14 +219,8 @@ class controller_mppi(template_controller):
 
         self.avg_cost.append(np.mean(self.S_tilde_k, axis=0))
 
-        # 
-        for i in range(mpc_samples):
-            # self.u[i] += self.reward_weighted_average(
-            #     self.S_tilde[:, -1] - self.S_tilde[:, i], self.delta_u[:, i]
-            # )
-            self.u[i] += self.reward_weighted_average(
-                self.S_tilde_k, self.delta_u[:, i]
-            )
+        # Update inputs with weighted perturbations
+        self.u = update_inputs(self.u, self.S_tilde_k, self.delta_u)
 
         Q = np.clip(self.u[0], -1, 1)
         # Q = self.u[0]
