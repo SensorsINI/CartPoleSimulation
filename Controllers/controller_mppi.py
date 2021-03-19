@@ -52,6 +52,17 @@ parallelize = True
 _cartpole_ode = conditional_decorator(jit(nopython=True), parallelize)(_cartpole_ode)
 
 
+"""Init logging lists"""
+distance_differences, E_pots, E_kins_pole, E_kins_cart, control_costs = (
+    np.array([]),
+    np.array([]),
+    np.array([]),
+    np.array([]),
+    np.array([]),
+)
+DEBUG = True
+
+
 """Cost function helpers"""
 E_kin_cart = conditional_decorator(jit(nopython=True), parallelize)(
     lambda s: (s[POSITIOND_IDX] / v_max) ** 2
@@ -63,7 +74,8 @@ E_pot_cost = conditional_decorator(jit(nopython=True), parallelize)(
     lambda s: (1 - np.cos(s[ANGLE_IDX])) ** 2
 )
 distance_difference = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s, target_position: ((s[POSITION_IDX] - target_position) / TrackHalfLength) ** 2
+    lambda s, target_position: ((s[POSITION_IDX] - target_position) / TrackHalfLength)
+    ** 2
 )
 
 
@@ -106,24 +118,18 @@ def motion_derivatives(s: np.ndarray, u: float):
 @conditional_decorator(jit(nopython=True), parallelize)
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
-    if np.abs(u + delta_u) > 1.0:
-        return 1.0e5
-    # if np.cos(s[ANGLE_IDX]) < 0.5:
-    #     return 1.0e5
     dd = distance_difference(s, target_position) * 1.0e4
     ep = 500 * E_pot_cost(s)
-    # if (distance_difference(s, target_position) + ep) < 1e-4: return 0
     ekp = E_kin_pol(s)
     ekc = 100 * E_kin_cart(s)
-    q = dd + ep + ekp + ekc
-    # self.distance_differences.append(dd)
-    # self.E_pots.append(ep)
-    # self.E_kins_pole.append(ekp)
-    # self.E_kins_cart.append(ekc)
-
-    q += (
+    cc = (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
+
+    if np.abs(u + delta_u) > 1.0:
+        return 1.0e5
+
+    q = dd + ep + ekp + ekc + cc
     return q
 
 
@@ -165,10 +171,6 @@ class controller_mppi(template_controller):
 
         self.rho_sqrt_inv = 0.01
         self.avg_cost = []
-        self.distance_differences = []
-        self.E_pots = []
-        self.E_kins_pole = []
-        self.E_kins_cart = []
         self.num_timesteps = 0
 
         self.s_horizon = np.zeros(())
@@ -195,7 +197,10 @@ class controller_mppi(template_controller):
         elif uniform:
             delta_u = np.zeros((mc_samples, mpc_samples), dtype=float)
             for i in range(0, mpc_samples):
-                delta_u[:, i] = np.random.uniform(low=-1.0, high=1.0, size=(mc_samples,)) - self.u[i]
+                delta_u[:, i] = (
+                    np.random.uniform(low=-1.0, high=1.0, size=(mc_samples,))
+                    - self.u[i]
+                )
         else:
             delta_u = stdev * np.random.normal(size=np.shape(self.delta_u))
 
@@ -234,11 +239,9 @@ class controller_mppi(template_controller):
 
         return Q  # normed control input in the range [-1,1]
 
-    # Optionally: A method called after an experiment.
-    # May be used to print some statistics about controller performance (e.g. number of iter. to converge)
     def controller_report(self):
-        # TODO: Graph the running cost per iteration to see if the controller minimizes it
-        time_axis = dt * 10 * np.arange(start=0, stop=len(self.avg_cost))
+        # Graph the average state cost per iteration
+        time_axis = dt * np.arange(start=0, stop=len(self.avg_cost))
         plt.figure(num=2, figsize=(8, 8))
         plt.plot(time_axis, self.avg_cost)
         plt.ylabel("avg_cost")
@@ -246,36 +249,41 @@ class controller_mppi(template_controller):
         plt.title("Cost over iterations")
         plt.show()
 
-        self.num_timesteps -= 1
+        if DEBUG:
+            self.num_timesteps -= 1
 
-        self.distance_differences = np.reshape(
-            np.array(self.distance_differences[mc_samples * (mpc_samples - 1) :]),
-            (self.num_timesteps, mc_samples, mpc_samples - 1),
-        )
-        self.E_pots = np.reshape(
-            np.array(self.E_pots[mc_samples * (mpc_samples - 1) :]),
-            (self.num_timesteps, mc_samples, mpc_samples - 1),
-        )
-        self.E_kins_pole = np.reshape(
-            np.array(self.E_kins_pole[mc_samples * (mpc_samples - 1) :]),
-            (self.num_timesteps, mc_samples, mpc_samples - 1),
-        )
-        self.E_kins_cart = np.reshape(
-            np.array(self.E_kins_cart[mc_samples * (mpc_samples - 1) :]),
-            (self.num_timesteps, mc_samples, mpc_samples - 1),
-        )
+            distance_differences = np.reshape(
+                np.array(self.distance_differences[mc_samples * (mpc_samples - 1) :]),
+                (self.num_timesteps, mc_samples, mpc_samples - 1),
+            )
+            E_pots = np.reshape(
+                np.array(self.E_pots[mc_samples * (mpc_samples - 1) :]),
+                (self.num_timesteps, mc_samples, mpc_samples - 1),
+            )
+            E_kins_pole = np.reshape(
+                np.array(self.E_kins_pole[mc_samples * (mpc_samples - 1) :]),
+                (self.num_timesteps, mc_samples, mpc_samples - 1),
+            )
+            E_kins_cart = np.reshape(
+                np.array(self.E_kins_cart[mc_samples * (mpc_samples - 1) :]),
+                (self.num_timesteps, mc_samples, mpc_samples - 1),
+            )
 
-        plt.figure(num=3, figsize=(12, 8))
-        plt.plot(
-            np.mean(self.distance_differences[:, :, -1], axis=1),
-            label="Distance difference cost",
-        )
-        plt.plot(np.mean(self.E_pots[:, :, -1], axis=1), label="E_pot cost")
-        plt.plot(np.mean(self.E_kins_pole[:, :, -1], axis=1), label="E_kin_pole cost")
-        plt.plot(np.mean(self.E_kins_cart[:, :, -1], axis=1), label="E_kin_cart cost")
-        plt.title("Cost components over time")
-        plt.legend()
-        plt.show()
+            plt.figure(num=3, figsize=(12, 8))
+            plt.plot(
+                np.mean(self.distance_differences[:, :, -1], axis=1),
+                label="Distance difference cost",
+            )
+            plt.plot(np.mean(self.E_pots[:, :, -1], axis=1), label="E_pot cost")
+            plt.plot(
+                np.mean(self.E_kins_pole[:, :, -1], axis=1), label="E_kin_pole cost"
+            )
+            plt.plot(
+                np.mean(self.E_kins_cart[:, :, -1], axis=1), label="E_kin_cart cost"
+            )
+            plt.title("Cost components over time")
+            plt.legend()
+            plt.show()
 
     # Optionally: reset the controller after an experiment
     # May be useful for stateful controllers, like these containing RNN,
