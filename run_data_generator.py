@@ -18,7 +18,7 @@ dt_controller_update_DataGen = 0.02
 dt_save_DataGen = 0.1
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
-length_of_experiment_DataGen = 6.0  # Length of each experiment in s
+length_of_experiment_DataGen = 16.0  # Length of each experiment in s
 controller_DataGen = 'mppi'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'lqr'
@@ -36,7 +36,7 @@ turning_points_DataGen = None
 # initial state
 # This is just one possibility how to set the initial state. Feel free to modify this code
 # [position, positionD, angle, angleD]
-initial_state = [0, None, 20 * (np.pi / 180.0), None]
+initial_state = [20, None, 180 * (np.pi / 180.0), None]
 initial_state_DataGen = s0
 if initial_state[0] is None:
     initial_state_DataGen[cartpole_state_varname_to_index('position')] = np.random.uniform(low=-TrackHalfLength / 2.0,
@@ -98,13 +98,13 @@ for i in range(number_of_experiments):
         save_mode=save_mode
     )
 
+    gen_end = timeit.default_timer()
+    gen_dt = (gen_end - gen_start) * 1000.0
+    print('time to generate data: {} ms'.format(gen_dt))
+
     try:
         CartPoleInstance.controller.controller_report()
     except:
         pass
-
-    gen_end = timeit.default_timer()
-    gen_dt = (gen_end - gen_start) * 1000.0
-    print('time to generate data: {} ms'.format(gen_dt))
 
 # os.system('say "Antonio! Todo ha terminado!"')
