@@ -49,6 +49,7 @@ P_GLOBALS.v_max = 10.0  # max DC motor speed, m/s, in absense of friction, used 
 P_GLOBALS.TrackHalfLength = 50.0  # m, length of the track on which CartPole can move, from 0 to edge, track is symmetric
 
 P_GLOBALS.controlDisturbance = 0.0  # disturbance, as factor of u_max
+P_GLOBALS.controlBias = 0.0  # bias of control input
 P_GLOBALS.sensorNoise = 0.0  # sensor noise added to output of the system TODO: not implemented yet
 
 P_GLOBALS.g = 9.81  # absolute value of gravity acceleration, m/s^2
@@ -56,7 +57,7 @@ P_GLOBALS.k = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
 # (I = k*m*L^2) (with L being half if the length)
 
 # Export variables as global
-k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, TrackHalfLength = (
+k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, controlBias, TrackHalfLength = (
     P_GLOBALS.k,
     P_GLOBALS.M,
     P_GLOBALS.m,
@@ -68,6 +69,7 @@ k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, Tr
     P_GLOBALS.u_max,
     P_GLOBALS.sensorNoise,
     P_GLOBALS.controlDisturbance,
+    P_GLOBALS.controlBias,
     P_GLOBALS.TrackHalfLength
 )
 
@@ -274,7 +276,9 @@ def Q2u(Q):
 
     In future there might be implemented here a more sophisticated model of a motor driving CartPole
     """
-    u = u_max * Q + controlDisturbance * np.random.normal() * u_max  # Q is drive -1:1 range, add noise on control
+    u = u_max * np.clip(
+        Q + controlDisturbance * np.random.normal() + P_GLOBALS.controlBias, -1.0, 1.0
+    )  # Q is drive -1:1 range, add noise on control
 
     return u
 
