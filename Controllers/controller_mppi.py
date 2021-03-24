@@ -277,16 +277,17 @@ class controller_mppi(template_controller):
             plt.title("Cost over iterations")
             plt.show()
 
+            # Graph the different cost components per iteration
             clgs = np.stack(COST_LOGS, axis=0)  # ITERATIONS x 5 x mpc_steps
             plt.figure(num=3, figsize=(12, 8))
             plt.plot(
-                clgs[:, 0, 1], label="Distance difference cost",
+                np.sum(clgs[:, 0, :], axis=-1), label="Distance difference cost",
             )
-            plt.plot(clgs[:, 1, 1], label="E_pot cost")
-            plt.plot(clgs[:, 2, 1], label="E_kin_pole cost")
-            plt.plot(clgs[:, 3, 1], label="E_kin_cart cost")
-            plt.plot(clgs[:, 4, 1], label="Control cost")
-            plt.title("Cost of each first MPC horizon step over time")
+            plt.plot(np.sum(clgs[:, 1, :], axis=-1), label="E_pot cost")
+            plt.plot(np.sum(clgs[:, 2, :], axis=-1), label="E_kin_pole cost")
+            plt.plot(np.sum(clgs[:, 3, :], axis=-1), label="E_kin_cart cost")
+            plt.plot(np.sum(clgs[:, 4, :], axis=-1), label="Control cost")
+            plt.title("Cost component breakdown")
             plt.legend()
             plt.show()
 
