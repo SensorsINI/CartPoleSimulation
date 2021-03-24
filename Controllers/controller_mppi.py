@@ -57,7 +57,7 @@ _cartpole_ode = conditional_decorator(jit(nopython=True), parallelize)(_cartpole
 
 
 """Init logging variables"""
-DEBUG = False
+LOGGING = False
 # Save average cost for each cost component
 COST_LOGS = []
 
@@ -107,7 +107,7 @@ def trajectory_rollouts(s, S_tilde_k, u, delta_u, target_position):
 
 
 @conditional_decorator(jit(nopython=True), parallelize)
-def trajectory_rollouts_debug(s, S_tilde_k, u, delta_u, target_position):
+def trajectory_rollouts_logging(s, S_tilde_k, u, delta_u, target_position):
     s_horizon = np.zeros((mc_samples, mpc_samples, s.size))
     cost_logs_internal = np.zeros((mc_samples, 5, mpc_samples))
     for k in range(mc_samples):
@@ -128,7 +128,7 @@ def trajectory_rollouts_debug(s, S_tilde_k, u, delta_u, target_position):
     return S_tilde_k, cost_logs_internal
 
 
-rollout_function = trajectory_rollouts_debug if DEBUG else trajectory_rollouts
+rollout_function = trajectory_rollouts_logging if LOGGING else trajectory_rollouts
 
 
 @conditional_decorator(jit(nopython=True), parallelize)
@@ -250,7 +250,7 @@ class controller_mppi(template_controller):
             self.s, self.S_tilde_k, self.u, self.delta_u, self.target_position,
         )
 
-        if DEBUG:
+        if LOGGING:
             self.avg_cost.append(np.mean(self.S_tilde_k, axis=0))
             COST_LOGS.append(np.mean(cost_logs_internal, axis=0))
 
@@ -267,7 +267,7 @@ class controller_mppi(template_controller):
         return Q  # normed control input in the range [-1,1]
 
     def controller_report(self):
-        if DEBUG:
+        if LOGGING:
             # Graph the average state cost per iteration
             time_axis = dt * np.arange(start=0, stop=len(self.avg_cost))
             plt.figure(num=2, figsize=(8, 8))
