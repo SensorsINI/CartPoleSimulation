@@ -3,6 +3,7 @@
 import scipy.optimize
 
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
+from CartPole.cartpole_model import TrackHalfLength
 from Modeling.TF.TF_Functions.Network import *
 from Predictores.predictor_ideal import predictor_ideal
 
@@ -143,7 +144,7 @@ class controller_custom_mpc_scipy:
         self.Predictor.setup(initial_state=self.initial_state, prediction_denorm=False)
 
         # FIXME: You are now norming target position manually...
-        self.target_position_normed = self.target_position/50.0
+        self.target_position_normed = self.target_position/TrackHalfLength
 
         if self.step_number > self.warm_up_len:
             # Solve Optimization problem

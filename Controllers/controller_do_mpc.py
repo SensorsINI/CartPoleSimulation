@@ -4,7 +4,7 @@ import do_mpc
 import numpy as np
 
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import P_GLOBALS, s0, cartpole_ode_namespace, Q2u
+from CartPole.cartpole_model import P_GLOBALS, s0, cartpole_ode_namespace, Q2u, TrackHalfLength
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index, cartpole_state_namespace_to_vector, cartpole_state_vector_to_namespace
 
 from types import SimpleNamespace
@@ -53,7 +53,7 @@ class controller_do_mpc(template_controller):
         E_kin_pol = (s.angleD/(2*np.pi))**2
         E_pot = np.sin(s.angle)**2
 
-        distance_difference = (((s.position - target_position)/50.0) ** 2)
+        distance_difference = (((s.position - target_position)/TrackHalfLength) ** 2)
 
         self.model.set_expression('E_kin_cart', E_kin_cart)
         self.model.set_expression('E_kin_pol', E_kin_pol)

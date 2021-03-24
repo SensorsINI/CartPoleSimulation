@@ -902,7 +902,7 @@ class CartPole:
         self.y_wheel = self.y_plane + self.WheelRadius
         self.MastHight = 10.0  # For drawing only. For calculation see L
         self.MastThickness = 0.05
-        self.HalfLength = 50.0  # Length of the track
+        self.HalfLength = P_GLOBALS.TrackHalfLength  # Length of the track
 
         self.y_acceleration_arrow = 1.5 * self.WheelRadius
         self.scaling_dx_acceleration_arrow = 20.0
