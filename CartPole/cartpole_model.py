@@ -276,8 +276,8 @@ def Q2u(Q):
 
     In future there might be implemented here a more sophisticated model of a motor driving CartPole
     """
-    u = u_max * np.clip(
-        Q + controlDisturbance * np.random.normal() + P_GLOBALS.controlBias, -1.0, 1.0
+    u = u_max * (
+        Q + controlDisturbance * np.random.normal() + P_GLOBALS.controlBias
     )  # Q is drive -1:1 range, add noise on control
 
     return u
