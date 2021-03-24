@@ -1,7 +1,7 @@
 """mpc controller"""
 
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import P_GLOBALS, s0, Q2u, cartpole_ode
+from CartPole.cartpole_model import P_GLOBALS, s0, Q2u, cartpole_ode, TrackHalfLength
 from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
 
 import matplotlib.pyplot as plt
@@ -75,7 +75,7 @@ class controller_mpc_opti(template_controller):
         self.E_kin_cart = lambda s: (s[cartpole_state_varname_to_index('positionD')] / P_GLOBALS.v_max) ** 2
         self.E_kin_pol = lambda s: (s[cartpole_state_varname_to_index('angleD')] / (2 * np.pi)) ** 2
         self.E_pot_cost = lambda s: 1-np.cos(s[cartpole_state_varname_to_index('angle')])
-        self.distance_difference = lambda s: (((s[cartpole_state_varname_to_index('position')] - self.target_position) / 50.0)) ** 2
+        self.distance_difference = lambda s: (((s[cartpole_state_varname_to_index('position')] - self.target_position) / TrackHalfLength)) ** 2
 
         self.Q_bounds = [(-1, 1)] * self.mpc_horizon
 
