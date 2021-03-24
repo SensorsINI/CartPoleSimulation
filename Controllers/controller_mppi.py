@@ -1,3 +1,7 @@
+"""
+Model Predictive Path Integral Controller
+Based on Williams, Aldrich, Theodorou (2015)
+"""
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import (
     P_GLOBALS,
