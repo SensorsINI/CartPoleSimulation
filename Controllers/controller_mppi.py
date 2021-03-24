@@ -22,9 +22,11 @@ from CartPole._CartPole_mathematical_helpers import (
     create_cartpole_state,
     cartpole_state_varname_to_index,
     conditional_decorator,
+    wrap_angle_rad_inplace,
 )
 
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider
 import numpy as np
 from numba import jit
 
@@ -35,7 +37,7 @@ from copy import deepcopy
 dt = 0.02  # s
 mpc_horizon = 1.0
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
-mc_samples = 4000  # Number of Monte Carlo samples
+mc_samples = 500  # Number of Monte Carlo samples
 
 
 """Define indices of values in state statically"""
@@ -57,9 +59,11 @@ _cartpole_ode = conditional_decorator(jit(nopython=True), parallelize)(_cartpole
 
 
 """Init logging variables"""
-LOGGING = False
+LOGGING = True
 # Save average cost for each cost component
-COST_LOGS = []
+COST_TO_GO_LOGS = []
+COST_BREAKDOWN_LOGS = []
+STATE_LOGS = []
 
 
 """Cost function helpers"""
@@ -103,7 +107,7 @@ def trajectory_rollouts(s, S_tilde_k, u, delta_u, target_position):
             )
             S_tilde_k[k] += cost_increment
 
-    return S_tilde_k, None
+    return S_tilde_k, None, None
 
 
 @conditional_decorator(jit(nopython=True), parallelize)
@@ -125,7 +129,7 @@ def trajectory_rollouts_logging(s, S_tilde_k, u, delta_u, target_position):
             S_tilde_k[k] += cost_increment
             cost_logs_internal[k, :, i] = [dd, ep, ekp, ekc, cc]
 
-    return S_tilde_k, cost_logs_internal
+    return S_tilde_k, cost_logs_internal, s_horizon
 
 
 rollout_function = trajectory_rollouts_logging if LOGGING else trajectory_rollouts
@@ -196,7 +200,6 @@ class controller_mppi(template_controller):
         self.target_position = 0.0
 
         self.rho_sqrt_inv = 0.01
-        self.avg_cost = []
 
         self.iteration = 0
 
@@ -246,49 +249,156 @@ class controller_mppi(template_controller):
         self.S_tilde_k = np.zeros_like(self.S_tilde_k)
 
         # Run parallel trajectory rollouts for different input perturbations
-        self.S_tilde_k, cost_logs_internal = rollout_function(
+        self.S_tilde_k, cost_logs_internal, s_horizon = rollout_function(
             self.s, self.S_tilde_k, self.u, self.delta_u, self.target_position,
         )
 
+        # Log states and costs incurred for plotting later
         if LOGGING:
-            self.avg_cost.append(np.mean(self.S_tilde_k, axis=0))
-            COST_LOGS.append(np.mean(cost_logs_internal, axis=0))
+            COST_TO_GO_LOGS.append(self.S_tilde_k)
+            COST_BREAKDOWN_LOGS.append(np.mean(cost_logs_internal, axis=0))
+            STATE_LOGS.append(
+                s_horizon[
+                    :,
+                    :,
+                    [
+                        cartpole_state_varname_to_index("position"),
+                        cartpole_state_varname_to_index("angle"),
+                    ],
+                ]
+            )
 
         # Update inputs with weighted perturbations
         self.u = update_inputs(self.u, self.S_tilde_k, self.delta_u)
 
-        Q = np.clip(self.u[0], -1, 1)
-        # Q = self.u[0]
+        # Clip inputs to allowed range
+        Q = np.clip(self.u[0], -1.0, 1.0)
 
-        # Index shift inputs
+        # Index-shift inputs
         self.u[:-1] = self.u[1:]
-        # self.u[-1] = 0
+        self.u[-1] = 0
 
         return Q  # normed control input in the range [-1,1]
 
     def controller_report(self):
         if LOGGING:
-            # Graph the average state cost per iteration
-            time_axis = dt * np.arange(start=0, stop=len(self.avg_cost))
-            plt.figure(num=2, figsize=(8, 8))
-            plt.plot(time_axis, self.avg_cost)
+            ### Plot the average state cost per iteration
+            ctglgs = np.stack(COST_TO_GO_LOGS, axis=0)  # ITERATIONS x mc_samples
+            time_axis = dt * np.arange(start=0, stop=np.shape(ctglgs)[0])
+            plt.figure(num=2, figsize=(16, 9))
+            plt.plot(time_axis, np.mean(ctglgs, axis=1))
             plt.ylabel("avg_cost")
             plt.xlabel("time")
-            plt.title("Cost over iterations")
+            plt.title("Cost-to-go per Timestep")
             plt.show()
 
-            # Graph the different cost components per iteration
-            clgs = np.stack(COST_LOGS, axis=0)  # ITERATIONS x 5 x mpc_steps
-            plt.figure(num=3, figsize=(12, 8))
+            ### Graph the different cost components per iteration
+            clgs = np.stack(COST_BREAKDOWN_LOGS, axis=0)  # ITERATIONS x 5 x mpc_steps
+            time_axis = dt * np.arange(start=0, stop=np.shape(clgs)[0])
+
+            plt.figure(num=3, figsize=(16, 9))
             plt.plot(
-                np.sum(clgs[:, 0, :], axis=-1), label="Distance difference cost",
+                time_axis,
+                np.sum(clgs[:, 0, :], axis=-1),
+                label="Distance difference cost",
             )
-            plt.plot(np.sum(clgs[:, 1, :], axis=-1), label="E_pot cost")
-            plt.plot(np.sum(clgs[:, 2, :], axis=-1), label="E_kin_pole cost")
-            plt.plot(np.sum(clgs[:, 3, :], axis=-1), label="E_kin_cart cost")
-            plt.plot(np.sum(clgs[:, 4, :], axis=-1), label="Control cost")
+            plt.plot(time_axis, np.sum(clgs[:, 1, :], axis=-1), label="E_pot cost")
+            plt.plot(time_axis, np.sum(clgs[:, 2, :], axis=-1), label="E_kin_pole cost")
+            plt.plot(time_axis, np.sum(clgs[:, 3, :], axis=-1), label="E_kin_cart cost")
+            plt.plot(time_axis, np.sum(clgs[:, 4, :], axis=-1), label="Control cost")
+
+            plt.ylabel("total horizon cost")
+            plt.xlabel("time")
             plt.title("Cost component breakdown")
             plt.legend()
+            plt.show()
+
+            ### Draw the trajectory rollouts simulated by MPPI
+            def draw_rollouts(
+                states: np.ndarray,
+                ax_position: plt.Axes,
+                ax_angle: plt.Axes,
+                iteration: int,
+            ):
+                mc_rollouts = np.shape(states)[0]
+                horizon_length = np.shape(states)[1]
+                # Loop over all MC rollouts
+                for i in range(mc_rollouts):
+                    ax_position.plot(
+                        np.arange(iteration, iteration + horizon_length) * dt,
+                        states[i, :, 0],
+                        alpha=0.005,
+                        linestyle="-",
+                        linewidth=1,
+                        color="k",
+                    )
+                    ax_angle.plot(
+                        np.arange(iteration, iteration + horizon_length) * dt,
+                        states[i, :, 1] * 180.0 / np.pi,
+                        alpha=0.005,
+                        linestyle="-",
+                        linewidth=2,
+                        color="k",
+                    )
+            
+            # Prepare data
+            # shape(slgs) = ITERATIONS x mc_samples x mpc_steps x [position, angle]
+            slgs = np.stack(STATE_LOGS, axis=0)
+            wrap_angle_rad_inplace(slgs[:, :, :, 1])
+
+            # Create figure
+            fig, (ax1, ax2) = plt.subplots(
+                nrows=2, ncols=1, num=4, figsize=(16, 9), sharex=True, gridspec_kw={'bottom': .15}
+            )
+
+            # Create time slider
+            slider_axis = plt.axes([0.15, 0.02, 0.7, 0.03])
+            slider = Slider(
+                slider_axis, "timestep", 1, np.shape(slgs)[0], valinit=1, valstep=1
+            )
+
+            def update_plot(k):
+                # Clear previous iteration plot
+                ax1.clear()
+                ax2.clear()
+
+                # Plot Monte Carlo rollouts
+                draw_rollouts(slgs[k - 1, :, :, :], ax1, ax2, k - 1)
+
+                # Plot nominal trajectory
+                ax1.plot(
+                    np.arange(0, np.shape(slgs)[0]) * dt,
+                    slgs[:, 0, 0, 0],
+                    alpha=1.0,
+                    linestyle="-",
+                    linewidth=1,
+                    color="g",
+                )
+                ax2.plot(
+                    np.arange(0, np.shape(slgs)[0]) * dt,
+                    slgs[:, 0, 0, 1] * 180.0 / np.pi,
+                    alpha=1.0,
+                    linestyle="-",
+                    linewidth=1,
+                    color="g",
+                )
+                ax1.set_xlim(0, np.shape(slgs)[0] * dt)
+                ax1.set_ylim(np.min(slgs) * 1.05, np.max(slgs) * 1.05)
+                ax2.set_ylim(-180.0, 180.0)
+
+                # Set labels
+                ax1.set_ylabel("position (m)")
+                ax2.set_ylabel("angle (deg)")
+                ax2.set_xlabel("time (s)", loc="right")
+                ax1.set_title("Monte Carlo Rollouts")
+
+            # Draw first iteration
+            update_plot(1)
+
+            # Update plot on slider click
+            slider.on_changed(update_plot)
+
+            # Show plot
             plt.show()
 
     # Optionally: reset the controller after an experiment
