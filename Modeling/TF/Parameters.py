@@ -10,7 +10,7 @@ Created on Fri Jun 19 08:29:29 2020
 import argparse
 import glob
 
-net_name = 'GRU-16H1-16H2'
+net_name = 'Dense-16H1-16H2-32H2'
 
 # Path to trained models and their logs
 PATH_TO_MODELS = './Modeling/TF/Models/'
@@ -21,88 +21,6 @@ PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'Dataset-1-norm.c
 TRAINING_FILES = './ExperimentRecordings/Dataset-1/Train/'
 VALIDATION_FILES = './ExperimentRecordings/Dataset-1/Validate/'
 TEST_FILES = './ExperimentRecordings/Dataset-1/Test/'
-
-# TRAINING_FILES = './ExperimentRecordings/250/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/250/Validate/'
-# TEST_FILES = './ExperimentRecordings/250/Test/'
-
-# TRAINING_FILES = './ExperimentRecordings/25/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/25/Validate/'
-# TEST_FILES = './ExperimentRecordings/25/Test/'
-
-# TRAINING_FILES = './ExperimentRecordings/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/Validate/'
-# TEST_FILES = './ExperimentRecordings/Test/'
-
-
-# TRAINING_FILES = glob.glob('./ExperimentRecordings/2500/Train/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Train/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Train/' + '*.csv')
-# VALIDATION_FILES = glob.glob('./ExperimentRecordings/2500/Validate/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Validate/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Validate/' + '*.csv')
-# TEST_FILES = glob.glob('./ExperimentRecordings/2500/Test/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Test/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Test/' + '*.csv')
-
-
-# endregion
-
-# 250 norm, trained on 250
-# net_name = 'Dense-6IN-64H1-64H2-5OUT-0'
-# PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '250.csv'
-# TRAINING_FILES = './ExperimentRecordings/250/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/250/Validate/'
-# TEST_FILES = './ExperimentRecordings/250/Test/'
-#
-# # 250 norm, trained on all
-# net_name = 'Dense-6IN-64H1-64H2-5OUT-1'
-# PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '250.csv'
-# TRAINING_FILES = glob.glob('./ExperimentRecordings/2500/Train/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Train/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Train/' + '*.csv')
-# VALIDATION_FILES = glob.glob('./ExperimentRecordings/2500/Validate/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Validate/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Validate/' + '*.csv')
-# TEST_FILES = glob.glob('./ExperimentRecordings/2500/Test/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Test/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Test/' + '*.csv')
-#
-# net_name = 'GRU-6IN-64H1-64H2-5OUT-0'
-# PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '250.csv'
-# TRAINING_FILES = glob.glob('./ExperimentRecordings/2500/Train/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Train/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Train/' + '*.csv')
-# VALIDATION_FILES = glob.glob('./ExperimentRecordings/2500/Validate/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Validate/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Validate/' + '*.csv')
-# TEST_FILES = glob.glob('./ExperimentRecordings/2500/Test/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Test/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Test/' + '*.csv')
-#
-# net_name = 'GRU-6IN-64H1-64H2-5OUT-1'
-# PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '2500_tailored.csv'
-# TRAINING_FILES = './ExperimentRecordings/2500/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/2500/Validate/'
-# TEST_FILES = './ExperimentRecordings/2500/Test/'
-#
-#
-# net_name = 'GRU-6IN-64H1-64H2-5OUT-2'
-# PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '2500.csv'
-# TRAINING_FILES = './ExperimentRecordings/2500/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/2500/Validate/'
-# TEST_FILES = './ExperimentRecordings/2500/Test/'
-#
-# net_name = 'GRU-6IN-64H1-64H2-5OUT-3'
-# PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '250.csv'
-# TRAINING_FILES = './ExperimentRecordings/250/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/250/Validate/'
-# TEST_FILES = './ExperimentRecordings/250/Test/'
-
-
-# TRAINING_FILES = './ExperimentRecordings/25/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/25/Validate/'
-# TEST_FILES = './ExperimentRecordings/25/Test/'
 
 
 
