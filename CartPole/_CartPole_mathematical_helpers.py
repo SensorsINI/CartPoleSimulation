@@ -10,7 +10,7 @@ import numpy as np
 
 
 # Wraps the angle into range [-π, π]
-def wrap_angle_rad(angle):
+def wrap_angle_rad(angle: float) -> float:
     Modulo = fmod(angle, 2 * np.pi)  # positive modulo
     if Modulo < -np.pi:
         angle = Modulo + 2 * np.pi
@@ -19,6 +19,14 @@ def wrap_angle_rad(angle):
     else:
         angle = Modulo
     return angle
+
+
+def wrap_angle_rad_inplace(angle: np.ndarray) -> None:
+    Modulo = np.fmod(angle, 2 * np.pi)  # positive modulo
+    neg_wrap, pos_wrap = Modulo < -np.pi, Modulo > np.pi
+    angle[neg_wrap] = Modulo[neg_wrap] + 2 * np.pi
+    angle[pos_wrap] = Modulo[pos_wrap] - 2 * np.pi
+    angle[~(neg_wrap | pos_wrap)] = Modulo[~(neg_wrap | pos_wrap)]
 
 
 STATE_VARIABLES = np.sort(['angle', 'angleD', 'angleDD', 'position', 'positionD', 'positionDD', 'angle_cos', 'angle_sin'])

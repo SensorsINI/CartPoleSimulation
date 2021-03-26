@@ -21,8 +21,8 @@ dt_controller_update_DataGen = 0.1
 dt_save_DataGen = 0.1
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
-length_of_experiment_DataGen = 600.0  # Length of each experiment in s
-controller_DataGen = 'do-mpc'  # Controller which should be used in generated experiment
+length_of_experiment_DataGen = 16.0  # Length of each experiment in s
+controller_DataGen = 'mppi'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'lqr'
 track_relative_complexity_DataGen = 0.1  # randomly placed target points/s
@@ -111,13 +111,13 @@ for i in range(number_of_experiments):
         save_mode=save_mode
     )
 
+    gen_end = timeit.default_timer()
+    gen_dt = (gen_end - gen_start) * 1000.0
+    print('time to generate data: {} ms'.format(gen_dt))
+
     try:
         CartPoleInstance.controller.controller_report()
     except:
         pass
-
-    gen_end = timeit.default_timer()
-    gen_dt = (gen_end - gen_start) * 1000.0
-    print('time to generate data: {} ms'.format(gen_dt))
 
 # os.system('say "Antonio! Todo ha terminado!"')
