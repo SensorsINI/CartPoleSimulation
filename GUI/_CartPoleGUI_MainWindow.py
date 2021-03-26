@@ -31,6 +31,7 @@ if get_backend() != 'module://backend_interagg':
 
 # Import functions to measure time intervals and to pause a thread for a given time
 from time import sleep
+import csv
 
 # Import Cart class - the class keeping all the parameters and methods
 # related to CartPole which are not related to PyQt5 GUI
@@ -428,7 +429,17 @@ class MainWindow(QMainWindow):
         csv_name = self.textbox.text()
 
         # Load experiment history
-        history_pd = self.CartPoleInstance.load_history_csv(csv_name=csv_name)
+        history_pd, filepath = self.CartPoleInstance.load_history_csv(csv_name=csv_name)
+
+        # Set cartpole in the right mode (just to ensure slider behaves properly)
+        with open(filepath) as f:
+            reader = csv.reader(f)
+            for line in reader:
+                line = line[0]
+                if line[:len('# Controller: ')] == '# Controller: ':
+                    self.CartPoleInstance.set_controller(line[len('# Controller: '):].rstrip("\n"))
+                    self.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
+                    break
 
         # Augment the experiment history with simulation time step size
         dt = []

@@ -33,37 +33,43 @@ Using predictor:
 #   Updating it more often will lead to false results.
 
 
-from Modeling.load_and_normalize import load_normalization_info, normalize_df
+from Modeling.load_and_normalize import load_normalization_info, normalize_numpy_array
 from CartPole.cartpole_model import Q2u
-from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
+from CartPole._CartPole_mathematical_helpers import create_cartpole_state,\
+    cartpole_state_varname_to_index, cartpole_state_varnames_to_indices, \
+    cartpole_state_indices_to_varnames
 
 import numpy as np
-import pandas as pd
-import copy
-import timeit
 
 from CartPole.cartpole_model import cartpole_ode
 
-RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0' # You need it to get normalization info
-RNN_PATH = './save_tf/'
-# RNN_PATH = './controllers/nets/mpc_on_rnn_tf/'
-PREDICTION_FEATURES_NAMES = ['s.angle.cos', 's.angle.sin', 's.angle', 's.angleD', 's.position', 's.positionD']
-PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'NI_2021-03-01_11-51-13.csv'
+PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '2500.csv'
 
-def mpc_next_state(s, u, dt):
+def next_state(s, u, dt):
     """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
     """
 
-    s_next = s
+    s_next = create_cartpole_state()
 
-    s_next[cartpole_state_varname_to_index('angleDD')], s_next[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(s_next, u)  # Calculates CURRENT second derivatives
+    # # Calculates CURRENT second derivatives
+    # s_next[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s, u)
 
     # Calculate NEXT state:
-    s_next[cartpole_state_varname_to_index('position')] = s[cartpole_state_varname_to_index('position')] + s[cartpole_state_varname_to_index('positionD')] * dt
-    s_next[cartpole_state_varname_to_index('positionD')] = s[cartpole_state_varname_to_index('positionD')] + s[cartpole_state_varname_to_index('positionDD')] * dt
+    s_next[cartpole_state_varname_to_index('position')] = \
+        s[cartpole_state_varname_to_index('position')] + s[cartpole_state_varname_to_index('positionD')] * dt
+    s_next[cartpole_state_varname_to_index('positionD')] = \
+        s[cartpole_state_varname_to_index('positionD')] + s[cartpole_state_varname_to_index('positionDD')] * dt
 
-    s_next[cartpole_state_varname_to_index('angle')] = s[cartpole_state_varname_to_index('angle')] + s[cartpole_state_varname_to_index('angleD')] * dt
-    s_next[cartpole_state_varname_to_index('angleD')] = s[cartpole_state_varname_to_index('angleD')] + s[cartpole_state_varname_to_index('angleDD')] * dt
+    s_next[cartpole_state_varname_to_index('angle')] = \
+        s[cartpole_state_varname_to_index('angle')] + s[cartpole_state_varname_to_index('angleD')] * dt
+    s_next[cartpole_state_varname_to_index('angleD')] = \
+        s[cartpole_state_varname_to_index('angleD')] + s[cartpole_state_varname_to_index('angleDD')] * dt
+
+    s_next[cartpole_state_varname_to_index('angle_cos')] = np.cos(s_next[cartpole_state_varname_to_index('angle')])
+    s_next[cartpole_state_varname_to_index('angle_sin')] = np.sin(s_next[cartpole_state_varname_to_index('angle')])
+
+    # Calculates second derivatives of NEXT state
+    s_next[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s_next, u)
 
     return s_next
 
@@ -83,37 +89,20 @@ class predictor_ideal:
 
         self.dt = dt
 
-        self.prediction_features_names = PREDICTION_FEATURES_NAMES
+        self.prediction_features_names = cartpole_state_indices_to_varnames(range(len(self.s)))
+
         self.prediction_denorm = False
 
-        # self.prediction_list = pd.DataFrame(columns=PREDICTION_FEATURES_NAMES, index=range(horizon + 1))
-        self.prediction_list = pd.DataFrame(data=np.zeros((self.horizon+1, len(PREDICTION_FEATURES_NAMES)+1)),
-                                            columns=['Q'] + PREDICTION_FEATURES_NAMES)
 
-        pass
+        #
+        self.output = np.zeros((self.horizon+1, len(self.prediction_features_names)+1))
 
-    def setup(self, initial_state: pd.DataFrame, prediction_denorm=False):
 
-        if ('s.angle' in initial_state.columns):
-            self.s[cartpole_state_varname_to_index('angle')] = initial_state['s.angle'].to_numpy().squeeze()
-        elif ('s.angle.cos' in initial_state.columns) and ('s.angle.sin' in initial_state.columns):
-            self.s[cartpole_state_varname_to_index('angle')] = np.arctan2(initial_state['s.angle.sin'].to_numpy(), initial_state['s.angle.cos'].to_numpy())
-        else:
-            raise ValueError('Angle info missing')
+    def setup(self, initial_state: np.ndarray, prediction_denorm=False):
 
-        if ('s.angle.cos' in initial_state.columns) and ('s.angle.sin' in initial_state.columns):
-            self.s[cartpole_state_varname_to_index('angle_cos')] = initial_state['s.angle.cos'].to_numpy().squeeze()
-            self.s[cartpole_state_varname_to_index('angle_sin')] = initial_state['s.angle.sin'].to_numpy().squeeze()
-        elif ('s.angle' in initial_state.columns):
-            self.s[cartpole_state_varname_to_index('angle_cos')] = np.cos(initial_state['s.angle']).to_numpy().squeeze()
-            self.s[cartpole_state_varname_to_index('angle_sin')] = np.sin(initial_state['s.angle']).to_numpy().squeeze()
-        else:
-            raise ValueError('Angle info missing')
+        # The initial state is provided with not valid second derivatives
 
-        self.s[cartpole_state_varname_to_index('angleD')] = initial_state['s.angleD'].to_numpy().squeeze()
-
-        self.s[cartpole_state_varname_to_index('position')] = initial_state['s.position'].to_numpy().squeeze()
-        self.s[cartpole_state_varname_to_index('positionD')] = initial_state['s.positionD'].to_numpy().squeeze()
+        self.s[:] = initial_state
 
         if prediction_denorm:
             self.prediction_denorm = True
@@ -121,48 +110,29 @@ class predictor_ideal:
             self.prediction_denorm = False
 
 
-    def predict(self, Q) -> pd.DataFrame:
+    def predict(self, Q: np.ndarray) -> np.ndarray:
 
-        if len(Q) != self.horizon:
+        if len(Q) != self.horizon+1:
             raise IndexError('Number of provided control inputs does not match the horizon')
         else:
             Q_hat = np.atleast_1d(np.asarray(Q).squeeze())
 
-        # t0 = timeit.default_timer()
-        yp_hat = np.zeros(self.horizon + 1, dtype=object)
+        self.output[:, -1] = Q_hat
+
+        s_next = self.s
+        # Calculate second derivatives of initial state
+        s_next[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s_next, Q2u(Q_hat[0]))
+        self.output[0, :-1] = s_next
 
         for k in range(self.horizon):
-            if k == 0:
-                yp_hat[0] = self.s
-                s_next = self.s
-
-            t0 = timeit.default_timer()
-            s_next = mpc_next_state(s_next, Q2u(Q_hat[k]), dt=self.dt)
-            s_next[cartpole_state_varname_to_index('angle_cos')] = np.cos(s_next[cartpole_state_varname_to_index('angle')])
-            s_next[cartpole_state_varname_to_index('angle_sin')] = np.sin(s_next[cartpole_state_varname_to_index('angle')])
-            t1 = timeit.default_timer()
-            # self.eq_eval_time.append((t1 - t0) * 1.0e6)
-            yp_hat[k + 1] = s_next
-
-        all_features = []
-        for k in range(len(yp_hat)):
-            s = yp_hat[k]
-            if k < self.horizon:
-                Q = Q_hat[k]
-            else:
-                Q = Q_hat[k-1]
-            timestep_features = [Q, s[cartpole_state_varname_to_index('angle_cos')], s[cartpole_state_varname_to_index('angle_sin')], s[cartpole_state_varname_to_index('angle')], s[cartpole_state_varname_to_index('angleD')], s[cartpole_state_varname_to_index('position')], s[cartpole_state_varname_to_index('positionD')]]
-            all_features.append(timestep_features)
-        all_features = np.asarray(all_features)
-        self.prediction_list.values[:, :] = all_features
-        # self.prediction_list = normalize_df(self.prediction_list, self.normalization_info)
-
-        predictions = copy.copy(self.prediction_list)
+            s_next = next_state(s_next, Q2u(Q_hat[k]), dt=self.dt)
+            self.output[k+1, :-1] = s_next
 
         if self.prediction_denorm:
-            return predictions
+            return self.output
         else:
-            return normalize_df(predictions, self.normalization_info)
+            columns = self.prediction_features_names + ['Q']
+            return normalize_numpy_array(self.output, columns, self.normalization_info)
 
     # @tf.function
     def update_internal_state(self, Q0):

@@ -213,14 +213,14 @@ class DatasetRandom(keras.utils.Sequence):
                                             high=3.0 * np.pi)
 
         initial_state = pd.DataFrame(0, index=np.arange(1),
-                                          columns=['s.angle.cos', 's.angle.sin', 's.angleD', 's.position',
-                                                   's.positionD'])
+                                          columns=['angle_cos', 'angle_sin', 'angleD', 'position',
+                                                   'positionD'])
 
-        initial_state['s.angle.cos'] = [np.cos(s[cartpole_state_varname_to_index('angle')])]
-        initial_state['s.angle.sin'] = [np.sin(s[cartpole_state_varname_to_index('angle')])]
-        initial_state['s.angleD'] = [s[cartpole_state_varname_to_index('angleD')]]
-        initial_state['s.position'] = [s[cartpole_state_varname_to_index('position')]]
-        initial_state['s.positionD'] = [s[cartpole_state_varname_to_index('positionD')]]
+        initial_state['angle_cos'] = [np.cos(s[cartpole_state_varname_to_index('angle')])]
+        initial_state['angle_sin'] = [np.sin(s[cartpole_state_varname_to_index('angle')])]
+        initial_state['angleD'] = [s[cartpole_state_varname_to_index('angleD')]]
+        initial_state['position'] = [s[cartpole_state_varname_to_index('position')]]
+        initial_state['positionD'] = [s[cartpole_state_varname_to_index('positionD')]]
 
         Predictor = predictor_ideal((self.exp_len+1) * 5, 0.02) # This results in exp_len+2 timesteps
         Predictor.setup(initial_state=initial_state, prediction_denorm=False)

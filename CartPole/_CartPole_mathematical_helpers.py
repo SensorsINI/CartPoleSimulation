@@ -23,7 +23,7 @@ def wrap_angle_rad(angle):
 
 STATE_VARIABLES = np.sort(['angle', 'angleD', 'angleDD', 'position', 'positionD', 'positionDD', 'angle_cos', 'angle_sin'])
 
-def create_cartpole_state(state: dict={}) -> np.ndarray:
+def create_cartpole_state(state: dict={}, dtype=None) -> np.ndarray:
     """
     Constructor of cartpole state from named arguments. The order of variables is fixed in STATE_VARIABLES.
 
@@ -42,7 +42,10 @@ def create_cartpole_state(state: dict={}) -> np.ndarray:
     state['angle_cos'] = np.cos(state['angle']) if 'angle' in state.keys() else np.cos(0.0)
     state['angle_sin'] = np.sin(state['angle']) if 'angle' in state.keys() else np.sin(0.0)
 
-    s = np.zeros_like(STATE_VARIABLES, dtype=float)
+    if dtype is None:
+        dtype = np.float32
+
+    s = np.zeros_like(STATE_VARIABLES, dtype=dtype)
     for i, v in enumerate(STATE_VARIABLES):
         s[i] = state.get(v) if v in state.keys() else s[i]
     return s
@@ -60,6 +63,20 @@ def cartpole_state_varname_to_index(variable_name: str) -> int:
 
 def cartpole_state_index_to_varname(index: int) -> str:
     return STATE_VARIABLES[index]
+
+
+def cartpole_state_varnames_to_indices(variable_names: list) -> list:
+    indices = []
+    for variable_name in variable_names:
+        indices.append(cartpole_state_varname_to_index(variable_name))
+    return indices
+
+def cartpole_state_indices_to_varnames(indices: list) -> list:
+    varnames = []
+    for index in indices:
+        varnames.append(cartpole_state_index_to_varname(index))
+    return varnames
+
 
 
 def cartpole_state_namespace_to_vector(s_namespace: SimpleNamespace) -> np.ndarray:

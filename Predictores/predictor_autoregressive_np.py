@@ -21,7 +21,7 @@ RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0' # DT = 0.1s for this net
 # RNN_PATH = './save_tf/long_3_55/'
 RNN_PATH = './save_tf/'
 # RNN_PATH = './controllers/nets/mpc_on_rnn_tf/'
-PREDICTION_FEATURES_NAMES = ['s.angle.cos', 's.angle.sin', 's.angleD', 's.position', 's.positionD']
+PREDICTION_FEATURES_NAMES = ['angle_cos', 'angle_sin', 'angleD', 'position', 'positionD']
 
 class predictor_autoregressive_tf:
     def __init__(self, horizon, dt=None):
@@ -116,10 +116,10 @@ class predictor_autoregressive_tf:
 
         if self.prediction_denorm:
             predictions = copy.copy(denormalize_df(self.prediction_rnn[self.prediction_features_names], self.normalization_info))
-            predictions['s.angle'] = np.arctan2(predictions['s.angle.sin'], predictions['s.angle.cos'])
+            predictions['angle'] = np.arctan2(predictions['angle_sin'], predictions['angle_cos'])
         else:
             predictions = copy.copy(self.prediction_rnn[self.prediction_features_names])
-            predictions['s.angle'] = np.arctan2(predictions['s.angle.sin'], predictions['s.angle.cos'])/np.pi
+            predictions['angle'] = np.arctan2(predictions['angle_sin'], predictions['angle_cos'])/np.pi
 
         return predictions
 

@@ -39,7 +39,7 @@ except:
 
 # datafile = glob.glob('./data/validate/' + '*.csv')[0]
 datafile = glob.glob('./ExperimentRecordings/Test/' + '*.csv')[0]
-features = ['s.angle.cos', 's.angle.sin', 's.angle', 's.angleD', 's.position', 's.positionD']
+features = ['angle_cos', 'angle_sin', 'angle', 'angleD', 'position', 'positionD']
 feature_to_plot = features[2]
 
 df = pd.read_csv(datafile, comment='#', dtype=np.float32)
