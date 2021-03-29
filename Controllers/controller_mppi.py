@@ -74,7 +74,7 @@ E_kin_pol = conditional_decorator(jit(nopython=True), parallelize)(
     lambda s: s[ANGLED_IDX] ** 2
 )
 E_pot_cost = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s: np.sin(s[ANGLE_IDX]) ** 2
+    lambda s: (1.0 - np.cos(s[ANGLE_IDX])) ** 2
 )
 distance_difference = conditional_decorator(jit(nopython=True), parallelize)(
     lambda s, target_position: (s[POSITION_IDX] - target_position) ** 2
@@ -149,8 +149,8 @@ def motion_derivatives(s: np.ndarray, u: float):
 @conditional_decorator(jit(nopython=True), parallelize)
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
-    dd = distance_difference(s, target_position) * 1.0e4
-    ep = 100 * E_pot_cost(s)
+    dd = distance_difference(s, target_position)
+    ep = 2e2 * E_pot_cost(s)
     ekp = E_kin_pol(s)
     ekc = 100 * E_kin_cart(s)
     cc = (
