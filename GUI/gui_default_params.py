@@ -16,8 +16,8 @@ save_interval = 0.1  # s, How often to save the results of simulation
 
 
 # Starting setting of the CartPole GUI (can be changed in GUI)
-controller_init = 'custom-mpc-scipy'  # Defines which controller is loaded at the start of the program
-# controller_init = 'do-mpc'
+# controller_init = 'custom-mpc-scipy'  # Defines which controller is loaded at the start of the program
+controller_init = 'do-mpc'
 """
 Possible choices for CartPole controller:
 

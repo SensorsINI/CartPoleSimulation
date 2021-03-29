@@ -5,7 +5,8 @@ from tqdm import trange
 
 import numpy as np
 
-from CartPole._CartPole_mathematical_helpers import wrap_angle_rad, create_cartpole_state,\
+from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
+from CartPole.state_utilities import create_cartpole_state, \
     cartpole_state_varnames_to_indices, cartpole_state_varname_to_index, \
     cartpole_state_indices_to_varnames
 from types import SimpleNamespace

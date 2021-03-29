@@ -9,7 +9,8 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 
 # region Imported modules
 
-from CartPole._CartPole_mathematical_helpers import wrap_angle_rad, cartpole_state_varname_to_index, cartpole_state_index_to_varname
+from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
+from CartPole.state_utilities import cartpole_state_varname_to_index, cartpole_state_index_to_varname
 from CartPole.cartpole_model import Q2u, cartpole_ode, P_GLOBALS, s0
 
 import numpy as np
