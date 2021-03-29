@@ -48,11 +48,11 @@ import pandas as pd
 RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0'  # DT = 0.1s for this net
 NET_PATH = './Modeling/TF/Models/' + RNN_FULL_NAME
 # RNN_PATH = './controllers/nets/mpc_on_rnn_tf/'
-PREDICTION_FEATURES_NAMES = ['s.angle.cos', 's.angle.sin', 's.angleD', 's.position', 's.positionD']
+PREDICTION_FEATURES_NAMES = ['angle_cos', 'angle_sin', 'angleD', 'position', 'positionD']
 
 # TODO: This should be taken from log of net:
-inputs_list = ['Q', 's.angle.sin', 's.angle.cos', 's.angleD', 's.position', 's.positionD']
-outputs_list = ['s.angle.sin', 's.angle.cos', 's.angleD', 's.position', 's.positionD']
+inputs_list = ['Q', 'angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
+outputs_list = ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
 PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'NI_2021-03-01_11-51-13.csv'
 
 
@@ -136,10 +136,10 @@ class predictor_autoregressive_tf:
 
         if self.prediction_denorm:
             predictions = copy.copy(denormalize_df(self.prediction_rnn[self.prediction_features_names], self.normalization_info))
-            predictions['s.angle'] = np.arctan2(predictions['s.angle.sin'], predictions['s.angle.cos'])
+            predictions['angle'] = np.arctan2(predictions['angle_sin'], predictions['angle_cos'])
         else:
             predictions = copy.copy(self.prediction_rnn[self.prediction_features_names])
-            predictions['s.angle'] = np.arctan2(predictions['s.angle.sin'], predictions['s.angle.cos'])/np.pi
+            predictions['angle'] = np.arctan2(predictions['angle_sin'], predictions['angle_cos'])/np.pi
 
         return predictions
 

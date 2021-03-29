@@ -193,6 +193,22 @@ def get_net_and_norm_info(a,
             # This is the full name of pretrained net. A new full name will be given if the training is resumed
             net_info.net_full_name = net_full_name
 
+            # region Make a single call on an zero array to make the console output clean
+            # (just aesthetic effect to throw possible warning here and not at the beginning of training)
+
+            # # Save internal state
+            # states = get_internal_states(net)
+            #
+            # # Run test input
+            # test_input = np.zeros(shape=(batch_size, time_series_length, len(net_info.inputs)))
+            # net.predict_on_batch(test_input)
+            #
+            # # Restore initial hidden state
+            # net.reset_states()
+            # load_internal_states(net, states)
+
+            # endregion
+
 
     else:
 
@@ -213,22 +229,6 @@ def get_net_and_norm_info(a,
         # endregion
 
         net_info.parent_net_name = 'Network trained from scratch'
-
-    # endregion
-
-    # region Make a single call on an zero array to make the console output clean
-    # (just aesthetic effect to throw possible warning here and not at the beginning of training)
-
-    # Save internal state
-    states = get_internal_states(net)
-
-    # Run test input
-    test_input = np.zeros(shape=(batch_size, time_series_length, len(net_info.inputs)))
-    net.predict_on_batch(test_input)
-
-    # Restore initial hidden state
-    net.reset_states()
-    load_internal_states(net, states)
 
     # endregion
 

@@ -68,17 +68,16 @@ STATE_LOGS = []
 
 """Cost function helpers"""
 E_kin_cart = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s: (s[POSITIOND_IDX] / v_max) ** 2
+    lambda s: s[POSITIOND_IDX] ** 2
 )
 E_kin_pol = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s: (s[ANGLED_IDX] / (2 * np.pi)) ** 2
+    lambda s: s[ANGLED_IDX] ** 2
 )
 E_pot_cost = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s: (1 - np.cos(s[ANGLE_IDX])) ** 2
+    lambda s: np.sin(s[ANGLE_IDX]) ** 2
 )
 distance_difference = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s, target_position: ((s[POSITION_IDX] - target_position) / TrackHalfLength)
-    ** 2
+    lambda s, target_position: (s[POSITION_IDX] - target_position) ** 2
 )
 
 
@@ -340,7 +339,7 @@ class controller_mppi(template_controller):
                         linewidth=2,
                         color="k",
                     )
-            
+
             # Prepare data
             # shape(slgs) = ITERATIONS x mc_samples x mpc_steps x [position, angle]
             slgs = np.stack(STATE_LOGS, axis=0)
@@ -348,7 +347,12 @@ class controller_mppi(template_controller):
 
             # Create figure
             fig, (ax1, ax2) = plt.subplots(
-                nrows=2, ncols=1, num=4, figsize=(16, 9), sharex=True, gridspec_kw={'bottom': .15}
+                nrows=2,
+                ncols=1,
+                num=4,
+                figsize=(16, 9),
+                sharex=True,
+                gridspec_kw={"bottom": 0.15},
             )
 
             # Create time slider

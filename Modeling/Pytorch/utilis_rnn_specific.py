@@ -14,12 +14,12 @@ def plot_results_specific(targets_pd, rnn_outputs, time_axis, comment, closed_lo
         time_axis_string = 'Time [s]'
 
 
-    if ('s.angle' in targets_pd) and ('s.angle' in rnn_outputs) and ('s.position' in targets_pd) and (
-            's.position' in rnn_outputs):
-        angle_target = np.rad2deg(targets_pd['s.angle'].to_numpy())
-        position_target = targets_pd['s.position'].to_numpy()
-        angle_output = np.rad2deg(rnn_outputs['s.angle'].to_numpy())
-        position_output = rnn_outputs['s.position'].to_numpy()
+    if ('angle' in targets_pd) and ('angle' in rnn_outputs) and ('position' in targets_pd) and (
+            'position' in rnn_outputs):
+        angle_target = np.rad2deg(targets_pd['angle'].to_numpy())
+        position_target = targets_pd['position'].to_numpy()
+        angle_output = np.rad2deg(rnn_outputs['angle'].to_numpy())
+        position_output = rnn_outputs['position'].to_numpy()
 
         # Create a figure instance
         fig, axs = plt.subplots(2, 1, figsize=(18, 10), sharex=True)

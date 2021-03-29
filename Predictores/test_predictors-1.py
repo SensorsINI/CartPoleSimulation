@@ -18,14 +18,14 @@ start_at = 20
 autoregres_at_after_start = 20
 
 datafile = glob.glob('./ExperimentRecordings/Test/' + '*.csv')[0]
-features = ['s.angle.cos', 's.angle.sin', 's.angle', 's.angleD', 's.position', 's.positionD']
+features = ['angle_cos', 'angle_sin', 'angle', 'angleD', 'position', 'positionD']
 feature_to_plot = features[4]
 
 df = pd.read_csv(datafile, comment='#', dtype=np.float32)
 df = df.iloc[::downsampling].reset_index(drop=True)
 df = df.iloc[start_at:].reset_index(drop=True)
 df = df.iloc[0:autoregres_at_after_start + horizon + 1, df.columns.get_indexer(
-    ['time', 'Q', 's.angle', 's.angle.cos', 's.angle.sin', 's.angleD', 's.position', 's.positionD'])]
+    ['time', 'Q', 'angle', 'angle_cos', 'angle_sin', 'angleD', 'position', 'positionD'])]
 
 pd_plotter_simple(df, 'time', feature_to_plot, idx_range=[0, autoregres_at_after_start + horizon],
                   vline=df.loc[df.index[autoregres_at_after_start], 'time'], marker='o',

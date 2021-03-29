@@ -321,7 +321,7 @@ def brunton_widget(inputs, outputs, ground_truth, net_outputs, time_axis, axs=No
         current_point_at_timeaxis = ground_truth.shape[0]//2
 
     if feature_to_display is None:
-        feature_to_display = 's.angle.cos'
+        feature_to_display = 'angle_cos'
 
     if horizon is None:
         horizon = max_horizon

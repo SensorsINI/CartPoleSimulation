@@ -22,8 +22,9 @@ except:
     pass
 
 PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/'
-PATH_TO_EXPERIMENT_RECORDINGS = './ExperimentRecordings/' # Path where the experiments data is stored
+PATH_TO_EXPERIMENT_RECORDINGS = './ExperimentRecordings/'  # Path where the experiments data is stored
 normalization_rounding_decimals = 5
+
 
 def get_paths_to_datafiles(paths_to_data_information):
     """
@@ -71,7 +72,6 @@ def get_paths_to_datafiles(paths_to_data_information):
 
 
 def load_data(list_of_paths_to_datafiles=None):
-
     all_dfs = []  # saved separately to get normalization
 
     print('Loading data files:')
@@ -82,6 +82,7 @@ def load_data(list_of_paths_to_datafiles=None):
         all_dfs.append(df)
 
     return all_dfs
+
 
 # This function returns the saving interval of datafile
 # Used to ensure that datafiles used for training save data with the same frequency
@@ -109,8 +110,8 @@ def get_sampling_interval_from_normalization_info(path_to_normalization_info):
                     dt_save = float(dt_information[:-2])
                 return dt_save
 
-def load_cartpole_parameters(dataset_path):
 
+def load_cartpole_parameters(dataset_path):
     p = SimpleNamespace()
 
     # region Get information about the pretrained network from the associated txt file
@@ -173,14 +174,13 @@ def load_cartpole_parameters(dataset_path):
 
     return p
 
+
 def calculate_normalization_info(paths_to_data_information=None, plot_histograms=True):
     """
     This function creates csv file with information about dataset statistics which may be used for normalization.
     The statistics are calculated from provided datafiles
     BUT may include user corrections to account for prior knowledge about distribution (e.g. 0 mean)
     """
-
-
 
     list_of_paths_to_datafiles = get_paths_to_datafiles(paths_to_data_information)
 
@@ -203,7 +203,7 @@ def calculate_normalization_info(paths_to_data_information=None, plot_histograms
 
     tol = 1.0e-6
     sampling_interval_str = '# Sampling interval of data used to calculate normalization: '
-    if np.all(abs(dts_save-dt_save) < tol):
+    if np.all(abs(dts_save - dt_save) < tol):
         sampling_interval_str += '{} s'.format(dt_save)
     else:
         sampling_interval_str += 'Not constant!'
@@ -250,35 +250,50 @@ def calculate_normalization_info(paths_to_data_information=None, plot_histograms
     df_norm_info_from_data = df_norm_info.copy()
 
     # User defined normalization values:
-    df_norm_info.loc['mean', 's.position'] = 0.0
-    df_norm_info.loc['std',  's.position'] = df_norm_info.loc['std', 's.position']  # no change
-    df_norm_info.loc['max',  's.position'] = P_GLOBALS.TrackHalfLength
-    df_norm_info.loc['min',  's.position'] = -P_GLOBALS.TrackHalfLength
 
-    df_norm_info.loc['mean', 's.positionD'] = 0.0
-    df_norm_info.loc['std',  's.positionD'] = df_norm_info.loc['std', 's.positionD']
-    df_norm_info.loc['max',  's.positionD'] = max(abs(df_norm_info.loc['max',  's.positionD']), abs(df_norm_info.loc['min',  's.positionD']))
-    df_norm_info.loc['min',  's.positionD'] = - df_norm_info.loc['max',  's.positionD']
+    df_norm_info.loc['mean', 'angle'] = 0.0
+    df_norm_info.loc['std', 'angle'] = df_norm_info.loc['std', 'angle']
+    df_norm_info.loc['max', 'angle'] = np.pi
+    df_norm_info.loc['min', 'angle'] = -np.pi
 
-    df_norm_info.loc['mean', 's.positionDD'] = 0.0
-    df_norm_info.loc['std', 's.positionDD'] = df_norm_info.loc['std', 's.positionDD']
-    df_norm_info.loc['max', 's.positionDD'] = max(abs(df_norm_info.loc['max', 's.positionDD']), abs(df_norm_info.loc['min', 's.positionDD']))
-    df_norm_info.loc['min', 's.positionDD'] = - df_norm_info.loc['max', 's.positionDD']
+    df_norm_info.loc['mean', 'angleD'] = 0.0
+    df_norm_info.loc['std', 'angleD'] = df_norm_info.loc['std', 'angleD']
+    df_norm_info.loc['max', 'angleD'] = max(abs(df_norm_info.loc['max', 'angleD']),
+                                            abs(df_norm_info.loc['min', 'angleD']))
+    df_norm_info.loc['min', 'angleD'] = - df_norm_info.loc['max', 'angleD']
 
-    df_norm_info.loc['mean', 's.angle'] = 0.0
-    df_norm_info.loc['std', 's.angle'] = df_norm_info.loc['std', 's.angle']
-    df_norm_info.loc['max', 's.angle'] = np.pi
-    df_norm_info.loc['min', 's.angle'] = -np.pi
+    df_norm_info.loc['mean', 'angleDD'] = 0.0
+    df_norm_info.loc['std', 'angleDD'] = df_norm_info.loc['std', 'angleDD']
+    df_norm_info.loc['max', 'angleDD'] = max(abs(df_norm_info.loc['max', 'angleDD']),
+                                             abs(df_norm_info.loc['min', 'angleDD']))
+    df_norm_info.loc['min', 'angleDD'] = - df_norm_info.loc['max', 'angleDD']
 
-    df_norm_info.loc['mean', 's.angleD'] = 0.0
-    df_norm_info.loc['std', 's.angleD'] = df_norm_info.loc['std', 's.angleD']
-    df_norm_info.loc['max', 's.angleD'] = max(abs(df_norm_info.loc['max',  's.angleD']), abs(df_norm_info.loc['min',  's.angleD']))
-    df_norm_info.loc['min', 's.angleD'] = - df_norm_info.loc['max',  's.angleD']
+    df_norm_info.loc['mean', 'angle_cos'] = 0.0
+    df_norm_info.loc['std', 'angle_cos'] = df_norm_info.loc['std', 'angle_cos']
+    df_norm_info.loc['max', 'angle_cos'] = 1.0
+    df_norm_info.loc['min', 'angle_cos'] = - 1.0
 
-    df_norm_info.loc['mean', 's.angleDD'] = 0.0
-    df_norm_info.loc['std', 's.angleDD'] = df_norm_info.loc['std', 's.angleDD']
-    df_norm_info.loc['max', 's.angleDD'] = max(abs(df_norm_info.loc['max',  's.angleDD']), abs(df_norm_info.loc['min',  's.angleDD']))
-    df_norm_info.loc['min', 's.angleDD'] = - df_norm_info.loc['max',  's.angleDD']
+    df_norm_info.loc['mean', 'angle_sin'] = 0.0
+    df_norm_info.loc['std', 'angle_sin'] = df_norm_info.loc['std', 'angle_sin']
+    df_norm_info.loc['max', 'angle_sin'] = 1.0
+    df_norm_info.loc['min', 'angle_sin'] = - 1.0
+
+    df_norm_info.loc['mean', 'position'] = 0.0
+    df_norm_info.loc['std', 'position'] = df_norm_info.loc['std', 'position']  # no change
+    df_norm_info.loc['max', 'position'] = P_GLOBALS.TrackHalfLength
+    df_norm_info.loc['min', 'position'] = -P_GLOBALS.TrackHalfLength
+
+    df_norm_info.loc['mean', 'positionD'] = 0.0
+    df_norm_info.loc['std', 'positionD'] = df_norm_info.loc['std', 'positionD']
+    df_norm_info.loc['max', 'positionD'] = max(abs(df_norm_info.loc['max', 'positionD']),
+                                               abs(df_norm_info.loc['min', 'positionD']))
+    df_norm_info.loc['min', 'positionD'] = - df_norm_info.loc['max', 'positionD']
+
+    df_norm_info.loc['mean', 'positionDD'] = 0.0
+    df_norm_info.loc['std', 'positionDD'] = df_norm_info.loc['std', 'positionDD']
+    df_norm_info.loc['max', 'positionDD'] = max(abs(df_norm_info.loc['max', 'positionDD']),
+                                                abs(df_norm_info.loc['min', 'positionDD']))
+    df_norm_info.loc['min', 'positionDD'] = - df_norm_info.loc['max', 'positionDD']
 
     df_norm_info.loc['mean', 'u'] = 0.0
     df_norm_info.loc['std', 'u'] = df_norm_info.loc['std', 'u']
@@ -295,16 +310,6 @@ def calculate_normalization_info(paths_to_data_information=None, plot_histograms
     df_norm_info.loc['max', 'target_position'] = P_GLOBALS.TrackHalfLength
     df_norm_info.loc['min', 'target_position'] = -P_GLOBALS.TrackHalfLength
 
-    df_norm_info.loc['mean', 's.angle.sin'] = 0.0
-    df_norm_info.loc['std', 's.angle.sin'] = df_norm_info.loc['std', 's.angle.sin']
-    df_norm_info.loc['max', 's.angle.sin'] = 1.0
-    df_norm_info.loc['min', 's.angle.sin'] = - 1.0
-
-    df_norm_info.loc['mean', 's.angle.cos'] = 0.0
-    df_norm_info.loc['std', 's.angle.cos'] = df_norm_info.loc['std', 's.angle.cos']
-    df_norm_info.loc['max', 's.angle.cos'] = 1.0
-    df_norm_info.loc['min', 's.angle.cos'] = - 1.0
-
     if df_norm_info.equals(df_norm_info_from_data):
         modified = 'No'
         # print to file also original dataframe, so that anybody can check changes done by user
@@ -320,9 +325,9 @@ def calculate_normalization_info(paths_to_data_information=None, plot_histograms
     df_norm_info_from_data = df_norm_info_from_data.round(normalization_rounding_decimals)
     df_index = df_norm_info_from_data.index
     df_norm_info_from_data.insert(0, "      ", df_index, True)
-    df_norm_info_from_data.insert(0, "#", 4*['#'], True)
+    df_norm_info_from_data.insert(0, "#", 4 * ['#'], True)
     for i in range(len(df_norm_info_from_data.columns)):
-        df_norm_info_from_data.insert(2*i+1, '         ', 4 * ['           '], True)
+        df_norm_info_from_data.insert(2 * i + 1, '         ', 4 * ['           '], True)
     # endregion
 
     # region Make folder to save normalization info (if not yet existing)
@@ -401,10 +406,6 @@ def load_normalization_info(path_to_normalization_info):
     return pd.read_csv(path_to_normalization_info, index_col=0, comment='#')
 
 
-
-
-
-
 def normalize_feature(feature, normalization_info, normalization_type='minmax_sym', name=None):
     """feature needs to have atribute name!!!"""
 
@@ -473,7 +474,8 @@ def denormalize_feature(feature, normalization_info, normalization_type='minmax_
         # col_max = normalization_info.loc['max', name]
         # return feature * (col_max - col_min) + col_min
         # return feature * col_std + col_mean
-        return feature * (normalization_info.loc['max', name] - normalization_info.loc['min', name]) + normalization_info.loc['min', name]
+        return feature * (normalization_info.loc['max', name] - normalization_info.loc['min', name]) + \
+               normalization_info.loc['min', name]
     elif normalization_type == 'minmax_sym':
         # col_min = normalization_info.loc['min', name]
         # col_max = normalization_info.loc['max', name]
@@ -495,32 +497,62 @@ def denormalize_df(dfs, normalization_info, normalization_type='minmax_sym'):
 
     return dfs
 
+
 def denormalize_numpy_array(normalized_array,
                             features,
                             normalization_info,
                             normalization_type='minmax_sym'):
-
     denormalized_array = np.zeros_like(normalized_array)
     for feature_idx in range(len(features)):
         if normalization_type == 'gaussian':
-            denormalized_array[..., feature_idx] =  normalized_array[..., feature_idx] * \
-                                                    normalization_info.loc['std', features[feature_idx]] + \
-                                                    normalization_info.loc['mean', features[feature_idx]]
+            denormalized_array[..., feature_idx] = normalized_array[..., feature_idx] * \
+                                                   normalization_info.at['std', features[feature_idx]] + \
+                                                   normalization_info.at['mean', features[feature_idx]]
         elif normalization_type == 'minmax_pos':
-            denormalized_array[..., feature_idx] =  normalized_array[..., feature_idx]\
-                                                    * (normalization_info.loc['max', features[feature_idx]] - normalization_info.loc['min', features[feature_idx]]) + \
-                                                    normalization_info.loc['min', features[feature_idx]]
+            denormalized_array[..., feature_idx] = normalized_array[..., feature_idx] \
+                                                   * (normalization_info.at['max', features[feature_idx]] -
+                                                      normalization_info.at['min', features[feature_idx]]) + \
+                                                   normalization_info.at['min', features[feature_idx]]
         elif normalization_type == 'minmax_sym':
             denormalized_array[..., feature_idx] = ((normalized_array[..., feature_idx] + 1.0) / 2.0) * \
-                                                   (normalization_info.loc['max', features[feature_idx]] - normalization_info.loc['min', features[feature_idx]]) \
-                                                   + normalization_info.loc['min', features[feature_idx]]
+                                                   (normalization_info.at['max', features[feature_idx]] -
+                                                    normalization_info.at['min', features[feature_idx]]) \
+                                                   + normalization_info.at['min', features[feature_idx]]
 
     return denormalized_array
 
 
+def normalize_numpy_array(denormalized_array,
+                          features,
+                          normalization_info,
+                          normalization_type='minmax_sym'):
+
+    normalized_array = np.zeros_like(denormalized_array)
+
+    for feature_idx in range(len(features)):
+        if normalization_type == 'gaussian':
+            normalized_array[..., feature_idx] = (denormalized_array[..., feature_idx]
+                                                  - normalization_info.at['mean', features[feature_idx]]) / \
+                                                  normalization_info.at['std', features[feature_idx]]
+
+        elif normalization_type == 'minmax_pos':
+            normalized_array[..., feature_idx] = (denormalized_array[..., feature_idx]
+                                                  - normalization_info.at['min', features[feature_idx]])\
+                                                  / (normalization_info.at['max', features[feature_idx]] -
+                                                  normalization_info.at['min', features[feature_idx]])
+
+
+        elif normalization_type == 'minmax_sym':
+            normalized_array[..., feature_idx] = -1.0 + 2.0 * (
+                    (denormalized_array[..., feature_idx]-normalization_info.at['min', features[feature_idx]])
+                    /
+                    (normalization_info.at['max', features[feature_idx]] - normalization_info.at['min', features[feature_idx]])
+            )
+
+    return normalized_array
+
 
 if __name__ == '__main__':
-
-    folder_with_data_to_calculate_norm_info = './ExperimentRecordings/Train/'
+    folder_with_data_to_calculate_norm_info = './ExperimentRecordings/25/Train/'
 
     calculate_normalization_info(folder_with_data_to_calculate_norm_info)

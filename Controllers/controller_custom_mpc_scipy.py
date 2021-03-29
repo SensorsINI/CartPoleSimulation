@@ -2,34 +2,41 @@
 
 import scipy.optimize
 
-from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
-from CartPole.cartpole_model import TrackHalfLength
+from CartPole.cartpole_model import P_GLOBALS
+
+from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index, \
+    cartpole_state_indices_to_varnames
 from Modeling.TF.TF_Functions.Network import *
 from Predictores.predictor_ideal import predictor_ideal
+
+import matplotlib.pyplot as plt
 
 predictor = predictor_ideal
 # WARNING: if using RNN to provide CartPole model to MPC
 # make sure that it is trained to predict future states with this timestep
-DT = 0.2
+DT = 0.1
 
 # method = 'L-BFGS-B'
 method = 'SLSQP'
-maxiter = 80 # I think it was a key thing.
-maxiter = 800
-ftol = 1.0e-8
-mpc_horizon = 5
+ftol = 1.0e-6
+mpc_horizon = 10
 
 # weights
-wr = 1.0  # rterm
-l1 = 5.0  # -pot
-l2 = 50.0  # distance
-l3 = 0.0  # kin_pol
-m1 = 0.0  # kin_pol
-m2 = 20.0  # -pot
-m3 = 0.0  # kin_cart
-m4 = 20.0*100.0  # distance
+wr = 0.01  # rterm
+
+l1 = 1.0  # angle_sin_cost
+l1_2 = 0.0  # angle_sin_cost
+l2 = 0.0  # angleD_cost
+l3 = 1.0  # position_cost
+l4 = 0.01  # positionD_cost
+
+m1 = 0.0  # angle_sin_cost
+m2 = 0.0  # angleD_cost
+m3 = 0.0  # position_cost
+m4 = 0.0  # positionD_cost
 
 w_sum = wr + l1 + l2 + l3 + m1 + m2 + m3 + m4
+# w_sum = 1.0
 
 wr /= w_sum
 l1 /= w_sum
@@ -40,11 +47,13 @@ m2 /= w_sum
 m3 /= w_sum
 m4 /= w_sum
 
+
 class controller_custom_mpc_scipy:
     def __init__(self):
 
+        self.horizon = mpc_horizon
 
-        self.Predictor = predictor(horizon=mpc_horizon, dt=DT)
+        self.Predictor = predictor(horizon=self.horizon, dt=DT)
 
         self.rnn_eval_time = []
         self.predictor_time = []
@@ -59,94 +68,82 @@ class controller_custom_mpc_scipy:
         # State of the cart
         self.s = create_cartpole_state()  # s like state
 
-        self.target_position = 0.0
-        self.target_position_normed = 0.0
+        self.target_position = 30.0
 
-        self.mpc_horizon = mpc_horizon
-
-        self.yp_hat = np.zeros(self.mpc_horizon, dtype=object)  # MPC prediction of future states
-        self.Q_hat = np.zeros(self.mpc_horizon)  # MPC prediction of future control inputs
-        self.Q_hat0 = np.zeros(self.mpc_horizon)  # initial guess for future control inputs to be predicted
+        self.Q_hat = np.zeros(self.horizon+1)  # MPC prediction of future control inputs
+        self.Q_hat0 = np.zeros(self.horizon+1)  # initial guess for future control inputs to be predicted
         self.Q_previous = 0.0
 
-        self.E_kin_cart = lambda positionD: (positionD) ** 2
-        self.E_kin_pol = lambda angleD: (angleD) ** 2
-        self.E_pot_cost = lambda angle: 1 - np.cos(angle)
-        self.E_pot = lambda cos_angle: cos_angle
-        self.E_pot_cost = lambda cos_angle: 1 - cos_angle
-
-        self.distance_difference = lambda position: ((position - self.target_position_normed))**2
+        self.angle_cost = lambda angle: angle ** 2
+        self.angle_sin_cost = lambda angle_sin: angle_sin ** 2
+        self.angleD_cost = lambda angleD: angleD ** 2
+        self.position_cost = lambda position: (position - self.target_position) ** 2
+        self.positionD_cost = lambda positionD: positionD ** 2
 
         self.Q_bounds = scipy.optimize.Bounds(lb=-1.0, ub=1.0)
 
-        self.initial_state = pd.DataFrame(0, index=np.arange(1), columns=['s.angle.cos', 's.angle.sin', 's.angleD', 's.position', 's.positionD'])
+        self.initial_state = create_cartpole_state()
 
-        self.step_number = 0
-        self.warm_up_len = 20
+        self.prediction_features_names = cartpole_state_indices_to_varnames(range(len(self.s)))
+        self.predictions = np.zeros((self.horizon + 1, len(self.prediction_features_names) + 1))
+
+        # Array keeping individual costs for every timestep of prediction
+        self.costs_names = ['angle_cost', 'angle_sin_cost', 'angleD_cost', 'position_cost', 'positionD_cost']
+        self.cost_array = np.zeros((self.horizon + 1, len(self.costs_names) + 1))
+
+        # Numbers of samples which should be bridged with output from a P controller
+        # To give RNN time to settle
+        self.warm_up_len = 0
+        self.sample_counter = 0  # Counting samples for above aim
 
     def cost_function(self, Q_hat):
-        t0 = timeit.default_timer()
+
         # Predict future states given control_inputs Q_hat
-        self.predictions = copy.copy(self.Predictor.predict(Q_hat))
+        self.predictions = self.Predictor.predict(Q_hat)
 
-        t1 = timeit.default_timer()
+        self.cost_array[:, self.costs_names.index('angle_cost')] = \
+            self.angle_cost(self.predictions[:, cartpole_state_varname_to_index('angle')])
+        self.cost_array[:, self.costs_names.index('angle_sin_cost')] = \
+            self.angle_sin_cost(self.predictions[:, cartpole_state_varname_to_index('angle_sin')])
+        self.cost_array[:, self.costs_names.index('angleD_cost')] = \
+            self.angleD_cost(self.predictions[:, cartpole_state_varname_to_index('angleD')])
+        self.cost_array[:, self.costs_names.index('position_cost')] = \
+            self.position_cost(self.predictions[:, cartpole_state_varname_to_index('position')])
+        self.cost_array[:, self.costs_names.index('positionD_cost')] = \
+            self.positionD_cost(self.predictions[:, cartpole_state_varname_to_index('positionD')])
 
-        self.predictions['E_pot'] = self.E_pot(self.predictions['s.angle.cos'])
-        self.predictions['E_kin_pol'] = self.E_kin_pol(self.predictions['s.angleD'])
-        self.predictions['E_kin_cart'] = self.E_kin_cart(self.predictions['s.positionD'])
-        self.predictions['distance_difference'] = self.distance_difference(self.predictions['s.position'])
+        # Calculate l-cost for every timestep
+        self.cost_array[:, -1] = (
+                                  + l1 * self.cost_array[:, self.costs_names.index('angle_cost')]
+                                  + l1_2 * self.cost_array[:, self.costs_names.index('angle_sin_cost')]
+                                  + l2 * self.cost_array[:, self.costs_names.index('angleD_cost')]
+                                  + l3 * self.cost_array[:, self.costs_names.index('position_cost')]
+                                  + l4 * self.cost_array[:, self.costs_names.index('positionD_cost')])
 
-        self.predictions['lterm'] = - l1 * self.predictions['E_pot'] + \
-                                        l2 * self.predictions['distance_difference'] + \
-                                             l3 * self.predictions['E_kin_pol']
-
-        # print(self.predictions['distance_difference'])
+        l_terms = np.sum(self.cost_array[:, -1])
 
         # Calculate sum of r-terms
         r_terms = wr * ((Q_hat[0] - self.Q_previous) ** 2)
         r_terms += wr * sum((Q_hat[1:] - Q_hat[:-1]) ** 2)
 
-
-        l_terms = self.predictions['lterm'].sum()
-
-        m_term = (m1 * self.predictions['E_kin_pol'].iloc[-1]
-                    - m2 * self.predictions['E_pot'].iloc[-1]
-                        + m3 * self.predictions['E_kin_cart'].iloc[-1]
-                            + m4 * self.predictions['distance_difference'].iloc[-1])
+        m_term = (m1 * self.cost_array[-1, self.costs_names.index('angle_sin_cost')]
+                  + m2 * self.cost_array[-1, self.costs_names.index('angleD_cost')]
+                  + m3 * self.cost_array[-1, self.costs_names.index('position_cost')]
+                  + m4 * self.cost_array[-1, self.costs_names.index('positionD_cost')])
 
         cost = r_terms + m_term + l_terms
-
-        # t2 = timeit.default_timer()
-        # print('cost function eval {} ms'.format((t2-t0)*1000.0))
-        # print('predictor eval {} ms'.format((t1-t0)*1000.0))
-        # self.predictor_time.append((t1-t0)*1000.0)
-        # print('predictor/all {}%'.format(np.round(100*(t1-t0)/(t2-t0))))
 
         return cost
 
     def step(self, s, target_position, time=None):
-        # TODO: Step should get already a dataframe/dataseries from which it should pick the columns it needs
-        #   Optimally you should operate on the normed values all the time, try to eliminate devisions
-        # IMPORTANT: take care how often it is called!!!
 
-        # get initial state
-
-        self.s = s
+        self.s[...] = s
         self.target_position = target_position
 
-        self.initial_state['s.angle.cos'] = [np.cos(s[cartpole_state_varname_to_index('angle')])]
-        self.initial_state['s.angle.sin'] = [np.sin(s[cartpole_state_varname_to_index('angle')])]
-        self.initial_state['s.angleD'] = [s[cartpole_state_varname_to_index('angleD')]]
-        self.initial_state['s.position'] = [s[cartpole_state_varname_to_index('position')]]
-        self.initial_state['s.positionD'] = [s[cartpole_state_varname_to_index('positionD')]]
-
         # Setup Predictor
-        self.Predictor.setup(initial_state=self.initial_state, prediction_denorm=False)
+        self.Predictor.setup(initial_state=self.s, prediction_denorm=True)
 
-        # FIXME: You are now norming target position manually...
-        self.target_position_normed = self.target_position/TrackHalfLength
-
-        if self.step_number > self.warm_up_len:
+        if self.sample_counter > self.warm_up_len:
             # Solve Optimization problem
             # solution = scipy.optimize.basinhopping(self.cost_function, self.Q_hat0, niter=2,
             #                                        minimizer_kwargs={ "method": method,"bounds":self.Q_bounds })
@@ -155,19 +152,18 @@ class controller_custom_mpc_scipy:
             # self.Q_hat0 = np.clip(self.Q_hat0*(1+0.01*np.random.uniform(-1.0,1.0)), -1, 1)
             solution = scipy.optimize.minimize(self.cost_function, self.Q_hat0,
                                                bounds=self.Q_bounds, method=method,
-                                               options={'maxiter': maxiter, 'ftol': ftol})
+                                               options={'ftol': ftol})
 
             self.Q_hat = solution.x
 
             # Compose new initial guess
             self.Q_previous = Q0 = self.Q_hat[0]
-            self.Q_hat0 = np.hstack((self.Q_hat[1:], self.Q_hat[-1]))
+            # self.Q_hat0 = np.hstack((self.Q_hat[1:], self.Q_hat[-1]))
+            self.Q_hat0 = self.Q_hat
             # self.plot_prediction()
         else:
-            self.Q_previous = Q0 = -np.sin(s[cartpole_state_varname_to_index('angle')]) * 0.2
-            self.step_number = self.step_number + 1
-
-
+            self.Q_previous = Q0 = -s[cartpole_state_varname_to_index('angle_sin')] * 2.0
+            self.sample_counter = self.sample_counter + 1
 
         # Make predictor ready for the next timestep
         self.Predictor.update_internal_state(Q0)
@@ -176,13 +172,21 @@ class controller_custom_mpc_scipy:
         # self.nfun.append(solution.nfev)
         # print(solution)
 
+        # for i in range(len(self.prediction_features_names)):
+        #     plt.figure()
+        #     plt.title(self.prediction_features_names[i])
+        #     plt.plot(range(self.horizon+1), self.predictions[:, i], label=self.prediction_features_names[i])
+        # plt.figure()
+        # plt.title('Q')
+        # plt.plot(range(self.horizon + 1), self.predictions[:, -1], label='Q')
+        # plt.show()
 
         return Q0
 
     def reset(self):
         self.Predictor.net.reset_states()
-        self.Q_hat0 = np.zeros(self.mpc_horizon)
-        self.step_number = 0
+        self.Q_hat0 = self.Q_hat = np.zeros(self.horizon+1)
+        self.sample_counter = 0
 
     def controller_summary(self):
         print('******************************************************************')
@@ -212,38 +216,22 @@ class controller_custom_mpc_scipy:
 
         print('******************************************************************')
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def plot_prediction(self):
 
         self.fig, self.axs = plt.subplots(5, 1, figsize=(18, 14), sharex=True)  # share x axis so zoom zooms all plots
 
-        if 's.angle' in self.predictions:
+        if 'angle' in self.predictions:
             # raise KeyError('You should not be there')
-            angle = np.rad2deg(self.predictions['s.angle'].to_numpy())
-        elif ('s.angle.sin' in self.predictions) and ('s.angle.cos' in self.predictions):
-            angle = np.rad2deg(np.arctan2(self.predictions['s.angle.sin'].to_numpy(), self.predictions['s.angle.cos'].to_numpy()))
+            angle = np.rad2deg(self.predictions['angle'].to_numpy())
+        elif ('angle_sin' in self.predictions) and ('angle_cos' in self.predictions):
+            angle = np.rad2deg(
+                np.arctan2(self.predictions['angle_sin'].to_numpy(), self.predictions['angle_cos'].to_numpy()))
         else:
             raise ValueError('No data for angle in self.predictions')
 
-        angleD = self.predictions['s.angleD'].to_numpy()
-        position = self.predictions['s.position'].to_numpy()
-        positionD = self.predictions['s.positionD'].to_numpy()
+        angleD = self.predictions['angleD'].to_numpy()
+        position = self.predictions['position'].to_numpy()
+        positionD = self.predictions['positionD'].to_numpy()
 
         # Plot angle
         self.axs[0].set_ylabel("Angle (deg)", fontsize=18)

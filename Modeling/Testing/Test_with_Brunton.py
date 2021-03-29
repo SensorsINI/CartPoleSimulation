@@ -29,6 +29,57 @@ def test_network():
     This function create RNN instance based on parameters saved on disc and also creates the CartPole instance.
     The actual work of evaluation prediction results is done in get_predictions_TF function
     """
+    a_2 = None
+    dataset_2 = None
+    title_2 = None
+
+    # 250 norm, trained on 250
+    net_name = 'Dense-6IN-64H1-64H2-5OUT-0'
+    PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '250.csv'
+    TESTING_FILES = './ExperimentRecordings/250/Test/'
+
+    # 250 norm, trained on all
+    net_name = 'Dense-6IN-64H1-64H2-5OUT-1'
+    PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '250.csv'
+    # TESTING_FILES = './ExperimentRecordings/25/Test/'
+    TESTING_FILES = './ExperimentRecordings/250/Test/'
+    # TESTING_FILES = './ExperimentRecordings/2500/Test/'
+
+
+    net_name = 'GRU-6IN-64H1-64H2-5OUT-0'
+    PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '250.csv'
+    TESTING_FILES = './ExperimentRecordings/25/Test/'
+    TESTING_FILES = './ExperimentRecordings/250/Test/'
+    TESTING_FILES = './ExperimentRecordings/2500/Test/'
+
+    net_name = 'GRU-6IN-64H1-64H2-5OUT-1'
+    PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '2500_tailored.csv'
+    TESTING_FILES = './ExperimentRecordings/2500/Test/'
+
+    a.net_name = net_name
+    a.path_to_normalization_info = PATH_TO_NORMALIZATION_INFO
+    a.test_files = TESTING_FILES
+
+    net_name = 'GRU-6IN-64H1-64H2-5OUT-2'
+    PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '2500.csv'
+    TESTING_FILES = './ExperimentRecordings/2500/Test/'
+
+    # a_2 = deepcopy(a)
+    # a_2.net_name = net_name
+    # a_2.path_to_normalization_info = PATH_TO_NORMALIZATION_INFO
+    # a_2.test_files = TESTING_FILES
+
+
+    net_name = 'GRU-6IN-64H1-64H2-5OUT-3'
+    PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '250.csv'
+    TESTING_FILES = './ExperimentRecordings/250/Test/'
+
+    a.net_name = net_name
+    a.path_to_normalization_info = PATH_TO_NORMALIZATION_INFO
+    a.test_files = TESTING_FILES
+
+
+
 
     # Get first dataset
 
@@ -36,12 +87,11 @@ def test_network():
     ground_truth, net_outputs, time_axis\
         = get_data_for_gui_TF(a)
 
-    # # Get second dataset
-    # a_new = deepcopy(a)
-    # a_new.net_name = 'GRU-6IN-64H1-64H2-5OUT-0'
-    # _, _, title_2,\
-    # _, dataset_2, _\
-    #     = get_data_for_gui_TF(a_new)
+    # Get second dataset
+    if a_2 is not None:
+        _, _, title_2,\
+        _, dataset_2, _\
+            = get_data_for_gui_TF(a_2)
 
 
     inputs_euler, outputs_euler, title_2, \

@@ -5,7 +5,9 @@ from tqdm import trange
 
 import numpy as np
 
-from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
+from CartPole._CartPole_mathematical_helpers import wrap_angle_rad, create_cartpole_state,\
+    cartpole_state_varnames_to_indices, cartpole_state_varname_to_index, \
+    cartpole_state_indices_to_varnames
 from types import SimpleNamespace
 
 from CartPole.cartpole_model import Q2u, cartpole_ode
@@ -17,15 +19,14 @@ def get_prediction_from_euler(a):
     paths_to_datafiles_test = get_paths_to_datafiles(a.test_files)
     test_dfs = load_data(paths_to_datafiles_test)
     dataset = test_dfs[0].iloc[a.test_start_idx:a.test_start_idx+a.test_len+a.test_max_horizon, :]
-    outputs = ['s.angle', 's.angle.cos', 's.angle.sin', 's.angleD', 's.angleDD',
-               's.position', 's.positionD', 's.positionDD']
+
+    s = create_cartpole_state()
+    outputs = cartpole_state_indices_to_varnames(range(len(s)))
     inputs = outputs + ['Q']
     dataset[inputs]
     dataset.reset_index(drop=True, inplace=True)
 
-    p = load_cartpole_parameters(paths_to_datafiles_test[0])
     dt_sampling = get_sampling_interval_from_datafile(paths_to_datafiles_test[0])
-    s = SimpleNamespace()
 
     time_axis = dataset['time'].to_numpy()[:a.test_len]
 
@@ -34,41 +35,30 @@ def get_prediction_from_euler(a):
     print('Calculating predictions...')
     for timestep in trange(a.test_len):
 
-        s.position = float(dataset.loc[dataset.index[[timestep]], 's.position'])
-        s.positionD = float(dataset.loc[dataset.index[[timestep]], 's.positionD'])
-        s.positionDD = float(dataset.loc[dataset.index[[timestep]], 's.positionDD'])
-        s.angle = float(dataset.loc[dataset.index[[timestep]], 's.angle'])
-        s.angle_cos = float(dataset.loc[dataset.index[[timestep]], 's.angle.cos'])
-        s.angle_sin = float(dataset.loc[dataset.index[[timestep]], 's.angle.sin'])
-        s.angleD = float(dataset.loc[dataset.index[[timestep]], 's.angleD'])
-        s.angleDD = float(dataset.loc[dataset.index[[timestep]], 's.angleDD'])
+        state_dict = dataset.loc[dataset.index[[timestep]], :].to_dict('records')[0]
+        s = create_cartpole_state(state_dict)
 
         # Progress max_horison steps
         # save the data for every step in a third dimension of an array
         for i in range(0, a.test_max_horizon):
             Q = float(dataset.loc[dataset.index[[timestep+i]], 'Q'])
-            u = Q2u(Q, p)
+            u = Q2u(Q)
             # We assume control input is the first variable
             # All other variables are in closed loop
 
-            # Integrate
-            s.position += s.positionD * dt_sampling
-            s.positionD += s.positionDD * dt_sampling
+            s[cartpole_state_varnames_to_indices(['position', 'positionD', 'angle', 'angleD'])] += \
+                s[cartpole_state_varnames_to_indices(['positionD','positionDD', 'angleD', 'angleDD'])] * dt_sampling
 
-            s.angle += s.angleD * dt_sampling
-            s.angleD += s.angleDD * dt_sampling
+            s[cartpole_state_varname_to_index('angle')] = \
+                wrap_angle_rad(s[cartpole_state_varname_to_index('angle')])
 
-            s.angle = wrap_angle_rad(s.angle)
+            s[cartpole_state_varnames_to_indices(['angle_cos', 'angle_sin'])] = \
+                [np.cos(s[cartpole_state_varname_to_index('angle')]), np.sin(s[cartpole_state_varname_to_index('angle')])]
 
-            s.angle_cos = np.cos(s.angle)
-            s.angle_sin = np.sin(s.angle)
+            s[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s, u)
 
-            s.angleDD, s.positionDD = cartpole_ode(p, s, u)
-
-            state = np.array([s.angle, s.angle_cos, s.angle_sin, s.angleD, s.angleDD,
-                          s.position, s.positionD, s.positionDD])
             # Append s to outputs matrix
-            output_array[i, timestep, :] = state
+            output_array[i, timestep, :] = s
 
 
 
