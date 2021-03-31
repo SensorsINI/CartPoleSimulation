@@ -29,7 +29,8 @@ def wrap_angle_rad_inplace(angle: np.ndarray) -> None:
     angle[~(neg_wrap | pos_wrap)] = Modulo[~(neg_wrap | pos_wrap)]
 
 
-STATE_VARIABLES = np.sort(['angle', 'angleD', 'angleDD', 'position', 'positionD', 'positionDD', 'angle_cos', 'angle_sin'])
+STATE_VARIABLES = np.sort(['angle', 'angleD', 'angleDD', 'angle_cos', 'angle_sin', 'position', 'positionD', 'positionDD'])
+STATE_VARIABLES_REDUCED = np.sort(['angle', 'angleD', 'angle_cos', 'angle_sin', 'position', 'positionD'])
 
 def create_cartpole_state(state: dict={}, dtype=None) -> np.ndarray:
     """
@@ -68,10 +69,8 @@ def conditional_decorator(dec, cond):
 def cartpole_state_varname_to_index(variable_name: str) -> int:
     return np.where(STATE_VARIABLES == variable_name)[0][0]
 
-
 def cartpole_state_index_to_varname(index: int) -> str:
     return STATE_VARIABLES[index]
-
 
 def cartpole_state_varnames_to_indices(variable_names: list) -> list:
     indices = []
@@ -84,7 +83,6 @@ def cartpole_state_indices_to_varnames(indices: list) -> list:
     for index in indices:
         varnames.append(cartpole_state_index_to_varname(index))
     return varnames
-
 
 
 def cartpole_state_namespace_to_vector(s_namespace: SimpleNamespace) -> np.ndarray:

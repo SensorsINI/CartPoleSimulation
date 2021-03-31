@@ -21,7 +21,7 @@ dt_controller_update_DataGen = 0.02
 dt_save_DataGen = 0.1
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
-length_of_experiment_DataGen = 6.0  # Length of each experiment in s
+length_of_experiment_DataGen = 16.0  # Length of each experiment in s
 controller_DataGen = 'mppi'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'lqr'
@@ -39,7 +39,7 @@ turning_points_DataGen = None
 # initial state
 # This is just one possibility how to set the initial state. Feel free to modify this code
 # [position, positionD, angle, angleD]
-initial_state = [20, None, 180 * (np.pi / 180.0), None]
+initial_state = [None, None, None, None]
 initial_state_DataGen = s0
 
 # Set the max for smoothly interpolated random target position to avoid bumping into track ends.

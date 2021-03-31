@@ -3,7 +3,7 @@
 # e.g. while testing new controller
 
 # TIME SCALES - timescales cannot be changed after starting the program
-dt_simulation = 0.002  # s, time step of CartPole simulation if run through GUI
+dt_simulation = 0.02  # s, time step of CartPole simulation if run through GUI
 controller_update_interval = 0.02  # s, sets how often the control input should be calculated
 # The last variable must be in practice the multiple of dt_simulation
 # Hence the provided value is translated to interval given in the number of time steps of main simulation
