@@ -2,7 +2,7 @@
 
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import P_GLOBALS, s0, Q2u, cartpole_ode
-from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
+from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
 
 import matplotlib.pyplot as plt
 import numpy as np

@@ -14,10 +14,9 @@ from CartPole.cartpole_model import (
     u_max,
     TrackHalfLength,
 )
-from CartPole._CartPole_mathematical_helpers import (
+from CartPole.state_utilities import (
     create_cartpole_state,
     cartpole_state_varname_to_index,
-    conditional_decorator,
 )
 
 import matplotlib.pyplot as plt
@@ -25,6 +24,15 @@ import numpy as np
 from numba import jit
 
 from copy import deepcopy
+
+
+def conditional_decorator(dec, cond: bool):
+    """This function applies the decorator dec if cond is True."""
+
+    def decorator(func):
+        return dec(func) if cond else func
+
+    return decorator
 
 
 """Timestep and sampling settings"""
@@ -63,7 +71,8 @@ E_pot_cost = conditional_decorator(jit(nopython=True), parallelize)(
     lambda s: (1 - np.cos(s[ANGLE_IDX])) ** 2
 )
 distance_difference = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s, target_position: ((s[POSITION_IDX] - target_position) / TrackHalfLength) ** 2
+    lambda s, target_position: ((s[POSITION_IDX] - target_position) / TrackHalfLength)
+    ** 2
 )
 
 
@@ -195,7 +204,10 @@ class controller_mppi(template_controller):
         elif uniform:
             delta_u = np.zeros((mc_samples, mpc_samples), dtype=float)
             for i in range(0, mpc_samples):
-                delta_u[:, i] = np.random.uniform(low=-1.0, high=1.0, size=(mc_samples,)) - self.u[i]
+                delta_u[:, i] = (
+                    np.random.uniform(low=-1.0, high=1.0, size=(mc_samples,))
+                    - self.u[i]
+                )
         else:
             delta_u = stdev * np.random.normal(size=np.shape(self.delta_u))
 

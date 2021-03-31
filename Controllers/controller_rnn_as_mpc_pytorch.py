@@ -5,7 +5,7 @@ import pandas as pd
 from Modeling.Pytorch.utilis_rnn import *
 
 from Controllers.template_controller import template_controller
-from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index
+from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
 
 
 RNN_FULL_NAME = 'GRU-5IN-32H1-32H2-1OUT-0'
