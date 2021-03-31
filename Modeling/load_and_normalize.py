@@ -525,9 +525,11 @@ def denormalize_numpy_array(normalized_array,
 def normalize_numpy_array(denormalized_array,
                           features,
                           normalization_info,
-                          normalization_type='minmax_sym'):
+                          normalization_type='minmax_sym',
+                          normalized_array = None,):  # If you want to write to an existing array instead of creating your own
 
-    normalized_array = np.zeros_like(denormalized_array)
+    if normalized_array is None: # This option gives a possibility of using preallocated array
+        normalized_array = np.zeros_like(denormalized_array)
 
     for feature_idx in range(len(features)):
         if normalization_type == 'gaussian':
