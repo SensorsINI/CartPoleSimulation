@@ -311,7 +311,7 @@ class controller_mppi(template_controller):
         if LOGGING:
             ### Plot the average state cost per iteration
             ctglgs = np.stack(COST_TO_GO_LOGS, axis=0)  # ITERATIONS x mc_samples
-            time_axis = dt * np.arange(start=0, stop=np.shape(ctglgs)[0])
+            time_axis = update_every * dt * np.arange(start=0, stop=np.shape(ctglgs)[0])
             plt.figure(num=2, figsize=(16, 9))
             plt.plot(time_axis, np.mean(ctglgs, axis=1))
             plt.ylabel("avg_cost")
@@ -321,7 +321,7 @@ class controller_mppi(template_controller):
 
             ### Graph the different cost components per iteration
             clgs = np.stack(COST_BREAKDOWN_LOGS, axis=0)  # ITERATIONS x 5 x mpc_horizon
-            time_axis = dt * np.arange(start=0, stop=np.shape(clgs)[0])
+            time_axis = update_every * dt * np.arange(start=0, stop=np.shape(clgs)[0])
 
             plt.figure(num=3, figsize=(16, 9))
             plt.plot(
