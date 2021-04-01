@@ -438,7 +438,7 @@ class controller_mppi(template_controller):
                     color="r",
                 )
                 ax1.set_xlim(0, np.shape(slgs)[0] * dt)
-                ax1.set_ylim(np.min(slgs) * 1.05, np.max(slgs) * 1.05)
+                ax1.set_ylim(-TrackHalfLength * 1.05, TrackHalfLength * 1.05)
                 ax2.set_ylim(-180.0, 180.0)
 
                 # Set labels
