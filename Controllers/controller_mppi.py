@@ -74,7 +74,7 @@ E_kin_pol = conditional_decorator(jit(nopython=True), parallelize)(
     lambda s: s[ANGLED_IDX] ** 2
 )
 E_pot_cost = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s: (1.0 - np.cos(s[ANGLE_IDX])) ** 2
+    lambda s: ((1.0 - np.cos(s[ANGLE_IDX])) * 0.5) ** 2
 )
 distance_difference = conditional_decorator(jit(nopython=True), parallelize)(
     lambda s, target_position: (s[POSITION_IDX] - target_position) ** 2
