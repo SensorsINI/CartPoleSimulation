@@ -397,7 +397,8 @@ class controller_mppi(template_controller):
             )
 
             # Normalize cost to go to use as opacity in plot
-            ctglgs /= np.max(np.abs(ctglgs), axis=0)  # ITERATIONS x mc_samples
+            # shape(ctglgs) = ITERATIONS x mc_samples
+            ctglgs = np.divide(ctglgs.T, np.max(np.abs(ctglgs), axis=1)).T
 
             # This function updates the plot when a new iteration is selected
             def update_plot(i):
