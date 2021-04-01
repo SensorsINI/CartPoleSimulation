@@ -103,15 +103,15 @@ def trajectory_rollouts(
     delta_u: np.ndarray,
     target_position: np.ndarray,
 ):
-    s_horizon = np.zeros((mc_samples, mpc_samples, s.size))
+    s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size))
     for k in range(mc_samples):
         s_horizon[k, 0, :] = s
-        for i in range(1, mpc_samples):
-            s_last = s_horizon[k, i - 1, :]
+        for i in range(0, mpc_samples):
+            s_last = s_horizon[k, i, :]
             # Explicit Euler integration step
             derivatives = motion_derivatives(s_last, u[i] + delta_u[k, i])
             s_next = s_last + derivatives * dt
-            s_horizon[k, i, :] = s_next
+            s_horizon[k, i + 1, :] = s_next
 
             cost_increment, _, _, _, _, _ = q(
                 s_next, u[i], delta_u[k, i], target_position
@@ -129,16 +129,16 @@ def trajectory_rollouts_logging(
     delta_u: np.ndarray,
     target_position: np.ndarray,
 ):
-    s_horizon = np.zeros((mc_samples, mpc_samples, s.size))
+    s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size))
     cost_logs_internal = np.zeros((mc_samples, 5, mpc_samples))
     for k in range(mc_samples):
         s_horizon[k, 0, :] = s
-        for i in range(1, mpc_samples):
-            s_last = s_horizon[k, i - 1, :]
+        for i in range(0, mpc_samples):
+            s_last = s_horizon[k, i, :]
             # Explicit Euler integration step
             derivatives = motion_derivatives(s_last, u[i] + delta_u[k, i])
             s_next = s_last + derivatives * dt
-            s_horizon[k, i, :] = s_next
+            s_horizon[k, i + 1, :] = s_next
 
             cost_increment, dd, ep, ekp, ekc, cc = q(
                 s_next, u[i], delta_u[k, i], target_position
@@ -146,7 +146,7 @@ def trajectory_rollouts_logging(
             S_tilde_k[k] += cost_increment
             cost_logs_internal[k, :, i] = [dd, ep, ekp, ekc, cc]
 
-    return S_tilde_k, cost_logs_internal, s_horizon
+    return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
 
 
 rollout_function = trajectory_rollouts_logging if LOGGING else trajectory_rollouts
