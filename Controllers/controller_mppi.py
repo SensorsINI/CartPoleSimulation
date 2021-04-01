@@ -94,7 +94,13 @@ def cartpole_ode_parallelize(s: np.ndarray, u: float):
 
 
 @conditional_decorator(jit(nopython=True), parallelize)
-def trajectory_rollouts(s, S_tilde_k, u, delta_u, target_position):
+def trajectory_rollouts(
+    s: np.ndarray,
+    S_tilde_k: np.ndarray,
+    u: np.ndarray,
+    delta_u: np.ndarray,
+    target_position: np.ndarray,
+):
     s_horizon = np.zeros((mc_samples, mpc_samples, s.size))
     for k in range(mc_samples):
         s_horizon[k, 0, :] = s
