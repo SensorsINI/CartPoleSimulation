@@ -200,11 +200,10 @@ def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
     :param S: Cost array of size (mc_samples)
     :param delta_u: The input perturbations that had been used, size (mc_samples, mpc_samples)
 
-    :return: Input u for the whole MPC horizon updated with reward-weighted control perturbations
+    Update happens in-place.
     """
     for i in range(mpc_samples):
         u[i] += reward_weighted_average(S, delta_u[:, i])
-    return u
 
 
 class controller_mppi(template_controller):
@@ -271,7 +270,7 @@ class controller_mppi(template_controller):
         )
 
         # Update inputs with weighted perturbations
-        self.u = update_inputs(self.u, self.S_tilde_k, self.delta_u)
+        update_inputs(self.u, self.S_tilde_k, self.delta_u)
 
         # Log states and costs incurred for plotting later
         if LOGGING:
