@@ -43,7 +43,7 @@ P_GLOBALS.M = 0.230  # mass of cart, kg # Checked by Antonio
 P_GLOBALS.L = 0.395/2.0  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi
 P_GLOBALS.u_max = 2.0  # max force produced by the motor, N
 P_GLOBALS.M_fric = 1.0e-1  # cart friction on track, N/m/s
-P_GLOBALS.J_fric = 2.5e-4  # friction coefficient on angular velocity in pole joint, Nm/rad/s
+P_GLOBALS.J_fric = 2.5e-3 # friction coefficient on angular velocity in pole joint, Nm/rad/s
 P_GLOBALS.v_max = 10.0  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented yet
 
 P_GLOBALS.TrackHalfLength = 0.25  # m, length of the track on which CartPole can move, from 0 to edge, track is symmetric

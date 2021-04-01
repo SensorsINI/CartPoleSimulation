@@ -39,8 +39,8 @@ from copy import deepcopy
 dt = 0.02  # s
 mpc_horizon = 1.0
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
-mc_samples = 500  # Number of Monte Carlo samples
-update_every = 1  # Cost weighted update of inputs every ... steps
+mc_samples = 2000  # Number of Monte Carlo samples
+update_every = 50  # Cost weighted update of inputs every ... steps
 
 
 """Define indices of values in state statically"""
@@ -169,10 +169,10 @@ def motion_derivatives(s: np.ndarray, u: float):
 @conditional_decorator(jit(nopython=True), parallelize)
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
-    dd = distance_difference(s, target_position)
-    ep = 2e2 * E_pot_cost(s)
-    ekp = E_kin_pol(s)
-    ekc = 100 * E_kin_cart(s)
+    dd = 1.0e3 * distance_difference_cost(s, target_position)
+    ep = 5.0e2 * E_pot_cost(s)
+    ekp = 1.0e-3 * E_kin_pol(s)
+    ekc = 5.0e-1 * E_kin_cart(s)
     cc = (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
@@ -303,7 +303,7 @@ class controller_mppi(template_controller):
 
         # Index-shift inputs
         self.u[:-1] = self.u[1:]
-        self.u[-1] = 0
+        self.u[-1] = self.u[-1]
 
         return Q  # normed control input in the range [-1,1]
 
