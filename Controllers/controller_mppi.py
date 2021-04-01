@@ -240,7 +240,7 @@ class controller_mppi(template_controller):
 
     def step(self, s, target_position, time=None):
         self.s = s
-        self.target_position = target_position.item()
+        self.target_position = target_position
 
         self.iteration += 1
 
