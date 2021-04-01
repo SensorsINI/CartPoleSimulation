@@ -51,7 +51,7 @@ POSITIOND_IDX = cartpole_state_varname_to_index("positionD").item()
 
 """MPPI constants"""
 R = 1.0e0  # How much to punish Q
-LBD = 10  # Cost parameter lambda
+LBD = 1.0e1  # Cost parameter lambda
 NU = 1.0e1  # Exploration variance
 
 
@@ -114,7 +114,13 @@ def trajectory_rollouts(s, S_tilde_k, u, delta_u, target_position):
 
 
 @conditional_decorator(jit(nopython=True), parallelize)
-def trajectory_rollouts_logging(s, S_tilde_k, u, delta_u, target_position):
+def trajectory_rollouts_logging(
+    s: np.ndarray,
+    S_tilde_k: np.ndarray,
+    u: np.ndarray,
+    delta_u: np.ndarray,
+    target_position: np.ndarray,
+):
     s_horizon = np.zeros((mc_samples, mpc_samples, s.size))
     cost_logs_internal = np.zeros((mc_samples, 5, mpc_samples))
     for k in range(mc_samples):
@@ -310,7 +316,7 @@ class controller_mppi(template_controller):
             plt.show()
 
             ### Graph the different cost components per iteration
-            clgs = np.stack(COST_BREAKDOWN_LOGS, axis=0)  # ITERATIONS x 5 x mpc_steps
+            clgs = np.stack(COST_BREAKDOWN_LOGS, axis=0)  # ITERATIONS x 5 x mpc_horizon
             time_axis = dt * np.arange(start=0, stop=np.shape(clgs)[0])
 
             plt.figure(num=3, figsize=(16, 9))
