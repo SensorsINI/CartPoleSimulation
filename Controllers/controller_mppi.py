@@ -321,6 +321,7 @@ class controller_mppi(template_controller):
                 states: np.ndarray,
                 ax_position: plt.Axes,
                 ax_angle: plt.Axes,
+                costs: np.ndarray,
                 iteration: int,
             ):
                 mc_rollouts = np.shape(states)[0]
@@ -332,8 +333,8 @@ class controller_mppi(template_controller):
                         states[i, :, 0],
                         alpha=0.005,
                         linestyle="-",
-                        linewidth=1,
-                        color="k",
+                        linewidth=2,
+                        color=(0.0, (1 - costs[i]) ** 2, 0.0, 0.02),
                     )
                     ax_angle.plot(
                         np.arange(iteration, iteration + horizon_length) * dt,
@@ -341,7 +342,7 @@ class controller_mppi(template_controller):
                         alpha=0.005,
                         linestyle="-",
                         linewidth=2,
-                        color="k",
+                        color=(0.0, (1 - costs[i]) ** 2, 0.0, 0.02),
                     )
 
             # Prepare data
@@ -365,13 +366,17 @@ class controller_mppi(template_controller):
                 slider_axis, "timestep", 1, np.shape(slgs)[0], valinit=1, valstep=1
             )
 
-            def update_plot(k):
+            # Normalize cost to go to use as opacity in plot
+            ctglgs /= np.max(np.abs(ctglgs), axis=0)  # ITERATIONS x mc_samples
+
+            # This function updates the plot when a new iteration is selected
+            def update_plot(i):
                 # Clear previous iteration plot
                 ax1.clear()
                 ax2.clear()
 
                 # Plot Monte Carlo rollouts
-                draw_rollouts(slgs[k - 1, :, :, :], ax1, ax2, k - 1)
+                draw_rollouts(slgs[i - 1, :, :, :], ax1, ax2, ctglgs[i - 1, :], i - 1)
 
                 # Plot nominal trajectory
                 ax1.plot(
