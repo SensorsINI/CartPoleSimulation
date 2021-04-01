@@ -16,6 +16,8 @@ from CartPole.cartpole_model import (
     L,
     v_max,
     u_max,
+    controlBias,
+    controlDisturbance,
     TrackHalfLength,
 )
 from CartPole._CartPole_mathematical_helpers import (
@@ -142,7 +144,9 @@ def motion_derivatives(s: np.ndarray, u: float):
     s_dot = np.zeros_like(s)
     s_dot[POSITION_IDX] = s[POSITIOND_IDX]
     s_dot[ANGLE_IDX] = s[ANGLED_IDX]
-    (s_dot[ANGLED_IDX], s_dot[POSITIOND_IDX]) = cartpole_ode_parallelize(s, u_max * u)
+    (s_dot[ANGLED_IDX], s_dot[POSITIOND_IDX]) = cartpole_ode_parallelize(
+        s, u_max * (u + controlDisturbance * np.random.normal() + controlBias)
+    )
     return s_dot
 
 
