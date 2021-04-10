@@ -230,6 +230,7 @@ class CartPole:
                 self.target_position = 0.0  # In this case target position is not used.
                 # This just fill the corresponding column in history with zeros
             else:
+                print(self.slider_value)
                 self.target_position = self.slider_value * self.p.TrackHalfLength  # Get target position from slider
 
         # Calculate the next state

@@ -465,7 +465,7 @@ class MainWindow(QMainWindow):
             self.CartPoleInstance.u = row['u']
             self.CartPoleInstance.Q = row['Q']
             self.CartPoleInstance.target_position = row['target_position']
-            self.CartPoleInstance.slider_value = self.CartPoleInstance.target_position
+            self.CartPoleInstance.slider_value = self.CartPoleInstance.target_position/self.CartPoleInstance.p.TrackHalfLength
 
             dt_target = (self.CartPoleInstance.dt / self.speedup)
             replay_looper.dt_target = dt_target
