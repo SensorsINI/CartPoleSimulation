@@ -465,7 +465,10 @@ class MainWindow(QMainWindow):
             self.CartPoleInstance.u = row['u']
             self.CartPoleInstance.Q = row['Q']
             self.CartPoleInstance.target_position = row['target_position']
-            self.CartPoleInstance.slider_value = self.CartPoleInstance.target_position/self.CartPoleInstance.p.TrackHalfLength
+            if self.CartPoleInstance.controller_name == 'manual-stabilization':
+                self.CartPoleInstance.slider_value = self.CartPoleInstance.Q
+            else:
+                self.CartPoleInstance.slider_value = self.CartPoleInstance.target_position/self.CartPoleInstance.p.TrackHalfLength
 
             dt_target = (self.CartPoleInstance.dt / self.speedup)
             replay_looper.dt_target = dt_target
@@ -537,7 +540,7 @@ class MainWindow(QMainWindow):
                     turning_points_list.append(float(turning_point))
             self.CartPoleInstance.turning_points = turning_points_list
 
-            self.CartPoleInstance.Generate_Random_Trace_Function()
+            self.CartPoleInstance.setup_cartpole_random_experiment()
 
         self.looper.dt_target = self.CartPoleInstance.dt_simulation / self.speedup
         # Pass the function to execute

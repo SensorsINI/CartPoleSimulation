@@ -640,26 +640,25 @@ class CartPole:
                                          ):
 
         # Set time scales:
-        self.dt_simulation = dt_simulation
-        self.dt_controller = dt_controller
-        self.dt_save = dt_save
+        if dt_simulation is not None: self.dt_simulation = dt_simulation
+        if dt_controller is not None: self.dt_controller = dt_controller
+        if dt_save is not None: self.dt_save = dt_save
 
         # Set CartPole in the right (automatic control) mode
         # You may want to provide it before this function not to reload it every time
-        if controller is not None:
-            self.set_controller(controller)
+        if controller is not None: self.set_controller(controller)
 
         # Set initial state
-        self.s = s0
+        if s0 is not None: self.s = s0
 
-        self.track_relative_complexity = track_relative_complexity
-        self.length_of_experiment = length_of_experiment
-        self.interpolation_type = interpolation_type
-        self.turning_points_period = turning_points_period
-        self.start_random_target_position_at = start_random_target_position_at
-        self.end_random_target_position_at = end_random_target_position_at
-        self.turning_points = turning_points
-        self.used_track_fraction = used_track_fraction
+        if track_relative_complexity is not None: self.track_relative_complexity = track_relative_complexity
+        if length_of_experiment is not None: self.length_of_experiment = length_of_experiment
+        if interpolation_type is not None: self.interpolation_type = interpolation_type
+        if turning_points_period is not None: self.turning_points_period = turning_points_period
+        if start_random_target_position_at is not None: self.start_random_target_position_at = start_random_target_position_at
+        if end_random_target_position_at is not None: self.end_random_target_position_at = end_random_target_position_at
+        if turning_points is not None: self.turning_points = turning_points
+        if used_track_fraction is not None: self.used_track_fraction = used_track_fraction
 
         self.Generate_Random_Trace_Function()
         self.use_pregenerated_target_position = 1
