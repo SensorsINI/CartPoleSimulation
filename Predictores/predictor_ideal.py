@@ -35,7 +35,7 @@ Using predictor:
 
 from Modeling.load_and_normalize import load_normalization_info, normalize_numpy_array
 from CartPole.cartpole_model import Q2u
-from CartPole.state_utilities import create_cartpole_state, \
+from CartPole._CartPole_mathematical_helpers import create_cartpole_state,\
     cartpole_state_varname_to_index, cartpole_state_varnames_to_indices, \
     cartpole_state_indices_to_varnames
 

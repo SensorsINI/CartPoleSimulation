@@ -36,7 +36,7 @@ import csv
 # Import Cart class - the class keeping all the parameters and methods
 # related to CartPole which are not related to PyQt5 GUI
 from CartPole import CartPole
-from CartPole.state_utilities import cartpole_state_varname_to_index
+from CartPole._CartPole_mathematical_helpers import cartpole_state_varname_to_index
 
 from GUI.gui_default_params import *
 from GUI.loop_timer import loop_timer

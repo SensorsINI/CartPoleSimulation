@@ -4,8 +4,8 @@ import do_mpc
 import numpy as np
 
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import v_max, s0, Q2u, cartpole_ode_namespace
-from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index, cartpole_state_vector_to_namespace
+from CartPole.cartpole_model import v_max, s0, Q2u, cartpole_ode_namespace, TrackHalfLength
+from CartPole._CartPole_mathematical_helpers import create_cartpole_state, cartpole_state_varname_to_index, cartpole_state_vector_to_namespace
 
 from types import SimpleNamespace
 
