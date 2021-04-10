@@ -9,7 +9,7 @@ controller_update_interval = 0.02  # s, sets how often the control input should 
 # Hence the provided value is translated to interval given in the number of time steps of main simulation
 # controller_update_interval_steps =  np.rint(controller_update_interval/dt_simulation)
 # 0 is treated the same as 1 with controller updated at every simulation time step
-save_interval = 0.1  # s, How often to save the results of simulation
+save_interval = 0.02  # s, How often to save the results of simulation
 # The same considerations as for controller_update_interval apply
 # We recommend to set it to the same value as controller_update_interval.
 # In such a case saving is done at the same time step as the controller is updated
