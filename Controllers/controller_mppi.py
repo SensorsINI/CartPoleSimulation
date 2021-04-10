@@ -82,8 +82,21 @@ E_kin_pol = conditional_decorator(jit(nopython=True), parallelize)(
 E_pot_cost = conditional_decorator(jit(nopython=True), parallelize)(
     lambda s: ((1.0 - np.cos(s[ANGLE_IDX])) * 0.5) ** 2
 )
-distance_difference = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s, target_position: (s[POSITION_IDX] - target_position) ** 2
+distance_difference_cost = conditional_decorator(jit(nopython=True), parallelize)(
+    lambda s, target_position: (
+        ((s[POSITION_IDX] - target_position) / (2 * TrackHalfLength)) ** 2
+        + (abs(abs(s[POSITION_IDX]) - TrackHalfLength) < 0.05 * TrackHalfLength) * 1.0e3
+        # + 1.0
+        # / (
+        #     1.0
+        #     + (500.0 / TrackHalfLength ** 2) * (s[POSITION_IDX] - TrackHalfLength) ** 2
+        # )
+        # + 1.0
+        # / (
+        #     1.0
+        #     + (500.0 / TrackHalfLength ** 2) * (s[POSITION_IDX] + TrackHalfLength) ** 2
+        # )
+    )
 )
 
 
@@ -169,13 +182,16 @@ def motion_derivatives(s: np.ndarray, u: float):
 @conditional_decorator(jit(nopython=True), parallelize)
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
-    dd = 1.0e3 * distance_difference_cost(s, target_position)
-    ep = 5.0e2 * E_pot_cost(s)
-    ekp = 1.0e-3 * E_kin_pol(s)
-    ekc = 5.0e-1 * E_kin_cart(s)
+    dd = 5.0e1 * distance_difference_cost(s, target_position)
+    ep = 1.0e3 * E_pot_cost(s)
+    ekp = 1.0e-2 * E_kin_pol(s)
+    ekc = 5.0e-0 * E_kin_cart(s)
     cc = (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
+    # if np.abs(u + delta_u) > 1.0:
+    #     # Control deviation is outside constraint set.
+    #     cc = 1.0e5
 
     q = dd + ep + ekp + ekc + cc
 
