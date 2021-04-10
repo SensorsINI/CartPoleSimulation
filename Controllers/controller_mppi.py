@@ -40,7 +40,7 @@ dt = 0.02  # s
 mpc_horizon = 1.0
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 mc_samples = 2000  # Number of Monte Carlo samples
-update_every = 50  # Cost weighted update of inputs every ... steps
+update_every = 1  # Cost weighted update of inputs every ... steps
 
 
 """Define indices of values in state statically"""
@@ -222,7 +222,7 @@ class controller_mppi(template_controller):
 
         self.rho_sqrt_inv = 0.01
 
-        self.iteration = 0
+        self.iteration = -1
 
         self.s_horizon = np.zeros(())
         self.u = np.zeros((mpc_samples), dtype=float)
@@ -323,7 +323,7 @@ class controller_mppi(template_controller):
             plt.show()
 
             ### Graph the different cost components per iteration
-            clgs = np.stack(COST_BREAKDOWN_LOGS, axis=0)  # ITERATIONS x 5 x mpc_horizon
+            clgs = np.stack(COST_BREAKDOWN_LOGS, axis=0)  # ITERATIONS x 5 x mpc_samples
             time_axis = update_every * dt * np.arange(start=0, stop=np.shape(clgs)[0])
 
             plt.figure(num=3, figsize=(16, 9))
@@ -359,19 +359,19 @@ class controller_mppi(template_controller):
                         (update_every * iteration + np.arange(0, horizon_length)) * dt,
                         states[i, :, 0],
                         linestyle="-",
-                        linewidth=2,
-                        color=(0.0, (1 - costs[i]) ** 2, 0.0, 0.02),
+                        linewidth=1,
+                        color=(0.0, (1 - 0.3 * costs[i]) ** 2, 0.0, 0.02 * (1 - 0.3 * costs[i]) ** 2),
                     )
                     ax_angle.plot(
                         (update_every * iteration + np.arange(0, horizon_length)) * dt,
                         states[i, :, 1] * 180.0 / np.pi,
                         linestyle="-",
-                        linewidth=2,
-                        color=(0.0, (1 - costs[i]) ** 2, 0.0, 0.02),
+                        linewidth=1,
+                        color=(0.0, (1 - 0.3 * costs[i]) ** 2, 0.0, 0.02 * (1 - 0.3 * costs[i]) ** 2),
                     )
 
             # Prepare data
-            # shape(slgs) = ITERATIONS x mc_samples x mpc_horizon x [position, angle]
+            # shape(slgs) = ITERATIONS x mc_samples x mpc_samples x [position, angle]
             slgs = np.stack(STATE_LOGS, axis=0)
             wrap_angle_rad_inplace(slgs[:, :, :, 1])
             # shape(iplgs) = ITERATIONS x mpc_horizon
@@ -379,8 +379,8 @@ class controller_mppi(template_controller):
             # shape(nrlgs) = ITERATIONS x mpc_horizon x [position, angle]
             nrlgs = np.stack(NOMINAL_ROLLOUT_LOGS, axis=0)
             wrap_angle_rad_inplace(nrlgs[:, :, 1])
-            # shape(iplgs) = ITERATIONS x [position, angle]
-            trjctlgs = np.stack(TRAJECTORY_LOGS, axis=0)
+            # shape(trjctlgs) = (update_every * ITERATIONS) x [position, angle]
+            trjctlgs = np.stack(TRAJECTORY_LOGS[:-1], axis=0)
             wrap_angle_rad_inplace(trjctlgs[:, 1])
 
             # Create figure
