@@ -20,7 +20,7 @@ from CartPole.cartpole_model import (
     controlDisturbance,
     TrackHalfLength,
 )
-from CartPole._CartPole_mathematical_helpers import (
+from CartPole.state_utilities import (
     create_cartpole_state,
     cartpole_state_varname_to_index,
     conditional_decorator,
