@@ -86,16 +86,6 @@ distance_difference_cost = conditional_decorator(jit(nopython=True), parallelize
     lambda s, target_position: (
         ((s[POSITION_IDX] - target_position) / (2 * TrackHalfLength)) ** 2
         + (abs(abs(s[POSITION_IDX]) - TrackHalfLength) < 0.05 * TrackHalfLength) * 1.0e3
-        # + 1.0
-        # / (
-        #     1.0
-        #     + (500.0 / TrackHalfLength ** 2) * (s[POSITION_IDX] - TrackHalfLength) ** 2
-        # )
-        # + 1.0
-        # / (
-        #     1.0
-        #     + (500.0 / TrackHalfLength ** 2) * (s[POSITION_IDX] + TrackHalfLength) ** 2
-        # )
     )
 )
 
@@ -194,9 +184,6 @@ def q(s, u, delta_u, target_position):
     #     cc = 1.0e5
 
     q = dd + ep + ekp + ekc + cc
-
-    if np.abs(u + delta_u) > 1.0:
-        q = 1.0e5
 
     return q, dd, ep, ekp, ekc, cc
 
