@@ -23,6 +23,9 @@ from CartPole.cartpole_model import (
 from CartPole.state_utilities import (
     create_cartpole_state,
     cartpole_state_varname_to_index,
+)
+
+from CartPole._CartPole_mathematical_helpers import (
     conditional_decorator,
     wrap_angle_rad_inplace,
 )

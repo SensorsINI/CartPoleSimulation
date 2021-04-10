@@ -6,25 +6,35 @@ STATE_VARIABLES = np.sort(
     [
         "angle",
         "angleD",
+        "angle_cos",
+        "angle_sin",
         "angleDD",
         "position",
         "positionD",
         "positionDD",
-        "angle_cos",
-        "angle_sin",
     ]
 )
 
+STATE_VARIABLES_REDUCED = np.sort(
+    ['angle',
+     'angleD',
+     'angle_cos',
+     'angle_sin',
+     'position',
+     'positionD',
+     ]
+)
+
 STATE_INDICES = {x: np.where(STATE_VARIABLES==x)[0][0] for x in STATE_VARIABLES}
+STATE_INDICES_REDUCED = {x: np.where(STATE_VARIABLES_REDUCED==x)[0][0] for x in STATE_VARIABLES_REDUCED}
 
-
-def create_cartpole_state(state: dict = {}, dtype=None) -> np.ndarray:
+def create_cartpole_state(state: dict={}, dtype=None) -> np.ndarray:
     """
     Constructor of cartpole state from named arguments. The order of variables is fixed in STATE_VARIABLES.
 
     Input parameters are passed as a dict with the following possible keys. Other keys are ignored.
     Unset key-value pairs are initialized to 0.
-    
+
     :param angle: Pole angle. 0 means pole is upright. Clockwise angle rotation is defined as negative.
     :param angleD: Angular velocity of pole.
     :param angleDD: Angular acceleration of pole.
