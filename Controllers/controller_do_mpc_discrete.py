@@ -93,7 +93,7 @@ class controller_do_mpc_discrete(template_controller):
         E_kin_pol = (s.angleD/(2*np.pi))**2
         E_pot = np.cos(s.angle)
 
-        distance_difference = (((s.position - target_position)/50.0) ** 2)
+        distance_difference = (((s.position - target_position)/TrackHalfLength) ** 2)
 
         self.model.set_expression('E_kin_cart', E_kin_cart)
         self.model.set_expression('E_kin_pol', E_kin_pol)

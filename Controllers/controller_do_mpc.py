@@ -1,4 +1,4 @@
-"""do-mpc controller"""
+"""do-mpc controller old"""
 
 import do_mpc
 import numpy as np
@@ -9,18 +9,8 @@ from CartPole.state_utilities import cartpole_state_vector_to_namespace
 
 from types import SimpleNamespace
 
-dt_mpc_simulation = 0.1  # s
-mpc_horizon = 5
-
-# Perturbation factors:
-# Change of output from optimal
-p_Q = 0.05
-# Change of cost function
-p_position = 0.2
-p_positionD = 0.2
-p_angle = 0.2
-
-
+dt_mpc_simulation = 0.2  # s
+mpc_horizon = 10
 
 class controller_do_mpc(template_controller):
     def __init__(self,
@@ -59,11 +49,11 @@ class controller_do_mpc(template_controller):
         self.model.set_rhs('s.angleD', angleD_next)
 
         # Simplified, normalized expressions for E_kin and E_pot as a port of cost function
-        E_kin_cart = s.positionD ** 2
-        E_kin_pol = s.angleD**2
+        E_kin_cart = (s.positionD / P_GLOBALS.v_max) ** 2
+        E_kin_pol = (s.angleD/(2*np.pi))**2
         E_pot = np.sin(s.angle)**2
 
-        distance_difference = (s.position - target_position) ** 2
+        distance_difference = (((s.position - target_position)/50.0) ** 2)
 
         self.model.set_expression('E_kin_cart', E_kin_cart)
         self.model.set_expression('E_kin_pol', E_kin_pol)
@@ -92,11 +82,7 @@ class controller_do_mpc(template_controller):
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'MA57'})
 
         # # Standard version
-        lterm = (
-                1.0 * (1+p_angle*np.random.uniform(-1.0, 1.0)) * self.model.aux['E_pot']
-                + 0.002 * (1+p_position*np.random.uniform(-1.0, 1.0)) * distance_difference
-                + 0.005 * (1+p_positionD*np.random.uniform(-1.0, 1.0)) * self.model.aux['E_kin_cart']
-                 )
+        lterm = 1.0 * self.model.aux['E_pot'] + 5.0 * distance_difference + 0.5 * self.model.aux['E_kin_cart']
         # mterm = 400.0 * self.model.aux['E_kin_cart']
         mterm = 0.0 * self.model.aux['E_kin_cart']
         # mterm = 0.0 * distance_difference # 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
@@ -156,4 +142,4 @@ class controller_do_mpc(template_controller):
 
         Q = self.mpc.make_step(self.x0)
 
-        return Q.item()*(1+p_Q*np.random.uniform(-1.0, 1.0))
+        return Q.item()

@@ -8,6 +8,9 @@ from CartPole.state_utilities import create_cartpole_state, cartpole_state_varna
     cartpole_state_indices_to_varnames
 from Modeling.TF.TF_Functions.Network import *
 from Predictores.predictor_ideal import predictor_ideal
+from Predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
+
+from Controllers.controller_lqr import controller_lqr
 
 import matplotlib.pyplot as plt
 
@@ -18,16 +21,16 @@ DT = 0.1
 
 # method = 'L-BFGS-B'
 method = 'SLSQP'
-ftol = 1.0e-6
+ftol = 1.0e-8
 mpc_horizon = 10
 
 # weights
-wr = 0.01  # rterm
+wr = 0.001  # rterm
 
-l1 = 1.0  # angle_sin_cost
+l1 = 100.0  # angle_cost
 l1_2 = 0.0  # angle_sin_cost
 l2 = 0.0  # angleD_cost
-l3 = 1.0  # position_cost
+l3 = 0.0  # position_cost
 l4 = 0.01  # positionD_cost
 
 m1 = 0.0  # angle_sin_cost
@@ -35,8 +38,8 @@ m2 = 0.0  # angleD_cost
 m3 = 0.0  # position_cost
 m4 = 0.0  # positionD_cost
 
-w_sum = wr + l1 + l2 + l3 + m1 + m2 + m3 + m4
-# w_sum = 1.0
+# w_sum = wr + l1 + l2 + l3 + m1 + m2 + m3 + m4
+w_sum = 1.0
 
 wr /= w_sum
 l1 /= w_sum
@@ -50,6 +53,9 @@ m4 /= w_sum
 
 class controller_custom_mpc_scipy:
     def __init__(self):
+
+        # LQR to stabilize pole in the starting phase
+        self.lqr_controller = controller_lqr()
 
         self.horizon = mpc_horizon
 
@@ -68,10 +74,10 @@ class controller_custom_mpc_scipy:
         # State of the cart
         self.s = create_cartpole_state()  # s like state
 
-        self.target_position = 30.0
+        self.target_position = 0.0
 
-        self.Q_hat = np.zeros(self.horizon+1)  # MPC prediction of future control inputs
-        self.Q_hat0 = np.zeros(self.horizon+1)  # initial guess for future control inputs to be predicted
+        self.Q_hat = np.zeros(self.horizon)  # MPC prediction of future control inputs
+        self.Q_hat0 = np.random.normal(0.0, 0.1 ,self.horizon)  # initial guess for future control inputs to be predicted
         self.Q_previous = 0.0
 
         self.angle_cost = lambda angle: angle ** 2
@@ -143,7 +149,7 @@ class controller_custom_mpc_scipy:
         # Setup Predictor
         self.Predictor.setup(initial_state=self.s, prediction_denorm=True)
 
-        if self.sample_counter > self.warm_up_len:
+        if self.sample_counter >= self.warm_up_len:
             # Solve Optimization problem
             # solution = scipy.optimize.basinhopping(self.cost_function, self.Q_hat0, niter=2,
             #                                        minimizer_kwargs={ "method": method,"bounds":self.Q_bounds })
@@ -159,11 +165,10 @@ class controller_custom_mpc_scipy:
             # Compose new initial guess
             self.Q_previous = Q0 = self.Q_hat[0]
             # self.Q_hat0 = np.hstack((self.Q_hat[1:], self.Q_hat[-1]))
-            self.Q_hat0 = self.Q_hat
+            self.Q_hat0 = self.Q_hat + np.random.normal(0.0, 0.01, self.horizon)
             # self.plot_prediction()
         else:
-            self.Q_previous = Q0 = -s[cartpole_state_varname_to_index('angle_sin')] * 2.0
-            self.sample_counter = self.sample_counter + 1
+            Q0 = self.lqr_controller.step(s, target_position)
 
         # Make predictor ready for the next timestep
         self.Predictor.update_internal_state(Q0)
@@ -185,7 +190,7 @@ class controller_custom_mpc_scipy:
 
     def reset(self):
         self.Predictor.net.reset_states()
-        self.Q_hat0 = self.Q_hat = np.zeros(self.horizon+1)
+        self.Q_hat0 = self.Q_hat = np.zeros(self.horizon)
         self.sample_counter = 0
 
     def controller_summary(self):

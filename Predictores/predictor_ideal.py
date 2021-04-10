@@ -43,35 +43,39 @@ import numpy as np
 
 from CartPole.cartpole_model import cartpole_ode
 
+from copy import deepcopy
+
 PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '2500.csv'
 
-def next_state(s, u, dt):
+def next_state(s, u, dt, intermediate_steps=2):
     """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
     """
 
-    s_next = create_cartpole_state()
+    s_next = deepcopy(s)
 
     # # Calculates CURRENT second derivatives
     # s_next[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s, u)
+    for i in range(intermediate_steps):
+        # Calculate NEXT state:
+        s_next[cartpole_state_varname_to_index('position')] = \
+            s[cartpole_state_varname_to_index('position')] + s_next[cartpole_state_varname_to_index('positionD')] * (dt/float(intermediate_steps))
+        s_next[cartpole_state_varname_to_index('positionD')] = \
+            s[cartpole_state_varname_to_index('positionD')] + s_next[cartpole_state_varname_to_index('positionDD')] * (dt/float(intermediate_steps))
 
-    # Calculate NEXT state:
-    s_next[cartpole_state_varname_to_index('position')] = \
-        s[cartpole_state_varname_to_index('position')] + s[cartpole_state_varname_to_index('positionD')] * dt
-    s_next[cartpole_state_varname_to_index('positionD')] = \
-        s[cartpole_state_varname_to_index('positionD')] + s[cartpole_state_varname_to_index('positionDD')] * dt
+        s_next[cartpole_state_varname_to_index('angle')] = \
+            s[cartpole_state_varname_to_index('angle')] + s_next[cartpole_state_varname_to_index('angleD')] * (dt/float(intermediate_steps))
+        s_next[cartpole_state_varname_to_index('angleD')] = \
+            s_next[cartpole_state_varname_to_index('angleD')] + s_next[cartpole_state_varname_to_index('angleDD')] * (dt/float(intermediate_steps))
 
-    s_next[cartpole_state_varname_to_index('angle')] = \
-        s[cartpole_state_varname_to_index('angle')] + s[cartpole_state_varname_to_index('angleD')] * dt
-    s_next[cartpole_state_varname_to_index('angleD')] = \
-        s[cartpole_state_varname_to_index('angleD')] + s[cartpole_state_varname_to_index('angleDD')] * dt
+        # Calculates second derivatives of NEXT state
+        s_next[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s_next, u)
 
-    s_next[cartpole_state_varname_to_index('angle_cos')] = np.cos(s_next[cartpole_state_varname_to_index('angle')])
-    s_next[cartpole_state_varname_to_index('angle_sin')] = np.sin(s_next[cartpole_state_varname_to_index('angle')])
+        s_next[cartpole_state_varname_to_index('angle_cos')] = np.cos(s_next[cartpole_state_varname_to_index('angle')])
+        s_next[cartpole_state_varname_to_index('angle_sin')] = np.sin(s_next[cartpole_state_varname_to_index('angle')])
 
-    # Calculates second derivatives of NEXT state
-    s_next[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s_next, u)
 
     return s_next
+
 
 
 class predictor_ideal:
@@ -112,12 +116,12 @@ class predictor_ideal:
 
     def predict(self, Q: np.ndarray) -> np.ndarray:
 
-        if len(Q) != self.horizon+1:
+        if len(Q) != self.horizon:
             raise IndexError('Number of provided control inputs does not match the horizon')
         else:
             Q_hat = np.atleast_1d(np.asarray(Q).squeeze())
 
-        self.output[:, -1] = Q_hat
+        self.output[:-1, -1] = Q_hat
 
         s_next = self.s
         # Calculate second derivatives of initial state
@@ -129,10 +133,10 @@ class predictor_ideal:
             self.output[k+1, :-1] = s_next
 
         if self.prediction_denorm:
-            return self.output
+            return self.output[:, :-1]
         else:
             columns = self.prediction_features_names + ['Q']
-            return normalize_numpy_array(self.output, columns, self.normalization_info)
+            return normalize_numpy_array(self.output, columns, self.normalization_info)[:, :-1]
 
     # @tf.function
     def update_internal_state(self, Q0):
