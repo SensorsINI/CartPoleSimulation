@@ -186,13 +186,13 @@ def q(s, u, delta_u, target_position):
     dd = 5.0e1 * distance_difference_cost(s, target_position)
     ep = 1.0e3 * E_pot_cost(s)
     ekp = 1.0e-2 * E_kin_pol(s)
-    ekc = 5.0e-0 * E_kin_cart(s)
+    ekc = 5.0e0 * E_kin_cart(s)
     cc = (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
-    # if np.abs(u + delta_u) > 1.0:
-    #     # Control deviation is outside constraint set.
-    #     cc = 1.0e5
+    if np.abs(u + delta_u) > 1.0:
+        # Control deviation is outside constraint set.
+        cc = 1.0e5
 
     q = dd + ep + ekp + ekc + cc
 
