@@ -286,9 +286,7 @@ class controller_mppi(template_controller):
             if LOGGING:
                 COST_TO_GO_LOGS.append(self.S_tilde_k)
                 COST_BREAKDOWN_LOGS.append(np.mean(cost_logs_internal, axis=0))
-                STATE_LOGS.append(
-                    s_horizon[:, :, [POSITION_IDX, ANGLE_IDX]]
-                )
+                STATE_LOGS.append(s_horizon[:, :, [POSITION_IDX, ANGLE_IDX]])
                 INPUT_LOGS.append(self.u)
                 # To plot the trajectory the controller wants to make
                 rollout_trajectory = np.zeros((mpc_samples + 1, s.size))
@@ -364,14 +362,24 @@ class controller_mppi(template_controller):
                         states[i, :, 0],
                         linestyle="-",
                         linewidth=1,
-                        color=(0.0, (1 - 0.3 * costs[i]) ** 2, 0.0, 0.02 * (1 - 0.3 * costs[i]) ** 2),
+                        color=(
+                            0.0,
+                            (1 - 0.3 * costs[i]) ** 2,
+                            0.0,
+                            0.02 * (1 - 0.3 * costs[i]) ** 2,
+                        ),
                     )
                     ax_angle.plot(
                         (update_every * iteration + np.arange(0, horizon_length)) * dt,
                         states[i, :, 1] * 180.0 / np.pi,
                         linestyle="-",
                         linewidth=1,
-                        color=(0.0, (1 - 0.3 * costs[i]) ** 2, 0.0, 0.02 * (1 - 0.3 * costs[i]) ** 2),
+                        color=(
+                            0.0,
+                            (1 - 0.3 * costs[i]) ** 2,
+                            0.0,
+                            0.02 * (1 - 0.3 * costs[i]) ** 2,
+                        ),
                     )
 
             # Prepare data
