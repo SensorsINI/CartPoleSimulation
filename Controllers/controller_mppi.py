@@ -103,6 +103,33 @@ def cartpole_ode_parallelize(s: np.ndarray, u: float):
 
 
 @conditional_decorator(jit(nopython=True), parallelize)
+def motion_derivatives(s: np.ndarray, u: float):
+    """
+    :return: The vector of angle, angleD, position, positionD time derivatives
+    """
+    s_dot = np.zeros_like(s)
+    s_dot[POSITION_IDX] = s[POSITIOND_IDX]
+    s_dot[ANGLE_IDX] = s[ANGLED_IDX]
+    (s_dot[ANGLED_IDX], s_dot[POSITIOND_IDX]) = cartpole_ode_parallelize(
+        s, u_max * (u + controlDisturbance * np.random.normal() + controlBias)
+    )
+    return s_dot
+
+
+@conditional_decorator(jit(nopython=True), parallelize)
+def integration_step(s_prev: np.ndarray, u: float) -> np.ndarray:
+    """
+    Perform explicit Euler integration step to simulate MPC horizon
+    """
+    derivatives = motion_derivatives(s_prev, u)
+    s_next = s_prev + derivatives * dt
+    # Simulate bouncing off edges (does not consider cart dimensions)
+    if abs(s_next[POSITION_IDX]) > TrackHalfLength:
+        s_next[POSITIOND_IDX] = -s_next[POSITIOND_IDX]
+    return s_next
+
+
+@conditional_decorator(jit(nopython=True), parallelize)
 def trajectory_rollouts(
     s: np.ndarray,
     S_tilde_k: np.ndarray,
@@ -114,10 +141,7 @@ def trajectory_rollouts(
     for k in range(mc_samples):
         s_horizon[k, 0, :] = s
         for i in range(0, mpc_samples):
-            s_last = s_horizon[k, i, :]
-            # Explicit Euler integration step
-            derivatives = motion_derivatives(s_last, u[i] + delta_u[k, i])
-            s_next = s_last + derivatives * dt
+            s_next = integration_step(s_prev=s_horizon[k, i, :], u=u[i] + delta_u[k, i])
             s_horizon[k, i + 1, :] = s_next
 
             cost_increment, _, _, _, _, _ = q(
@@ -141,10 +165,7 @@ def trajectory_rollouts_logging(
     for k in range(mc_samples):
         s_horizon[k, 0, :] = s
         for i in range(0, mpc_samples):
-            s_last = s_horizon[k, i, :]
-            # Explicit Euler integration step
-            derivatives = motion_derivatives(s_last, u[i] + delta_u[k, i])
-            s_next = s_last + derivatives * dt
+            s_next = integration_step(s_prev=s_horizon[k, i, :], u=u[i] + delta_u[k, i])
             s_horizon[k, i + 1, :] = s_next
 
             cost_increment, dd, ep, ekp, ekc, cc = q(
@@ -157,20 +178,6 @@ def trajectory_rollouts_logging(
 
 
 rollout_function = trajectory_rollouts_logging if LOGGING else trajectory_rollouts
-
-
-@conditional_decorator(jit(nopython=True), parallelize)
-def motion_derivatives(s: np.ndarray, u: float):
-    """
-    :return: The vector of angle, angleD, position, positionD time derivatives
-    """
-    s_dot = np.zeros_like(s)
-    s_dot[POSITION_IDX] = s[POSITIOND_IDX]
-    s_dot[ANGLE_IDX] = s[ANGLED_IDX]
-    (s_dot[ANGLED_IDX], s_dot[POSITIOND_IDX]) = cartpole_ode_parallelize(
-        s, u_max * (u + controlDisturbance * np.random.normal() + controlBias)
-    )
-    return s_dot
 
 
 @conditional_decorator(jit(nopython=True), parallelize)
@@ -292,9 +299,9 @@ class controller_mppi(template_controller):
                 rollout_trajectory = np.zeros((mpc_samples + 1, s.size))
                 rollout_trajectory[0, :] = self.s
                 for i in range(0, mpc_samples):
-                    s_last = rollout_trajectory[i, :]
-                    derivatives = motion_derivatives(s_last, self.u[i])
-                    s_next = s_last + derivatives * dt
+                    s_next = integration_step(
+                        s_prev=rollout_trajectory[i, :], u=self.u[i]
+                    )
                     rollout_trajectory[i + 1, :] = s_next
                 NOMINAL_ROLLOUT_LOGS.append(
                     rollout_trajectory[:-1, [POSITION_IDX, ANGLE_IDX]]
