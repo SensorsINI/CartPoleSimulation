@@ -268,10 +268,10 @@ class controller_mppi(template_controller):
 
         if self.iteration % update_every == 0:
             # Initialize perturbations and cost arrays
-            # self.delta_u = self.initialize_perturbations(
-            #     stdev=self.rho_sqrt_inv / np.sqrt(dt), random_walk=False
-            # )  # N(mean=0, var=1/(rho*dt))
-            self.delta_u = self.initialize_perturbations(stdev=0.2)
+            self.delta_u = self.initialize_perturbations(
+                stdev=self.rho_sqrt_inv
+                / np.sqrt(dt)
+            )  # du ~ N(mean=0, var=1/(rho*dt))
             self.S_tilde_k = np.zeros_like(self.S_tilde_k)
 
             # Run parallel trajectory rollouts for different input perturbations
