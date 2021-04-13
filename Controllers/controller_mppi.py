@@ -57,6 +57,7 @@ POSITIOND_IDX = cartpole_state_varname_to_index("positionD").item()
 R = 1.0e0  # How much to punish Q
 LBD = 1.0e1  # Cost parameter lambda
 NU = 1.0e1  # Exploration variance
+GAMMA = 1.01  # Future cost discount
 
 
 """Set up parallelization"""
@@ -122,7 +123,7 @@ def trajectory_rollouts(
             cost_increment, _, _, _, _, _ = q(
                 s_next, u[i], delta_u[k, i], target_position
             )
-            S_tilde_k[k] += cost_increment
+            S_tilde_k[k] += GAMMA ** i * cost_increment
 
     return S_tilde_k, None, None
 
@@ -149,7 +150,7 @@ def trajectory_rollouts_logging(
             cost_increment, dd, ep, ekp, ekc, cc = q(
                 s_next, u[i], delta_u[k, i], target_position
             )
-            S_tilde_k[k] += cost_increment
+            S_tilde_k[k] += GAMMA ** i * cost_increment
             cost_logs_internal[k, :, i] = [dd, ep, ekp, ekc, cc]
 
     return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
