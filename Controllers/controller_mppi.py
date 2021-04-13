@@ -42,7 +42,7 @@ from copy import deepcopy
 dt = 0.02  # s
 mpc_horizon = 1.0
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
-mc_samples = 2000  # Number of Monte Carlo samples
+mc_samples = int(2e3)  # Number of Monte Carlo samples
 update_every = 1  # Cost weighted update of inputs every ... steps
 
 
@@ -56,8 +56,8 @@ POSITIOND_IDX = cartpole_state_varname_to_index("positionD").item()
 """MPPI constants"""
 R = 1.0e0  # How much to punish Q
 LBD = 1.0e1  # Cost parameter lambda
-NU = 1.0e1  # Exploration variance
-GAMMA = 1.01  # Future cost discount
+NU = 1.0e3  # Exploration variance
+GAMMA = 1.00  # Future cost discount
 
 
 """Set up parallelization"""
@@ -276,8 +276,7 @@ class controller_mppi(template_controller):
         if self.iteration % update_every == 0:
             # Initialize perturbations and cost arrays
             self.delta_u = self.initialize_perturbations(
-                stdev=self.rho_sqrt_inv
-                / np.sqrt(dt)
+                stdev=self.rho_sqrt_inv / np.sqrt(dt)
             )  # du ~ N(mean=0, var=1/(rho*dt))
             self.S_tilde_k = np.zeros_like(self.S_tilde_k)
 
