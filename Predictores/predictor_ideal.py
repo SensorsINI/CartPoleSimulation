@@ -63,7 +63,7 @@ def next_state(s, u, dt, intermediate_steps=2):
             s_next[..., cartpole_state_varname_to_index('positionD')] + s_next[..., cartpole_state_varname_to_index('positionDD')] * (dt/float(intermediate_steps))
         
         # Simulate bouncing off edges (does not consider cart dimensions)
-        s_nextabs(s_next[..., cartpole_state_varname_to_index('position')]) > TrackHalfLength, cartpole_state_varname_to_index('positionD')] \
+        s_next[..., abs(s_next[..., cartpole_state_varname_to_index('position')]) > TrackHalfLength, cartpole_state_varname_to_index('positionD')] \
             = -s_next[..., abs(s_next[..., cartpole_state_varname_to_index('position')]) > TrackHalfLength, cartpole_state_varname_to_index('positionD')]
 
         s_next[..., cartpole_state_varname_to_index('angle')] = \
@@ -85,7 +85,7 @@ def next_state(s, u, dt, intermediate_steps=2):
 class predictor_ideal:
     def __init__(self, horizon, dt):
 
-        self.normalization_info = load_normalization_info(PATH_TO_NORMALIZATION_INFO)
+        self.normalization_info = None
 
         # State of the cart
         self.s = create_cartpole_state()  # s like state
