@@ -259,7 +259,7 @@ class controller_mppi(template_controller):
             plt.figure(num=2, figsize=(16, 9))
             plt.plot(time_axis, np.mean(ctglgs, axis=1))
             plt.ylabel("avg_cost")
-            plt.xlabel("time")
+            plt.xlabel("time (s)")
             plt.title("Cost-to-go per Timestep")
             plt.show()
 
@@ -279,7 +279,7 @@ class controller_mppi(template_controller):
             plt.plot(time_axis, np.sum(clgs[:, 4, :], axis=-1), label="Control cost")
 
             plt.ylabel("total horizon cost")
-            plt.xlabel("time")
+            plt.xlabel("time (s)")
             plt.title("Cost component breakdown")
             plt.legend()
             plt.show()
