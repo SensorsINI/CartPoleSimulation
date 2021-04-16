@@ -132,44 +132,20 @@ def trajectory_rollouts(
     predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
     s_horizon = predictor.predict(u + delta_u)
 
-    for k in range(mc_samples):
-        for i in range(0, mpc_samples):
-            cost_increment, _, _, _, _, _ = q(
-                s_horizon[k, i + 1, :],
-                np.array([u[i]]),
-                np.array([delta_u[k, i]]),
-                target_position,
-            )
-            S_tilde_k[k] += GAMMA ** i * cost_increment
-
-    return S_tilde_k, None, None
-
-
-def trajectory_rollouts_logging(
-    s: np.ndarray,
-    S_tilde_k: np.ndarray,
-    u: np.ndarray,
-    delta_u: np.ndarray,
-    target_position: np.ndarray,
-):
-    s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size))
-    s_horizon[:, 0, :] = np.tile(s, (mc_samples, 1))
-
-    predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
-    s_horizon = predictor.predict(u + delta_u)
-
     cost_increment, dd, ep, ekp, ekc, cc = q(
         s_horizon[:, 1:, :], u, delta_u, target_position
     )
     S_tilde_k = np.sum(cost_increment, axis=1)
-    cost_logs_internal = np.stack(
-        [dd, ep, ekp, ekc, cc], axis=1
-    )  # (mc_samples x 5 x mpc_samples)
+    
+    if LOGGING:
+        cost_logs_internal = np.stack(
+            [dd, ep, ekp, ekc, cc], axis=1
+        )  # (mc_samples x 5 x mpc_samples)
 
-    return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
+        return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
+    return S_tilde_k, None, None
 
 
-rollout_function = trajectory_rollouts_logging if LOGGING else trajectory_rollouts
 
 
 def q(s, u, delta_u, target_position):
@@ -270,7 +246,7 @@ class controller_mppi(template_controller):
             self.S_tilde_k = np.zeros_like(self.S_tilde_k)
 
             # Run parallel trajectory rollouts for different input perturbations
-            self.S_tilde_k, cost_logs_internal, s_horizon = rollout_function(
+            self.S_tilde_k, cost_logs_internal, s_horizon = trajectory_rollouts(
                 self.s, self.S_tilde_k, self.u, self.delta_u, self.target_position,
             )
 
