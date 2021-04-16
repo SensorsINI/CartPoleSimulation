@@ -34,7 +34,7 @@ Using predictor:
 
 
 from Modeling.load_and_normalize import load_normalization_info, normalize_numpy_array
-from CartPole.cartpole_model import Q2u
+from CartPole.cartpole_model import Q2u, TrackHalfLength
 from CartPole.state_utilities import create_cartpole_state, \
     cartpole_state_varname_to_index, cartpole_state_varnames_to_indices, \
     cartpole_state_indices_to_varnames
@@ -61,6 +61,10 @@ def next_state(s, u, dt, intermediate_steps=2):
             s_next[..., cartpole_state_varname_to_index('position')] + s_next[..., cartpole_state_varname_to_index('positionD')] * (dt/float(intermediate_steps))
         s_next[..., cartpole_state_varname_to_index('positionD')] = \
             s_next[..., cartpole_state_varname_to_index('positionD')] + s_next[..., cartpole_state_varname_to_index('positionDD')] * (dt/float(intermediate_steps))
+        
+        # Simulate bouncing off edges (does not consider cart dimensions)
+        s_nextabs(s_next[..., cartpole_state_varname_to_index('position')]) > TrackHalfLength, cartpole_state_varname_to_index('positionD')] \
+            = -s_next[..., abs(s_next[..., cartpole_state_varname_to_index('position')]) > TrackHalfLength, cartpole_state_varname_to_index('positionD')]
 
         s_next[..., cartpole_state_varname_to_index('angle')] = \
             s_next[..., cartpole_state_varname_to_index('angle')] + s_next[..., cartpole_state_varname_to_index('angleD')] * (dt/float(intermediate_steps))
