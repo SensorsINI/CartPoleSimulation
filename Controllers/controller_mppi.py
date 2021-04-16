@@ -29,6 +29,7 @@ from CartPole._CartPole_mathematical_helpers import (
     conditional_decorator,
     wrap_angle_rad_inplace,
 )
+from Predictores.predictor_ideal import predictor_ideal
 
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
@@ -61,7 +62,7 @@ GAMMA = 1.00  # Future cost discount
 
 
 """Set up parallelization"""
-parallelize = True
+parallelize = False
 _cartpole_ode = conditional_decorator(jit(nopython=True), parallelize)(_cartpole_ode)
 
 
@@ -78,20 +79,24 @@ NOMINAL_ROLLOUT_LOGS = []
 
 """Cost function helpers"""
 E_kin_cart = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s: s[POSITIOND_IDX] ** 2
+    lambda s: s[..., POSITIOND_IDX] ** 2
 )
 E_kin_pol = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s: s[ANGLED_IDX] ** 2
+    lambda s: s[..., ANGLED_IDX] ** 2
 )
 E_pot_cost = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s: ((1.0 - np.cos(s[ANGLE_IDX])) * 0.5) ** 2
+    lambda s: ((1.0 - np.cos(s[..., ANGLE_IDX])) * 0.5) ** 2
 )
 distance_difference_cost = conditional_decorator(jit(nopython=True), parallelize)(
     lambda s, target_position: (
-        ((s[POSITION_IDX] - target_position) / (2 * TrackHalfLength)) ** 2
-        + (abs(abs(s[POSITION_IDX]) - TrackHalfLength) < 0.05 * TrackHalfLength) * 1.0e3
+        ((s[..., POSITION_IDX] - target_position) / (2 * TrackHalfLength)) ** 2
+        + (abs(abs(s[..., POSITION_IDX]) - TrackHalfLength) < 0.05 * TrackHalfLength) * 1.0e3
     )
 )
+
+
+"""Define Predictor"""
+predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
 
 
 @conditional_decorator(jit(nopython=True), parallelize)
@@ -138,14 +143,15 @@ def trajectory_rollouts(
     target_position: np.ndarray,
 ):
     s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size))
-    for k in range(mc_samples):
-        s_horizon[k, 0, :] = s
-        for i in range(0, mpc_samples):
-            s_next = integration_step(s_prev=s_horizon[k, i, :], u=u[i] + delta_u[k, i])
-            s_horizon[k, i + 1, :] = s_next
+    s_horizon[:, 0, :] = np.tile(s, (mc_samples, 1))
 
+    predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
+    s_horizon = predictor.predict(u + delta_u)
+
+    for k in range(mc_samples):
+        for i in range(0, mpc_samples):
             cost_increment, _, _, _, _, _ = q(
-                s_next, u[i], delta_u[k, i], target_position
+                s_horizon[k, i + 1, :], np.array([u[i]]), np.array([delta_u[k, i]]), target_position
             )
             S_tilde_k[k] += GAMMA ** i * cost_increment
 
@@ -161,18 +167,16 @@ def trajectory_rollouts_logging(
     target_position: np.ndarray,
 ):
     s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size))
-    cost_logs_internal = np.zeros((mc_samples, 5, mpc_samples))
-    for k in range(mc_samples):
-        s_horizon[k, 0, :] = s
-        for i in range(0, mpc_samples):
-            s_next = integration_step(s_prev=s_horizon[k, i, :], u=u[i] + delta_u[k, i])
-            s_horizon[k, i + 1, :] = s_next
+    s_horizon[:, 0, :] = np.tile(s, (mc_samples, 1))
 
-            cost_increment, dd, ep, ekp, ekc, cc = q(
-                s_next, u[i], delta_u[k, i], target_position
-            )
-            S_tilde_k[k] += GAMMA ** i * cost_increment
-            cost_logs_internal[k, :, i] = [dd, ep, ekp, ekc, cc]
+    predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
+    s_horizon = predictor.predict(u + delta_u)
+
+    cost_increment, dd, ep, ekp, ekc, cc = q(
+        s_horizon[:, 1:, :], u, delta_u, target_position
+    )
+    S_tilde_k = np.sum(cost_increment, axis=1)
+    cost_logs_internal = np.stack([dd, ep, ekp, ekc, cc], axis=1)  # (mc_samples x 5 x mpc_samples)
 
     return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
 
@@ -190,9 +194,9 @@ def q(s, u, delta_u, target_position):
     cc = (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
-    if np.abs(u + delta_u) > 1.0:
-        # Control deviation is outside constraint set.
-        cc = 1.0e5
+    
+    # Penalize if control deviation is outside constraint set.
+    cc[np.abs(u + delta_u) > 1.0] = 1.0e5
 
     q = dd + ep + ekp + ekc + cc
 
@@ -315,6 +319,9 @@ class controller_mppi(template_controller):
         # Index-shift inputs
         self.u[:-1] = self.u[1:]
         self.u[-1] = self.u[-1]
+
+        # Prepare predictor for next timestep
+        predictor.update_internal_state(Q)
 
         return Q  # normed control input in the range [-1,1]
 
@@ -489,4 +496,7 @@ class controller_mppi(template_controller):
     # It is called after an experiment,
     # but only if the controller is supposed to be reused without reloading (e.g. in GUI)
     def controller_reset(self):
-        pass
+        try:
+            predictor.net.reset_states()
+        except:
+            pass
