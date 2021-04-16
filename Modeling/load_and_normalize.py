@@ -88,11 +88,13 @@ def load_data(list_of_paths_to_datafiles=None):
 # Used to ensure that datafiles used for training save data with the same frequency
 def get_sampling_interval_from_datafile(path_to_datafile):
     preceding_text = '# Saving: '
+    dt_save = None
     with open(path_to_datafile, 'r') as cmt_file:  # open file
         for line in cmt_file:  # read each line
             if line[0:len(preceding_text)] == preceding_text:
                 dt_save = float(line[len(preceding_text):-2])
                 return dt_save
+    return dt_save
 
 
 # This function returns the saving interval of datafile
