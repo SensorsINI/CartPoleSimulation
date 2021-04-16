@@ -34,7 +34,6 @@ from Predictores.predictor_ideal import predictor_ideal
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 import numpy as np
-from numba import jit
 
 from copy import deepcopy
 
@@ -61,10 +60,6 @@ NU = 1.0e3  # Exploration variance
 GAMMA = 1.00  # Future cost discount
 
 
-"""Set up parallelization"""
-parallelize = False
-_cartpole_ode = conditional_decorator(jit(nopython=True), parallelize)(_cartpole_ode)
-
 
 """Init logging variables"""
 LOGGING = True
@@ -78,20 +73,13 @@ NOMINAL_ROLLOUT_LOGS = []
 
 
 """Cost function helpers"""
-E_kin_cart = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s: s[..., POSITIOND_IDX] ** 2
-)
-E_kin_pol = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s: s[..., ANGLED_IDX] ** 2
-)
-E_pot_cost = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s: ((1.0 - np.cos(s[..., ANGLE_IDX])) * 0.5) ** 2
-)
-distance_difference_cost = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s, target_position: (
-        ((s[..., POSITION_IDX] - target_position) / (2 * TrackHalfLength)) ** 2
-        + (abs(abs(s[..., POSITION_IDX]) - TrackHalfLength) < 0.05 * TrackHalfLength) * 1.0e3
-    )
+E_kin_cart = lambda s: s[..., POSITIOND_IDX] ** 2
+E_kin_pol = lambda s: s[..., ANGLED_IDX] ** 2
+E_pot_cost = lambda s: ((1.0 - np.cos(s[..., ANGLE_IDX])) * 0.5) ** 2
+distance_difference_cost = lambda s, target_position: (
+    ((s[..., POSITION_IDX] - target_position) / (2 * TrackHalfLength)) ** 2
+    + (abs(abs(s[..., POSITION_IDX]) - TrackHalfLength) < 0.05 * TrackHalfLength)
+    * 1.0e3
 )
 
 
@@ -99,7 +87,6 @@ distance_difference_cost = conditional_decorator(jit(nopython=True), parallelize
 predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
 
 
-@conditional_decorator(jit(nopython=True), parallelize)
 def cartpole_ode_parallelize(s: np.ndarray, u: float):
     """Wrapper for the _cartpole_ode function"""
     return _cartpole_ode(
@@ -107,7 +94,6 @@ def cartpole_ode_parallelize(s: np.ndarray, u: float):
     )
 
 
-@conditional_decorator(jit(nopython=True), parallelize)
 def motion_derivatives(s: np.ndarray, u: float):
     """
     :return: The vector of angle, angleD, position, positionD time derivatives
@@ -121,7 +107,6 @@ def motion_derivatives(s: np.ndarray, u: float):
     return s_dot
 
 
-@conditional_decorator(jit(nopython=True), parallelize)
 def integration_step(s_prev: np.ndarray, u: float) -> np.ndarray:
     """
     Perform explicit Euler integration step to simulate MPC horizon
@@ -134,7 +119,6 @@ def integration_step(s_prev: np.ndarray, u: float) -> np.ndarray:
     return s_next
 
 
-@conditional_decorator(jit(nopython=True), parallelize)
 def trajectory_rollouts(
     s: np.ndarray,
     S_tilde_k: np.ndarray,
@@ -151,14 +135,16 @@ def trajectory_rollouts(
     for k in range(mc_samples):
         for i in range(0, mpc_samples):
             cost_increment, _, _, _, _, _ = q(
-                s_horizon[k, i + 1, :], np.array([u[i]]), np.array([delta_u[k, i]]), target_position
+                s_horizon[k, i + 1, :],
+                np.array([u[i]]),
+                np.array([delta_u[k, i]]),
+                target_position,
             )
             S_tilde_k[k] += GAMMA ** i * cost_increment
 
     return S_tilde_k, None, None
 
 
-@conditional_decorator(jit(nopython=True), parallelize)
 def trajectory_rollouts_logging(
     s: np.ndarray,
     S_tilde_k: np.ndarray,
@@ -176,7 +162,9 @@ def trajectory_rollouts_logging(
         s_horizon[:, 1:, :], u, delta_u, target_position
     )
     S_tilde_k = np.sum(cost_increment, axis=1)
-    cost_logs_internal = np.stack([dd, ep, ekp, ekc, cc], axis=1)  # (mc_samples x 5 x mpc_samples)
+    cost_logs_internal = np.stack(
+        [dd, ep, ekp, ekc, cc], axis=1
+    )  # (mc_samples x 5 x mpc_samples)
 
     return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
 
@@ -184,7 +172,6 @@ def trajectory_rollouts_logging(
 rollout_function = trajectory_rollouts_logging if LOGGING else trajectory_rollouts
 
 
-@conditional_decorator(jit(nopython=True), parallelize)
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
     dd = 5.0e1 * distance_difference_cost(s, target_position)
@@ -194,7 +181,7 @@ def q(s, u, delta_u, target_position):
     cc = (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
-    
+
     # Penalize if control deviation is outside constraint set.
     cc[np.abs(u + delta_u) > 1.0] = 1.0e5
 
@@ -203,7 +190,6 @@ def q(s, u, delta_u, target_position):
     return q, dd, ep, ekp, ekc, cc
 
 
-@conditional_decorator(jit(nopython=True), parallelize)
 def reward_weighted_average(S_i, delta_u_i):
     """Average the perturbations delta_u based on their desirability"""
     rho = np.min(S_i)  # for numerical stability
@@ -213,7 +199,6 @@ def reward_weighted_average(S_i, delta_u_i):
     return b
 
 
-@conditional_decorator(jit(nopython=True), parallelize)
 def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
     """
     :param u: Sampling mean / warm started control inputs of size (,mpc_samples)
