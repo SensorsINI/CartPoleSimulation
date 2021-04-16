@@ -60,7 +60,6 @@ NU = 1.0e3  # Exploration variance
 GAMMA = 1.00  # Future cost discount
 
 
-
 """Init logging variables"""
 LOGGING = True
 # Save average cost for each cost component
@@ -94,31 +93,6 @@ def cartpole_ode_parallelize(s: np.ndarray, u: float):
     )
 
 
-def motion_derivatives(s: np.ndarray, u: float):
-    """
-    :return: The vector of angle, angleD, position, positionD time derivatives
-    """
-    s_dot = np.zeros_like(s)
-    s_dot[POSITION_IDX] = s[POSITIOND_IDX]
-    s_dot[ANGLE_IDX] = s[ANGLED_IDX]
-    (s_dot[ANGLED_IDX], s_dot[POSITIOND_IDX]) = cartpole_ode_parallelize(
-        s, u_max * (u + controlDisturbance * np.random.normal() + controlBias)
-    )
-    return s_dot
-
-
-def integration_step(s_prev: np.ndarray, u: float) -> np.ndarray:
-    """
-    Perform explicit Euler integration step to simulate MPC horizon
-    """
-    derivatives = motion_derivatives(s_prev, u)
-    s_next = s_prev + derivatives * dt
-    # Simulate bouncing off edges (does not consider cart dimensions)
-    if abs(s_next[POSITION_IDX]) > TrackHalfLength:
-        s_next[POSITIOND_IDX] = -s_next[POSITIOND_IDX]
-    return s_next
-
-
 def trajectory_rollouts(
     s: np.ndarray,
     S_tilde_k: np.ndarray,
@@ -136,7 +110,7 @@ def trajectory_rollouts(
         s_horizon[:, 1:, :], u, delta_u, target_position
     )
     S_tilde_k = np.sum(cost_increment, axis=1)
-    
+
     if LOGGING:
         cost_logs_internal = np.stack(
             [dd, ep, ekp, ekc, cc], axis=1
@@ -144,8 +118,6 @@ def trajectory_rollouts(
 
         return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
     return S_tilde_k, None, None
-
-
 
 
 def q(s, u, delta_u, target_position):
@@ -259,14 +231,10 @@ class controller_mppi(template_controller):
                 COST_BREAKDOWN_LOGS.append(np.mean(cost_logs_internal, axis=0))
                 STATE_LOGS.append(s_horizon[:, :, [POSITION_IDX, ANGLE_IDX]])
                 INPUT_LOGS.append(self.u)
-                # To plot the trajectory the controller wants to make
-                rollout_trajectory = np.zeros((mpc_samples + 1, s.size))
-                rollout_trajectory[0, :] = self.s
-                for i in range(0, mpc_samples):
-                    s_next = integration_step(
-                        s_prev=rollout_trajectory[i, :], u=self.u[i]
-                    )
-                    rollout_trajectory[i + 1, :] = s_next
+                # Simulate nominal rollout to plot the trajectory the controller wants to make
+                predictor.setup(initial_state=self.s, prediction_denorm=True)
+                # Compute one rollout of shape (mpc_samples + 1) x s.size
+                rollout_trajectory = predictor.predict(self.u)
                 NOMINAL_ROLLOUT_LOGS.append(
                     rollout_trajectory[:-1, [POSITION_IDX, ANGLE_IDX]]
                 )
