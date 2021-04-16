@@ -138,12 +138,12 @@ def q(s, u, delta_u, target_position):
     return q, dd, ep, ekp, ekc, cc
 
 
-def reward_weighted_average(S_i, delta_u_i):
+def reward_weighted_average(S, delta_u):
     """Average the perturbations delta_u based on their desirability"""
-    rho = np.min(S_i)  # for numerical stability
-    exp_s = np.exp(-1.0 / LBD * (S_i - rho))
+    rho = np.min(S)  # for numerical stability
+    exp_s = np.exp(-1.0 / LBD * (S - rho))
     a = np.sum(exp_s)
-    b = np.sum(np.multiply(exp_s, delta_u_i) / a)
+    b = np.sum(np.multiply(np.expand_dims(exp_s, 1), delta_u) / a, axis=0)
     return b
 
 
@@ -152,11 +152,8 @@ def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
     :param u: Sampling mean / warm started control inputs of size (,mpc_samples)
     :param S: Cost array of size (mc_samples)
     :param delta_u: The input perturbations that had been used, size (mc_samples, mpc_samples)
-
-    Update happens in-place.
     """
-    for i in range(mpc_samples):
-        u[i] += reward_weighted_average(S, delta_u[:, i])
+    u += reward_weighted_average(S, delta_u)
 
 
 class controller_mppi(template_controller):
