@@ -41,10 +41,10 @@ P_GLOBALS = SimpleNamespace()  # "p" like parameters
 P_GLOBALS.m = 0.087  # mass of pole, kg # Checked by Antonio & Tobi
 P_GLOBALS.M = 0.230  # mass of cart, kg # Checked by Antonio
 P_GLOBALS.L = 0.395/2.0  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi
-P_GLOBALS.u_max = 5.0  # max force produced by the motor, N
-P_GLOBALS.M_fric = 4.0  # cart friction on track, N/m/s
+P_GLOBALS.u_max = 8.88  # max force produced by the motor, N # Checked by Marcin
+P_GLOBALS.M_fric = 6.34  # cart friction on track, N/m/s # Checked by Marcin
 P_GLOBALS.J_fric = 2.5e-4  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
-P_GLOBALS.v_max = 10.0  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented yet in model, but needed for MPC
+P_GLOBALS.v_max = 1.2  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented in model, but needed for MPC
 
 P_GLOBALS.TrackHalfLength = 0.25  # m, length of the track on which CartPole can move, from 0 to edge, track is symmetric
 
@@ -107,6 +107,13 @@ def _cartpole_ode(angle, angleD, position, positionD, u):
             ) / A
             + (k / A) * u  # Effect of force applied to cart
         )
+
+        # Making m go to 0 and setting J_fric=0 (fine for pole without mass)
+        # positionDD = (u_max/M)*Q-(M_fric/M)*positionD
+        # Compare this with positionDD = a*Q-b*positionD
+        # u_max = M*a = 0.230*28 = 6.44, 0.317*28 = 8.88, (Second option is if I account for pole mass)
+        # M_fric = M*b = 0.230*20 = 4.6, 0.230*20 = 6.34
+        # From experiment b = 20, a = 28
 
         angleDD = (
             (
