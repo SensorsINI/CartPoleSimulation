@@ -42,9 +42,8 @@ P_GLOBALS.m = 0.087  # mass of pole, kg # Checked by Antonio & Tobi
 P_GLOBALS.M = 0.230  # mass of cart, kg # Checked by Antonio
 P_GLOBALS.L = 0.395/2.0  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi
 P_GLOBALS.u_max = 5.0  # max force produced by the motor, N
-P_GLOBALS.M_fric = 1.0e-1  # cart friction on track, N/m/s
-P_GLOBALS.J_fric = 2.5e-3 # friction coefficient on angular velocity in pole joint, Nm/rad/s
-P_GLOBALS.v_max = 10.0  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented yet
+P_GLOBALS.M_fric = 40.0  # cart friction on track, N/m/s
+P_GLOBALS.J_fric = 2.5e-4  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
 
 P_GLOBALS.TrackHalfLength = 0.25  # m, length of the track on which CartPole can move, from 0 to edge, track is symmetric
 
@@ -53,7 +52,7 @@ P_GLOBALS.controlBias = 0.0  # bias of control input
 P_GLOBALS.sensorNoise = 0.0  # sensor noise added to output of the system TODO: not implemented yet
 
 P_GLOBALS.g = 9.81  # absolute value of gravity acceleration, m/s^2
-P_GLOBALS.k = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole # FIXME: I think it should be 1/3
+P_GLOBALS.k = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole with length 2L: I = k*m*L^2 # FIXME: I think it should be 1/3
 # (I = k*m*L^2) (with L being half if the length)
 
 # Export variables as global
@@ -96,16 +95,16 @@ def _cartpole_ode(angle, angleD, position, positionD, u):
         # g (gravitational acceleration) is positive (absolute value)
         # Checked independently by Marcin and Krishna
 
-        A = (k + 1) * (M + m) - m * (ca ** 2)
+        A = k * (M + m) - m * (ca ** 2)
 
         positionDD = (
             (
                 + m * g * sa * ca  # Movement of the cart due to gravity
                 + ((J_fric * angleD * ca) / (L))  # Movement of the cart due to pend' s friction in the joint
-                - (k + 1) * (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                - (k + 1) * M_fric * positionD  # Braking of the cart due its friction
+                - k * (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                - k * M_fric * positionD  # Braking of the cart due its friction
             ) / A
-            + ((k + 1) / A) * u  # Effect of force applied to cart
+            + (k / A) * u  # Effect of force applied to cart
         )
 
         angleDD = (
@@ -117,6 +116,10 @@ def _cartpole_ode(angle, angleD, position, positionD, u):
             ) / (A * L) 
             + (ca / (A * L)) * u  # Effect of force applied to cart
         )
+
+        # making M go to infinity makes angleDD = (g/k*L)sin(angle) - angleD*J_fric/(k*m*L^2)
+        # This is the same as equation derived directly for a pendulum.
+        # k is 4/3! It is the factor for pendulum with length 2L: I = k*m*L^2
 
     elif CARTPOLE_EQUATIONS == 'Marcin-Sharpneat-Recommended':
         # Distribute pole mass uniformly across pole 
@@ -195,7 +198,7 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
 
     if CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
         # Helper function
-        A = (k + 1.0) * (M + m) - m * (ca ** 2)
+        A = k * (M + m) - m * (ca ** 2)
 
         # Jacobian entries
         J[0, 0] = 0.0  # xx
@@ -210,25 +213,25 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
 
         J[1, 0] = 0.0  # vx
 
-        J[1, 1] = -(1.0+k) * M_fric / A  # vv
+        J[1, 1] = -k * M_fric / A  # vv
 
         J[1, 2] = (    # vt
-                     -2.0 * (1.0+k) * u * ca * sa * m
+                     -2.0 * k * u * ca * sa * m
                      - 2.0 * ca * sa * m * (
-                             -(1.0+k) * L * (angleD**2) * sa * m
-                             + g * ca * sa * m - (1.0+k) * positionD * M_fric
+                             -k * L * (angleD**2) * sa * m
+                             + g * ca * sa * m - k * positionD * M_fric
                              + (angleD * ca * J_fric/L)
                                                                 ))/(A**2) \
              + (
-                     -(1.0+k) * L * (angleD**2) * ca * m
+                     -k * L * (angleD**2) * ca * m
                      +  g * ((ca**2)-(sa**2)) * m
                      - (angleD * sa * J_fric)/L
                                                                 )/ A
 
-        J[1, 3] = (-2.0 * (1.0+k) * L * angleD * sa * m  # vo
+        J[1, 3] = (-2.0 * k * L * angleD * sa * m  # vo
               + (ca * J_fric / L)) / A
 
-        J[1, 4] = (1.0+k) / A  # vu
+        J[1, 4] = k / A  # vu
 
         J[2, 0] = 0.0  # tx
 
