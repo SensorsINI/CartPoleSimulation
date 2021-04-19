@@ -10,7 +10,7 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 # region Imported modules
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
-from CartPole.state_utilities import cartpole_state_varname_to_index, cartpole_state_index_to_varname
+from CartPole.state_utilities import cartpole_state_varname_to_index, cartpole_state_index_to_varname, cartpole_state_varnames_to_indices
 from CartPole.cartpole_model import Q2u, cartpole_ode, P_GLOBALS, s0
 
 import numpy as np
@@ -259,7 +259,7 @@ class CartPole:
         # In case in the next step the wheel of the cart
         # went beyond the track
         # Bump elastically into an (invisible) boarder
-        if (abs(self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics) + self.WheelToMiddle) > self.TrackHalfLengthGraphics:
+        if abs(self.s[cartpole_state_varname_to_index('position')]) > self.p.TrackHalfLength:
             self.s[cartpole_state_varname_to_index('positionD')] = -self.s[cartpole_state_varname_to_index('positionD')]
 
         # Determine the dimensionless [-1,1] value of the motor power Q
@@ -821,10 +821,11 @@ class CartPole:
             else:
                 self.target_position = self.slider_value * self.p.TrackHalfLength
 
-            self.Q = 0.0
+            # self.Q = # FIXME
+            self.Q=0.0
 
             self.u = Q2u(self.Q)
-            self.s[cartpole_state_varname_to_index('angleDD')], self.s[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(self.s, self.u)
+            self.s[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(self.s, self.u)
 
         elif reset_mode == 2:  # Don't change it
             if (s is not None) and (Q is not None) and (target_position is not None):
@@ -932,9 +933,9 @@ class CartPole:
         self.y_wheel = self.y_plane + self.WheelRadius
         self.MastHight = 10.0  # For drawing only. For calculation see L
         self.MastThickness = 0.05
-        self.TrackHalfLengthGraphics = 50.0  # Length of the track
+        self.TrackHalfLengthGraphics = 50.0  # Full Length of the track
 
-        self.physical_to_graphics = self.TrackHalfLengthGraphics/self.p.TrackHalfLength
+        self.physical_to_graphics = (self.TrackHalfLengthGraphics-self.WheelToMiddle)/self.p.TrackHalfLength  # TrackHalfLength is the effective length of track
         self.graphics_to_physical = 1.0/self.physical_to_graphics
 
         self.y_acceleration_arrow = 1.5 * self.WheelRadius
