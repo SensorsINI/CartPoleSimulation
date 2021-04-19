@@ -106,7 +106,7 @@ def test_network():
 
     run_test_gui(inputs, outputs,
                  ground_truth, net_outputs, time_axis,
-                 net_outputs_2=dataset_2,
+                 predictions_array_2v=dataset_2,
                  datasets_titles=[title_1, title_2]
                  )
 
