@@ -167,8 +167,8 @@ def cartpole_ode_namespace(s: SimpleNamespace, u: float):
 
 def cartpole_ode(s: np.ndarray, u: float):
     return _cartpole_ode(
-        s[cartpole_state_varname_to_index('angle')], s[cartpole_state_varname_to_index('angleD')],
-        s[cartpole_state_varname_to_index('position')], s[cartpole_state_varname_to_index('positionD')],
+        s[..., cartpole_state_varname_to_index('angle')], s[..., cartpole_state_varname_to_index('angleD')],
+        s[..., cartpole_state_varname_to_index('position')], s[..., cartpole_state_varname_to_index('positionD')],
         u
     )
 
@@ -288,7 +288,7 @@ def Q2u(Q):
     In future there might be implemented here a more sophisticated model of a motor driving CartPole
     """
     u = u_max * (
-        Q + controlDisturbance * np.random.normal() + P_GLOBALS.controlBias
+        Q + controlDisturbance * np.random.normal(loc=0.0, scale=1.0, size=np.shape(Q)) + P_GLOBALS.controlBias
     )  # Q is drive -1:1 range, add noise on control
 
     return u

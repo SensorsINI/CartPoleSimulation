@@ -188,7 +188,7 @@ class controller_custom_mpc_scipy:
 
         return Q0
 
-    def reset(self):
+    def controller_reset(self):
         self.Predictor.net.reset_states()
         self.Q_hat0 = self.Q_hat = np.zeros(self.horizon)
         self.sample_counter = 0

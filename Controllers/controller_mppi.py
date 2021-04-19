@@ -29,11 +29,11 @@ from CartPole._CartPole_mathematical_helpers import (
     conditional_decorator,
     wrap_angle_rad_inplace,
 )
+from Predictores.predictor_ideal import predictor_ideal
 
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 import numpy as np
-from numba import jit
 
 from copy import deepcopy
 
@@ -42,7 +42,7 @@ from copy import deepcopy
 dt = 0.02  # s
 mpc_horizon = 1.0
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
-mc_samples = 2000  # Number of Monte Carlo samples
+mc_samples = int(2e3)  # Number of Monte Carlo samples
 update_every = 1  # Cost weighted update of inputs every ... steps
 
 
@@ -56,12 +56,8 @@ POSITIOND_IDX = cartpole_state_varname_to_index("positionD").item()
 """MPPI constants"""
 R = 1.0e0  # How much to punish Q
 LBD = 1.0e1  # Cost parameter lambda
-NU = 1.0e1  # Exploration variance
-
-
-"""Set up parallelization"""
-parallelize = True
-_cartpole_ode = conditional_decorator(jit(nopython=True), parallelize)(_cartpole_ode)
+NU = 1.0e3  # Exploration variance
+GAMMA = 1.00  # Future cost discount
 
 
 """Init logging variables"""
@@ -76,24 +72,20 @@ NOMINAL_ROLLOUT_LOGS = []
 
 
 """Cost function helpers"""
-E_kin_cart = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s: s[POSITIOND_IDX] ** 2
-)
-E_kin_pol = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s: s[ANGLED_IDX] ** 2
-)
-E_pot_cost = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s: ((1.0 - np.cos(s[ANGLE_IDX])) * 0.5) ** 2
-)
-distance_difference_cost = conditional_decorator(jit(nopython=True), parallelize)(
-    lambda s, target_position: (
-        ((s[POSITION_IDX] - target_position) / (2 * TrackHalfLength)) ** 2
-        + (abs(abs(s[POSITION_IDX]) - TrackHalfLength) < 0.05 * TrackHalfLength) * 1.0e3
-    )
+E_kin_cart = lambda s: s[..., POSITIOND_IDX] ** 2
+E_kin_pol = lambda s: s[..., ANGLED_IDX] ** 2
+E_pot_cost = lambda s: ((1.0 - np.cos(s[..., ANGLE_IDX])) * 0.5) ** 2
+distance_difference_cost = lambda s, target_position: (
+    ((s[..., POSITION_IDX] - target_position) / (2 * TrackHalfLength)) ** 2
+    + (abs(abs(s[..., POSITION_IDX]) - TrackHalfLength) < 0.05 * TrackHalfLength)
+    * 1.0e3
 )
 
 
-@conditional_decorator(jit(nopython=True), parallelize)
+"""Define Predictor"""
+predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
+
+
 def cartpole_ode_parallelize(s: np.ndarray, u: float):
     """Wrapper for the _cartpole_ode function"""
     return _cartpole_ode(
@@ -101,7 +93,6 @@ def cartpole_ode_parallelize(s: np.ndarray, u: float):
     )
 
 
-@conditional_decorator(jit(nopython=True), parallelize)
 def trajectory_rollouts(
     s: np.ndarray,
     S_tilde_k: np.ndarray,
@@ -110,108 +101,59 @@ def trajectory_rollouts(
     target_position: np.ndarray,
 ):
     s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size))
-    for k in range(mc_samples):
-        s_horizon[k, 0, :] = s
-        for i in range(0, mpc_samples):
-            s_last = s_horizon[k, i, :]
-            # Explicit Euler integration step
-            derivatives = motion_derivatives(s_last, u[i] + delta_u[k, i])
-            s_next = s_last + derivatives * dt
-            s_horizon[k, i + 1, :] = s_next
+    s_horizon[:, 0, :] = np.tile(s, (mc_samples, 1))
 
-            cost_increment, _, _, _, _, _ = q(
-                s_next, u[i], delta_u[k, i], target_position
-            )
-            S_tilde_k[k] += cost_increment
+    predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
+    s_horizon = predictor.predict(u + delta_u)
 
+    cost_increment, dd, ep, ekp, ekc, cc = q(
+        s_horizon[:, 1:, :], u, delta_u, target_position
+    )
+    S_tilde_k = np.sum(cost_increment, axis=1)
+
+    if LOGGING:
+        cost_logs_internal = np.stack(
+            [dd, ep, ekp, ekc, cc], axis=1
+        )  # (mc_samples x 5 x mpc_samples)
+
+        return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
     return S_tilde_k, None, None
 
 
-@conditional_decorator(jit(nopython=True), parallelize)
-def trajectory_rollouts_logging(
-    s: np.ndarray,
-    S_tilde_k: np.ndarray,
-    u: np.ndarray,
-    delta_u: np.ndarray,
-    target_position: np.ndarray,
-):
-    s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size))
-    cost_logs_internal = np.zeros((mc_samples, 5, mpc_samples))
-    for k in range(mc_samples):
-        s_horizon[k, 0, :] = s
-        for i in range(0, mpc_samples):
-            s_last = s_horizon[k, i, :]
-            # Explicit Euler integration step
-            derivatives = motion_derivatives(s_last, u[i] + delta_u[k, i])
-            s_next = s_last + derivatives * dt
-            s_horizon[k, i + 1, :] = s_next
-
-            cost_increment, dd, ep, ekp, ekc, cc = q(
-                s_next, u[i], delta_u[k, i], target_position
-            )
-            S_tilde_k[k] += cost_increment
-            cost_logs_internal[k, :, i] = [dd, ep, ekp, ekc, cc]
-
-    return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
-
-
-rollout_function = trajectory_rollouts_logging if LOGGING else trajectory_rollouts
-
-
-@conditional_decorator(jit(nopython=True), parallelize)
-def motion_derivatives(s: np.ndarray, u: float):
-    """
-    :return: The vector of angle, angleD, position, positionD time derivatives
-    """
-    s_dot = np.zeros_like(s)
-    s_dot[POSITION_IDX] = s[POSITIOND_IDX]
-    s_dot[ANGLE_IDX] = s[ANGLED_IDX]
-    (s_dot[ANGLED_IDX], s_dot[POSITIOND_IDX]) = cartpole_ode_parallelize(
-        s, u_max * (u + controlDisturbance * np.random.normal() + controlBias)
-    )
-    return s_dot
-
-
-@conditional_decorator(jit(nopython=True), parallelize)
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
     dd = 5.0e1 * distance_difference_cost(s, target_position)
     ep = 1.0e3 * E_pot_cost(s)
     ekp = 1.0e-2 * E_kin_pol(s)
-    ekc = 5.0e-0 * E_kin_cart(s)
+    ekc = 5.0e0 * E_kin_cart(s)
     cc = (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
-    # if np.abs(u + delta_u) > 1.0:
-    #     # Control deviation is outside constraint set.
-    #     cc = 1.0e5
+
+    # Penalize if control deviation is outside constraint set.
+    cc[np.abs(u + delta_u) > 1.0] = 1.0e5
 
     q = dd + ep + ekp + ekc + cc
 
     return q, dd, ep, ekp, ekc, cc
 
 
-@conditional_decorator(jit(nopython=True), parallelize)
-def reward_weighted_average(S_i, delta_u_i):
+def reward_weighted_average(S, delta_u):
     """Average the perturbations delta_u based on their desirability"""
-    rho = np.min(S_i)  # for numerical stability
-    exp_s = np.exp(-1.0 / LBD * (S_i - rho))
+    rho = np.min(S)  # for numerical stability
+    exp_s = np.exp(-1.0 / LBD * (S - rho))
     a = np.sum(exp_s)
-    b = np.sum(np.multiply(exp_s, delta_u_i) / a)
+    b = np.sum(np.multiply(np.expand_dims(exp_s, 1), delta_u) / a, axis=0)
     return b
 
 
-@conditional_decorator(jit(nopython=True), parallelize)
 def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
     """
     :param u: Sampling mean / warm started control inputs of size (,mpc_samples)
     :param S: Cost array of size (mc_samples)
     :param delta_u: The input perturbations that had been used, size (mc_samples, mpc_samples)
-
-    Update happens in-place.
     """
-    for i in range(mpc_samples):
-        u[i] += reward_weighted_average(S, delta_u[:, i])
+    u += reward_weighted_average(S, delta_u)
 
 
 class controller_mppi(template_controller):
@@ -267,14 +209,13 @@ class controller_mppi(template_controller):
 
         if self.iteration % update_every == 0:
             # Initialize perturbations and cost arrays
-            # self.delta_u = self.initialize_perturbations(
-            #     stdev=self.rho_sqrt_inv / np.sqrt(dt), random_walk=False
-            # )  # N(mean=0, var=1/(rho*dt))
-            self.delta_u = self.initialize_perturbations(stdev=0.2)
+            self.delta_u = self.initialize_perturbations(
+                stdev=self.rho_sqrt_inv / np.sqrt(dt)
+            )  # du ~ N(mean=0, var=1/(rho*dt))
             self.S_tilde_k = np.zeros_like(self.S_tilde_k)
 
             # Run parallel trajectory rollouts for different input perturbations
-            self.S_tilde_k, cost_logs_internal, s_horizon = rollout_function(
+            self.S_tilde_k, cost_logs_internal, s_horizon = trajectory_rollouts(
                 self.s, self.S_tilde_k, self.u, self.delta_u, self.target_position,
             )
 
@@ -285,18 +226,12 @@ class controller_mppi(template_controller):
             if LOGGING:
                 COST_TO_GO_LOGS.append(self.S_tilde_k)
                 COST_BREAKDOWN_LOGS.append(np.mean(cost_logs_internal, axis=0))
-                STATE_LOGS.append(
-                    s_horizon[:, :, [POSITION_IDX, ANGLE_IDX]]
-                )
+                STATE_LOGS.append(s_horizon[:, :, [POSITION_IDX, ANGLE_IDX]])
                 INPUT_LOGS.append(self.u)
-                # To plot the trajectory the controller wants to make
-                rollout_trajectory = np.zeros((mpc_samples + 1, s.size))
-                rollout_trajectory[0, :] = self.s
-                for i in range(0, mpc_samples):
-                    s_last = rollout_trajectory[i, :]
-                    derivatives = motion_derivatives(s_last, self.u[i])
-                    s_next = s_last + derivatives * dt
-                    rollout_trajectory[i + 1, :] = s_next
+                # Simulate nominal rollout to plot the trajectory the controller wants to make
+                predictor.setup(initial_state=self.s, prediction_denorm=True)
+                # Compute one rollout of shape (mpc_samples + 1) x s.size
+                rollout_trajectory = predictor.predict(self.u)
                 NOMINAL_ROLLOUT_LOGS.append(
                     rollout_trajectory[:-1, [POSITION_IDX, ANGLE_IDX]]
                 )
@@ -311,6 +246,9 @@ class controller_mppi(template_controller):
         self.u[:-1] = self.u[1:]
         self.u[-1] = self.u[-1]
 
+        # Prepare predictor for next timestep
+        predictor.update_internal_state(Q)
+
         return Q  # normed control input in the range [-1,1]
 
     def controller_report(self):
@@ -321,7 +259,7 @@ class controller_mppi(template_controller):
             plt.figure(num=2, figsize=(16, 9))
             plt.plot(time_axis, np.mean(ctglgs, axis=1))
             plt.ylabel("avg_cost")
-            plt.xlabel("time")
+            plt.xlabel("time (s)")
             plt.title("Cost-to-go per Timestep")
             plt.show()
 
@@ -341,7 +279,7 @@ class controller_mppi(template_controller):
             plt.plot(time_axis, np.sum(clgs[:, 4, :], axis=-1), label="Control cost")
 
             plt.ylabel("total horizon cost")
-            plt.xlabel("time")
+            plt.xlabel("time (s)")
             plt.title("Cost component breakdown")
             plt.legend()
             plt.show()
@@ -363,14 +301,24 @@ class controller_mppi(template_controller):
                         states[i, :, 0],
                         linestyle="-",
                         linewidth=1,
-                        color=(0.0, (1 - 0.3 * costs[i]) ** 2, 0.0, 0.02 * (1 - 0.3 * costs[i]) ** 2),
+                        color=(
+                            0.0,
+                            (1 - 0.3 * costs[i]) ** 2,
+                            0.0,
+                            0.02 * (1 - 0.3 * costs[i]) ** 2,
+                        ),
                     )
                     ax_angle.plot(
                         (update_every * iteration + np.arange(0, horizon_length)) * dt,
                         states[i, :, 1] * 180.0 / np.pi,
                         linestyle="-",
                         linewidth=1,
-                        color=(0.0, (1 - 0.3 * costs[i]) ** 2, 0.0, 0.02 * (1 - 0.3 * costs[i]) ** 2),
+                        color=(
+                            0.0,
+                            (1 - 0.3 * costs[i]) ** 2,
+                            0.0,
+                            0.02 * (1 - 0.3 * costs[i]) ** 2,
+                        ),
                     )
 
             # Prepare data
@@ -474,4 +422,7 @@ class controller_mppi(template_controller):
     # It is called after an experiment,
     # but only if the controller is supposed to be reused without reloading (e.g. in GUI)
     def controller_reset(self):
-        pass
+        try:
+            predictor.net.reset_states()
+        except:
+            pass

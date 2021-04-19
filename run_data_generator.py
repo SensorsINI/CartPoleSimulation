@@ -41,7 +41,7 @@ turning_points_DataGen = None
 # [position, positionD, angle, angleD]
 # initial_state = [None, None, None, None]
 # initial_state = [0.5 * TrackHalfLength, 0, 180.0 * (np.pi / 180.0), 0]
-initial_state = [0.0, 0.0, 0.0, 0.0]
+initial_state = [- 0.2 * TrackHalfLength, 0.0, -180.0 * (np.pi / 180.0), 0.0]
 initial_state_DataGen = s0
 
 # Set the max for smoothly interpolated random target position to avoid bumping into track ends.
