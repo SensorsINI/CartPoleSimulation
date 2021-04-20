@@ -96,7 +96,7 @@ def test_network():
 
     inputs_euler, outputs_euler, title_2, \
     _, dataset_euler, _ \
-        = get_prediction_from_euler(a)
+        = get_prediction_from_euler(a, dt_sampling_by_dt_fine=50)
 
     # Get second dataset from Euler
     output_indexes = []
@@ -106,7 +106,7 @@ def test_network():
 
     run_test_gui(inputs, outputs,
                  ground_truth, net_outputs, time_axis,
-                 predictions_array_2v=dataset_2,
+                 predictions_array_2=dataset_2,
                  datasets_titles=[title_1, title_2]
                  )
 

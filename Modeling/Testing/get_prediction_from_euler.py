@@ -13,7 +13,7 @@ from types import SimpleNamespace
 
 from CartPole.cartpole_model import Q2u, cartpole_ode
 
-DEFAULT_SAMPLING_INTERVAL = 0.005  # s, Corresponds to our lab cartpole
+DEFAULT_SAMPLING_INTERVAL = 0.002  # s, Corresponds to our lab cartpole
 def get_prediction_from_euler(a, dt_sampling_by_dt_fine=1):
 
     # region In either case testing is done on a data collected offline
@@ -56,17 +56,17 @@ def get_prediction_from_euler(a, dt_sampling_by_dt_fine=1):
             # All other variables are in closed loop
             for _ in range(dt_sampling_by_dt_fine):
                 s[cartpole_state_varnames_to_indices(['position', 'positionD', 'angle', 'angleD'])] += \
-                    s[cartpole_state_varnames_to_indices(['positionD','positionDD', 'angleD', 'angleDD'])] * (dt_sampling/dt_sampling_by_dt_fine)
+                    s[cartpole_state_varnames_to_indices(['positionD','positionDD', 'angleD', 'angleDD'])] * (dt_sampling/float(dt_sampling_by_dt_fine))
 
                 s[cartpole_state_varname_to_index('angle')] = \
                     wrap_angle_rad(s[cartpole_state_varname_to_index('angle')])
 
-                s[cartpole_state_varnames_to_indices(['angle_cos', 'angle_sin'])] = \
-                    [np.cos(s[cartpole_state_varname_to_index('angle')]), np.sin(s[cartpole_state_varname_to_index('angle')])]
-
                 s[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s, u)
 
             # Append s to outputs matrix
+            s[cartpole_state_varnames_to_indices(['angle_cos', 'angle_sin'])] = \
+                [np.cos(s[cartpole_state_varname_to_index('angle')]),
+                 np.sin(s[cartpole_state_varname_to_index('angle')])]
             output_array[i, timestep, :] = s
 
 

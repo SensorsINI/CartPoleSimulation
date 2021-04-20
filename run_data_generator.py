@@ -6,6 +6,11 @@ from time import sleep
 import timeit
 
 import numpy as np
+# Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
+# On other OS you have to chose a different interactive backend.
+# from matplotlib import use
+# # use('TkAgg')
+# use('macOSX')
 
 # User defined simulation settings
 # csv = '2500/Test'  # Name with which data is saved, consecutive experiments will be save with increasing index attached

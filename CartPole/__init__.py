@@ -669,7 +669,11 @@ class CartPole:
 
         # Make already in the first timestep Q appropriate to the initial state, target position and controller
 
-        self.Update_Q()
+        if self.controller_name == 'manual-stabilization':
+            # in this case slider corresponds already to the power of the motor
+            self.Q = self.slider_value
+        else:  # in this case slider gives a target position, lqr regulator
+            self.Q = self.controller.step(self.s, self.target_position, self.time)
 
         self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, Q=self.Q, target_position=self.target_position)
 
@@ -821,8 +825,11 @@ class CartPole:
             else:
                 self.target_position = self.slider_value * self.p.TrackHalfLength
 
-            # self.Q = # FIXME
-            self.Q=0.0
+            if self.controller_name == 'manual-stabilization':
+                # in this case slider corresponds already to the power of the motor
+                self.Q = self.slider_value
+            else:  # in this case slider gives a target position, lqr regulator
+                self.Q = self.controller.step(self.s, self.target_position, self.time)
 
             self.u = Q2u(self.Q)
             self.s[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(self.s, self.u)
@@ -840,6 +847,8 @@ class CartPole:
                 raise ValueError('s, Q or target position not provided for initial state')
 
         # Reset the dict keeping the experiment history and save the state for t = 0
+        self.dt_save_steps_counter = 0
+        self.dt_controller_steps_counter = 0
         self.dict_history = {
 
                              'time': [self.time],
@@ -876,7 +885,7 @@ class CartPole:
             if self.dt_controller_number_of_steps == 0:
                 self.dt_controller_number_of_steps = 1
             # Initialize counter at max value to start with update
-            self.dt_controller_steps_counter = self.dt_controller_number_of_steps - 1
+            self.dt_controller_steps_counter = 0
         if self._dt_save is not None:
             self.dt_save_number_of_steps = np.rint(self._dt_save / value).astype(np.int32)
             if self.dt_save_number_of_steps == 0:
@@ -895,7 +904,7 @@ class CartPole:
             if self.dt_controller_number_of_steps == 0:
                 self.dt_controller_number_of_steps = 1
             # Initialize counter at max value to start with update
-            self.dt_controller_steps_counter = self.dt_controller_number_of_steps - 1
+            self.dt_controller_steps_counter = 0
 
     @property
     def dt_save(self):
