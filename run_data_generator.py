@@ -1,5 +1,5 @@
 from CartPole import CartPole
-from CartPole.cartpole_model import s0, TrackHalfLength, P_GLOBALS
+from CartPole.cartpole_model import create_cartpole_state, TrackHalfLength, P_GLOBALS
 from CartPole.state_utilities import cartpole_state_varname_to_index
 
 from time import sleep
@@ -47,7 +47,7 @@ turning_points_DataGen = None
 # initial_state = [None, None, None, None]
 # initial_state = [0.5 * TrackHalfLength, 0, 180.0 * (np.pi / 180.0), 0]
 initial_state = [- 0.2 * TrackHalfLength, 0.0, -180.0 * (np.pi / 180.0), 0.0]
-initial_state_DataGen = s0
+initial_state_DataGen = create_cartpole_state()
 
 # Set the max for smoothly interpolated random target position to avoid bumping into track ends.
 used_track_fraction = 0.5

@@ -47,7 +47,7 @@ class controller_lqr(template_controller):
 
         # Cost matrices for LQR controller
         self.Q = np.diag([10.0, 1.0, 1.0, 1.0])  # How much to punish x, v, theta, omega
-        self.R = 1.0e4  # How much to punish Q
+        self.R = 1.0e1  # How much to punish Q
 
         # first, try to solve the ricatti equation
         X = scipy.linalg.solve_continuous_are(A, B, self.Q, self.R)
