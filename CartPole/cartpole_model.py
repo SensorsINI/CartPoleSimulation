@@ -94,8 +94,8 @@ def _cartpole_ode(angle, angleD, position, positionD, u):
 
     :returns: angular acceleration, horizontal acceleration
     """
-    ca = np.cos(angle)
-    sa = np.sin(angle)
+    ca = torch.cos(angle)
+    sa = torch.sin(angle)
 
     if CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
         # Clockwise rotation is defined as negative
