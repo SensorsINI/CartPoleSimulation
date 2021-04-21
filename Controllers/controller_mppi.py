@@ -34,6 +34,7 @@ from Predictores.predictor_ideal import predictor_ideal
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 import numpy as np
+from numpy.random import SFC64, Generator
 
 from copy import deepcopy
 
@@ -60,8 +61,12 @@ NU = 1.0e3  # Exploration variance
 GAMMA = 1.00  # Future cost discount
 
 
+"""Random number generator"""
+rng = Generator(SFC64(123))
+
+
 """Init logging variables"""
-LOGGING = True
+LOGGING = False
 # Save average cost for each cost component
 COST_TO_GO_LOGS = []
 COST_BREAKDOWN_LOGS = []
@@ -176,26 +181,26 @@ class controller_mppi(template_controller):
         If random_walk is true, each row represents a 1D random walk with Gaussian steps.
         """
         if random_walk:
-            delta_u = np.zeros((mc_samples, mpc_samples), dtype=np.float32)
-            delta_u[:, 0] = stdev * np.random.normal(size=(mc_samples,)).astype(
-                np.float32
+            delta_u = np.empty((mc_samples, mpc_samples), dtype=np.float32)
+            delta_u[:, 0] = stdev * rng.standard_normal(
+                size=(mc_samples,), dtype=np.float32
             )
             for i in range(1, mpc_samples):
-                delta_u[:, i] = delta_u[:, i - 1] + stdev * np.random.normal(
-                    size=(mc_samples,)
-                ).astype(np.float32)
+                delta_u[:, i] = delta_u[:, i - 1] + stdev * rng.standard_normal(
+                    size=(mc_samples,), dtype=np.float32
+                )
         elif uniform:
-            delta_u = np.zeros((mc_samples, mpc_samples), dtype=np.float32)
+            delta_u = np.empty((mc_samples, mpc_samples), dtype=np.float32)
             for i in range(0, mpc_samples):
                 delta_u[:, i] = (
-                    np.random.uniform(low=-1.0, high=1.0, size=(mc_samples,)).astype(
+                    rng.uniform(low=-1.0, high=1.0, size=(mc_samples,)).astype(
                         np.float32
                     )
                     - self.u[i]
                 )
         else:
-            delta_u = stdev * np.random.normal(size=(mc_samples, mpc_samples)).astype(
-                np.float32
+            delta_u = stdev * rng.standard_normal(
+                size=(mc_samples, mpc_samples), dtype=np.float32
             )
 
         return delta_u

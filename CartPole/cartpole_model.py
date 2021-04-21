@@ -3,6 +3,8 @@ from typing import Union
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
 
 import numpy as np
+from numpy.random import SFC64, Generator
+rng = Generator(SFC64(123))
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
@@ -290,7 +292,7 @@ def Q2u(Q):
     In future there might be implemented here a more sophisticated model of a motor driving CartPole
     """
     u = u_max * (
-        Q + controlDisturbance * np.random.normal(loc=0.0, scale=1.0, size=np.shape(Q)) + P_GLOBALS.controlBias
+        Q + controlDisturbance *  rng.standard_normal(size=np.shape(Q), dtype=np.float32) + P_GLOBALS.controlBias
     )  # Q is drive -1:1 range, add noise on control
 
     return u
