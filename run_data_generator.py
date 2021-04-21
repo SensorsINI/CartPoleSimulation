@@ -1,11 +1,16 @@
 from CartPole import CartPole
-from CartPole.cartpole_model import s0, TrackHalfLength, P_GLOBALS
+from CartPole.cartpole_model import create_cartpole_state, TrackHalfLength, P_GLOBALS
 from CartPole.state_utilities import cartpole_state_varname_to_index
 
 from time import sleep
 import timeit
 
 import numpy as np
+# Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
+# On other OS you have to chose a different interactive backend.
+# from matplotlib import use
+# # use('TkAgg')
+# use('macOSX')
 
 # User defined simulation settings
 # csv = '2500/Test'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
@@ -42,7 +47,7 @@ turning_points_DataGen = None
 # initial_state = [None, None, None, None]
 # initial_state = [0.5 * TrackHalfLength, 0, 180.0 * (np.pi / 180.0), 0]
 initial_state = [- 0.2 * TrackHalfLength, 0.0, -180.0 * (np.pi / 180.0), 0.0]
-initial_state_DataGen = s0
+initial_state_DataGen = create_cartpole_state()
 
 # Set the max for smoothly interpolated random target position to avoid bumping into track ends.
 used_track_fraction = 0.5

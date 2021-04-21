@@ -105,21 +105,27 @@ print(np.around(intercept_x,2))
 motor_for_preduction = data_stat['Q'].to_numpy().reshape(-1, 1)
 v_max_predicted = reg.predict(motor_for_preduction)
 
-# plt.figure(figsize=(16, 9))
-# plt.plot(data_stat['Q'], data_stat['v_max'], marker='o', label='Measured v_max')
-# plt.plot(data_stat['Q'], v_max_predicted, marker='', label='Linear regression for small v_max')
-# plt.xlabel('Motor input Q [-]')
-# plt.ylabel('Maximal reached speed [m/s]')
-# plt.legend()
-# plt.show()
+plt.figure(figsize=(16, 9))
+plt.plot(data_stat['Q'], data_stat['v_max'], marker='o', label='Measured v_max')
+plt.plot(data_stat['Q'], v_max_predicted, marker='', label='Linear regression for small v_max')
+plt.xlabel('Motor input Q [-]')
+plt.ylabel('Maximal reached speed [m/s]')
+plt.legend()
+plt.show()
 
 
 # Second guess, including classincal friction:
 
 # Parameter guess
 b = 20.0
-a = 1.4*b
-c = 0.08*b
+a = 0.98*b
+c = 0.05*b
+
+print('a = {}'.format(a))
+print('b = {}'.format(b))
+print('c = {}'.format(c))
+
+
 
 v = np.zeros_like(time)
 for i in range(len(v)-1):

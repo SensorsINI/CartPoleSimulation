@@ -84,7 +84,7 @@ converted_dataset['angleD'] = converted_dataset['angleD'] + \
 # Smooth again
 converted_dataset['angleD'] = smooth(converted_dataset['angleD'], 10)
 
-converted_dataset['position'] = data['position']*(0.25/2048.0)
+converted_dataset['position'] = data['position']*(0.198/2330.0)
 
 # We use the direct calculation which is less precise however realistic for realt time scenario
 # converted_dataset['positionD'] = np.gradient(converted_dataset['position'], converted_dataset['time'])
@@ -93,7 +93,7 @@ converted_dataset['positionD'] = \
 
 
 converted_dataset['Q'] = data['actualMotorCmd']/8192.0
-converted_dataset['target_position'] = data['positionTarget']*(0.25/2048.0)
+converted_dataset['target_position'] = data['positionTarget']*(0.198/2330.0)
 
 
 

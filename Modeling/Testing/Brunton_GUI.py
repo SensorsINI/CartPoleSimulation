@@ -46,12 +46,12 @@ cmap = colors.LinearSegmentedColormap('custom', cdict)
 
 # endregion
 
-def run_test_gui(inputs, outputs, ground_truth, net_outputs, time_axis, net_outputs_2=None, datasets_titles=None):
+def run_test_gui(inputs, outputs, ground_truth, predictions_array, time_axis, predictions_array_2=None, datasets_titles=None):
     # Creat an instance of PyQt5 application
     # Every PyQt5 application has to contain this line
     app = QApplication(sys.argv)
     # Create an instance of the GUI window.
-    window = MainWindow(inputs, outputs, ground_truth, net_outputs, time_axis, net_outputs_2=net_outputs_2, datasets_titles=datasets_titles)
+    window = MainWindow(inputs, outputs, ground_truth, predictions_array, time_axis, predictions_array_2=predictions_array_2, datasets_titles=datasets_titles)
     window.show()
     # Next line hands the control over to Python GUI
     app.exec_()
@@ -61,9 +61,9 @@ class MainWindow(QMainWindow):
 
     def __init__(self,
                  inputs, outputs, ground_truth,
-                 net_outputs,
+                 predictions_array,
                  time_axis,
-                 net_outputs_2=None,
+                 predictions_array_2=None,
                  datasets_titles=None,
                  *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
@@ -71,13 +71,13 @@ class MainWindow(QMainWindow):
         self.inputs = inputs
         self.outputs = outputs
         self.ground_truth = ground_truth
-        self.net_outputs = net_outputs
-        self.net_outputs_2 = net_outputs_2
+        self.predictions_array = predictions_array
+        self.predictions_array_2 = predictions_array_2
         self.time_axis = time_axis
 
-        self.dataset = net_outputs
+        self.dataset = predictions_array
 
-        self.max_horizon = self.net_outputs.shape[0]
+        self.max_horizon = self.predictions_array.shape[0]
         self.horizon = self.max_horizon//2
 
         self.show_all = False
@@ -199,7 +199,7 @@ class MainWindow(QMainWindow):
         lr_d.addStretch(1)
 
         self.rbs_datasets[0].setChecked(True)
-        if net_outputs_2 is None:
+        if predictions_array_2 is None:
             self.rbs_datasets[1].setEnabled(False)
             # self.rbs_datasets[2].setEnabled(False)
 
@@ -270,9 +270,9 @@ class MainWindow(QMainWindow):
         for i in range(len(self.rbs_datasets)):
             if self.rbs_datasets[i].isChecked():
                 if i == 0:
-                    self.dataset = self.net_outputs
+                    self.dataset = self.predictions_array
                 if i == 1:
-                    self.dataset = self.net_outputs_2
+                    self.dataset = self.predictions_array_2
 
         self.redraw_canvas()
 
@@ -309,7 +309,7 @@ class MainWindow(QMainWindow):
 
 
 
-def brunton_widget(inputs, outputs, ground_truth, net_outputs, time_axis, axs=None,
+def brunton_widget(inputs, outputs, ground_truth, predictions_array, time_axis, axs=None,
                    current_point_at_timeaxis=None,
                    feature_to_display=None,
                    max_horizon=10, horizon=None,
@@ -321,7 +321,7 @@ def brunton_widget(inputs, outputs, ground_truth, net_outputs, time_axis, axs=No
         current_point_at_timeaxis = ground_truth.shape[0]//2
 
     if feature_to_display is None:
-        feature_to_display = 'angle_cos'
+        feature_to_display = 'position'
 
     if horizon is None:
         horizon = max_horizon
@@ -343,7 +343,7 @@ def brunton_widget(inputs, outputs, ground_truth, net_outputs, time_axis, axs=No
         if not show_all:
             axs.plot(time_axis[current_point_at_timeaxis], ground_truth[current_point_at_timeaxis, feature_idx],
                      'g.', markersize=16, label='Start')
-            prediction_distance.append(net_outputs[i, current_point_at_timeaxis, target_idx])
+            prediction_distance.append(predictions_array[i, current_point_at_timeaxis, target_idx])
             if downsample:
                 if (i % 2) == 0:
                     continue
@@ -352,7 +352,7 @@ def brunton_widget(inputs, outputs, ground_truth, net_outputs, time_axis, axs=No
                         marker='.')
 
         else:
-            prediction_distance.append(net_outputs[i, :-(i+1), target_idx])
+            prediction_distance.append(predictions_array[i, :-(i+1), target_idx])
             if downsample:
                 if (i % 2) == 0:
                     continue
@@ -360,6 +360,6 @@ def brunton_widget(inputs, outputs, ground_truth, net_outputs, time_axis, axs=No
                         c=cmap(float(i)/max_horizon),
                         marker='.', linestyle = '')
 
-    axs.set_ylim(y_lim)
+    # axs.set_ylim(y_lim)
 
     plt.show()

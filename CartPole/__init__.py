@@ -10,7 +10,7 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 # region Imported modules
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
-from CartPole.state_utilities import cartpole_state_varname_to_index, cartpole_state_index_to_varname
+from CartPole.state_utilities import cartpole_state_varname_to_index, cartpole_state_index_to_varname, cartpole_state_varnames_to_indices
 from CartPole.cartpole_model import Q2u, cartpole_ode, P_GLOBALS, s0
 
 import numpy as np
@@ -259,7 +259,7 @@ class CartPole:
         # In case in the next step the wheel of the cart
         # went beyond the track
         # Bump elastically into an (invisible) boarder
-        if (abs(self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics) + self.WheelToMiddle) > self.TrackHalfLengthGraphics:
+        if abs(self.s[cartpole_state_varname_to_index('position')]) > self.p.TrackHalfLength:
             self.s[cartpole_state_varname_to_index('positionD')] = -self.s[cartpole_state_varname_to_index('positionD')]
 
         # Determine the dimensionless [-1,1] value of the motor power Q
@@ -669,7 +669,11 @@ class CartPole:
 
         # Make already in the first timestep Q appropriate to the initial state, target position and controller
 
-        self.Update_Q()
+        if self.controller_name == 'manual-stabilization':
+            # in this case slider corresponds already to the power of the motor
+            self.Q = self.slider_value
+        else:  # in this case slider gives a target position, lqr regulator
+            self.Q = self.controller.step(self.s, self.target_position, self.time)
 
         self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, Q=self.Q, target_position=self.target_position)
 
@@ -821,10 +825,14 @@ class CartPole:
             else:
                 self.target_position = self.slider_value * self.p.TrackHalfLength
 
-            self.Q = 0.0
+            if self.controller_name == 'manual-stabilization':
+                # in this case slider corresponds already to the power of the motor
+                self.Q = self.slider_value
+            else:  # in this case slider gives a target position, lqr regulator
+                self.Q = self.controller.step(self.s, self.target_position, self.time)
 
             self.u = Q2u(self.Q)
-            self.s[cartpole_state_varname_to_index('angleDD')], self.s[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(self.s, self.u)
+            self.s[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(self.s, self.u)
 
         elif reset_mode == 2:  # Don't change it
             if (s is not None) and (Q is not None) and (target_position is not None):
@@ -839,6 +847,8 @@ class CartPole:
                 raise ValueError('s, Q or target position not provided for initial state')
 
         # Reset the dict keeping the experiment history and save the state for t = 0
+        self.dt_save_steps_counter = 0
+        self.dt_controller_steps_counter = 0
         self.dict_history = {
 
                              'time': [self.time],
@@ -875,7 +885,7 @@ class CartPole:
             if self.dt_controller_number_of_steps == 0:
                 self.dt_controller_number_of_steps = 1
             # Initialize counter at max value to start with update
-            self.dt_controller_steps_counter = self.dt_controller_number_of_steps - 1
+            self.dt_controller_steps_counter = 0
         if self._dt_save is not None:
             self.dt_save_number_of_steps = np.rint(self._dt_save / value).astype(np.int32)
             if self.dt_save_number_of_steps == 0:
@@ -894,7 +904,7 @@ class CartPole:
             if self.dt_controller_number_of_steps == 0:
                 self.dt_controller_number_of_steps = 1
             # Initialize counter at max value to start with update
-            self.dt_controller_steps_counter = self.dt_controller_number_of_steps - 1
+            self.dt_controller_steps_counter = 0
 
     @property
     def dt_save(self):
@@ -932,9 +942,9 @@ class CartPole:
         self.y_wheel = self.y_plane + self.WheelRadius
         self.MastHight = 10.0  # For drawing only. For calculation see L
         self.MastThickness = 0.05
-        self.TrackHalfLengthGraphics = 50.0  # Length of the track
+        self.TrackHalfLengthGraphics = 50.0  # Full Length of the track
 
-        self.physical_to_graphics = self.TrackHalfLengthGraphics/self.p.TrackHalfLength
+        self.physical_to_graphics = (self.TrackHalfLengthGraphics-self.WheelToMiddle)/self.p.TrackHalfLength  # TrackHalfLength is the effective length of track
         self.graphics_to_physical = 1.0/self.physical_to_graphics
 
         self.y_acceleration_arrow = 1.5 * self.WheelRadius

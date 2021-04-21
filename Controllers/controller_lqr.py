@@ -47,7 +47,7 @@ class controller_lqr(template_controller):
 
         # Cost matrices for LQR controller
         self.Q = np.diag([10.0, 1.0, 1.0, 1.0])  # How much to punish x, v, theta, omega
-        self.R = 1.0e9  # How much to punish Q
+        self.R = 1.0e1  # How much to punish Q
 
         # first, try to solve the ricatti equation
         X = scipy.linalg.solve_continuous_are(A, B, self.Q, self.R)
@@ -74,4 +74,13 @@ class controller_lqr(template_controller):
             [[s[cartpole_state_varname_to_index('position')] - PositionTarget], [s[cartpole_state_varname_to_index('positionD')]], [s[cartpole_state_varname_to_index('angle')]], [s[cartpole_state_varname_to_index('angleD')]]])
 
         Q = np.asscalar(np.dot(-self.K, state))
+
+        # Clip Q
+        if Q > 1.0:
+            Q = 1.0
+        elif Q < -1.0:
+            Q = -1.0
+        else:
+            pass
+
         return Q
