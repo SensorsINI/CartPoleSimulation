@@ -40,10 +40,17 @@ from CartPole.state_utilities import create_cartpole_state, \
     cartpole_state_indices_to_varnames
 
 import numpy as np
+import torch
 
 from CartPole.cartpole_model import cartpole_ode
 
 from copy import deepcopy
+
+
+"""Set PyTorch device"""
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.manual_seed(123)
+
 
 PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '2500.csv'
 
@@ -51,7 +58,7 @@ def next_state(s, u, dt, intermediate_steps=2):
     """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
     """
 
-    s_next = deepcopy(s)
+    s_next = s.clone()
 
     # # Calculates CURRENT second derivatives
     # s_next[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s, u)
@@ -72,10 +79,10 @@ def next_state(s, u, dt, intermediate_steps=2):
             s_next[..., cartpole_state_varname_to_index('angleD')] + s_next[..., cartpole_state_varname_to_index('angleDD')] * (dt/float(intermediate_steps))
 
         # Calculates second derivatives of NEXT state
-        s_next[..., cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = np.vstack(cartpole_ode(s_next, u)).T
+        s_next[..., cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = torch.vstack(cartpole_ode(s_next, u)).T
 
-        s_next[..., cartpole_state_varname_to_index('angle_cos')] = np.cos(s_next[..., cartpole_state_varname_to_index('angle')])
-        s_next[..., cartpole_state_varname_to_index('angle_sin')] = np.sin(s_next[..., cartpole_state_varname_to_index('angle')])
+        s_next[..., cartpole_state_varname_to_index('angle_cos')] = torch.cos(s_next[..., cartpole_state_varname_to_index('angle')])
+        s_next[..., cartpole_state_varname_to_index('angle_sin')] = torch.sin(s_next[..., cartpole_state_varname_to_index('angle')])
 
 
     return s_next
@@ -103,40 +110,40 @@ class predictor_ideal:
         self.prediction_denorm = False
 
 
-    def setup(self, initial_state: np.ndarray, prediction_denorm=False):
+    def setup(self, initial_state: torch.Tensor, prediction_denorm=False):
 
         # The initial state is provided with not valid second derivatives
         # Batch_size > 1 allows to feed several states at once and obtain predictions parallely
 
         # Shape of state: (batch size x state variables)
         self.s = initial_state
-        self.batch_size = np.size(self.s, 0) if self.s.ndim > 1 else 1
+        self.batch_size = self.s.size(0) if self.s.ndim > 1 else 1
 
         self.prediction_denorm = prediction_denorm
 
-        self.output = np.zeros((self.batch_size, self.horizon+1, len(self.prediction_features_names)+1))
+        self.output = torch.zeros((self.batch_size, self.horizon+1, len(self.prediction_features_names)+1))
 
 
-    def predict(self, Q: np.ndarray) -> np.ndarray:
+    def predict(self, Q: torch.Tensor) -> torch.Tensor:
 
         # Shape of Q: (batch size x horizon length)
-        if np.size(Q, -1) != self.horizon:
+        if Q.size(-1) != self.horizon:
             raise IndexError('Number of provided control inputs does not match the horizon')
         else:
-            Q_hat = np.atleast_1d(np.asarray(Q).squeeze())
+            Q_hat = torch.atleast_1d(torch.squeeze(Q))
 
         self.output[..., :-1, -1] = Q_hat
 
         s_next = self.s
         # Calculate second derivatives of initial state
-        s_next[..., cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = np.vstack(cartpole_ode(s_next, Q2u(Q_hat[..., 0]))).T
+        s_next[..., cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = torch.vstack(cartpole_ode(s_next, Q2u(Q_hat[..., 0]))).T
         self.output[..., 0, :-1] = s_next
 
         for k in range(self.horizon):
             s_next = next_state(s_next, Q2u(Q_hat[..., k]), dt=self.dt, intermediate_steps=2)
             self.output[..., k+1, :-1] = s_next
 
-        self.output = np.squeeze(self.output)
+        self.output = torch.squeeze(self.output)
         if self.prediction_denorm:
             return self.output[..., :-1]
         else:

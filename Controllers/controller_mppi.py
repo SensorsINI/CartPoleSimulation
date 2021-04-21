@@ -34,8 +34,14 @@ from Predictores.predictor_ideal import predictor_ideal
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 import numpy as np
+import torch
 
 from copy import deepcopy
+
+
+"""Set PyTorch device"""
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.manual_seed(123)
 
 
 """Timestep and sampling settings"""
@@ -74,7 +80,7 @@ NOMINAL_ROLLOUT_LOGS = []
 """Cost function helpers"""
 E_kin_cart = lambda s: s[..., POSITIOND_IDX] ** 2
 E_kin_pol = lambda s: s[..., ANGLED_IDX] ** 2
-E_pot_cost = lambda s: ((1.0 - np.cos(s[..., ANGLE_IDX])) * 0.5) ** 2
+E_pot_cost = lambda s: ((1.0 - torch.cos(s[..., ANGLE_IDX])) * 0.5) ** 2
 distance_difference_cost = lambda s, target_position: (
     ((s[..., POSITION_IDX] - target_position) / (2 * TrackHalfLength)) ** 2
     + (abs(abs(s[..., POSITION_IDX]) - TrackHalfLength) < 0.05 * TrackHalfLength)
@@ -87,14 +93,14 @@ predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
 
 
 def trajectory_rollouts(
-    s: np.ndarray,
-    S_tilde_k: np.ndarray,
-    u: np.ndarray,
-    delta_u: np.ndarray,
-    target_position: np.ndarray,
+    s: torch.Tensor,
+    S_tilde_k: torch.Tensor,
+    u: torch.Tensor,
+    delta_u: torch.Tensor,
+    target_position: torch.Tensor,
 ):
-    s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size))
-    s_horizon[:, 0, :] = np.tile(s, (mc_samples, 1))
+    s_horizon = torch.zeros((mc_samples, mpc_samples + 1, s.shape[0]), dtype=torch.float32, device=device, requires_grad=False)
+    s_horizon[:, 0, :] = torch.tile(s, (mc_samples, 1))
 
     predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
     s_horizon = predictor.predict(u + delta_u)
@@ -102,11 +108,11 @@ def trajectory_rollouts(
     cost_increment, dd, ep, ekp, ekc, cc = q(
         s_horizon[:, 1:, :], u, delta_u, target_position
     )
-    S_tilde_k = np.sum(cost_increment, axis=1)
+    S_tilde_k = torch.sum(cost_increment, dim=1)
 
     if LOGGING:
-        cost_logs_internal = np.stack(
-            [dd, ep, ekp, ekc, cc], axis=1
+        cost_logs_internal = torch.stack(
+            [dd, ep, ekp, ekc, cc], dim=1
         )  # (mc_samples x 5 x mpc_samples)
 
         return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
@@ -124,7 +130,7 @@ def q(s, u, delta_u, target_position):
     )
 
     # Penalize if control deviation is outside constraint set.
-    cc[np.abs(u + delta_u) > 1.0] = 1.0e5
+    cc[torch.abs(u + delta_u) > 1.0] = 1.0e5
 
     q = dd + ep + ekp + ekc + cc
 
@@ -133,14 +139,14 @@ def q(s, u, delta_u, target_position):
 
 def reward_weighted_average(S, delta_u):
     """Average the perturbations delta_u based on their desirability"""
-    rho = np.min(S)  # for numerical stability
-    exp_s = np.exp(-1.0 / LBD * (S - rho))
-    a = np.sum(exp_s)
-    b = np.sum(np.multiply(np.expand_dims(exp_s, 1), delta_u) / a, axis=0)
+    rho = torch.min(S)  # for numerical stability
+    exp_s = torch.exp(-1.0 / LBD * (S - rho))
+    a = torch.sum(exp_s)
+    b = torch.sum(torch.multiply(torch.unsqueeze(exp_s, 1), delta_u) / a, dim=0)
     return b
 
 
-def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
+def update_inputs(u: torch.Tensor, S: torch.Tensor, delta_u: torch.Tensor):
     """
     :param u: Sampling mean / warm started control inputs of size (,mpc_samples)
     :param S: Cost array of size (mc_samples)
@@ -154,55 +160,50 @@ class controller_mppi(template_controller):
         # State of the cart
         self.s = create_cartpole_state()
 
-        np.random.seed(123)
-
         self.target_position = 0.0
 
         self.rho_sqrt_inv = 0.01
 
         self.iteration = -1
 
-        self.s_horizon = np.zeros(())
-        self.u = np.zeros((mpc_samples), dtype=float)
-        self.delta_u = np.zeros((mc_samples, mpc_samples), dtype=float)
-        self.S_tilde_k = np.zeros((mc_samples), dtype=float)
+        self.s_horizon = torch.zeros((), dtype=torch.float32, device=device, requires_grad=False)
+        self.u = torch.zeros((mpc_samples), dtype=torch.float32, device=device, requires_grad=False)
+        self.delta_u = torch.zeros((mc_samples, mpc_samples), dtype=torch.float32, device=device, requires_grad=False)
+        self.S_tilde_k = torch.zeros((mc_samples), dtype=torch.float32, device=device, requires_grad=False)
 
     def initialize_perturbations(
         self, stdev: float = 1.0, random_walk: bool = False, uniform: bool = False
-    ) -> np.ndarray:
+    ) -> torch.Tensor:
         """
         Return a numpy array with the perturbations delta_u.
         If random_walk is false, initialize with independent Gaussian samples
         If random_walk is true, each row represents a 1D random walk with Gaussian steps.
         """
         if random_walk:
-            delta_u = np.zeros((mc_samples, mpc_samples), dtype=float)
-            delta_u[:, 0] = stdev * np.random.normal(size=(mc_samples,))
+            delta_u = torch.zeros((mc_samples, mpc_samples), dtype=torch.float32, device=device, requires_grad=False)
+            delta_u[:, 0] = stdev * torch.randn(size=(mc_samples,), dtype=torch.float32, device=device, requires_grad=False)
             for i in range(1, mpc_samples):
-                delta_u[:, i] = delta_u[:, i - 1] + stdev * np.random.normal(
-                    size=(mc_samples,)
+                delta_u[:, i] = delta_u[:, i - 1] + stdev * torch.randn(
+                    size=(mc_samples,), dtype=torch.float32, device=device, requires_grad=False
                 )
         elif uniform:
-            delta_u = np.zeros((mc_samples, mpc_samples), dtype=float)
+            delta_u = torch.zeros((mc_samples, mpc_samples), dtype=torch.float32, device=device, requires_grad=False)
             for i in range(0, mpc_samples):
-                delta_u[:, i] = (
-                    np.random.uniform(low=-1.0, high=1.0, size=(mc_samples,))
-                    - self.u[i]
-                )
+                delta_u[:, i] = 2 * torch.rand(mc_samples) - 1.0 - self.u[i]
         else:
-            delta_u = stdev * np.random.normal(size=(mc_samples, mpc_samples))
+            delta_u = stdev * torch.randn(size=(mc_samples, mpc_samples), dtype=torch.float32, device=device, requires_grad=False)
 
         return delta_u
 
     def step(self, s, target_position, time=None):
-        self.s = s
+        self.s = torch.tensor(s, dtype=torch.float32, device=device, requires_grad=False)
         self.target_position = target_position
 
         self.iteration += 1
 
         # Adjust horizon if changed in GUI while running
         predictor.horizon = mpc_samples
-        if mpc_samples != self.u.size:
+        if mpc_samples != self.u.shape[0]:
             self.update_control_vector()
 
         if self.iteration % update_every == 0:
@@ -210,7 +211,7 @@ class controller_mppi(template_controller):
             self.delta_u = self.initialize_perturbations(
                 stdev=self.rho_sqrt_inv / np.sqrt(dt)
             )  # du ~ N(mean=0, var=1/(rho*dt))
-            self.S_tilde_k = np.zeros_like(self.S_tilde_k)
+            self.S_tilde_k = torch.zeros_like(self.S_tilde_k, dtype=torch.float32, device=device, requires_grad=False)
 
             # Run parallel trajectory rollouts for different input perturbations
             self.S_tilde_k, cost_logs_internal, s_horizon = trajectory_rollouts(
@@ -223,7 +224,7 @@ class controller_mppi(template_controller):
             # Log states and costs incurred for plotting later
             if LOGGING:
                 COST_TO_GO_LOGS.append(self.S_tilde_k)
-                COST_BREAKDOWN_LOGS.append(np.mean(cost_logs_internal, axis=0))
+                COST_BREAKDOWN_LOGS.append(torch.mean(cost_logs_internal, dim=0))
                 STATE_LOGS.append(s_horizon[:, :, [POSITION_IDX, ANGLE_IDX]])
                 INPUT_LOGS.append(self.u)
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
@@ -238,10 +239,10 @@ class controller_mppi(template_controller):
             TRAJECTORY_LOGS.append(self.s[[POSITION_IDX, ANGLE_IDX]])
 
         # Clip inputs to allowed range
-        Q = np.clip(self.u[0], -1.0, 1.0)
+        Q = torch.clip(self.u[0], -1.0, 1.0)
 
         # Index-shift inputs
-        self.u[:-1] = self.u[1:]
+        self.u[:-1] = self.u.clone()[1:]
         self.u[-1] = self.u[-1]
 
         # Prepare predictor for next timestep
@@ -255,15 +256,17 @@ class controller_mppi(template_controller):
         When adjusting the horizon length, need to adjust this vector too.
         Init with zeros when lengthening, and slice when shortening horizon.
         """
-        update_length = min(mpc_samples, self.u.size)
-        u_new = np.zeros((mpc_samples), dtype=float)
+        update_length = min(mpc_samples, self.u.shape[0])
+        u_new = torch.zeros((mpc_samples), dtype=torch.float32, device=device, requires_grad=False)
         u_new[:update_length] = self.u[:update_length]
         self.u = u_new
 
     def controller_report(self):
         if LOGGING:
             ### Plot the average state cost per iteration
-            ctglgs = np.stack(COST_TO_GO_LOGS, axis=0)  # ITERATIONS x mc_samples
+            ctglgs = np.stack(
+                COST_TO_GO_LOGS.detach().cpu().numpy(), axis=0
+            )  # ITERATIONS x mc_samples
             time_axis = update_every * dt * np.arange(start=0, stop=np.shape(ctglgs)[0])
             plt.figure(num=2, figsize=(16, 9))
             plt.plot(time_axis, np.mean(ctglgs, axis=1))
@@ -273,7 +276,9 @@ class controller_mppi(template_controller):
             plt.show()
 
             ### Graph the different cost components per iteration
-            clgs = np.stack(COST_BREAKDOWN_LOGS, axis=0)  # ITERATIONS x 5 x mpc_samples
+            clgs = np.stack(
+                COST_BREAKDOWN_LOGS.detach().cpu().numpy(), axis=0
+            )  # ITERATIONS x 5 x mpc_samples
             time_axis = update_every * dt * np.arange(start=0, stop=np.shape(clgs)[0])
 
             plt.figure(num=3, figsize=(16, 9))
@@ -332,15 +337,15 @@ class controller_mppi(template_controller):
 
             # Prepare data
             # shape(slgs) = ITERATIONS x mc_samples x mpc_samples x [position, angle]
-            slgs = np.stack(STATE_LOGS, axis=0)
+            slgs = np.stack(STATE_LOGS.detach().cpu().numpy(), axis=0)
             wrap_angle_rad_inplace(slgs[:, :, :, 1])
             # shape(iplgs) = ITERATIONS x mpc_horizon
-            iplgs = np.stack(INPUT_LOGS, axis=0)
+            iplgs = np.stack(INPUT_LOGS.detach().cpu().numpy(), axis=0)
             # shape(nrlgs) = ITERATIONS x mpc_horizon x [position, angle]
-            nrlgs = np.stack(NOMINAL_ROLLOUT_LOGS, axis=0)
+            nrlgs = np.stack(NOMINAL_ROLLOUT_LOGS.detach().cpu().numpy(), axis=0)
             wrap_angle_rad_inplace(nrlgs[:, :, 1])
             # shape(trjctlgs) = (update_every * ITERATIONS) x [position, angle]
-            trjctlgs = np.stack(TRAJECTORY_LOGS[:-1], axis=0)
+            trjctlgs = np.stack(TRAJECTORY_LOGS[:-1].detach().cpu().numpy(), axis=0)
             wrap_angle_rad_inplace(trjctlgs[:, 1])
 
             # Create figure

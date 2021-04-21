@@ -3,6 +3,11 @@ from typing import Union
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
 
 import numpy as np
+import torch
+
+
+"""Set PyTorch device"""
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
@@ -167,7 +172,7 @@ def cartpole_ode_namespace(s: SimpleNamespace, u: float):
     )
 
 
-def cartpole_ode(s: np.ndarray, u: float):
+def cartpole_ode(s: torch.Tensor, u: float):
     return _cartpole_ode(
         s[..., cartpole_state_varname_to_index('angle')], s[..., cartpole_state_varname_to_index('angleD')],
         s[..., cartpole_state_varname_to_index('position')], s[..., cartpole_state_varname_to_index('positionD')],
@@ -290,7 +295,7 @@ def Q2u(Q):
     In future there might be implemented here a more sophisticated model of a motor driving CartPole
     """
     u = u_max * (
-        Q + controlDisturbance * np.random.normal(loc=0.0, scale=1.0, size=np.shape(Q)) + P_GLOBALS.controlBias
+        Q + controlDisturbance * torch.randn(size=np.shape(Q), dtype=torch.float32, device=device, requires_grad=False) + P_GLOBALS.controlBias
     )  # Q is drive -1:1 range, add noise on control
 
     return u
