@@ -74,4 +74,13 @@ class controller_lqr(template_controller):
             [[s[cartpole_state_varname_to_index('position')] - PositionTarget], [s[cartpole_state_varname_to_index('positionD')]], [s[cartpole_state_varname_to_index('angle')]], [s[cartpole_state_varname_to_index('angleD')]]])
 
         Q = np.asscalar(np.dot(-self.K, state))
+
+        # Clip Q
+        if Q > 1.0:
+            Q = 1.0
+        elif Q < -1.0:
+            Q = -1.0
+        else:
+            pass
+
         return Q
