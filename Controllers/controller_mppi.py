@@ -197,7 +197,7 @@ class controller_mppi(template_controller):
                     - self.u[i]
                 )
         else:
-            delta_u = stdev * np.random.normal(size=np.shape(self.delta_u))
+            delta_u = stdev * np.random.normal(size=(mc_samples, mpc_samples))
 
         return delta_u
 
@@ -206,6 +206,11 @@ class controller_mppi(template_controller):
         self.target_position = target_position
 
         self.iteration += 1
+
+        # Adjust horizon if changed in GUI while running
+        predictor.horizon = mpc_samples
+        if mpc_samples != self.u.size:
+            self.update_control_vector()
 
         if self.iteration % update_every == 0:
             # Initialize perturbations and cost arrays
@@ -250,6 +255,17 @@ class controller_mppi(template_controller):
         predictor.update_internal_state(Q)
 
         return Q  # normed control input in the range [-1,1]
+
+    def update_control_vector(self):
+        """
+        MPPI stores a vector of best-guess-so-far control inputs for future steps.
+        When adjusting the horizon length, need to adjust this vector too.
+        Init with zeros when lengthening, and slice when shortening horizon.
+        """
+        update_length = min(mpc_samples, self.u.size)
+        u_new = np.zeros((mpc_samples), dtype=float)
+        u_new[:update_length] = self.u[:update_length]
+        self.u = u_new
 
     def controller_report(self):
         if LOGGING:
