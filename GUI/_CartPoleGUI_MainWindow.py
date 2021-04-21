@@ -42,7 +42,7 @@ from GUI.gui_default_params import *
 from GUI.loop_timer import loop_timer
 from GUI._CartPoleGUI_worker_template import Worker
 from GUI._CartPoleGUI_summary_window import SummaryWindow
-from GUI._MPPIGUI_OptionsWindow import MPPIOptionsWindow
+from GUI._ControllerGUI_MPPIOptionsWindow import MPPIOptionsWindow
 
 
 # Class implementing the main window of CartPole GUI
