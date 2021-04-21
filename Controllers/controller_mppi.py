@@ -86,13 +86,6 @@ distance_difference_cost = lambda s, target_position: (
 predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
 
 
-def cartpole_ode_parallelize(s: np.ndarray, u: float):
-    """Wrapper for the _cartpole_ode function"""
-    return _cartpole_ode(
-        s[ANGLE_IDX], s[ANGLED_IDX], s[POSITION_IDX], s[POSITIOND_IDX], u
-    )
-
-
 def trajectory_rollouts(
     s: np.ndarray,
     S_tilde_k: np.ndarray,
