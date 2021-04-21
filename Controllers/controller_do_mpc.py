@@ -1,4 +1,4 @@
-"""do-mpc controller old"""
+"""do-mpc controller"""
 
 import do_mpc
 import numpy as np
@@ -9,8 +9,35 @@ from CartPole.state_utilities import cartpole_state_vector_to_namespace
 
 from types import SimpleNamespace
 
-dt_mpc_simulation = 0.2  # s
+dt_mpc_simulation = 0.1  # s
 mpc_horizon = 10
+
+# Perturbation factors:
+# Change of output from optimal
+p_Q = 0.05
+# Change of cost function
+p_position = 0.2
+p_positionD = 0.2
+p_angle = 0.2
+
+# # Change of output from optimal
+# p_Q = 0.0
+# # Change of cost function
+# p_position = 0.0
+# p_positionD = 0.0
+# p_angle = 0.0
+
+l_angle = 2.0
+l_position = 2.0
+l_positionD = 0.5
+
+
+w_sum = l_angle + l_position + l_positionD
+
+l_angle /= w_sum
+l_position /= w_sum
+l_positionD /= w_sum
+
 
 class controller_do_mpc(template_controller):
     def __init__(self,
@@ -49,16 +76,17 @@ class controller_do_mpc(template_controller):
         self.model.set_rhs('s.angleD', angleD_next)
 
         # Simplified, normalized expressions for E_kin and E_pot as a port of cost function
-        E_kin_cart = (s.positionD / P_GLOBALS.v_max) ** 2
-        E_kin_pol = (s.angleD/(2*np.pi))**2
-        E_pot = np.sin(s.angle)**2
+        cost_position = (s.position - target_position) ** 2
+        cost_positionD = s.positionD ** 2
+        cost_angleD = s.angleD**2
+        cost_angle_sin = np.sin(s.angle)**2
+        cost_angle = (s.angle/np.pi)**2
 
-        distance_difference = (((s.position - target_position)/50.0) ** 2)
 
-        self.model.set_expression('E_kin_cart', E_kin_cart)
-        self.model.set_expression('E_kin_pol', E_kin_pol)
-        self.model.set_expression('E_pot', E_pot)
-        self.model.set_expression('distance_difference', distance_difference)
+        self.model.set_expression('cost_positionD', cost_positionD)
+        self.model.set_expression('cost_angleD', cost_angleD)
+        self.model.set_expression('cost_angle', cost_angle)
+        self.model.set_expression('cost_position', cost_position)
 
 
         self.model.setup()
@@ -82,9 +110,13 @@ class controller_do_mpc(template_controller):
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'MA57'})
 
         # # Standard version
-        lterm = 1.0 * self.model.aux['E_pot'] + 5.0 * distance_difference + 0.5 * self.model.aux['E_kin_cart']
+        lterm = (
+                l_angle * (1+p_angle*np.random.uniform(-1.0, 1.0)) * self.model.aux['cost_angle']
+                + l_position * (1+p_position*np.random.uniform(-1.0, 1.0)) * cost_position
+                + l_positionD * (1+p_positionD*np.random.uniform(-1.0, 1.0)) * self.model.aux['cost_positionD']
+                 )
         # mterm = 400.0 * self.model.aux['E_kin_cart']
-        mterm = 0.0 * self.model.aux['E_kin_cart']
+        mterm = 0.0 * self.model.aux['cost_positionD']
         # mterm = 0.0 * distance_difference # 5 * self.model.aux['E_kin_pol'] - 5 * self.model.aux['E_pot']  + 5 * self.model.aux['E_kin_cart']
         self.mpc.set_rterm(Q=0.1)
 
@@ -142,4 +174,4 @@ class controller_do_mpc(template_controller):
 
         Q = self.mpc.make_step(self.x0)
 
-        return Q.item()
+        return Q.item()*(1+p_Q*np.random.uniform(-1.0, 1.0))
