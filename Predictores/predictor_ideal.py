@@ -114,7 +114,7 @@ class predictor_ideal:
 
         self.prediction_denorm = prediction_denorm
 
-        self.output = np.zeros((self.batch_size, self.horizon+1, len(self.prediction_features_names)+1))
+        self.output = np.zeros((self.batch_size, self.horizon+1, len(self.prediction_features_names)+1), dtype=np.float32)
 
 
     def predict(self, Q: np.ndarray) -> np.ndarray:

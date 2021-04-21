@@ -93,7 +93,7 @@ def trajectory_rollouts(
     delta_u: np.ndarray,
     target_position: np.ndarray,
 ):
-    s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size))
+    s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size), dtype=np.float32)
     s_horizon[:, 0, :] = np.tile(s, (mc_samples, 1))
 
     predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
@@ -162,10 +162,10 @@ class controller_mppi(template_controller):
 
         self.iteration = -1
 
-        self.s_horizon = np.zeros(())
-        self.u = np.zeros((mpc_samples), dtype=float)
-        self.delta_u = np.zeros((mc_samples, mpc_samples), dtype=float)
-        self.S_tilde_k = np.zeros((mc_samples), dtype=float)
+        self.s_horizon = np.zeros((), dtype=np.float32)
+        self.u = np.zeros((mpc_samples), dtype=np.float32)
+        self.delta_u = np.zeros((mc_samples, mpc_samples), dtype=np.float32)
+        self.S_tilde_k = np.zeros((mc_samples), dtype=np.float32)
 
     def initialize_perturbations(
         self, stdev: float = 1.0, random_walk: bool = False, uniform: bool = False
@@ -176,21 +176,27 @@ class controller_mppi(template_controller):
         If random_walk is true, each row represents a 1D random walk with Gaussian steps.
         """
         if random_walk:
-            delta_u = np.zeros((mc_samples, mpc_samples), dtype=float)
-            delta_u[:, 0] = stdev * np.random.normal(size=(mc_samples,))
+            delta_u = np.zeros((mc_samples, mpc_samples), dtype=np.float32)
+            delta_u[:, 0] = stdev * np.random.normal(size=(mc_samples,)).astype(
+                np.float32
+            )
             for i in range(1, mpc_samples):
                 delta_u[:, i] = delta_u[:, i - 1] + stdev * np.random.normal(
                     size=(mc_samples,)
-                )
+                ).astype(np.float32)
         elif uniform:
-            delta_u = np.zeros((mc_samples, mpc_samples), dtype=float)
+            delta_u = np.zeros((mc_samples, mpc_samples), dtype=np.float32)
             for i in range(0, mpc_samples):
                 delta_u[:, i] = (
-                    np.random.uniform(low=-1.0, high=1.0, size=(mc_samples,))
+                    np.random.uniform(low=-1.0, high=1.0, size=(mc_samples,)).astype(
+                        np.float32
+                    )
                     - self.u[i]
                 )
         else:
-            delta_u = stdev * np.random.normal(size=(mc_samples, mpc_samples))
+            delta_u = stdev * np.random.normal(size=(mc_samples, mpc_samples)).astype(
+                np.float32
+            )
 
         return delta_u
 
@@ -210,7 +216,7 @@ class controller_mppi(template_controller):
             self.delta_u = self.initialize_perturbations(
                 stdev=self.rho_sqrt_inv / np.sqrt(dt)
             )  # du ~ N(mean=0, var=1/(rho*dt))
-            self.S_tilde_k = np.zeros_like(self.S_tilde_k)
+            self.S_tilde_k = np.zeros_like(self.S_tilde_k, dtype=np.float32)
 
             # Run parallel trajectory rollouts for different input perturbations
             self.S_tilde_k, cost_logs_internal, s_horizon = trajectory_rollouts(
@@ -256,7 +262,7 @@ class controller_mppi(template_controller):
         Init with zeros when lengthening, and slice when shortening horizon.
         """
         update_length = min(mpc_samples, self.u.size)
-        u_new = np.zeros((mpc_samples), dtype=float)
+        u_new = np.zeros((mpc_samples), dtype=np.float32)
         u_new[:update_length] = self.u[:update_length]
         self.u = u_new
 
