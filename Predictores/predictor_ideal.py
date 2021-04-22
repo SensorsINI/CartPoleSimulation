@@ -95,7 +95,7 @@ def next_state(s, u, dt, intermediate_steps=2):
 class predictor_ideal:
     def __init__(self, horizon, dt):
 
-        self.normalization_info = None
+        self.normalization_info = load_normalization_info(PATH_TO_NORMALIZATION_INFO)
 
         # State of the cart
         self.s = create_cartpole_state()  # s like state
@@ -150,8 +150,8 @@ class predictor_ideal:
         if self.prediction_denorm:
             return self.output[..., :-1]
         else:
-            # columns = self.prediction_features_names + ['Q']
-            # return normalize_numpy_array(self.output, columns, self.normalization_info)[:, :-1]
+            columns = self.prediction_features_names + ['Q']
+            return normalize_numpy_array(self.output, columns, self.normalization_info)[..., :-1]
 
     # @tf.function
     def update_internal_state(self, Q0):
