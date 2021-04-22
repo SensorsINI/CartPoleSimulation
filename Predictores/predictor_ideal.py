@@ -44,8 +44,9 @@ import numpy as np
 from CartPole.cartpole_model import cartpole_ode
 
 from copy import deepcopy
+from others.globals_and_utils import Timer
 
-PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '2500.csv'
+PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'NI_2021-04-22_14-34-14.csv'
 
 def next_state(s, u, dt, intermediate_steps=2):
     """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt

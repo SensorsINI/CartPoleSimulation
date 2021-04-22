@@ -2,6 +2,8 @@ from types import SimpleNamespace
 from typing import Union
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
 
+from others.globals_and_utils import Timer
+
 import numpy as np
 from numpy.random import SFC64, Generator
 rng = Generator(SFC64(123))
@@ -106,10 +108,12 @@ def _cartpole_ode(angle, angleD, position, positionD, u):
             (
                 + m * g * sa * ca  # Movement of the cart due to gravity
                 + ((J_fric * angleD * ca) / (L))  # Movement of the cart due to pend' s friction in the joint
-                - k * (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                - k * M_fric * positionD  # Braking of the cart due its friction
+                + k * (
+                    - (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                    - M_fric * positionD  # Braking of the cart due its friction
+                    + u  # Effect of force applied to cart
+                )
             ) / A
-            + (k / A) * u  # Effect of force applied to cart
         )
 
         # Making m go to 0 and setting J_fric=0 (fine for pole without mass)
@@ -121,12 +125,16 @@ def _cartpole_ode(angle, angleD, position, positionD, u):
 
         angleDD = (
             (
-                + g * (m + M) * sa  # Movement of the pole due to gravity
-                - ((J_fric * (m + M) * angleD) / (L * m))  # Braking of the pole due friction in its joint
+                + (m + M) * (
+                    g * sa  # Movement of the pole due to gravity
+                    - J_fric * angleD / (L * m)  # Braking of the pole due friction in its joint
+                )
                 - m * L * (angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                - ca * M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
-            ) / (A * L) 
-            + (ca / (A * L)) * u  # Effect of force applied to cart
+                + ca * (
+                    - M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
+                    + u  # Effect of force applied to cart
+                )
+            ) / (A * L)
         )
 
         # making M go to infinity makes angleDD = (g/k*L)sin(angle) - angleD*J_fric/(k*m*L^2)

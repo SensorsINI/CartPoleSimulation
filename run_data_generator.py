@@ -4,6 +4,8 @@ from CartPole.state_utilities import cartpole_state_varname_to_index
 
 from time import sleep
 import timeit
+import cProfile
+from pstats import Stats, SortKey
 
 import numpy as np
 # Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
@@ -113,6 +115,17 @@ for i in range(number_of_experiments):
         used_track_fraction=used_track_fraction,
     )
     gen_start = timeit.default_timer()
+    # with cProfile.Profile() as pr:
+    #     CartPoleInstance.run_cartpole_random_experiment(
+    #         csv=csv,
+    #         save_mode=save_mode
+    #     )
+    # with open('profiling_stats.txt', 'w') as stream:
+    #     stats = Stats(pr, stream=stream)
+    #     stats.strip_dirs()
+    #     stats.sort_stats('time')
+    #     stats.dump_stats('.prof_stats')
+    #     stats.print_stats()
     CartPoleInstance.run_cartpole_random_experiment(
         csv=csv,
         save_mode=save_mode

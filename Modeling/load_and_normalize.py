@@ -557,6 +557,6 @@ def normalize_numpy_array(denormalized_array,
 
 
 if __name__ == '__main__':
-    folder_with_data_to_calculate_norm_info = './ExperimentRecordings/25/Train/'
+    folder_with_data_to_calculate_norm_info = './ExperimentRecordings/Exrec/'
 
     calculate_normalization_info(folder_with_data_to_calculate_norm_info)
