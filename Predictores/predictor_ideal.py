@@ -150,8 +150,8 @@ class predictor_ideal:
         if self.prediction_denorm:
             return self.output[..., :-1]
         else:
-            columns = self.prediction_features_names + ['Q']
-            return normalize_numpy_array(self.output, columns, self.normalization_info)[:, :-1]
+            # columns = self.prediction_features_names + ['Q']
+            # return normalize_numpy_array(self.output, columns, self.normalization_info)[:, :-1]
 
     # @tf.function
     def update_internal_state(self, Q0):
