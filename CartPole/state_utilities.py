@@ -83,7 +83,7 @@ def cartpole_state_indices_to_varnames(indices: list) -> list:
 
 
 def cartpole_state_namespace_to_vector(s_namespace: SimpleNamespace) -> np.ndarray:
-    s_array = np.zeros_like(STATE_VARIABLES, dtype=float)
+    s_array = np.zeros_like(STATE_VARIABLES, dtype=np.float32)
     for a in STATE_VARIABLES:
         s_array[cartpole_state_varname_to_index(a)] = getattr(
             s_namespace, a, s_array[cartpole_state_varname_to_index(a)]

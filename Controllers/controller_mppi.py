@@ -34,6 +34,7 @@ from Predictores.predictor_ideal import predictor_ideal
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 import numpy as np
+from numpy.random import SFC64, Generator
 
 from copy import deepcopy
 
@@ -60,8 +61,12 @@ NU = 1.0e3  # Exploration variance
 GAMMA = 1.00  # Future cost discount
 
 
+"""Random number generator"""
+rng = Generator(SFC64(123))
+
+
 """Init logging variables"""
-LOGGING = True
+LOGGING = False
 # Save average cost for each cost component
 COST_TO_GO_LOGS = []
 COST_BREAKDOWN_LOGS = []
@@ -86,13 +91,6 @@ distance_difference_cost = lambda s, target_position: (
 predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
 
 
-def cartpole_ode_parallelize(s: np.ndarray, u: float):
-    """Wrapper for the _cartpole_ode function"""
-    return _cartpole_ode(
-        s[ANGLE_IDX], s[ANGLED_IDX], s[POSITION_IDX], s[POSITIOND_IDX], u
-    )
-
-
 def trajectory_rollouts(
     s: np.ndarray,
     S_tilde_k: np.ndarray,
@@ -100,7 +98,7 @@ def trajectory_rollouts(
     delta_u: np.ndarray,
     target_position: np.ndarray,
 ):
-    s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size))
+    s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size), dtype=np.float32)
     s_horizon[:, 0, :] = np.tile(s, (mc_samples, 1))
 
     predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
@@ -169,10 +167,10 @@ class controller_mppi(template_controller):
 
         self.iteration = -1
 
-        self.s_horizon = np.zeros(())
-        self.u = np.zeros((mpc_samples), dtype=float)
-        self.delta_u = np.zeros((mc_samples, mpc_samples), dtype=float)
-        self.S_tilde_k = np.zeros((mc_samples), dtype=float)
+        self.s_horizon = np.zeros((), dtype=np.float32)
+        self.u = np.zeros((mpc_samples), dtype=np.float32)
+        self.delta_u = np.zeros((mc_samples, mpc_samples), dtype=np.float32)
+        self.S_tilde_k = np.zeros((mc_samples), dtype=np.float32)
 
     def initialize_perturbations(
         self, stdev: float = 1.0, random_walk: bool = False, uniform: bool = False
@@ -183,21 +181,27 @@ class controller_mppi(template_controller):
         If random_walk is true, each row represents a 1D random walk with Gaussian steps.
         """
         if random_walk:
-            delta_u = np.zeros((mc_samples, mpc_samples), dtype=float)
-            delta_u[:, 0] = stdev * np.random.normal(size=(mc_samples,))
+            delta_u = np.empty((mc_samples, mpc_samples), dtype=np.float32)
+            delta_u[:, 0] = stdev * rng.standard_normal(
+                size=(mc_samples,), dtype=np.float32
+            )
             for i in range(1, mpc_samples):
-                delta_u[:, i] = delta_u[:, i - 1] + stdev * np.random.normal(
-                    size=(mc_samples,)
+                delta_u[:, i] = delta_u[:, i - 1] + stdev * rng.standard_normal(
+                    size=(mc_samples,), dtype=np.float32
                 )
         elif uniform:
-            delta_u = np.zeros((mc_samples, mpc_samples), dtype=float)
+            delta_u = np.empty((mc_samples, mpc_samples), dtype=np.float32)
             for i in range(0, mpc_samples):
                 delta_u[:, i] = (
-                    np.random.uniform(low=-1.0, high=1.0, size=(mc_samples,))
+                    rng.uniform(low=-1.0, high=1.0, size=(mc_samples,)).astype(
+                        np.float32
+                    )
                     - self.u[i]
                 )
         else:
-            delta_u = stdev * np.random.normal(size=np.shape(self.delta_u))
+            delta_u = stdev * rng.standard_normal(
+                size=(mc_samples, mpc_samples), dtype=np.float32
+            )
 
         return delta_u
 
@@ -207,12 +211,17 @@ class controller_mppi(template_controller):
 
         self.iteration += 1
 
+        # Adjust horizon if changed in GUI while running
+        predictor.horizon = mpc_samples
+        if mpc_samples != self.u.size:
+            self.update_control_vector()
+
         if self.iteration % update_every == 0:
             # Initialize perturbations and cost arrays
             self.delta_u = self.initialize_perturbations(
                 stdev=self.rho_sqrt_inv / np.sqrt(dt)
             )  # du ~ N(mean=0, var=1/(rho*dt))
-            self.S_tilde_k = np.zeros_like(self.S_tilde_k)
+            self.S_tilde_k = np.zeros_like(self.S_tilde_k, dtype=np.float32)
 
             # Run parallel trajectory rollouts for different input perturbations
             self.S_tilde_k, cost_logs_internal, s_horizon = trajectory_rollouts(
@@ -250,6 +259,17 @@ class controller_mppi(template_controller):
         predictor.update_internal_state(Q)
 
         return Q  # normed control input in the range [-1,1]
+
+    def update_control_vector(self):
+        """
+        MPPI stores a vector of best-guess-so-far control inputs for future steps.
+        When adjusting the horizon length, need to adjust this vector too.
+        Init with zeros when lengthening, and slice when shortening horizon.
+        """
+        update_length = min(mpc_samples, self.u.size)
+        u_new = np.zeros((mpc_samples), dtype=np.float32)
+        u_new[:update_length] = self.u[:update_length]
+        self.u = u_new
 
     def controller_report(self):
         if LOGGING:
