@@ -4,7 +4,7 @@ This file was necessary to make CartPole module self-contained.
 """
 
 from math import fmod
-import numpy as np
+import cupy as np
 
 
 # Wraps the angle into range [-π, π]

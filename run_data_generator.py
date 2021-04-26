@@ -7,7 +7,8 @@ import timeit
 import cProfile
 from pstats import Stats, SortKey
 
-import numpy as np
+import cupy as np
+np.cuda.Device(0).use()
 # Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
 # On other OS you have to chose a different interactive backend.
 # from matplotlib import use
@@ -28,7 +29,7 @@ dt_controller_update_DataGen = 0.02
 dt_save_DataGen = 0.1
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
-length_of_experiment_DataGen = 8.0  # Length of each experiment in s
+length_of_experiment_DataGen = 1.0  # Length of each experiment in s
 controller_DataGen = 'mppi'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'lqr'
@@ -115,21 +116,21 @@ for i in range(number_of_experiments):
         used_track_fraction=used_track_fraction,
     )
     gen_start = timeit.default_timer()
-    # with cProfile.Profile() as pr:
-    #     CartPoleInstance.run_cartpole_random_experiment(
-    #         csv=csv,
-    #         save_mode=save_mode
-    #     )
-    # with open('profiling_stats.txt', 'w') as stream:
-    #     stats = Stats(pr, stream=stream)
-    #     stats.strip_dirs()
-    #     stats.sort_stats('time')
-    #     stats.dump_stats('.prof_stats')
-    #     stats.print_stats()
-    CartPoleInstance.run_cartpole_random_experiment(
-        csv=csv,
-        save_mode=save_mode
-    )
+    with cProfile.Profile() as pr:
+        CartPoleInstance.run_cartpole_random_experiment(
+            csv=csv,
+            save_mode=save_mode
+        )
+    with open('profiling_stats.txt', 'w') as stream:
+        stats = Stats(pr, stream=stream)
+        stats.strip_dirs()
+        stats.sort_stats('time')
+        stats.dump_stats('.prof_stats')
+        stats.print_stats()
+    # CartPoleInstance.run_cartpole_random_experiment(
+    #     csv=csv,
+    #     save_mode=save_mode
+    # )
 
     gen_end = timeit.default_timer()
     gen_dt = (gen_end - gen_start) * 1000.0

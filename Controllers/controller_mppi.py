@@ -16,8 +16,9 @@ from others.globals_and_utils import Timer
 
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
-import numpy as np
-from numpy.random import SFC64, Generator
+# import numpy as np
+import cupy as np
+from cupy.random import XORWOW, Generator
 
 
 """Timestep and sampling settings"""
@@ -26,6 +27,11 @@ mpc_horizon = 1.0
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 mc_samples = int(2e3)  # Number of Monte Carlo samples
 update_every = 1  # Cost weighted update of inputs every ... steps
+
+
+"""Variables that will be used in each iteration. Init once and reuse."""
+s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size), dtype=np.float32)
+S_tilde_k = np.zeros((mc_samples), dtype=np.float32)
 
 
 """Define indices of values in state statically"""
@@ -43,7 +49,7 @@ GAMMA = 1.00  # Future cost discount
 
 
 """Random number generator"""
-rng = Generator(SFC64(123))
+rng = Generator(XORWOW(123))
 
 
 """Init logging variables"""
@@ -74,12 +80,10 @@ predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
 
 def trajectory_rollouts(
     s: np.ndarray,
-    S_tilde_k: np.ndarray,
     u: np.ndarray,
     delta_u: np.ndarray,
     target_position: np.ndarray,
 ):
-    s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size), dtype=np.float32)
     s_horizon[:, 0, :] = np.tile(s, (mc_samples, 1))
 
     predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
@@ -148,10 +152,8 @@ class controller_mppi(template_controller):
 
         self.iteration = -1
 
-        self.s_horizon = np.zeros((), dtype=np.float32)
         self.u = np.zeros((mpc_samples), dtype=np.float32)
         self.delta_u = np.zeros((mc_samples, mpc_samples), dtype=np.float32)
-        self.S_tilde_k = np.zeros((mc_samples), dtype=np.float32)
 
     def initialize_perturbations(
         self, stdev: float = 1.0, random_walk: bool = False, uniform: bool = False
@@ -188,7 +190,7 @@ class controller_mppi(template_controller):
 
     def step(self, s, target_position, time=None):
         self.s = s
-        self.target_position = target_position
+        self.target_position = np.asarray(target_position)
 
         self.iteration += 1
 
@@ -202,19 +204,18 @@ class controller_mppi(template_controller):
             self.delta_u = self.initialize_perturbations(
                 stdev=self.rho_sqrt_inv / np.sqrt(dt)
             )  # du ~ N(mean=0, var=1/(rho*dt))
-            self.S_tilde_k = np.zeros_like(self.S_tilde_k, dtype=np.float32)
 
             # Run parallel trajectory rollouts for different input perturbations
-            self.S_tilde_k, cost_logs_internal, s_horizon = trajectory_rollouts(
-                self.s, self.S_tilde_k, self.u, self.delta_u, self.target_position,
+            S_tilde_k, cost_logs_internal, s_horizon = trajectory_rollouts(
+                self.s, self.u, self.delta_u, self.target_position,
             )
 
             # Update inputs with weighted perturbations
-            update_inputs(self.u, self.S_tilde_k, self.delta_u)
+            update_inputs(self.u, S_tilde_k, self.delta_u)
 
             # Log states and costs incurred for plotting later
             if LOGGING:
-                COST_TO_GO_LOGS.append(self.S_tilde_k)
+                COST_TO_GO_LOGS.append(S_tilde_k)
                 COST_BREAKDOWN_LOGS.append(np.mean(cost_logs_internal, axis=0))
                 STATE_LOGS.append(s_horizon[:, :, [POSITION_IDX, ANGLE_IDX]])
                 INPUT_LOGS.append(self.u)

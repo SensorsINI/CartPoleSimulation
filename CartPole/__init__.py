@@ -14,6 +14,7 @@ from CartPole.state_utilities import cartpole_state_varname_to_index, cartpole_s
 from CartPole.cartpole_model import Q2u, cartpole_ode, P_GLOBALS, s0
 
 import numpy as np
+import cupy as cp
 import pandas as pd
 
 # Import module to save history of the simulation as csv file
@@ -453,7 +454,8 @@ class CartPole:
             # Round data to a set precision
             with open(self.csv_filepath, "a") as outfile:
                 writer = csv.writer(outfile)
-                self.dict_history = {key: np.around(value, self.rounding_decimals)
+                # self.dict_history = {key: cupy.asnumpy(value) for key, value in self.dict_history.items()}
+                self.dict_history = {key: cp.around(value, self.rounding_decimals)
                                      for key, value in self.dict_history.items()}
                 writer.writerows(zip(*self.dict_history.values()))
             self.save_now = False
@@ -505,25 +507,25 @@ class CartPole:
 
         # Plot angle error
         axs[0].set_ylabel("Angle (deg)", fontsize=fontsize_labels)
-        axs[0].plot(np.array(self.dict_history['time']), np.array(self.dict_history['angle']) * 180.0 / np.pi,
+        axs[0].plot(cp.asnumpy(self.dict_history['time']), cp.asnumpy(self.dict_history['angle']) * 180.0 / np.pi,
                     'b', markersize=12, label='Ground Truth')
         axs[0].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
         # Plot position
         axs[1].set_ylabel("position (m)", fontsize=fontsize_labels)
-        axs[1].plot(self.dict_history['time'], self.dict_history['position'], 'g', markersize=12,
+        axs[1].plot(cp.asnumpy(self.dict_history['time']), cp.asnumpy(self.dict_history['position']), 'g', markersize=12,
                     label='Ground Truth')
         axs[1].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
         # Plot motor input command
         axs[2].set_ylabel("motor (N)", fontsize=fontsize_labels)
-        axs[2].plot(self.dict_history['time'], self.dict_history['u'], 'r', markersize=12,
+        axs[2].plot(cp.asnumpy(self.dict_history['time']), cp.asnumpy(self.dict_history['u']), 'r', markersize=12,
                     label='motor')
         axs[2].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
         # Plot target position
         axs[3].set_ylabel("position target (m)", fontsize=fontsize_labels)
-        axs[3].plot(self.dict_history['time'], self.dict_history['target_position'], 'k')
+        axs[3].plot(cp.asnumpy(self.dict_history['time']), cp.asnumpy(self.dict_history['target_position']), 'k')
         axs[3].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
         axs[3].set_xlabel('Time (s)', fontsize=fontsize_labels)

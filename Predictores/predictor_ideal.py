@@ -39,7 +39,8 @@ from CartPole.state_utilities import create_cartpole_state, \
     cartpole_state_varname_to_index, cartpole_state_varnames_to_indices, \
     cartpole_state_indices_to_varnames
 
-import numpy as np
+# import numpy as np
+import cupy as np
 
 from CartPole.cartpole_model import cartpole_ode
 

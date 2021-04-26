@@ -4,9 +4,10 @@ from CartPole.state_utilities import create_cartpole_state, cartpole_state_varna
 
 from others.globals_and_utils import Timer
 
-import numpy as np
-from numpy.random import SFC64, Generator
-rng = Generator(SFC64(123))
+# import cupy as np
+import cupy as np
+from cupy.random import XORWOW, Generator
+rng = Generator(XORWOW(123))
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
@@ -178,6 +179,7 @@ def cartpole_ode_namespace(s: SimpleNamespace, u: float):
 
 
 def cartpole_ode(s: np.ndarray, u: float):
+    s = np.array(s)
     return _cartpole_ode(
         s[..., cartpole_state_varname_to_index('angle')], s[..., cartpole_state_varname_to_index('angleD')],
         s[..., cartpole_state_varname_to_index('position')], s[..., cartpole_state_varname_to_index('positionD')],
