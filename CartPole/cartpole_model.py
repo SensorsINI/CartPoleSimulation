@@ -3,8 +3,11 @@ from typing import Union
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
 
 import numpy as np
+import cupy as cp
 from numpy.random import SFC64, Generator
 rng = Generator(SFC64(123))
+from cupy.random import default_rng
+crng = default_rng(123)
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
@@ -81,7 +84,7 @@ k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, co
 s0 = create_cartpole_state()
 
 
-def _cartpole_ode(angle, angleD, position, positionD, u):
+def _cartpole_ode(angle, angleD, positionD, u):
     """
     Calculates current values of second derivative of angle and position
     from current value of angle and position, and their first derivatives
@@ -165,15 +168,14 @@ def _cartpole_ode(angle, angleD, position, positionD, u):
 
 def cartpole_ode_namespace(s: SimpleNamespace, u: float):
     return _cartpole_ode(
-        s.angle, s.angleD, s.position, s.positionD, u
+        s.angle, s.angleD, s.positionD, u
     )
 
 
-def cartpole_ode(s: np.ndarray, u: float):
+def cartpole_ode(s, u):
     return _cartpole_ode(
         s[..., cartpole_state_varname_to_index('angle')], s[..., cartpole_state_varname_to_index('angleD')],
-        s[..., cartpole_state_varname_to_index('position')], s[..., cartpole_state_varname_to_index('positionD')],
-        u
+        s[..., cartpole_state_varname_to_index('positionD')], u
     )
 
 
@@ -293,6 +295,18 @@ def Q2u(Q):
     """
     u = u_max * (
         Q + controlDisturbance *  rng.standard_normal(size=np.shape(Q), dtype=np.float32) + P_GLOBALS.controlBias
+    )  # Q is drive -1:1 range, add noise on control
+
+    return u
+
+def Q2u_cupy(Q: cp.ndarray):
+    """
+    Converts dimensionless motor power [-1,1] to a physical force acting on a cart.
+
+    In future there might be implemented here a more sophisticated model of a motor driving CartPole
+    """
+    u = u_max * (
+        Q + controlDisturbance * crng.standard_normal(size=cp.shape(Q), dtype=cp.float32) + P_GLOBALS.controlBias
     )  # Q is drive -1:1 range, add noise on control
 
     return u

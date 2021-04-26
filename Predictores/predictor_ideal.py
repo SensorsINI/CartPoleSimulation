@@ -34,12 +34,14 @@ Using predictor:
 
 
 from Modeling.load_and_normalize import load_normalization_info, normalize_numpy_array
-from CartPole.cartpole_model import Q2u, TrackHalfLength
+from CartPole.cartpole_model import Q2u, Q2u_cupy, TrackHalfLength
 from CartPole.state_utilities import create_cartpole_state, \
     cartpole_state_varname_to_index, cartpole_state_varnames_to_indices, \
     cartpole_state_indices_to_varnames
 
 import numpy as np
+import cupy as cp
+cp.cuda.Device(0).use()
 
 from CartPole.cartpole_model import cartpole_ode
 
@@ -47,18 +49,16 @@ from copy import deepcopy
 
 PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '2500.csv'
 
-def next_state(s, u, dt, intermediate_steps=2):
+def next_state(s: cp.ndarray, u: cp.ndarray, dt: float, intermediate_steps=2):
     """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
     """
-
-    s_next = deepcopy(s)
 
     # # Calculates CURRENT second derivatives
     # s_next[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s, u)
     t_step = dt / float(intermediate_steps)
     for i in range(intermediate_steps):
         # Calculate NEXT state:
-        s_next[
+        s[
             ...,
             [
                 cartpole_state_varname_to_index('position'),
@@ -66,7 +66,7 @@ def next_state(s, u, dt, intermediate_steps=2):
                 cartpole_state_varname_to_index('angle'),
                 cartpole_state_varname_to_index('angleD')
             ]
-        ] += s_next[
+        ] += s[
             ...,
             [
                 cartpole_state_varname_to_index('positionD'),
@@ -77,18 +77,18 @@ def next_state(s, u, dt, intermediate_steps=2):
         ] * t_step
         
         # Simulate bouncing off edges (does not consider cart dimensions)
-        s_next[..., abs(s_next[..., cartpole_state_varname_to_index('position')]) > TrackHalfLength, cartpole_state_varname_to_index('positionD')] \
-            = -s_next[..., abs(s_next[..., cartpole_state_varname_to_index('position')]) > TrackHalfLength, cartpole_state_varname_to_index('positionD')]
+        s[..., abs(s[..., cartpole_state_varname_to_index('position')]) > TrackHalfLength, cartpole_state_varname_to_index('positionD')] \
+            = -s[..., abs(s[..., cartpole_state_varname_to_index('position')]) > TrackHalfLength, cartpole_state_varname_to_index('positionD')]
 
         # Calculates second derivatives of NEXT state
-        angleDD, positionDD = cartpole_ode(s_next, u)
-        s_next[..., cartpole_state_varname_to_index('angleDD')] = angleDD
-        s_next[..., cartpole_state_varname_to_index('positionDD')] = positionDD
+        angleDD, positionDD = cartpole_ode(s, u)
+        s[..., cartpole_state_varname_to_index('angleDD')] = angleDD
+        s[..., cartpole_state_varname_to_index('positionDD')] = positionDD
 
-    s_next[..., cartpole_state_varname_to_index('angle_cos')] = np.cos(s_next[..., cartpole_state_varname_to_index('angle')])
-    s_next[..., cartpole_state_varname_to_index('angle_sin')] = np.sin(s_next[..., cartpole_state_varname_to_index('angle')])
+    s[..., cartpole_state_varname_to_index('angle_cos')] = np.cos(s[..., cartpole_state_varname_to_index('angle')])
+    s[..., cartpole_state_varname_to_index('angle_sin')] = np.sin(s[..., cartpole_state_varname_to_index('angle')])
 
-    return s_next
+    return s
 
 
 
@@ -120,39 +120,40 @@ class predictor_ideal:
         # Batch_size > 1 allows to feed several states at once and obtain predictions parallely
 
         # Shape of state: (batch size x state variables)
-        self.s = initial_state
+        self.s = cp.asarray(initial_state, dtype=cp.float32)
         self.batch_size = np.size(self.s, 0) if self.s.ndim > 1 else 1
 
         self.prediction_denorm = prediction_denorm
 
-        self.output = np.zeros((self.batch_size, self.horizon+1, len(self.prediction_features_names)+1), dtype=np.float32)
+        self.output = cp.zeros((self.batch_size, self.horizon+1, len(self.prediction_features_names)+1), dtype=cp.float32)
 
 
     def predict(self, Q: np.ndarray) -> np.ndarray:
+        Q = cp.asarray(Q)
 
         # Shape of Q: (batch size x horizon length)
-        if np.size(Q, -1) != self.horizon:
+        if cp.size(Q, -1) != self.horizon:
             raise IndexError('Number of provided control inputs does not match the horizon')
         else:
-            Q_hat = np.atleast_1d(np.asarray(Q).squeeze())
+            Q_hat = cp.atleast_1d(cp.asarray(Q).squeeze())
 
         self.output[..., :-1, -1] = Q_hat
 
         s_next = self.s
         # Calculate second derivatives of initial state
-        s_next[..., cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = np.vstack(cartpole_ode(s_next, Q2u(Q_hat[..., 0]))).T
+        s_next[..., cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cp.vstack(cartpole_ode(s_next, Q2u_cupy(Q_hat[..., 0]))).T
         self.output[..., 0, :-1] = s_next
 
         for k in range(self.horizon):
-            s_next = next_state(s_next, Q2u(Q_hat[..., k]), dt=self.dt, intermediate_steps=2)
+            s_next = next_state(s_next, Q2u_cupy(Q_hat[..., k]), dt=self.dt, intermediate_steps=2)
             self.output[..., k+1, :-1] = s_next
 
-        self.output = np.squeeze(self.output)
+        self.output = cp.squeeze(self.output)
         if self.prediction_denorm:
-            return self.output[..., :-1]
+            return cp.asnumpy(self.output[..., :-1])
         else:
             columns = self.prediction_features_names + ['Q']
-            return normalize_numpy_array(self.output, columns, self.normalization_info)[..., :-1]
+            return normalize_numpy_array(cp.asnumpy(self.output), columns, self.normalization_info)[..., :-1]
 
     # @tf.function
     def update_internal_state(self, Q0):

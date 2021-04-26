@@ -6,6 +6,7 @@ from time import sleep
 import timeit
 
 import numpy as np
+from others.cudaprofile import start, stop
 # Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
 # On other OS you have to chose a different interactive backend.
 # from matplotlib import use
@@ -26,7 +27,7 @@ dt_controller_update_DataGen = 0.02
 dt_save_DataGen = 0.1
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
-length_of_experiment_DataGen = 8.0  # Length of each experiment in s
+length_of_experiment_DataGen = 1.0  # Length of each experiment in s
 controller_DataGen = 'mppi'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'lqr'
@@ -52,7 +53,7 @@ initial_state_DataGen = create_cartpole_state()
 # Set the max for smoothly interpolated random target position to avoid bumping into track ends.
 used_track_fraction = 0.5
 
-
+start()
 for i in range(number_of_experiments):
 
     # start_random_target_position_at_DataGen = 0.0
@@ -126,5 +127,6 @@ for i in range(number_of_experiments):
         CartPoleInstance.controller.controller_report()
     except:
         pass
+stop()
 
 # os.system('say "Antonio! Todo ha terminado!"')

@@ -3,23 +3,7 @@ Model Predictive Path Integral Controller
 Based on Williams, Aldrich, Theodorou (2015)
 """
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import (
-    P_GLOBALS,
-    Q2u,
-    _cartpole_ode,
-    k,
-    M,
-    m,
-    g,
-    J_fric,
-    M_fric,
-    L,
-    v_max,
-    u_max,
-    controlBias,
-    controlDisturbance,
-    TrackHalfLength,
-)
+from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import (
     create_cartpole_state,
     cartpole_state_varname_to_index,
@@ -207,7 +191,7 @@ class controller_mppi(template_controller):
 
     def step(self, s, target_position, time=None):
         self.s = s
-        self.target_position = target_position
+        self.target_position = float(target_position)
 
         self.iteration += 1
 
