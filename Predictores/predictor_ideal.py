@@ -96,9 +96,10 @@ def next_state(s, u, dt, intermediate_steps=2):
 
 class predictor_ideal:
     def __init__(self, horizon, dt):
-
-        self.normalization_info = load_normalization_info(PATH_TO_NORMALIZATION_INFO)
-
+        try:
+            self.normalization_info = load_normalization_info(PATH_TO_NORMALIZATION_INFO)
+        except FileNotFoundError:
+            print('Normalization info not provided.')
         # State of the cart
         self.s = create_cartpole_state()  # s like state
         self.batch_size = 1
