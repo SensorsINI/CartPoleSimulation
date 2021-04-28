@@ -113,6 +113,8 @@ class predictor_ideal:
 
         self.prediction_denorm = False
 
+        self.output = None
+
 
     def setup(self, initial_state: np.ndarray, prediction_denorm=False):
 
@@ -144,7 +146,7 @@ class predictor_ideal:
         self.output[..., 0, :-1] = s_next
 
         for k in range(self.horizon):
-            s_next = next_state(s_next, Q2u(Q_hat[..., k]), dt=self.dt, intermediate_steps=2)
+            s_next = next_state(s_next, Q2u(Q_hat[..., k]), dt=self.dt, intermediate_steps=10)
             self.output[..., k+1, :-1] = s_next
 
         self.output = np.squeeze(self.output)
@@ -154,6 +156,5 @@ class predictor_ideal:
             columns = self.prediction_features_names + ['Q']
             return normalize_numpy_array(self.output, columns, self.normalization_info)[..., :-1]
 
-    # @tf.function
     def update_internal_state(self, Q0):
         pass

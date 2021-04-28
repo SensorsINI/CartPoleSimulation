@@ -44,59 +44,42 @@ from Modeling.TF.TF_Functions.Network import *
 from Modeling.TF.TF_Functions.Initialization import get_net_and_norm_info
 from Modeling.load_and_normalize import *
 
-from CartPole._CartPole_mathematical_helpers import *
-
 import numpy as np
-import pandas as pd
 
 
-PREDICTION_FEATURES_NAMES = ['angle_cos', 'angle_sin', 'angleD', 'position', 'positionD']
-
-net_name = 'GRU-6IN-64H1-64H2-5OUT-3'
-PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '250.csv'
-
-# region Import and print "command line" arguments
-print('')
-a = args()  # 'a' like arguments
-print(a.__dict__)
-print('')
-# endregion
-a.net_name = net_name
-a.path_to_normalization_info = PATH_TO_NORMALIZATION_INFO
+from CartPole.state_utilities import STATE_VARIABLES, cartpole_state_varnames_to_indices, cartpole_state_varname_to_index
 
 
 
 
 class predictor_autoregressive_tf:
-    def __init__(self, horizon, dt=None):
+    def __init__(self, a, horizon, batch_size=500):
 
+        self.a = a
         self.horizon = horizon
 
         # Create a copy of the network suitable for inference (stateful and with sequence length one)
         self.net, self.net_info, self.normalization_info = \
             get_net_and_norm_info(a, time_series_length=1,
-                                  batch_size=1, stateful=True)
+                                  batch_size=None, stateful=True)
 
 
         # Make a prediction
 
-        self.Q_previous = None  # Motor power from last time step
-
-
         self.rnn_internal_states = get_internal_states(self.net)
 
         self.net_initial_input_without_Q = np.zeros([len(self.net_info.inputs) - 1], dtype=np.float32)
-        # self.net_initial_input_without_Q_TF =
 
         self.prediction_denorm = None # Set to True or False in setup, determines if output should be denormalized
 
-        self.states_history = np.zeros([self.horizon+1, len(STATE_VARIABLES)], dtype=np.float32)
+        self.output_array = np.zeros([self.horizon+1, a.test_len, len(STATE_VARIABLES)+1], dtype=np.float32)
 
 
         Q_type = tf.TensorSpec((self.horizon,), tf.float32)
         initial_input_type = tf.TensorSpec((len(self.net_info.inputs)-1,), tf.float32)
 
-        net_input_type = tf.TensorSpec((1, 1, len(self.net_info.inputs)), tf.float32)
+        self.batch_size = batch_size
+        net_input_type = tf.TensorSpec((self.batch_size, len(self.net_info.inputs)), tf.float32)
 
 
 
@@ -117,13 +100,13 @@ class predictor_autoregressive_tf:
 
     def setup(self, initial_state: np.array, prediction_denorm=True):
 
-        self.states_history[0, :] = initial_state
+        self.output_array[0, ..., :-1] = initial_state
 
-        initial_state_normed = normalize_numpy_array(initial_state, STATE_VARIABLES, self.normalization_info)
+        initial_input_net_without_Q = initial_state[..., cartpole_state_varnames_to_indices(self.net_info.inputs[1:])]
+        self.net_initial_input_without_Q = normalize_numpy_array(initial_input_net_without_Q, self.net_info.inputs[1:], self.normalization_info)
 
         # [1:] excludes Q which is not included in initial_state_normed
         # As the only feature written with big Q it should be first on each list.
-        self.net_initial_input_without_Q = initial_state_normed[cartpole_state_varnames_to_indices(self.net_info.inputs[1:])]
         self.net_initial_input_without_Q_TF = tf.convert_to_tensor(self.net_initial_input_without_Q, tf.float32)
 
         if prediction_denorm:
@@ -137,10 +120,7 @@ class predictor_autoregressive_tf:
         # print('Prediction started')
         # load internal RNN state
 
-        if len(Q) != self.horizon:
-            raise IndexError('Number of provided control inputs does not match the horizon')
-        else:
-            Q = tf.squeeze(tf.convert_to_tensor(Q, dtype=tf.float32))
+        self.output_array[:-1, ..., -1] = Q
 
         load_internal_states(self.net, self.rnn_internal_states)
         # t0 = timeit.default_timer()
@@ -154,22 +134,22 @@ class predictor_autoregressive_tf:
         net_outputs = net_outputs.numpy()
 
         # Denormalize
-        self.states_history[1:, cartpole_state_varnames_to_indices(self.net_info.outputs)] = denormalize_numpy_array(net_outputs, self.net_info.outputs, self.normalization_info)
+        self.output_array[1:,..., cartpole_state_varnames_to_indices(self.net_info.outputs)] = denormalize_numpy_array(net_outputs, self.net_info.outputs, self.normalization_info)
 
         # Augment
         if 'angle' not in self.net_info.outputs:
-            self.states_history[:, cartpole_state_varname_to_index('angle')] = \
+            self.output_array[..., cartpole_state_varname_to_index('angle')] = \
                 np.arctan2(
-                    self.states_history[:, cartpole_state_varname_to_index('angle_sin')],
-                    self.states_history[:, cartpole_state_varname_to_index('angle_cos')])
+                    self.output_array[..., cartpole_state_varname_to_index('angle_sin')],
+                    self.output_array[..., cartpole_state_varname_to_index('angle_cos')])
         if 'angle_sin' not in self.net_info.outputs:
-            self.states_history[:, cartpole_state_varname_to_index('angle_sin')] =\
-                np.sin(self.states_history[:, cartpole_state_varname_to_index('angle')])
+            self.output_array[..., cartpole_state_varname_to_index('angle_sin')] =\
+                np.sin(self.output_array[..., cartpole_state_varname_to_index('angle')])
         if 'angle_cos' not in self.net_info.outputs:
-            self.states_history[:, cartpole_state_varname_to_index('angle_cos')] =\
-                np.sin(self.states_history[:, cartpole_state_varname_to_index('angle')])
+            self.output_array[..., cartpole_state_varname_to_index('angle_cos')] =\
+                np.sin(self.output_array[..., cartpole_state_varname_to_index('angle')])
 
-        return self.states_history
+        return self.output_array.transpose((1, 0, 2))
 
     # @tf.function
     def update_internal_state(self, Q0):
@@ -190,7 +170,7 @@ class predictor_autoregressive_tf:
 
         get_internal_states(self.net)
 
-    @tf.function
+    # @tf.function
     def iterate_net_f(self, Q):
         print('retracing iterate_net_f')
         # Iterate over RNN -
@@ -202,17 +182,18 @@ class predictor_autoregressive_tf:
 
         # net_inout = net_inout.write(0, tf.reshape(initial_input, [1, len(initial_input)]))
         for i in tf.range(0, self.horizon):
-            Q_current = (tf.reshape(Q[i], [1]))
+            Q_current = Q[i]
+            Q_current = (tf.reshape(Q_current, [-1, 1]))
             if i == 0:
                 if self.net_info.net_type == 'Dense':
-                    net_input = (tf.reshape(tf.concat([Q_current, self.net_initial_input_without_Q_TF], axis=0), [1, len(self.net_info.inputs)]))
+                    net_input = tf.concat([Q_current, self.net_initial_input_without_Q_TF], axis=1)
                 else:
-                    net_input = (tf.reshape(tf.concat([Q_current, self.net_initial_input_without_Q_TF], axis=0), [1, 1, len(self.net_info.inputs)]))
+                    net_input = (tf.reshape(tf.concat([Q_current, self.net_initial_input_without_Q_TF], axis=1), [1, 1, len(self.net_info.inputs)]))
             else:
                 if self.net_info.net_type == 'Dense':
-                    net_input = tf.reshape(tf.concat([Q_current, net_output], axis=0), [1, len(self.net_info.inputs)])
+                    net_input = tf.concat([Q_current, net_output], axis=1)
                 else:
-                    net_input = tf.reshape(tf.concat([Q_current, net_output], axis=0), [1, 1, len(self.net_info.inputs)])
+                    net_input = tf.reshape(tf.concat([Q_current, net_output], axis=1), [1, 1, len(self.net_info.inputs)])
             # net_output = self.net(net_input)
             net_output = tf.squeeze(self.evaluate_net(net_input))
             #tf.print(net_output)

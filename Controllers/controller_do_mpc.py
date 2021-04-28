@@ -27,9 +27,9 @@ p_angle = 0.2
 # p_positionD = 0.0
 # p_angle = 0.0
 
-l_angle = 2.0
+l_angle = 0.1
 l_position = 2.0
-l_positionD = 0.5
+l_positionD = 0.1
 
 
 w_sum = l_angle + l_position + l_positionD

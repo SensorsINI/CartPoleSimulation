@@ -717,8 +717,10 @@ class CartPole:
                 break
                 print('Cart went out of safety boundaries')
 
-            # if abs(CartPoleInstance.s[cartpole_state_varname_to_index('angle')]) > 0.8*np.pi:
-            #     raise ValueError('Cart went unstable')
+            # if abs(self.s[cartpole_state_varname_to_index('angle')]) > 0.8*np.pi:
+            #     # raise ValueError('Cart went unstable')
+            #     print('Cart went unstable')
+            #     break
 
             if save_mode == 'online' and self.save_flag:
                 self.save_history_csv(csv_name=csv, mode='save online')

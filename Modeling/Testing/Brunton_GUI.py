@@ -46,12 +46,12 @@ cmap = colors.LinearSegmentedColormap('custom', cdict)
 
 # endregion
 
-def run_test_gui(inputs, outputs, ground_truth, predictions_array, time_axis, predictions_array_2=None, datasets_titles=None):
+def run_test_gui(featurs, titles, ground_truth, predictions_list, time_axis):
     # Creat an instance of PyQt5 application
     # Every PyQt5 application has to contain this line
     app = QApplication(sys.argv)
     # Create an instance of the GUI window.
-    window = MainWindow(inputs, outputs, ground_truth, predictions_array, time_axis, predictions_array_2=predictions_array_2, datasets_titles=datasets_titles)
+    window = MainWindow(featurs, titles, ground_truth, predictions_list, time_axis)
     window.show()
     # Next line hands the control over to Python GUI
     app.exec_()
@@ -60,30 +60,29 @@ def run_test_gui(inputs, outputs, ground_truth, predictions_array, time_axis, pr
 class MainWindow(QMainWindow):
 
     def __init__(self,
-                 inputs, outputs, ground_truth,
-                 predictions_array,
+                 features,
+                 titles,
+                 ground_truth,
+                 predictions_list,
                  time_axis,
-                 predictions_array_2=None,
-                 datasets_titles=None,
                  *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
-        self.inputs = inputs
-        self.outputs = outputs
+        self.features = features
+        self.titles = titles
         self.ground_truth = ground_truth
-        self.predictions_array = predictions_array
-        self.predictions_array_2 = predictions_array_2
+        self.predictions_list = predictions_list
         self.time_axis = time_axis
 
-        self.dataset = predictions_array
+        self.dataset = predictions_list[0]
 
-        self.max_horizon = self.predictions_array.shape[0]
+        self.max_horizon = self.predictions_list[0].shape[-2]-1
         self.horizon = self.max_horizon//2
 
         self.show_all = False
         self.downsample = False
         self.current_point_at_timeaxis = (self.time_axis.shape[0]-self.max_horizon)//2
-        self.feature_to_display = outputs[0]
+        self.feature_to_display = self.features[0]
 
         # region - Create container for top level layout
         layout = QVBoxLayout()
@@ -177,13 +176,8 @@ class MainWindow(QMainWindow):
 
         self.rbs_datasets = []
 
-        if not ((type(datasets_titles) is list) and (len(datasets_titles)==2)):
-            datasets_titles = ['Dataset 1', 'Dataset 2']
-        # datasets_titles.append('Both')
-
-        self.rbs_datasets.append(QRadioButton(datasets_titles[0]))
-        self.rbs_datasets.append(QRadioButton(datasets_titles[1]))
-        # self.rbs_datasets.append(QRadioButton(datasets_titles[2]))
+        for title in self.titles:
+            self.rbs_datasets.append(QRadioButton(title))
 
         # Ensures that radio buttons are exclusive
         self.datasets_buttons_group = QButtonGroup()
@@ -199,9 +193,9 @@ class MainWindow(QMainWindow):
         lr_d.addStretch(1)
 
         self.rbs_datasets[0].setChecked(True)
-        if predictions_array_2 is None:
-            self.rbs_datasets[1].setEnabled(False)
-            # self.rbs_datasets[2].setEnabled(False)
+        # if len(self.predictions_list) < 2:
+        #     self.rbs_datasets[1].setEnabled(False)
+        #     # self.rbs_datasets[2].setEnabled(False)
 
         l_cb.addLayout(lr_d)
 
@@ -210,9 +204,9 @@ class MainWindow(QMainWindow):
         # region -- Combobox: Select feature to plot
         l_cb.addWidget(QLabel('Feature to plot:'))
         self.cb_select_feature = QComboBox()
-        self.cb_select_feature.addItems(outputs)
+        self.cb_select_feature.addItems(self.features)
         self.cb_select_feature.currentIndexChanged.connect(self.cb_select_feature_f)
-        self.cb_select_feature.setCurrentText(outputs[0])
+        self.cb_select_feature.setCurrentText(self.features[0])
         l_cb.addWidget(self.cb_select_feature)
 
         # region - Add checkboxes to layout
@@ -270,9 +264,9 @@ class MainWindow(QMainWindow):
         for i in range(len(self.rbs_datasets)):
             if self.rbs_datasets[i].isChecked():
                 if i == 0:
-                    self.dataset = self.predictions_array
+                    self.dataset = self.predictions_list[0]
                 if i == 1:
-                    self.dataset = self.predictions_array_2
+                    self.dataset = self.predictions_list[1]
 
         self.redraw_canvas()
 
@@ -296,7 +290,7 @@ class MainWindow(QMainWindow):
 
         self.fig.Ax.clear()
 
-        brunton_widget(self.inputs, self.outputs, self.ground_truth, self.dataset, self.time_axis,
+        brunton_widget(self.features, self.ground_truth, self.dataset, self.time_axis,
                        axs=self.fig.Ax,
                        current_point_at_timeaxis=self.current_point_at_timeaxis,
                        feature_to_display=self.feature_to_display,
@@ -309,7 +303,7 @@ class MainWindow(QMainWindow):
 
 
 
-def brunton_widget(inputs, outputs, ground_truth, predictions_array, time_axis, axs=None,
+def brunton_widget(features, ground_truth, predictions_array, time_axis, axs=None,
                    current_point_at_timeaxis=None,
                    feature_to_display=None,
                    max_horizon=10, horizon=None,
@@ -326,8 +320,7 @@ def brunton_widget(inputs, outputs, ground_truth, predictions_array, time_axis, 
     if horizon is None:
         horizon = max_horizon
 
-    feature_idx = inputs.index(feature_to_display)
-    target_idx = outputs.index(feature_to_display)
+    feature_idx = features.index(feature_to_display)
 
     # Brunton Plot
     if axs is None:
@@ -343,7 +336,7 @@ def brunton_widget(inputs, outputs, ground_truth, predictions_array, time_axis, 
         if not show_all:
             axs.plot(time_axis[current_point_at_timeaxis], ground_truth[current_point_at_timeaxis, feature_idx],
                      'g.', markersize=16, label='Start')
-            prediction_distance.append(predictions_array[i, current_point_at_timeaxis, target_idx])
+            prediction_distance.append(predictions_array[current_point_at_timeaxis, i+1, feature_idx])
             if downsample:
                 if (i % 2) == 0:
                     continue
@@ -352,7 +345,7 @@ def brunton_widget(inputs, outputs, ground_truth, predictions_array, time_axis, 
                         marker='.')
 
         else:
-            prediction_distance.append(predictions_array[i, :-(i+1), target_idx])
+            prediction_distance.append(predictions_array[:-(i+1), i+1, feature_idx])
             if downsample:
                 if (i % 2) == 0:
                     continue
