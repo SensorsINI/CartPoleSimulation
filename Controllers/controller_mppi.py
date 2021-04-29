@@ -29,7 +29,6 @@ from CartPole._CartPole_mathematical_helpers import (
     conditional_decorator,
     wrap_angle_rad_inplace,
 )
-from Predictores.predictor_ideal import predictor_ideal
 
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
@@ -38,14 +37,16 @@ from numpy.random import SFC64, Generator
 
 from copy import deepcopy
 from Predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
-
+from Predictores.predictor_ideal import predictor_ideal
 
 """Timestep and sampling settings"""
 dt = 0.02  # s
-mpc_horizon = 1.0
+mpc_horizon = 0.8
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 mc_samples = int(2e3)  # Number of Monte Carlo samples
 update_every = 1  # Cost weighted update of inputs every ... steps
+predictor_type = 'Euler'
+# predictor_type = 'NeuralNet'
 
 
 """Define indices of values in state statically"""
@@ -89,8 +90,10 @@ distance_difference_cost = lambda s, target_position: (
 
 
 """Define Predictor"""
-# predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
-predictor = predictor_autoregressive_tf(horizon=mpc_samples, batch_size=mc_samples)
+if predictor_type == 'Euler':
+    predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
+elif predictor_type == 'NeuralNet':
+    predictor = predictor_autoregressive_tf(horizon=mpc_samples, batch_size=mc_samples)
 
 
 def trajectory_rollouts(
@@ -103,14 +106,16 @@ def trajectory_rollouts(
     s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size), dtype=np.float32)
     s_horizon[:, 0, :] = np.tile(s, (mc_samples, 1))
 
-    # predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
-    # s_horizon = predictor.predict(u + delta_u)
-
-    states = s_horizon[:, 0, :]
-    predictor.setup(initial_state=states, prediction_denorm=True)
-    Q = u + delta_u
-    Q = Q.transpose()
-    s_horizon = predictor.predict(Q)
+    # FIXME: The two predictors takes control input matrix transposed with respect to each other.
+    #       Please make it consistent, then you can delete this "if" statement
+    if predictor_type == 'Euler':
+        predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
+        s_horizon = predictor.predict(u + delta_u)
+    elif predictor_type == 'NeuralNet':
+        predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
+        Q = u + delta_u
+        Q = Q.transpose()
+        s_horizon = predictor.predict(Q)
 
     cost_increment, dd, ep, ekp, ekc, cc = q(
         s_horizon[:, 1:, :], u, delta_u, target_position
@@ -220,8 +225,9 @@ class controller_mppi(template_controller):
         self.iteration += 1
 
         # Adjust horizon if changed in GUI while running
-        # TODO: For this to work we need to build a setter which also reinitialize arrays which size depends on horizon
-        # predictor.horizon = mpc_samples
+        # FIXME: For this to work with NeuralNet predictor we need to build a setter,
+        #  which also reinitialize arrays which size depends on horizon
+        predictor.horizon = mpc_samples
         if mpc_samples != self.u.size:
             self.update_control_vector()
 
@@ -249,7 +255,11 @@ class controller_mppi(template_controller):
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
                 predictor.setup(initial_state=self.s, prediction_denorm=True)
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
-                rollout_trajectory = predictor.predict(self.u)
+                # FIXME: Delete this "if" as soon as the predictors accept control input of the same form
+                if predictor_type == 'Euler':
+                    rollout_trajectory = predictor.predict(self.u)
+                elif predictor_type == 'NeuralNet':
+                    rollout_trajectory = predictor.predict(self.u.transpose())
                 NOMINAL_ROLLOUT_LOGS.append(
                     rollout_trajectory[:-1, [POSITION_IDX, ANGLE_IDX]]
                 )
@@ -265,8 +275,8 @@ class controller_mppi(template_controller):
         self.u[-1] = self.u[-1]
 
         # Prepare predictor for next timestep
+        # FIXME: This commented line is probably not longer needed. Check and delete.
         # predictor.update_internal_state(Q)
-        # TODO: Size needs to be changed, Q needs to be repeated by number of roll outs
         Q_update = np.tile(Q, (mc_samples, 1))
         predictor.update_internal_state(Q_update)
 

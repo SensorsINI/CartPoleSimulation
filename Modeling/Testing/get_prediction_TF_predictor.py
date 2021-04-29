@@ -51,8 +51,8 @@ def get_data_for_gui_TF(a, dataset, net_name):
     Q_array = [Q[i:-a.test_max_horizon+i] for i in range(a.test_max_horizon)]
     Q_array = np.vstack(Q_array)
 
-    # mode = 'batch'
-    mode = 'sequential'
+    mode = 'batch'
+    # mode = 'sequential'
     if mode == 'batch':
         # All at once
         predictor = predictor_autoregressive_tf(horizon=a.test_max_horizon, batch_size=a.test_len, net_name=net_name)
