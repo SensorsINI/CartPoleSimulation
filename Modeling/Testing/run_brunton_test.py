@@ -7,8 +7,8 @@ from Modeling.load_and_normalize import \
 
 
 # Custom functions
-from Modeling.Testing.get_prediction_TF import get_data_for_gui_TF
-# from Modeling.Testing.get_prediction_TF_predictor import get_data_for_gui_TF
+# from Modeling.Testing.get_prediction_TF import get_data_for_gui_TF
+from Modeling.Testing.get_prediction_TF_predictor import get_data_for_gui_TF
 from get_prediction_from_euler import get_prediction_from_euler
 from get_prediction_from_euler_predictor import get_prediction_from_euler_predictor
 
@@ -30,8 +30,7 @@ def run_brunton_test():
         elif a.tests[test_idx] == 'Euler-predictor':
             predictions = get_prediction_from_euler_predictor(a, dataset, dataset_sampling_dt, dt_sampling_by_dt_fine=10)
         else: # Assume this is a neural_network test:
-            predictions = get_data_for_gui_TF(a, dataset, dataset_sampling_dt,
-                                              net_name=a.tests[test_idx])
+            predictions = get_data_for_gui_TF(a, dataset, net_name=a.tests[test_idx])
 
         predictions_list.append(predictions)
 

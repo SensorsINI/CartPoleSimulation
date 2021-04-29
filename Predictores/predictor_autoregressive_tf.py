@@ -39,29 +39,39 @@ Using predictor:
 #   Updating it more often will lead to false results.
 
 # "Command line" parameters
-from Modeling.TF.Parameters import args
 from Modeling.TF.TF_Functions.Network import *
 from Modeling.TF.TF_Functions.Initialization import get_net_and_norm_info
 from Modeling.load_and_normalize import *
 
 import numpy as np
 
+from types import SimpleNamespace
 
 from CartPole.state_utilities import STATE_VARIABLES, cartpole_state_varnames_to_indices, cartpole_state_varname_to_index
 
 
+NET_NAME = 'Dense-6IN-16H1-16H2-5OUT-0'
 
+PATH_TO_MODELS = './Modeling/TF/Models/'
 
 class predictor_autoregressive_tf:
-    def __init__(self, a, horizon, batch_size=500):
+    def __init__(self, horizon=None, batch_size=None, net_name=None):
 
-        self.a = a
+        a = SimpleNamespace()
+        self.batch_size = batch_size
+        self._horizon = None # Helper variable for horizon settoer
         self.horizon = horizon
+        a.path_to_models = PATH_TO_MODELS
+
+        if net_name is None:
+            a.net_name = NET_NAME
+        else:
+            a.net_name = net_name
 
         # Create a copy of the network suitable for inference (stateful and with sequence length one)
         self.net, self.net_info, self.normalization_info = \
             get_net_and_norm_info(a, time_series_length=1,
-                                  batch_size=None, stateful=True)
+                                  batch_size=self.batch_size, stateful=True)
 
 
         # Make a prediction
@@ -72,13 +82,11 @@ class predictor_autoregressive_tf:
 
         self.prediction_denorm = None # Set to True or False in setup, determines if output should be denormalized
 
-        self.output_array = np.zeros([self.horizon+1, a.test_len, len(STATE_VARIABLES)+1], dtype=np.float32)
-
-
+        self.output_array = np.zeros([self.horizon+1, self.batch_size, len(STATE_VARIABLES)+1], dtype=np.float32)
         Q_type = tf.TensorSpec((self.horizon,), tf.float32)
+
         initial_input_type = tf.TensorSpec((len(self.net_info.inputs)-1,), tf.float32)
 
-        self.batch_size = batch_size
         net_input_type = tf.TensorSpec((self.batch_size, len(self.net_info.inputs)), tf.float32)
 
 
@@ -158,21 +166,20 @@ class predictor_autoregressive_tf:
 
         # Run current input through network
         Q0 = tf.squeeze(tf.convert_to_tensor(Q0, dtype=tf.float32))
-        Q0 = (tf.reshape(Q0, [1]))
+        Q0 = (tf.reshape(Q0, [-1, 1]))
         if self.net_info.net_type == 'Dense':
-            net_input = (tf.reshape(tf.concat([Q0, self.net_initial_input_without_Q_TF], axis=0),
-                                    [1, len(self.net_info.inputs)]))
+            net_input = tf.concat([Q0, self.net_initial_input_without_Q_TF], axis=1)
         else:
-            net_input = (tf.reshape(tf.concat([Q0, self.net_initial_input_without_Q_TF], axis=0),
-                                    [1, 1, len(self.net_info.inputs)]))
+            net_input = (tf.reshape(tf.concat([Q0, self.net_initial_input_without_Q_TF], axis=1),
+                                    [-1, 1, len(self.net_info.inputs)]))
         # self.evaluate_net(self.net_current_input) # Using tf.function to compile net
         self.net(net_input)  # Using net directly
 
-        get_internal_states(self.net)
+        self.rnn_internal_states = get_internal_states(self.net)
 
     # @tf.function
     def iterate_net_f(self, Q):
-        print('retracing iterate_net_f')
+        # print('retracing iterate_net_f')
         # Iterate over RNN -
         # net_input = tf.zeros(shape=(1, 1, len(self.net_info.inputs),), dtype=tf.float32)
         # net_output = tf.zeros(shape=(1,len(self.net_outputs_names)), dtype=tf.float32)
@@ -188,15 +195,18 @@ class predictor_autoregressive_tf:
                 if self.net_info.net_type == 'Dense':
                     net_input = tf.concat([Q_current, self.net_initial_input_without_Q_TF], axis=1)
                 else:
-                    net_input = (tf.reshape(tf.concat([Q_current, self.net_initial_input_without_Q_TF], axis=1), [1, 1, len(self.net_info.inputs)]))
+                    net_input = (tf.reshape(tf.concat([Q_current, self.net_initial_input_without_Q_TF], axis=1), [-1, 1, len(self.net_info.inputs)]))
             else:
                 if self.net_info.net_type == 'Dense':
                     net_input = tf.concat([Q_current, net_output], axis=1)
                 else:
-                    net_input = tf.reshape(tf.concat([Q_current, net_output], axis=1), [1, 1, len(self.net_info.inputs)])
+                    net_input = tf.reshape(tf.concat([Q_current, net_output], axis=1), [-1, 1, len(self.net_info.inputs)])
             # net_output = self.net(net_input)
-            net_output = tf.squeeze(self.evaluate_net(net_input))
+            net_output = self.evaluate_net(net_input)
             #tf.print(net_output)
+
+            if self.net_info.net_type != 'Dense':
+                net_output = tf.reshape(net_output, [-1, len(self.net_info.outputs)])
 
             net_outputs = net_outputs.write(i, net_output)
             # tf.print(net_inout.read(i+1))
@@ -206,6 +216,40 @@ class predictor_autoregressive_tf:
 
     @tf.function
     def evaluate_net_f(self, net_input):
-        print('retracing evaluate_net_f')
+        # print('retracing evaluate_net_f')
         net_output = self.net(net_input)
         return net_output
+
+    @property
+    def horizon(self):
+        return self._horizon
+
+    @horizon.setter
+    def horizon(self, value):
+        if self._horizon is None:
+            print('I used initialization setter!')
+            self._horizon = value
+        else:
+            print('I used normal setter!')
+            self._horizon = value
+            self.output_array = np.zeros([self.horizon + 1, self.batch_size, len(STATE_VARIABLES) + 1],
+                                         dtype=np.float32)
+
+            Q_type = tf.TensorSpec((self.horizon,), tf.float32)
+
+            initial_input_type = tf.TensorSpec((len(self.net_info.inputs) - 1,), tf.float32)
+
+            net_input_type = tf.TensorSpec((self.batch_size, len(self.net_info.inputs)), tf.float32)
+
+            # Retracing tensorflow functions
+            try:
+                self.evaluate_net = self.evaluate_net_f.get_concrete_function(net_input=net_input_type)
+            except:
+                self.evaluate_net = self.evaluate_net_f
+
+            try:
+                self.iterate_net = self.iterate_net_f.get_concrete_function(Q=Q_type,
+                                                                            initial_input=initial_input_type)
+                print(self.iterate_net)
+            except:
+                self.iterate_net = self.iterate_net_f

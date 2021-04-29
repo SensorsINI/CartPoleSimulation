@@ -37,6 +37,7 @@ import numpy as np
 from numpy.random import SFC64, Generator
 
 from copy import deepcopy
+from Predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
 
 
 """Timestep and sampling settings"""
@@ -88,7 +89,8 @@ distance_difference_cost = lambda s, target_position: (
 
 
 """Define Predictor"""
-predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
+# predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
+predictor = predictor_autoregressive_tf(horizon=mpc_samples, batch_size=mc_samples)
 
 
 def trajectory_rollouts(
@@ -101,8 +103,14 @@ def trajectory_rollouts(
     s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size), dtype=np.float32)
     s_horizon[:, 0, :] = np.tile(s, (mc_samples, 1))
 
-    predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
-    s_horizon = predictor.predict(u + delta_u)
+    # predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
+    # s_horizon = predictor.predict(u + delta_u)
+
+    states = s_horizon[:, 0, :]
+    predictor.setup(initial_state=states, prediction_denorm=True)
+    Q = u + delta_u
+    Q = Q.transpose()
+    s_horizon = predictor.predict(Q)
 
     cost_increment, dd, ep, ekp, ekc, cc = q(
         s_horizon[:, 1:, :], u, delta_u, target_position
@@ -212,7 +220,8 @@ class controller_mppi(template_controller):
         self.iteration += 1
 
         # Adjust horizon if changed in GUI while running
-        predictor.horizon = mpc_samples
+        # TODO: For this to work we need to build a setter which also reinitialize arrays which size depends on horizon
+        # predictor.horizon = mpc_samples
         if mpc_samples != self.u.size:
             self.update_control_vector()
 
@@ -256,7 +265,10 @@ class controller_mppi(template_controller):
         self.u[-1] = self.u[-1]
 
         # Prepare predictor for next timestep
-        predictor.update_internal_state(Q)
+        # predictor.update_internal_state(Q)
+        # TODO: Size needs to be changed, Q needs to be repeated by number of roll outs
+        Q_update = np.tile(Q, (mc_samples, 1))
+        predictor.update_internal_state(Q_update)
 
         return Q  # normed control input in the range [-1,1]
 
@@ -443,6 +455,7 @@ class controller_mppi(template_controller):
     # but only if the controller is supposed to be reused without reloading (e.g. in GUI)
     def controller_reset(self):
         try:
+            # TODO: Not sure if this works for predictor autoregressive tf
             predictor.net.reset_states()
         except:
             pass

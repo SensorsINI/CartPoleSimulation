@@ -35,6 +35,8 @@ cdict = {'red':   ((0.0,  0.22, 0.0),
 
 cmap = colors.LinearSegmentedColormap('custom', cdict)
 
+mode = 'sequential'
+# mode = 'batch'
 def get_data_for_gui_TF(a, dataset, dataset_sampling_dt, net_name):
 
     output_array = np.zeros(shape=(a.test_max_horizon + 1, a.test_len, len(a.features) + 1))
@@ -42,9 +44,15 @@ def get_data_for_gui_TF(a, dataset, dataset_sampling_dt, net_name):
     # Create a copy of the network suitable for inference (stateful and with sequence length one)
     a = copy.deepcopy(a)
     a.net_name = net_name
-    net_for_inference, net_for_inference_info, normalization_info = \
-        get_net_and_norm_info(a, time_series_length=1,
-                              batch_size=1, stateful=True)
+
+    if mode == 'batch':
+        net_for_inference, net_for_inference_info, normalization_info = \
+            get_net_and_norm_info(a, time_series_length=1,
+                                  batch_size=a.test_len, stateful=True)
+    elif mode == 'sequential':
+        net_for_inference, net_for_inference_info, normalization_info = \
+            get_net_and_norm_info(a, time_series_length=1,
+                                  batch_size=1, stateful=True)
 
     # Get features, target, and time axis
     # Format the experiment data
@@ -61,8 +69,6 @@ def get_data_for_gui_TF(a, dataset, dataset_sampling_dt, net_name):
     normalized_net_output = np.zeros(shape=(a.test_max_horizon, a.test_len, len(net_for_inference_info.outputs)))
 
     internal_states = None
-    mode = 'sequential'
-    # mode = 'batch'
     if mode=='sequential':
 
         for timestep in trange(a.test_len):

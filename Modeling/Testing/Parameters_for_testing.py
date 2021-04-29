@@ -12,7 +12,7 @@ PATH_TO_MODELS = './Modeling/TF/Models/'
 
 features = list(STATE_VARIABLES_REDUCED)
 
-tests = ['GRU-6IN-16H1-16H2-5OUT-0', 'Euler-predictor']  # May be 'Euler', Euler-predictor, name of network or None = 'Dense-16H1-16H2'
+tests = ['GRU-6IN-16H1-16H2-5OUT-0', 'Dense-6IN-16H1-16H2-5OUT-0', 'Euler-predictor']  # May be 'Euler', Euler-predictor, name of network or None = 'Dense-16H1-16H2'
 norm_infos = ['./Modeling/NormalizationInfo/' + 'Dataset-1-norm.csv']*len(tests) # Norm info for each test, for Euler has no effect, can be None or whatever
 dt_euler = [0.002]*len(tests)  # Timestep of Euler (printed are only values, for which ground truth value exists), for neural network has no effect
 titles = tests  # Titles of tests to be printed in GUI
@@ -44,7 +44,7 @@ def args():
     parser.add_argument('--test_len', default=500, type=int,
                         help='For graphical testing only test_len samples from first test file is taken.')
     parser.add_argument('--test_start_idx', default=100, type=int, help='Indicates from which point data from test file should be taken.')
-    parser.add_argument('--test_max_horizon', default=50, type=int,
+    parser.add_argument('--test_max_horizon', default=40, type=int,
                         help='Indicates prediction horizon for testing.')
 
     args = parser.parse_args()

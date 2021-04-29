@@ -263,10 +263,7 @@ class MainWindow(QMainWindow):
 
         for i in range(len(self.rbs_datasets)):
             if self.rbs_datasets[i].isChecked():
-                if i == 0:
-                    self.dataset = self.predictions_list[0]
-                if i == 1:
-                    self.dataset = self.predictions_list[1]
+                self.dataset = self.predictions_list[i]
 
         self.redraw_canvas()
 
