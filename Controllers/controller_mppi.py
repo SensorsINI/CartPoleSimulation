@@ -23,7 +23,6 @@ from others.globals_and_utils import Timer
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 
-from numba import cuda
 import numpy as np
 from numpy.random import SFC64, Generator
 
