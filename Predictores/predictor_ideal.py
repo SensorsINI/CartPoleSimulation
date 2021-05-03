@@ -60,29 +60,49 @@ threads_per_block = 16
 blocks_per_grid = math.ceil(2000/16)
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def edge_bounce(position, positionD):
     for i in range(position.shape[0]):
         if abs(position[i]) > TrackHalfLength: positionD[i] = -positionD[i]
+    return positionD
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def euler_step(state, stateD, t_step):
-    for i in range(state.shape[0]):
-        state[i] = state[i] + stateD[i] * t_step
+    state += stateD * t_step
+    return state
 
 
-@jit(nopython=True)
-def _cos(val, cos_val):
-    for i in range(val.shape[0]):
-        cos_val[i] = math.cos(val[i])
+@jit(nopython=True, cache=True, fastmath=True)
+def next_state_numba(angle, angleD, angleDD, angle_cos, angle_sin, position, positionD, positionDD, u, t_step, intermediate_steps):
+    for _ in range(intermediate_steps):
+        # Calculate NEXT state:
+        # with Timer("8"):
+        angle = euler_step(angle, angleD, t_step)
+        # with Timer("9"):
+        angleD = euler_step(angleD, angleDD, t_step)
+        # with Timer("10"):
+        position = euler_step(position, positionD, t_step)
+        # with Timer("11"):
+        positionD = euler_step(positionD, positionDD, t_step)
+        
+        # Simulate bouncing off edges (does not consider cart dimensions)
+        # with Timer("12"):
+        positionD = edge_bounce(position, positionD)
 
+        # Calculates second derivatives of NEXT state
+        # with Timer("13"):
+        A = get_A(angle_cos)
 
-@jit(nopython=True)
-def _sin(val, sin_val):
-    for i in range(val.shape[0]):
-        sin_val[i] = math.sin(val[i])
+        # with Timer("14"):
+        angleDD = _angleDD(angleD, positionD, angle_cos, angle_sin, A, u)
+        positionDD = _positionDD(angleD, positionD, angle_cos, angle_sin, A, u)
 
+    # with Timer("15"):
+    angle_cos = np.cos(angle)
+    angle_sin = np.sin(angle)
+
+    return angle, angleD, angleDD, position, positionD, positionDD, angle_cos, angle_sin
 
 class predictor_ideal:
     def __init__(self, horizon, dt):
@@ -99,7 +119,7 @@ class predictor_ideal:
 
         self.horizon = horizon
 
-        self.intermediate_steps = 2
+        self.intermediate_steps = 1
         self.t_step = dt / float(self.intermediate_steps)
 
         self.prediction_features_names = cartpole_state_indices_to_varnames(range(len(self.s)))
@@ -140,32 +160,22 @@ class predictor_ideal:
         """
         # # Calculates CURRENT second derivatives
         # s[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s, u)
-        for _ in range(self.intermediate_steps):
-            # Calculate NEXT state:
-            # with Timer("8"):
-            euler_step(self.angle, self.angleD, self.t_step)
-            # with Timer("9"):
-            euler_step(self.angleD, self.angleDD, self.t_step)
-            # with Timer("10"):
-            euler_step(self.position, self.positionD, self.t_step)
-            # with Timer("11"):
-            euler_step(self.positionD, self.positionDD, self.t_step)
-            
-            # Simulate bouncing off edges (does not consider cart dimensions)
-            # with Timer("12"):
-            edge_bounce(self.position, self.positionD)
-
-            # Calculates second derivatives of NEXT state
-            # with Timer("13"):
-            self.A = get_A(self.angle_cos)
-
-            # with Timer("14"):
-            _angleDD(self.angleD, self.angleDD, self.positionD, self.angle_cos, self.angle_sin, self.A, self.u[k, :])
-            _positionDD(self.angleD, self.positionD, self.positionDD, self.angle_cos, self.angle_sin, self.A, self.u[k, :])
-
-        # with Timer("15"):
-        _cos(self.angle, self.angle_cos)
-        _sin(self.angle, self.angle_sin)
+        (
+            self.angle, self.angleD, self.angleDD, self.position, self.positionD, self.positionDD, self.angle_cos, self.angle_sin
+        ) = next_state_numba(
+            angle=self.angle,
+            angleD=self.angleD,
+            angleDD=self.angleDD,
+            angle_cos=self.angle_cos,
+            angle_sin=self.angle_sin,
+            position=self.position,
+            positionD=self.positionD,
+            positionDD=self.positionDD,
+            u=self.u[k, :],
+            t_step=self.t_step,
+            intermediate_steps=self.intermediate_steps
+        )
+        
 
 
     def predict(self, Q: np.ndarray) -> np.ndarray:
@@ -185,17 +195,17 @@ class predictor_ideal:
         # Calculate second derivatives of initial state
         self.A = get_A(self.angle_cos)
         # with Timer("4"):
-        _angleDD(self.angleD, self.angleDD, self.positionD, self.angle_cos, self.angle_sin, self.A, self.u[0, :])
-        _positionDD(self.angleD, self.positionD, self.positionDD, self.angle_cos, self.angle_sin, self.A, self.u[0, :])
+        self.angleDD = _angleDD(self.angleD, self.positionD, self.angle_cos, self.angle_sin, self.A, self.u[0, :])
+        self.positionDD = _positionDD(self.angleD, self.positionD, self.angle_cos, self.angle_sin, self.A, self.u[0, :])
         # with Timer("5"):
-        self.output[0, :-1, :] = np.stack([self.angle, self.angleD, self.angleDD, self.position, self.positionD, self.positionDD, self.angle_cos, self.angle_sin])
+        self.write_outputs(0)
 
         for k in range(self.horizon):
             # with Timer("6"):
             # Inplace update of state
             self.next_state(k)
             # with Timer("6.2"):
-            self.output[k+1, :-1, :] = np.stack([self.angle, self.angleD, self.angleDD, self.position, self.positionD, self.positionDD, self.angle_cos, self.angle_sin])
+            self.write_outputs(k+1)
 
         # with Timer("7"):
         self.output = np.squeeze(self.output)
@@ -205,6 +215,16 @@ class predictor_ideal:
             self.output[:-1, -1, :] = np.transpose(Q_hat)
             columns = self.prediction_features_names + ['Q']
             return normalize_numpy_array(np.transpose(self.output, axes=(2,0,1)), columns, np.squeeze(self.normalization_info)[:, :-1])
+
+    def write_outputs(self, iteration):
+        self.output[iteration, ANGLE_IDX, :] = self.angle
+        self.output[iteration, ANGLED_IDX, :] = self.angleD
+        self.output[iteration, ANGLEDD_IDX, :] = self.angleDD
+        self.output[iteration, POSITION_IDX, :] = self.position
+        self.output[iteration, POSITIOND_IDX, :] = self.positionD
+        self.output[iteration, POSITIONDD_IDX, :] = self.positionDD
+        self.output[iteration, ANGLE_COS_IDX, :] = self.angle_cos
+        self.output[iteration, ANGLE_SIN_IDX, :] = self.angle_sin
 
     # @tf.function
     def update_internal_state(self, Q0):

@@ -86,38 +86,36 @@ k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, co
 s0 = create_cartpole_state()
 
 
-@jit
-def _positionDD(angleD, positionD, positionDD, ca, sa, A, u):
-    for i in range(angleD.shape[0]):
-        positionDD[i] = (
-            (
-                + m * g * sa[i] * ca[i]  # Movement of the cart due to gravity
-                + ((J_fric * angleD[i] * ca[i]) / (L))  # Movement of the cart due to pend' s friction in the joint
-                + k * (
-                    - (m * L * (angleD[i] ** 2) * sa[i])  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                    - M_fric * positionD[i]  # Braking of the cart due its friction
-                    + u[i]  # Effect of force applied to cart
-                )
-            ) / A[i]
-        )
+@jit(nopython=True, cache=True, fastmath=True)
+def _positionDD(angleD, positionD, ca, sa, A, u):
+    return (
+        (
+            + m * g * sa * ca  # Movement of the cart due to gravity
+            + ((J_fric * angleD * ca) / (L))  # Movement of the cart due to pend' s friction in the joint
+            + k * (
+                - (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                - M_fric * positionD  # Braking of the cart due its friction
+                + u  # Effect of force applied to cart
+            )
+        ) / A
+    )
 
 
-@jit
-def _angleDD(angleD, angleDD, positionD, ca, sa, A, u):
-    for i in range(angleD.shape[0]):
-        angleDD[i] = (
-            (
-                + (m + M) * (
-                    g * sa[i]  # Movement of the pole due to gravity
-                    - J_fric * angleD[i] / (L * m)  # Braking of the pole due friction in its joint
-                )
-                - m * L * (angleD[i] ** 2) * sa[i] * ca[i]  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                + ca[i] * (
-                    - M_fric * positionD[i]  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
-                    + u[i]  # Effect of force applied to cart
-                )
-            ) / (A[i] * L)
-        )
+@jit(nopython=True, cache=True, fastmath=True)
+def _angleDD(angleD, positionD, ca, sa, A, u):
+    return (
+        (
+            + (m + M) * (
+                g * sa  # Movement of the pole due to gravity
+                - J_fric * angleD / (L * m)  # Braking of the pole due friction in its joint
+            )
+            - m * L * (angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
+            + ca * (
+                - M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
+                + u  # Effect of force applied to cart
+            )
+        ) / (A * L)
+    )
 
 
 def _cartpole_ode(angle, angleD, positionD, u):
@@ -221,7 +219,7 @@ def cartpole_ode(s: np.ndarray, u: float):
     )
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def get_A(ca):
     A = k * (M + m) - m * (ca ** 2)
     return A
