@@ -2,6 +2,14 @@
 Model Predictive Path Integral Controller
 Based on Williams, Aldrich, Theodorou (2015)
 """
+
+# Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
+# On other OS you have to chose a different interactive backend.
+# from matplotlib import use
+# # # use('TkAgg')
+# use('macOSX')
+
+
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import (
     P_GLOBALS,
@@ -81,7 +89,8 @@ NOMINAL_ROLLOUT_LOGS = []
 """Cost function helpers"""
 E_kin_cart = lambda s: s[..., POSITIOND_IDX] ** 2
 E_kin_pol = lambda s: s[..., ANGLED_IDX] ** 2
-E_pot_cost = lambda s: ((1.0 - np.cos(s[..., ANGLE_IDX])) * 0.5) ** 2
+# E_pot_cost = lambda s: ((1.0 - np.cos(s[..., ANGLE_IDX])) * 0.5) ** 2
+E_pot_cost = lambda s: (s[..., ANGLE_IDX]/np.pi)**2
 distance_difference_cost = lambda s, target_position: (
     ((s[..., POSITION_IDX] - target_position) / (2 * TrackHalfLength)) ** 2
     + (abs(abs(s[..., POSITION_IDX]) - TrackHalfLength) < 0.05 * TrackHalfLength)
@@ -108,11 +117,10 @@ def trajectory_rollouts(
 
     # FIXME: The two predictors takes control input matrix transposed with respect to each other.
     #       Please make it consistent, then you can delete this "if" statement
+    predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
     if predictor_type == 'Euler':
-        predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
         s_horizon = predictor.predict(u + delta_u)
     elif predictor_type == 'NeuralNet':
-        predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
         Q = u + delta_u
         Q = Q.transpose()
         s_horizon = predictor.predict(Q)
@@ -134,7 +142,7 @@ def trajectory_rollouts(
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
     dd = 5.0e1 * distance_difference_cost(s, target_position)
-    ep = 1.0e3 * E_pot_cost(s)
+    ep = 5.0e4 * E_pot_cost(s) # Frederik had 1.0e3
     ekp = 1.0e-2 * E_kin_pol(s)
     ekc = 5.0e0 * E_kin_cart(s)
     cc = (

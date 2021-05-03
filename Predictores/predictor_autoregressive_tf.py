@@ -51,6 +51,7 @@ from CartPole.state_utilities import STATE_VARIABLES, cartpole_state_varnames_to
 
 
 NET_NAME = 'Dense-6IN-16H1-16H2-5OUT-0'
+# NET_NAME = 'GRU-6IN-16H1-16H2-5OUT-0'
 
 PATH_TO_MODELS = './Modeling/TF/Models/'
 
@@ -227,29 +228,29 @@ class predictor_autoregressive_tf:
     @horizon.setter
     def horizon(self, value):
         if self._horizon is None:
-            print('I used initialization setter!')
+            # print('I used initialization setter!')
             self._horizon = value
         else:
-            print('I used normal setter!')
+            # print('I used normal setter!')
             self._horizon = value
-            self.output_array = np.zeros([self.horizon + 1, self.batch_size, len(STATE_VARIABLES) + 1],
-                                         dtype=np.float32)
-
-            Q_type = tf.TensorSpec((self.horizon,), tf.float32)
-
-            initial_input_type = tf.TensorSpec((len(self.net_info.inputs) - 1,), tf.float32)
-
-            net_input_type = tf.TensorSpec((self.batch_size, len(self.net_info.inputs)), tf.float32)
-
-            # Retracing tensorflow functions
-            try:
-                self.evaluate_net = self.evaluate_net_f.get_concrete_function(net_input=net_input_type)
-            except:
-                self.evaluate_net = self.evaluate_net_f
-
-            try:
-                self.iterate_net = self.iterate_net_f.get_concrete_function(Q=Q_type,
-                                                                            initial_input=initial_input_type)
-                print(self.iterate_net)
-            except:
-                self.iterate_net = self.iterate_net_f
+            # self.output_array = np.zeros([self.horizon + 1, self.batch_size, len(STATE_VARIABLES) + 1],
+            #                              dtype=np.float32)
+            #
+            # Q_type = tf.TensorSpec((self.horizon,), tf.float32)
+            #
+            # initial_input_type = tf.TensorSpec((len(self.net_info.inputs) - 1,), tf.float32)
+            #
+            # net_input_type = tf.TensorSpec((self.batch_size, len(self.net_info.inputs)), tf.float32)
+            #
+            # # Retracing tensorflow functions
+            # try:
+            #     self.evaluate_net = self.evaluate_net_f.get_concrete_function(net_input=net_input_type)
+            # except:
+            #     self.evaluate_net = self.evaluate_net_f
+            #
+            # try:
+            #     self.iterate_net = self.iterate_net_f.get_concrete_function(Q=Q_type,
+            #                                                                 initial_input=initial_input_type)
+            #     print(self.iterate_net)
+            # except:
+            #     self.iterate_net = self.iterate_net_f
