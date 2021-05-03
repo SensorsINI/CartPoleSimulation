@@ -1,8 +1,13 @@
 from types import SimpleNamespace
 from typing import Union
-from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
+from CartPole.state_utilities import (
+    create_cartpole_state, cartpole_state_varname_to_index,
+    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
+)
 
+from numba import cuda, vectorize, guvectorize, float32
 import numpy as np
+import math
 from numpy.random import SFC64, Generator
 rng = Generator(SFC64(123))
 
@@ -62,26 +67,66 @@ P_GLOBALS.k = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
 
 # Export variables as global
 k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, controlBias, TrackHalfLength = (
-    P_GLOBALS.k,
-    P_GLOBALS.M,
-    P_GLOBALS.m,
-    P_GLOBALS.g,
-    P_GLOBALS.J_fric,
-    P_GLOBALS.M_fric,
-    P_GLOBALS.L,
-    P_GLOBALS.v_max,
-    P_GLOBALS.u_max,
-    P_GLOBALS.sensorNoise,
-    P_GLOBALS.controlDisturbance,
-    P_GLOBALS.controlBias,
-    P_GLOBALS.TrackHalfLength
+    float32(P_GLOBALS.k),
+    float32(P_GLOBALS.M),
+    float32(P_GLOBALS.m),
+    float32(P_GLOBALS.g),
+    float32(P_GLOBALS.J_fric),
+    float32(P_GLOBALS.M_fric),
+    float32(P_GLOBALS.L),
+    float32(P_GLOBALS.v_max),
+    float32(P_GLOBALS.u_max),
+    float32(P_GLOBALS.sensorNoise),
+    float32(P_GLOBALS.controlDisturbance),
+    float32(P_GLOBALS.controlBias),
+    float32(P_GLOBALS.TrackHalfLength)
 )
 
 # Create initial state vector
 s0 = create_cartpole_state()
 
 
-def _cartpole_ode(angle, angleD, position, positionD, u):
+# @vectorize(['float32(float32, float32, float32, float32, float32, float32)'], target='cuda')
+@cuda.jit
+def _positionDD(angleD, positionD, positionDD, ca, sa, A, u, param_m, param_k, param_g, param_M_fric, param_J_fric, param_L):
+    start = cuda.grid(1)      # 1 = one dimensional thread grid
+    stride = cuda.gridsize(1)
+    for i in range(start, angleD.shape[0], stride):
+        positionDD[i] = (
+            (
+                + param_m[0] * param_g[0] * sa[i] * ca[i]  # Movement of the cart due to gravity
+                + ((param_J_fric[0] * angleD[i] * ca[i]) / (param_L[0]))  # Movement of the cart due to pend' s friction in the joint
+                + param_k[0] * (
+                    - (param_m[0] * param_L[0] * (angleD[i] ** 2) * sa[i])  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                    - param_M_fric[0] * positionD[i]  # Braking of the cart due its friction
+                    + u[i]  # Effect of force applied to cart
+                )
+            ) / A[i]
+        )
+
+
+# @vectorize(['float32(float32, float32, float32, float32, float32, float32)'], target='cuda')
+@cuda.jit
+def _angleDD(angleD, angleDD, positionD, ca, sa, A, u, param_m, param_M, param_g, param_M_fric, param_J_fric, param_L):
+    start = cuda.grid(1)      # 1 = one dimensional thread grid
+    stride = cuda.gridsize(1)
+    for i in range(start, angleD.shape[0], stride):
+        angleDD[i] = (
+            (
+                + (param_m[0] + param_M[0]) * (
+                    param_g[0] * sa[i]  # Movement of the pole due to gravity
+                    - param_J_fric[0] * angleD[i] / (param_L[0] * param_m[0])  # Braking of the pole due friction in its joint
+                )
+                - param_m[0] * param_L[0] * (angleD[i] ** 2) * sa[i] * ca[i]  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                + ca[i] * (
+                    - param_M_fric[0] * positionD[i]  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
+                    + u[i]  # Effect of force applied to cart
+                )
+            ) / (A[i] * param_L[0])
+        )
+
+# @guvectorize([(float32[:], float32[:], float32[:], float32[:], float32[:], float32[:])], '(n),(n),(n),(n)->(n),(n)', nopython=True)
+def _cartpole_ode(angle, angleD, positionD, u):
     """
     Calculates current values of second derivative of angle and position
     from current value of angle and position, and their first derivatives
@@ -106,10 +151,12 @@ def _cartpole_ode(angle, angleD, position, positionD, u):
             (
                 + m * g * sa * ca  # Movement of the cart due to gravity
                 + ((J_fric * angleD * ca) / (L))  # Movement of the cart due to pend' s friction in the joint
-                - k * (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                - k * M_fric * positionD  # Braking of the cart due its friction
+                + k * (
+                    - (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                    - M_fric * positionD  # Braking of the cart due its friction
+                    + u  # Effect of force applied to cart
+                )
             ) / A
-            + (k / A) * u  # Effect of force applied to cart
         )
 
         # Making m go to 0 and setting J_fric=0 (fine for pole without mass)
@@ -121,12 +168,16 @@ def _cartpole_ode(angle, angleD, position, positionD, u):
 
         angleDD = (
             (
-                + g * (m + M) * sa  # Movement of the pole due to gravity
-                - ((J_fric * (m + M) * angleD) / (L * m))  # Braking of the pole due friction in its joint
+                + (m + M) * (
+                    g * sa  # Movement of the pole due to gravity
+                    - J_fric * angleD / (L * m)  # Braking of the pole due friction in its joint
+                )
                 - m * L * (angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                - ca * M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
-            ) / (A * L) 
-            + (ca / (A * L)) * u  # Effect of force applied to cart
+                + ca * (
+                    - M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
+                    + u  # Effect of force applied to cart
+                )
+            ) / (A * L)
         )
 
         # making M go to infinity makes angleDD = (g/k*L)sin(angle) - angleD*J_fric/(k*m*L^2)
@@ -165,16 +216,24 @@ def _cartpole_ode(angle, angleD, position, positionD, u):
 
 def cartpole_ode_namespace(s: SimpleNamespace, u: float):
     return _cartpole_ode(
-        s.angle, s.angleD, s.position, s.positionD, u
+        s.angle, s.angleD, s.positionD, u
     )
 
 
 def cartpole_ode(s: np.ndarray, u: float):
     return _cartpole_ode(
         s[..., cartpole_state_varname_to_index('angle')], s[..., cartpole_state_varname_to_index('angleD')],
-        s[..., cartpole_state_varname_to_index('position')], s[..., cartpole_state_varname_to_index('positionD')],
-        u
+        s[..., cartpole_state_varname_to_index('positionD')], u
     )
+
+
+# @vectorize(['float32(float32)'], target='cuda')
+@cuda.jit
+def get_A(ca, A, param_k, param_M, param_m):
+    start = cuda.grid(1)      # 1 = one dimensional thread grid
+    stride = cuda.gridsize(1)
+    for i in range(start, ca.shape[0], stride):
+        A[i] = param_k[0] * (param_M[0] + param_m[0]) - param_m[0] * (ca[i] ** 2)
 
 
 def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
@@ -292,7 +351,7 @@ def Q2u(Q):
     In future there might be implemented here a more sophisticated model of a motor driving CartPole
     """
     u = u_max * (
-        Q + controlDisturbance *  rng.standard_normal(size=np.shape(Q), dtype=np.float32) + P_GLOBALS.controlBias
+        Q + controlDisturbance * rng.standard_normal(size=np.shape(Q), dtype=np.float32) + P_GLOBALS.controlBias
     )  # Q is drive -1:1 range, add noise on control
 
     return u
