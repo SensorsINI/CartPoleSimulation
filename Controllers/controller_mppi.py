@@ -53,8 +53,8 @@ mpc_horizon = 0.8
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 mc_samples = int(2e3)  # Number of Monte Carlo samples
 update_every = 1  # Cost weighted update of inputs every ... steps
-predictor_type = 'Euler'
-# predictor_type = 'NeuralNet'
+# predictor_type = 'Euler'
+predictor_type = 'NeuralNet'
 
 
 """Define indices of values in state statically"""
@@ -76,7 +76,8 @@ rng = Generator(SFC64(123))
 
 
 """Init logging variables"""
-LOGGING = False
+LOGGING = True
+# LOGGING = False
 # Save average cost for each cost component
 COST_TO_GO_LOGS = []
 COST_BREAKDOWN_LOGS = []
@@ -115,15 +116,8 @@ def trajectory_rollouts(
     s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size), dtype=np.float32)
     s_horizon[:, 0, :] = np.tile(s, (mc_samples, 1))
 
-    # FIXME: The two predictors takes control input matrix transposed with respect to each other.
-    #       Please make it consistent, then you can delete this "if" statement
     predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
-    if predictor_type == 'Euler':
-        s_horizon = predictor.predict(u + delta_u)
-    elif predictor_type == 'NeuralNet':
-        Q = u + delta_u
-        Q = Q.transpose()
-        s_horizon = predictor.predict(Q)
+    s_horizon = predictor.predict(u + delta_u)
 
     cost_increment, dd, ep, ekp, ekc, cc = q(
         s_horizon[:, 1:, :], u, delta_u, target_position
@@ -261,13 +255,13 @@ class controller_mppi(template_controller):
                 STATE_LOGS.append(s_horizon[:, :, [POSITION_IDX, ANGLE_IDX]])
                 INPUT_LOGS.append(self.u)
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
-                predictor.setup(initial_state=self.s, prediction_denorm=True)
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
-                # FIXME: Delete this "if" as soon as the predictors accept control input of the same form
                 if predictor_type == 'Euler':
+                    predictor.setup(initial_state=self.s, prediction_denorm=True)
                     rollout_trajectory = predictor.predict(self.u)
                 elif predictor_type == 'NeuralNet':
-                    rollout_trajectory = predictor.predict(self.u.transpose())
+                    # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
+                    rollout_trajectory = predictor.predict(np.tile(self.u, (mc_samples, 1)))[0, ...]
                 NOMINAL_ROLLOUT_LOGS.append(
                     rollout_trajectory[:-1, [POSITION_IDX, ANGLE_IDX]]
                 )
@@ -283,8 +277,6 @@ class controller_mppi(template_controller):
         self.u[-1] = self.u[-1]
 
         # Prepare predictor for next timestep
-        # FIXME: This commented line is probably not longer needed. Check and delete.
-        # predictor.update_internal_state(Q)
         Q_update = np.tile(Q, (mc_samples, 1))
         predictor.update_internal_state(Q_update)
 

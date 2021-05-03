@@ -49,10 +49,10 @@ def get_data_for_gui_TF(a, dataset, net_name):
 
     Q = dataset['Q'].to_numpy()
     Q_array = [Q[i:-a.test_max_horizon+i] for i in range(a.test_max_horizon)]
-    Q_array = np.vstack(Q_array)
+    Q_array = np.vstack(Q_array).transpose()
 
-    mode = 'batch'
-    # mode = 'sequential'
+    # mode = 'batch'
+    mode = 'sequential'
     if mode == 'batch':
         # All at once
         predictor = predictor_autoregressive_tf(horizon=a.test_max_horizon, batch_size=a.test_len, net_name=net_name)
@@ -64,11 +64,11 @@ def get_data_for_gui_TF(a, dataset, net_name):
         # Iteratively (to test internal state update)
         output_array = np.zeros([a.test_len, a.test_max_horizon + 1, len(STATE_VARIABLES) + 1], dtype=np.float32)
         for timestep in trange(a.test_len):
-            Q_current_timestep = Q_array[:, timestep, np.newaxis]
+            Q_current_timestep = Q_array[np.newaxis, timestep, :]
             s_current_timestep = states_0[timestep, np.newaxis]
             predictor.setup(initial_state=s_current_timestep, prediction_denorm=True)
             output_array[timestep,:,:] = predictor.predict(Q_current_timestep)
-            predictor.update_internal_state(Q_current_timestep[0])
+            predictor.update_internal_state(Q_current_timestep[0, 0])
 
     output_array = output_array[..., list(cartpole_state_varnames_to_indices(a.features))+[-1]]
 

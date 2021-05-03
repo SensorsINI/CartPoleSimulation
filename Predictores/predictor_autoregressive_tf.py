@@ -83,7 +83,7 @@ class predictor_autoregressive_tf:
 
         self.prediction_denorm = None # Set to True or False in setup, determines if output should be denormalized
 
-        self.output_array = np.zeros([self.horizon+1, self.batch_size, len(STATE_VARIABLES)+1], dtype=np.float32)
+        self.output_array = np.zeros([self.batch_size, self.horizon+1, len(STATE_VARIABLES)+1], dtype=np.float32)
         Q_type = tf.TensorSpec((self.horizon,), tf.float32)
 
         initial_input_type = tf.TensorSpec((len(self.net_info.inputs)-1,), tf.float32)
@@ -109,7 +109,7 @@ class predictor_autoregressive_tf:
 
     def setup(self, initial_state: np.array, prediction_denorm=True):
 
-        self.output_array[0, ..., :-1] = initial_state
+        self.output_array[..., 0, :-1] = initial_state
 
         initial_input_net_without_Q = initial_state[..., cartpole_state_varnames_to_indices(self.net_info.inputs[1:])]
         self.net_initial_input_without_Q = normalize_numpy_array(initial_input_net_without_Q, self.net_info.inputs[1:], self.normalization_info)
@@ -117,7 +117,7 @@ class predictor_autoregressive_tf:
         # [1:] excludes Q which is not included in initial_state_normed
         # As the only feature written with big Q it should be first on each list.
         self.net_initial_input_without_Q_TF = tf.convert_to_tensor(self.net_initial_input_without_Q, tf.float32)
-
+        self.net_initial_input_without_Q_TF = tf.reshape(self.net_initial_input_without_Q_TF, [-1, len(self.net_info.inputs[1:])])
         if prediction_denorm:
             self.prediction_denorm=True
         else:
@@ -129,7 +129,7 @@ class predictor_autoregressive_tf:
         # print('Prediction started')
         # load internal RNN state
 
-        self.output_array[:-1, ..., -1] = Q
+        self.output_array[..., :-1, -1] = Q
 
         load_internal_states(self.net, self.rnn_internal_states)
         # t0 = timeit.default_timer()
@@ -140,10 +140,10 @@ class predictor_autoregressive_tf:
         # compose the pandas output DF
         # Later: if necessary add sin, cos, derivatives
         # First version let us assume net returns all state except for angle
-        net_outputs = net_outputs.numpy()
 
         # Denormalize
-        self.output_array[1:,..., cartpole_state_varnames_to_indices(self.net_info.outputs)] = denormalize_numpy_array(net_outputs, self.net_info.outputs, self.normalization_info)
+        self.output_array[..., 1:, cartpole_state_varnames_to_indices(self.net_info.outputs)] = \
+            denormalize_numpy_array(net_outputs.numpy(), self.net_info.outputs, self.normalization_info)
 
         # Augment
         if 'angle' not in self.net_info.outputs:
@@ -158,7 +158,7 @@ class predictor_autoregressive_tf:
             self.output_array[..., cartpole_state_varname_to_index('angle_cos')] =\
                 np.sin(self.output_array[..., cartpole_state_varname_to_index('angle')])
 
-        return self.output_array.transpose((1, 0, 2))
+        return self.output_array
 
     # @tf.function
     def update_internal_state(self, Q0):
@@ -167,7 +167,7 @@ class predictor_autoregressive_tf:
 
         # Run current input through network
         Q0 = tf.squeeze(tf.convert_to_tensor(Q0, dtype=tf.float32))
-        Q0 = (tf.reshape(Q0, [-1, 1]))
+        Q0 = tf.reshape(Q0, [-1, 1])
         if self.net_info.net_type == 'Dense':
             net_input = tf.concat([Q0, self.net_initial_input_without_Q_TF], axis=1)
         else:
@@ -190,7 +190,7 @@ class predictor_autoregressive_tf:
 
         # net_inout = net_inout.write(0, tf.reshape(initial_input, [1, len(initial_input)]))
         for i in tf.range(0, self.horizon):
-            Q_current = Q[i]
+            Q_current = Q[..., i]
             Q_current = (tf.reshape(Q_current, [-1, 1]))
             if i == 0:
                 if self.net_info.net_type == 'Dense':
@@ -212,7 +212,7 @@ class predictor_autoregressive_tf:
             net_outputs = net_outputs.write(i, net_output)
             # tf.print(net_inout.read(i+1))
         # print(net_inout)
-        net_outputs = net_outputs.stack()
+        net_outputs = tf.transpose(net_outputs.stack(), perm=[1, 0, 2])
         return net_outputs
 
     @tf.function
