@@ -55,7 +55,7 @@ rng = Generator(SFC64(123))
 
 
 """Init logging variables"""
-LOGGING = True
+LOGGING = False
 # Save average cost for each cost component
 COST_TO_GO_LOGS = []
 COST_BREAKDOWN_LOGS = []
