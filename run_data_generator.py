@@ -1,9 +1,11 @@
 from CartPole import CartPole
 from CartPole.cartpole_model import create_cartpole_state, TrackHalfLength, P_GLOBALS
-from CartPole.state_utilities import cartpole_state_varname_to_index
+from CartPole.state_utilities import cartpole_state_varname_to_index, cartpole_state_varnames_to_indices
 
 from time import sleep
 import timeit
+import cProfile
+from pstats import Stats, SortKey
 
 import numpy as np
 # Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
@@ -26,7 +28,7 @@ dt_controller_update_DataGen = 0.02
 dt_save_DataGen = 0.1
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
-length_of_experiment_DataGen = 8.0  # Length of each experiment in s
+length_of_experiment_DataGen = 1.0  # Length of each experiment in s
 controller_DataGen = 'mppi'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'lqr'
@@ -46,7 +48,7 @@ turning_points_DataGen = None
 # [position, positionD, angle, angleD]
 # initial_state = [None, None, None, None]
 # initial_state = [0.5 * TrackHalfLength, 0, 180.0 * (np.pi / 180.0), 0]
-initial_state = [- 0.2 * TrackHalfLength, 0.0, -180.0 * (np.pi / 180.0), 0.0]
+initial_state = [- 0.2 * TrackHalfLength, 0.0, 45.0 * (np.pi / 180.0), 0.0]
 initial_state_DataGen = create_cartpole_state()
 
 # Set the max for smoothly interpolated random target position to avoid bumping into track ends.
@@ -83,6 +85,12 @@ for i in range(number_of_experiments):
     else:
         initial_state_DataGen[cartpole_state_varname_to_index('angleD')] = initial_state[3]
 
+    # Add cos/sin values
+    initial_state_DataGen[cartpole_state_varnames_to_indices(['angle_cos', 'angle_sin'])] = [
+        np.cos(initial_state_DataGen[cartpole_state_varname_to_index('angle')]),
+        np.sin(initial_state_DataGen[cartpole_state_varname_to_index('angle')])
+    ]
+
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
     # You may also specify some of the variables from above here, to make them change at each iteration.#
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -113,6 +121,17 @@ for i in range(number_of_experiments):
         used_track_fraction=used_track_fraction,
     )
     gen_start = timeit.default_timer()
+    # with cProfile.Profile() as pr:
+    #     CartPoleInstance.run_cartpole_random_experiment(
+    #         csv=csv,
+    #         save_mode=save_mode
+    #     )
+    # with open('profiling_stats.txt', 'w') as stream:
+    #     stats = Stats(pr, stream=stream)
+    #     stats.strip_dirs()
+    #     stats.sort_stats('time')
+    #     stats.dump_stats('.prof_stats')
+    #     stats.print_stats()
     CartPoleInstance.run_cartpole_random_experiment(
         csv=csv,
         save_mode=save_mode
