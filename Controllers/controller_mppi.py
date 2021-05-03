@@ -23,6 +23,7 @@ from others.globals_and_utils import Timer
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 
+from numba import jit
 import numpy as np
 from numpy.random import SFC64, Generator
 
@@ -54,7 +55,7 @@ rng = Generator(SFC64(123))
 
 
 """Init logging variables"""
-LOGGING = False
+LOGGING = True
 # Save average cost for each cost component
 COST_TO_GO_LOGS = []
 COST_BREAKDOWN_LOGS = []
@@ -65,14 +66,36 @@ NOMINAL_ROLLOUT_LOGS = []
 
 
 """Cost function helpers"""
-E_kin_cart = lambda s: s[..., POSITIOND_IDX] ** 2
-E_kin_pol = lambda s: s[..., ANGLED_IDX] ** 2
-E_pot_cost = lambda s: ((1.0 - np.cos(s[..., ANGLE_IDX])) * 0.5) ** 2
-distance_difference_cost = lambda s, target_position: (
-    ((s[..., POSITION_IDX] - target_position) / (2 * TrackHalfLength)) ** 2
-    + (abs(abs(s[..., POSITION_IDX]) - TrackHalfLength) < 0.05 * TrackHalfLength)
-    * 1.0e3
-)
+@jit(nopython=True, cache=True, fastmath=True)
+def E_kin_cart(positionD): return positionD ** 2
+
+
+@jit(nopython=True, cache=True, fastmath=True)
+def E_kin_pol(angleD): return angleD ** 2
+
+
+@jit(nopython=True, cache=True, fastmath=True)
+def E_pot_cost(angle):
+    return ((1.0 - np.cos(angle)) * 0.5) ** 2
+
+
+@jit(nopython=True, cache=True, fastmath=True)
+def distance_difference_cost(position, target_position):
+    return (
+        ((position - target_position) / (2 * TrackHalfLength)) ** 2
+        + (np.abs(np.abs(position) - TrackHalfLength) < 0.05 * TrackHalfLength) * 1.0e3
+    )
+
+
+@jit(nopython=True, cache=True, fastmath=True)
+def penalize_deviation(cc, u):
+    # Penalize if control deviation is outside constraint set.
+    I, J = cc.shape
+    for i in range(I):
+        for j in range(J):
+            if np.abs(u[i, j]) > 1.0: cc[i, j] = 1.0e5
+    # cc[np.abs(u) > 1.0] = 1.0e5
+    return cc
 
 
 """Define Predictor"""
@@ -98,25 +121,25 @@ def trajectory_rollouts(
     S_tilde_k = np.sum(cost_increment, axis=1)
 
     if LOGGING:
-        cost_logs_internal = np.stack(
-            [dd, ep, ekp, ekc, cc], axis=1
-        )  # (mc_samples x 5 x mpc_samples)
-
+        cost_logs_internal = np.swapaxes(np.array([dd, ep, ekp, ekc, cc]), 0, 1)
+        # (mc_samples x 5 x mpc_samples)
         return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
     return S_tilde_k, None, None
 
 
+# @jit(nopython=True, cache=True, fastmath=True)
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
-    dd = 5.0e1 * distance_difference_cost(s, target_position)
-    ep = 1.0e3 * E_pot_cost(s)
-    ekp = 1.0e-2 * E_kin_pol(s)
-    ekc = 5.0e0 * E_kin_cart(s)
+    dd = 5.0e1 * distance_difference_cost(s[:, :, POSITION_IDX], target_position)
+    ep = 1.0e3 * E_pot_cost(s[:, :, ANGLE_IDX])
+    ekp = 1.0e-2 * E_kin_pol(s[:, :, ANGLED_IDX])
+    ekc = 5.0e0 * E_kin_cart(s[:, :, POSITIOND_IDX])
     cc = (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
 
     # Penalize if control deviation is outside constraint set.
+    # cc = penalize_deviation(cc, u + delta_u)
     cc[np.abs(u + delta_u) > 1.0] = 1.0e5
 
     q = dd + ep + ekp + ekc + cc
@@ -124,6 +147,7 @@ def q(s, u, delta_u, target_position):
     return q, dd, ep, ekp, ekc, cc
 
 
+@jit(nopython=True, cache=True, fastmath=True)
 def reward_weighted_average(S, delta_u):
     """Average the perturbations delta_u based on their desirability"""
     rho = np.min(S)  # for numerical stability
@@ -133,6 +157,7 @@ def reward_weighted_average(S, delta_u):
     return b
 
 
+@jit(nopython=True, cache=True, fastmath=True)
 def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
     """
     :param u: Sampling mean / warm started control inputs of size (,mpc_samples)

@@ -77,28 +77,20 @@ def euler_step(state, stateD, t_step):
 def next_state_numba(angle, angleD, angleDD, angle_cos, angle_sin, position, positionD, positionDD, u, t_step, intermediate_steps):
     for _ in range(intermediate_steps):
         # Calculate NEXT state:
-        # with Timer("8"):
         angle = euler_step(angle, angleD, t_step)
-        # with Timer("9"):
         angleD = euler_step(angleD, angleDD, t_step)
-        # with Timer("10"):
         position = euler_step(position, positionD, t_step)
-        # with Timer("11"):
         positionD = euler_step(positionD, positionDD, t_step)
         
         # Simulate bouncing off edges (does not consider cart dimensions)
-        # with Timer("12"):
         positionD = edge_bounce(position, positionD)
 
         # Calculates second derivatives of NEXT state
-        # with Timer("13"):
         A = get_A(angle_cos)
 
-        # with Timer("14"):
         angleDD = _angleDD(angleD, positionD, angle_cos, angle_sin, A, u)
         positionDD = _positionDD(angleD, positionD, angle_cos, angle_sin, A, u)
 
-    # with Timer("15"):
     angle_cos = np.cos(angle)
     angle_sin = np.sin(angle)
 
@@ -179,36 +171,27 @@ class predictor_ideal:
 
 
     def predict(self, Q: np.ndarray) -> np.ndarray:
-        
-        # with Timer("1"):
         # Shape of Q: (batch size x horizon length)
         if np.size(Q, -1) != self.horizon:
             raise IndexError('Number of provided control inputs does not match the horizon')
         else:
             Q_hat = np.atleast_1d(np.asarray(Q).squeeze())
         
-        # with Timer("2"):
         # shape(u) = horizon_steps x batch_size
         self.u = Q2u(Q_hat.T)
+        if self.u.ndim == 1: self.u = self.u[:, np.newaxis]
 
-        # with Timer("3"):
         # Calculate second derivatives of initial state
         self.A = get_A(self.angle_cos)
-        # with Timer("4"):
         self.angleDD = _angleDD(self.angleD, self.positionD, self.angle_cos, self.angle_sin, self.A, self.u[0, :])
         self.positionDD = _positionDD(self.angleD, self.positionD, self.angle_cos, self.angle_sin, self.A, self.u[0, :])
-        # with Timer("5"):
         self.write_outputs(0)
 
         for k in range(self.horizon):
-            # with Timer("6"):
-            # Inplace update of state
+            # State update
             self.next_state(k)
-            # with Timer("6.2"):
             self.write_outputs(k+1)
 
-        # with Timer("7"):
-        self.output = np.squeeze(self.output)
         if self.prediction_denorm:
             return np.transpose(self.output[:, :-1, :], axes=(2,0,1))
         else:
