@@ -28,7 +28,7 @@ dt_controller_update_DataGen = 0.02
 dt_save_DataGen = 0.02
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
-length_of_experiment_DataGen = 1.0  # Length of each experiment in s
+length_of_experiment_DataGen = 10.0  # Length of each experiment in s
 controller_DataGen = 'mppi'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'lqr'

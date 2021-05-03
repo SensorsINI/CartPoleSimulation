@@ -10,12 +10,12 @@ Created on Fri Jun 19 08:29:29 2020
 import argparse
 import glob
 
-net_name = 'Dense-16H1-16H2-32H2'
+net_name = 'Dense-16H1-16H2'
 
 # Path to trained models and their logs
 PATH_TO_MODELS = './Modeling/TF/Models/'
 
-PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'Dataset-1-norm.csv'
+PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'NI_2021-05-03_17-23-23.csv'
 
 # The following paths to dictionaries may be replaced by the list of paths to data files.
 TRAINING_FILES = './ExperimentRecordings/Dataset-1/Train/'
