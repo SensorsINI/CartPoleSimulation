@@ -3,26 +3,14 @@ Model Predictive Path Integral Controller
 Based on Williams, Aldrich, Theodorou (2015)
 """
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import (
-    P_GLOBALS,
-    Q2u,
-    _cartpole_ode,
-    k,
-    M,
-    m,
-    g,
-    J_fric,
-    M_fric,
-    L,
-    v_max,
-    u_max,
-    controlBias,
-    controlDisturbance,
-    TrackHalfLength,
-)
+from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import (
     create_cartpole_state,
     cartpole_state_varname_to_index,
+    ANGLE_IDX,
+    ANGLED_IDX,
+    POSITION_IDX,
+    POSITIOND_IDX,
 )
 
 from CartPole._CartPole_mathematical_helpers import (
@@ -30,13 +18,14 @@ from CartPole._CartPole_mathematical_helpers import (
     wrap_angle_rad_inplace,
 )
 from Predictores.predictor_ideal import predictor_ideal
+from others.globals_and_utils import Timer
 
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
+
+from numba import cuda
 import numpy as np
 from numpy.random import SFC64, Generator
-
-from copy import deepcopy
 
 
 """Timestep and sampling settings"""
@@ -158,8 +147,6 @@ class controller_mppi(template_controller):
     def __init__(self):
         # State of the cart
         self.s = create_cartpole_state()
-
-        np.random.seed(123)
 
         self.target_position = 0.0
 
