@@ -2,6 +2,14 @@
 Model Predictive Path Integral Controller
 Based on Williams, Aldrich, Theodorou (2015)
 """
+
+# Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
+# On other OS you have to chose a different interactive backend.
+# from matplotlib import use
+# # # use('TkAgg')
+# use('macOSX')
+
+
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import (
@@ -17,7 +25,7 @@ from CartPole._CartPole_mathematical_helpers import (
     conditional_decorator,
     wrap_angle_rad_inplace,
 )
-from Predictores.predictor_ideal import predictor_ideal
+
 from others.globals_and_utils import Timer
 
 import matplotlib.pyplot as plt
@@ -27,13 +35,17 @@ from numba import jit
 import numpy as np
 from numpy.random import SFC64, Generator
 
+from Predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
+from Predictores.predictor_ideal import predictor_ideal
 
 """Timestep and sampling settings"""
 dt = 0.02  # s
-mpc_horizon = 1.0
+mpc_horizon = 0.8
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 mc_samples = int(2e3)  # Number of Monte Carlo samples
 update_every = 1  # Cost weighted update of inputs every ... steps
+# predictor_type = 'Euler'
+predictor_type = 'NeuralNet'
 
 
 """Define indices of values in state statically"""
@@ -55,7 +67,8 @@ rng = Generator(SFC64(123))
 
 
 """Init logging variables"""
-LOGGING = False
+LOGGING = True
+# LOGGING = False
 # Save average cost for each cost component
 COST_TO_GO_LOGS = []
 COST_BREAKDOWN_LOGS = []
@@ -99,7 +112,10 @@ def penalize_deviation(cc, u):
 
 
 """Define Predictor"""
-predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
+if predictor_type == 'Euler':
+    predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
+elif predictor_type == 'NeuralNet':
+    predictor = predictor_autoregressive_tf(horizon=mpc_samples, batch_size=mc_samples)
 
 
 def trajectory_rollouts(
@@ -223,6 +239,8 @@ class controller_mppi(template_controller):
         self.iteration += 1
 
         # Adjust horizon if changed in GUI while running
+        # FIXME: For this to work with NeuralNet predictor we need to build a setter,
+        #  which also reinitialize arrays which size depends on horizon
         predictor.horizon = mpc_samples
         if mpc_samples != self.u.size:
             self.update_control_vector()
@@ -249,9 +267,13 @@ class controller_mppi(template_controller):
                 STATE_LOGS.append(s_horizon[:, :, [POSITION_IDX, ANGLE_IDX]])
                 INPUT_LOGS.append(self.u)
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
-                predictor.setup(initial_state=self.s, prediction_denorm=True)
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
-                rollout_trajectory = predictor.predict(self.u)
+                if predictor_type == 'Euler':
+                    predictor.setup(initial_state=self.s, prediction_denorm=True)
+                    rollout_trajectory = predictor.predict(self.u)
+                elif predictor_type == 'NeuralNet':
+                    # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
+                    rollout_trajectory = predictor.predict(np.tile(self.u, (mc_samples, 1)))[0, ...]
                 NOMINAL_ROLLOUT_LOGS.append(
                     rollout_trajectory[:-1, [POSITION_IDX, ANGLE_IDX]]
                 )
@@ -267,7 +289,8 @@ class controller_mppi(template_controller):
         self.u[-1] = self.u[-1]
 
         # Prepare predictor for next timestep
-        predictor.update_internal_state(Q)
+        Q_update = np.tile(Q, (mc_samples, 1))
+        predictor.update_internal_state(Q_update)
 
         return Q  # normed control input in the range [-1,1]
 
@@ -454,6 +477,7 @@ class controller_mppi(template_controller):
     # but only if the controller is supposed to be reused without reloading (e.g. in GUI)
     def controller_reset(self):
         try:
+            # TODO: Not sure if this works for predictor autoregressive tf
             predictor.net.reset_states()
         except:
             pass

@@ -717,8 +717,10 @@ class CartPole:
                 break
                 print('Cart went out of safety boundaries')
 
-            # if abs(CartPoleInstance.s[cartpole_state_varname_to_index('angle')]) > 0.8*np.pi:
-            #     raise ValueError('Cart went unstable')
+            # if abs(self.s[cartpole_state_varname_to_index('angle')]) > 0.8*np.pi:
+            #     # raise ValueError('Cart went unstable')
+            #     print('Cart went unstable')
+            #     break
 
             if save_mode == 'online' and self.save_flag:
                 self.save_history_csv(csv_name=csv, mode='save online')
@@ -817,7 +819,7 @@ class CartPole:
             # You can change here with which initial parameters you wish to start the simulation
             self.s[cartpole_state_varname_to_index('position')] = 0.0
             self.s[cartpole_state_varname_to_index('positionD')] = 0.0
-            self.s[cartpole_state_varname_to_index('angle')] = (2.0 * np.random.normal() - 1.0) * np.pi / 180.0  # np.pi/2.0 #
+            self.s[cartpole_state_varname_to_index('angle')] = (1.0 * np.random.normal() - 1.0) * np.pi / 180.0  # np.pi/2.0 #
             self.s[cartpole_state_varname_to_index('angleD')] = 0.0  # 1.0
 
             if self.controller_name == 'manual-stabilization':

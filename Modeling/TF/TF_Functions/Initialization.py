@@ -175,7 +175,7 @@ def get_net_and_norm_info(a,
             # Load the pretrained weights
             load_pretrained_net_weights(net, ckpt_path)
 
-            net_info.wash_out_len = a.wash_out_len
+            # net_info.wash_out_len = a.wash_out_len
 
             # endregion
             print('Model loaded from a checkpoint.')
@@ -241,7 +241,10 @@ def get_net_and_norm_info(a,
     # endregion
 
     # region Save wash-out length to net_info
-    net_info.wash_out_len = a.wash_out_len
+    try:
+        net_info.wash_out_len = a.wash_out_len
+    except AttributeError:
+        print('Wash out not defined.')
     # endregion
 
     return net, net_info, normalization_info

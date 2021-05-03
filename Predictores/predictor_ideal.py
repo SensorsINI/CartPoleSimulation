@@ -118,6 +118,8 @@ class predictor_ideal:
 
         self.prediction_denorm = False
 
+        self.output = None
+
 
     def setup(self, initial_state: np.ndarray, prediction_denorm=False):
 
@@ -209,6 +211,5 @@ class predictor_ideal:
         self.output[iteration, ANGLE_COS_IDX, :] = self.angle_cos
         self.output[iteration, ANGLE_SIN_IDX, :] = self.angle_sin
 
-    # @tf.function
     def update_internal_state(self, Q0):
         pass
