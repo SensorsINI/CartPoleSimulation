@@ -59,7 +59,7 @@ PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'Dataset-1-norm.c
 
 @jit(nopython=True, cache=True, fastmath=True)
 def edge_bounce(position, positionD):
-    for i in range(position.shape[0]):
+    for i in range(position.size):
         if abs(position[i]) > TrackHalfLength: positionD[i] = -positionD[i]
     return positionD
 
@@ -95,8 +95,7 @@ class predictor_ideal:
             self.normalization_info = load_normalization_info(PATH_TO_NORMALIZATION_INFO)
         except FileNotFoundError:
             print('Normalization info not provided.')
-        # State of the cart
-        self.s = create_cartpole_state()  # s like state
+        
         self.batch_size = 1
 
         self.target_position = 0.0
@@ -107,7 +106,7 @@ class predictor_ideal:
         self.intermediate_steps = 1
         self.t_step = dt / float(self.intermediate_steps)
 
-        self.prediction_features_names = cartpole_state_indices_to_varnames(range(len(self.s)))
+        self.prediction_features_names = STATE_VARIABLES.tolist()
 
         self.prediction_denorm = False
         self.batch_mode = False
@@ -119,26 +118,22 @@ class predictor_ideal:
 
         # The initial state is provided with not valid second derivatives
         # Batch_size > 1 allows to feed several states at once and obtain predictions parallely
+        # Shape of state: (batch size x state variables)
 
-        self.s = initial_state
-        # self.s = np.transpose(deepcopy(self.s))
-        # Shape of state: (state variables x batch size)
-        if self.s.ndim == 1:
-            self.s = self.s[np.newaxis, :]
-            self.batch_mode = False
-        else: self.batch_mode = True
+        self.batch_size = np.size(initial_state, 0) if initial_state.ndim > 1 else 1
+        self.batch_mode = not (self.batch_size == 1)
 
-        self.batch_size = np.size(self.s, 0) if self.s.ndim > 1 else 1
+        if not self.batch_mode: initial_state = np.expand_dims(initial_state, 0)
 
         self.angle, self.angleD, self.angleDD, self.position, self.positionD, self.positionDD, self.angle_cos, self.angle_sin = (
-            self.s[:, ANGLE_IDX],
-            self.s[:, ANGLED_IDX],
-            self.s[:, ANGLEDD_IDX],
-            self.s[:, POSITION_IDX],
-            self.s[:, POSITIOND_IDX],
-            self.s[:, POSITIONDD_IDX],
-            self.s[:, ANGLE_COS_IDX],
-            self.s[:, ANGLE_SIN_IDX],
+            initial_state[:, ANGLE_IDX],
+            initial_state[:, ANGLED_IDX],
+            initial_state[:, ANGLEDD_IDX],
+            initial_state[:, POSITION_IDX],
+            initial_state[:, POSITIOND_IDX],
+            initial_state[:, POSITIONDD_IDX],
+            initial_state[:, ANGLE_COS_IDX],
+            initial_state[:, ANGLE_SIN_IDX],
         )
 
         self.prediction_denorm = prediction_denorm
@@ -179,7 +174,7 @@ class predictor_ideal:
 
         # shape(u) = horizon_steps x batch_size
         self.u = Q2u(Q_hat)
-        if self.u.ndim == 1: self.u = self.u[np.newaxis, :]
+        if self.u.ndim == 1: self.u = np.expand_dims(self.u, 0)
 
         # Calculate second derivatives of initial state
         self.A = get_A(self.angle_cos)
@@ -198,7 +193,7 @@ class predictor_ideal:
         if self.prediction_denorm:
             return self.output[:, :, :-1] if self.batch_mode else np.squeeze(self.output[:, :, :-1])
         else:
-            self.output[:, :-1, -1] = np.transpose(Q_hat)
+            self.output[:, :-1, -1] = Q_hat
             columns = self.prediction_features_names + ['Q']
             out_array = self.output if self.batch_mode else np.squeeze(self.output)
             return normalize_numpy_array(out_array, columns, np.squeeze(self.normalization_info)[:, :-1])
