@@ -89,7 +89,7 @@ def E_kin_pol(angleD): return angleD ** 2
 
 @jit(nopython=True, cache=True, fastmath=True)
 def E_pot_cost(angle):
-    return ((1.0 - np.cos(angle)) * 0.5) ** 2
+    return (angle / np.pi) ** 2
 
 
 @jit(nopython=True, cache=True, fastmath=True)
