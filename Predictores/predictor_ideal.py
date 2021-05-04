@@ -117,6 +117,7 @@ class predictor_ideal:
         self.prediction_features_names = cartpole_state_indices_to_varnames(range(len(self.s)))
 
         self.prediction_denorm = False
+        self.batch_mode = False
 
         self.output = None
 
@@ -128,7 +129,11 @@ class predictor_ideal:
 
         initial_state = np.transpose(initial_state)
         # Shape of state: (state variables x batch size)
-        if initial_state.ndim == 1: initial_state = initial_state[:, np.newaxis]
+        if initial_state.ndim == 1:
+            initial_state = initial_state[:, np.newaxis]
+            self.batch_mode = False
+        else: self.batch_mode = True
+
         self.s = initial_state
         self.batch_size = np.size(self.s, 1) if self.s.ndim > 1 else 1
 
@@ -194,12 +199,15 @@ class predictor_ideal:
             self.next_state(k)
             self.write_outputs(k+1)
 
+        out_array = np.transpose(self.output, axes=(2,0,1))
+        # if not self.batch_mode: self.output = np.squeeze(self.output)
         if self.prediction_denorm:
-            return np.transpose(self.output[:, :-1, :], axes=(2,0,1))
+            return out_array[:, :, :-1] if self.batch_mode else np.squeeze(out_array[:, :, :-1])
         else:
-            self.output[:-1, -1, :] = np.transpose(Q_hat)
+            out_array[:, :-1, -1] = np.transpose(Q_hat)
             columns = self.prediction_features_names + ['Q']
-            return normalize_numpy_array(np.transpose(self.output, axes=(2,0,1)), columns, np.squeeze(self.normalization_info)[:, :-1])
+            out_array = out_array if self.batch_mode else np.squeeze(out_array)
+            return normalize_numpy_array(out_array, columns, np.squeeze(self.normalization_info)[:, :-1])
 
     def write_outputs(self, iteration):
         self.output[iteration, ANGLE_IDX, :] = self.angle
