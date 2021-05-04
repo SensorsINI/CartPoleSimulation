@@ -55,7 +55,7 @@ from CartPole.state_utilities import (
     STATE_VARIABLES
 )
 
-PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'NI_2021-04-22_14-34-14.csv'
+PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'Dataset-1-norm.csv'
 threads_per_block = 16
 blocks_per_grid = math.ceil(2000/16)
 
