@@ -1,7 +1,11 @@
 from types import SimpleNamespace
 from typing import Union
-from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
+from CartPole.state_utilities import (
+    create_cartpole_state, cartpole_state_varname_to_index,
+    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
+)
 
+from numba import float32, jit
 import numpy as np
 from numpy.random import SFC64, Generator
 rng = Generator(SFC64(123))
@@ -62,26 +66,58 @@ P_GLOBALS.k = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole
 
 # Export variables as global
 k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, controlBias, TrackHalfLength = (
-    P_GLOBALS.k,
-    P_GLOBALS.M,
-    P_GLOBALS.m,
-    P_GLOBALS.g,
-    P_GLOBALS.J_fric,
-    P_GLOBALS.M_fric,
-    P_GLOBALS.L,
-    P_GLOBALS.v_max,
-    P_GLOBALS.u_max,
-    P_GLOBALS.sensorNoise,
-    P_GLOBALS.controlDisturbance,
-    P_GLOBALS.controlBias,
-    P_GLOBALS.TrackHalfLength
+    float32(P_GLOBALS.k),
+    float32(P_GLOBALS.M),
+    float32(P_GLOBALS.m),
+    float32(P_GLOBALS.g),
+    float32(P_GLOBALS.J_fric),
+    float32(P_GLOBALS.M_fric),
+    float32(P_GLOBALS.L),
+    float32(P_GLOBALS.v_max),
+    float32(P_GLOBALS.u_max),
+    float32(P_GLOBALS.sensorNoise),
+    float32(P_GLOBALS.controlDisturbance),
+    float32(P_GLOBALS.controlBias),
+    float32(P_GLOBALS.TrackHalfLength)
 )
 
 # Create initial state vector
 s0 = create_cartpole_state()
 
 
-def _cartpole_ode(angle, angleD, position, positionD, u):
+@jit(nopython=True, cache=True, fastmath=True)
+def _positionDD(angleD, positionD, ca, sa, A, u):
+    return (
+        (
+            + m * g * sa * ca  # Movement of the cart due to gravity
+            + ((J_fric * angleD * ca) / (L))  # Movement of the cart due to pend' s friction in the joint
+            + k * (
+                - (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                - M_fric * positionD  # Braking of the cart due its friction
+                + u  # Effect of force applied to cart
+            )
+        ) / A
+    )
+
+
+@jit(nopython=True, cache=True, fastmath=True)
+def _angleDD(angleD, positionD, ca, sa, A, u):
+    return (
+        (
+            + (m + M) * (
+                g * sa  # Movement of the pole due to gravity
+                - J_fric * angleD / (L * m)  # Braking of the pole due friction in its joint
+            )
+            - m * L * (angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
+            + ca * (
+                - M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
+                + u  # Effect of force applied to cart
+            )
+        ) / (A * L)
+    )
+
+
+def _cartpole_ode(angle, angleD, positionD, u):
     """
     Calculates current values of second derivative of angle and position
     from current value of angle and position, and their first derivatives
@@ -165,16 +201,21 @@ def _cartpole_ode(angle, angleD, position, positionD, u):
 
 def cartpole_ode_namespace(s: SimpleNamespace, u: float):
     return _cartpole_ode(
-        s.angle, s.angleD, s.position, s.positionD, u
+        s.angle, s.angleD, s.positionD, u
     )
 
 
 def cartpole_ode(s: np.ndarray, u: float):
     return _cartpole_ode(
-        s[..., cartpole_state_varname_to_index('angle')], s[..., cartpole_state_varname_to_index('angleD')],
-        s[..., cartpole_state_varname_to_index('position')], s[..., cartpole_state_varname_to_index('positionD')],
-        u
+        s[..., ANGLE_IDX], s[..., ANGLED_IDX],
+        s[..., POSITIOND_IDX], u
     )
+
+
+@jit(nopython=True, cache=True, fastmath=True)
+def get_A(ca):
+    A = k * (M + m) - m * (ca ** 2)
+    return A
 
 
 def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
@@ -292,7 +333,7 @@ def Q2u(Q):
     In future there might be implemented here a more sophisticated model of a motor driving CartPole
     """
     u = u_max * (
-        Q + controlDisturbance *  rng.standard_normal(size=np.shape(Q), dtype=np.float32) + P_GLOBALS.controlBias
+        Q + controlDisturbance * rng.standard_normal(size=np.shape(Q), dtype=np.float32) + P_GLOBALS.controlBias
     )  # Q is drive -1:1 range, add noise on control
 
     return u

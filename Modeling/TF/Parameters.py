@@ -10,7 +10,7 @@ Created on Fri Jun 19 08:29:29 2020
 import argparse
 import glob
 
-net_name = 'Dense-16H1-16H2-32H2'
+net_name = 'Dense-16H1-16H2'
 
 # Path to trained models and their logs
 PATH_TO_MODELS = './Modeling/TF/Models/'
