@@ -9,8 +9,8 @@ from Modeling.load_and_normalize import \
 # Custom functions
 # from Modeling.Testing.get_prediction_TF import get_data_for_gui_TF
 from Modeling.Testing.get_prediction_TF_predictor import get_data_for_gui_TF
-from get_prediction_from_euler import get_prediction_from_euler
-from get_prediction_from_euler_predictor import get_prediction_from_euler_predictor
+from Modeling.Testing.get_prediction_from_euler import get_prediction_from_euler
+from Modeling.Testing.get_prediction_from_euler_predictor import get_prediction_from_euler_predictor
 
 from Modeling.Testing.Brunton_GUI import run_test_gui
 
