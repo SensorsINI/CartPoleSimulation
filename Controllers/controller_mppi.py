@@ -40,7 +40,7 @@ from Predictores.predictor_ideal import predictor_ideal
 
 """Timestep and sampling settings"""
 dt = 0.02  # s
-mpc_horizon = 0.8
+mpc_horizon = 1.0
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 mc_samples = int(2e3)  # Number of Monte Carlo samples
 update_every = 1  # Cost weighted update of inputs every ... steps
