@@ -85,8 +85,8 @@ def E_pot_cost(angle):
 @jit(nopython=True, cache=True, fastmath=True)
 def distance_difference_cost(position, target_position):
     return (
-        ((position - target_position) / (2 * TrackHalfLength)) ** 2
-        + (np.abs(np.abs(position) - TrackHalfLength) < 0.05 * TrackHalfLength) * 1.0e3
+        ((position - target_position) / (2.0 * TrackHalfLength)) ** 2
+        + (TrackHalfLength - np.abs(position) < 0.05 * TrackHalfLength) * 1.0e3
     )
 
 @jit(nopython=True, cache=True, fastmath=True)
