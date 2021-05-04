@@ -147,7 +147,7 @@ def trajectory_rollouts(
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
     dd = 5.0e1 * distance_difference_cost(s[:, :, POSITION_IDX], target_position)
-    ep = 1.0e3 * E_pot_cost(s[:, :, ANGLE_IDX])
+    ep = 5.0e4 * E_pot_cost(s[:, :, ANGLE_IDX])  # Frederik had 1.0e3
     ekp = 1.0e-2 * E_kin_pol(s[:, :, ANGLED_IDX])
     ekc = 5.0e0 * E_kin_cart(s[:, :, POSITIOND_IDX])
     cc = (
