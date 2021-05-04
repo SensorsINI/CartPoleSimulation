@@ -57,6 +57,12 @@ def next_state(s, u, dt, intermediate_steps=2):
     # s_next[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s, u)
     t_step = dt / float(intermediate_steps)
     for i in range(intermediate_steps):
+
+        # Calculates second derivatives of CURRENT state
+        angleDD, positionDD = cartpole_ode(s_next, u)
+        s_next[..., cartpole_state_varname_to_index('angleDD')] = angleDD
+        s_next[..., cartpole_state_varname_to_index('positionDD')] = positionDD
+
         # Calculate NEXT state:
         s_next[
             ...,
@@ -80,10 +86,6 @@ def next_state(s, u, dt, intermediate_steps=2):
         s_next[..., abs(s_next[..., cartpole_state_varname_to_index('position')]) > TrackHalfLength, cartpole_state_varname_to_index('positionD')] \
             = -s_next[..., abs(s_next[..., cartpole_state_varname_to_index('position')]) > TrackHalfLength, cartpole_state_varname_to_index('positionD')]
 
-        # Calculates second derivatives of NEXT state
-        angleDD, positionDD = cartpole_ode(s_next, u)
-        s_next[..., cartpole_state_varname_to_index('angleDD')] = angleDD
-        s_next[..., cartpole_state_varname_to_index('positionDD')] = positionDD
 
     s_next[..., cartpole_state_varname_to_index('angle_cos')] = np.cos(s_next[..., cartpole_state_varname_to_index('angle')])
     s_next[..., cartpole_state_varname_to_index('angle_sin')] = np.sin(s_next[..., cartpole_state_varname_to_index('angle')])
