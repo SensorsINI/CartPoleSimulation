@@ -106,7 +106,7 @@ class CartPole:
         # endregion
 
         # region Variables controlling operation of the program - can be modified directly from CartPole environment
-        self.rounding_decimals = 5  # Sets number of digits after coma to save in experiment history for each feature
+        self.rounding_decimals = np.inf  # Sets number of digits after coma to save in experiment history for each feature, make it np.inf to skip rounding entirely
         self.save_data_in_cart = True  # Decides whether to store whole data of the experiment in dict_history or not
         self.stop_at_90 = False  # If true pole is blocked after reaching the horizontal position
         # endregion
@@ -444,8 +444,11 @@ class CartPole:
             # Save this dict
             with open(self.csv_filepath, "a") as outfile:
                 writer = csv.writer(outfile)
-                self.dict_history = {key: np.around(value, self.rounding_decimals)
-                                     for key, value in self.dict_history.items()}
+                if self.rounding_decimals == np.inf:
+                    pass
+                else:
+                    self.dict_history = {key: np.around(value, self.rounding_decimals)
+                                         for key, value in self.dict_history.items()}
                 writer.writerows(zip(*self.dict_history.values()))
             self.save_now = False
 
@@ -453,8 +456,11 @@ class CartPole:
             # Round data to a set precision
             with open(self.csv_filepath, "a") as outfile:
                 writer = csv.writer(outfile)
-                self.dict_history = {key: np.around(value, self.rounding_decimals)
-                                     for key, value in self.dict_history.items()}
+                if self.rounding_decimals == np.inf:
+                    pass
+                else:
+                    self.dict_history = {key: np.around(value, self.rounding_decimals)
+                                         for key, value in self.dict_history.items()}
                 writer.writerows(zip(*self.dict_history.values()))
             self.save_now = False
             # Another possibility to save data.

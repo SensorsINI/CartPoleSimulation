@@ -25,9 +25,6 @@ def get_prediction_from_euler(a, dataset, dt_sampling, dt_sampling_by_dt_fine=1)
 
         state_dict = dataset.loc[dataset.index[[timestep]], :].to_dict('records')[0]
         s = create_cartpole_state(state_dict)
-        # Calculate second derivatives for first step - they may or may not be present in s
-        u = Q2u(Q_array[0, timestep])
-        s[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s, u)
         output_array[0, timestep, :-1] = s[cartpole_state_varnames_to_indices(a.features)]
         # Progress max_horison steps
         # save the data for every step in a third dimension of an array
@@ -36,13 +33,15 @@ def get_prediction_from_euler(a, dataset, dt_sampling, dt_sampling_by_dt_fine=1)
             u = Q2u(Q)
 
             for _ in range(dt_sampling_by_dt_fine):
+
+                s[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s, u)
+
+                # Calculate next state
                 s[cartpole_state_varnames_to_indices(['position', 'positionD', 'angle', 'angleD'])] += \
                     s[cartpole_state_varnames_to_indices(['positionD','positionDD', 'angleD', 'angleDD'])] * (dt_sampling/float(dt_sampling_by_dt_fine))
 
                 s[cartpole_state_varname_to_index('angle')] = \
                     wrap_angle_rad(s[cartpole_state_varname_to_index('angle')])
-
-                s[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s, u)
 
             # Append s to outputs matrix
             s[cartpole_state_varnames_to_indices(['angle_cos', 'angle_sin'])] = \
