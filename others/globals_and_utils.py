@@ -1,5 +1,6 @@
 """ Shared stuff between producer and consumer
  Author: Tobi Delbruck
+ Source: https://github.com/SensorsINI/joker-network
  """
 import logging
 import math
