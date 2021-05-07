@@ -22,7 +22,7 @@ except:
     pass
 
 PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/'
-PATH_TO_EXPERIMENT_RECORDINGS = './ExperimentRecordings/'  # Path where the experiments data is stored
+PATH_TO_EXPERIMENT_RECORDINGS = './ExperimentRecordings/Train/'  # Path where the experiments data is stored
 normalization_rounding_decimals = 5
 
 
@@ -557,6 +557,6 @@ def normalize_numpy_array(denormalized_array,
 
 
 if __name__ == '__main__':
-    folder_with_data_to_calculate_norm_info = './ExperimentRecordings/25/Train/'
+    folder_with_data_to_calculate_norm_info = './ExperimentRecordings/Dataset-1/Train/'
 
     calculate_normalization_info(folder_with_data_to_calculate_norm_info)

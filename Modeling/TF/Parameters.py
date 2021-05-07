@@ -10,99 +10,17 @@ Created on Fri Jun 19 08:29:29 2020
 import argparse
 import glob
 
-net_name = 'last'
+net_name = 'Dense-16H1-16H2'
 
 # Path to trained models and their logs
 PATH_TO_MODELS = './Modeling/TF/Models/'
 
-PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '2500_tailored.csv'
+PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'Dataset-1-norm.csv'
 
 # The following paths to dictionaries may be replaced by the list of paths to data files.
-TRAINING_FILES = './ExperimentRecordings/2500/Train/'
-VALIDATION_FILES = './ExperimentRecordings/2500/Validate/'
-TEST_FILES = './ExperimentRecordings/2500/Test/'
-
-# TRAINING_FILES = './ExperimentRecordings/250/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/250/Validate/'
-# TEST_FILES = './ExperimentRecordings/250/Test/'
-
-# TRAINING_FILES = './ExperimentRecordings/25/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/25/Validate/'
-# TEST_FILES = './ExperimentRecordings/25/Test/'
-
-# TRAINING_FILES = './ExperimentRecordings/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/Validate/'
-# TEST_FILES = './ExperimentRecordings/Test/'
-
-
-# TRAINING_FILES = glob.glob('./ExperimentRecordings/2500/Train/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Train/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Train/' + '*.csv')
-# VALIDATION_FILES = glob.glob('./ExperimentRecordings/2500/Validate/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Validate/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Validate/' + '*.csv')
-# TEST_FILES = glob.glob('./ExperimentRecordings/2500/Test/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Test/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Test/' + '*.csv')
-
-
-# endregion
-
-# 250 norm, trained on 250
-# net_name = 'Dense-6IN-64H1-64H2-5OUT-0'
-# PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '250.csv'
-# TRAINING_FILES = './ExperimentRecordings/250/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/250/Validate/'
-# TEST_FILES = './ExperimentRecordings/250/Test/'
-#
-# # 250 norm, trained on all
-# net_name = 'Dense-6IN-64H1-64H2-5OUT-1'
-# PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '250.csv'
-# TRAINING_FILES = glob.glob('./ExperimentRecordings/2500/Train/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Train/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Train/' + '*.csv')
-# VALIDATION_FILES = glob.glob('./ExperimentRecordings/2500/Validate/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Validate/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Validate/' + '*.csv')
-# TEST_FILES = glob.glob('./ExperimentRecordings/2500/Test/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Test/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Test/' + '*.csv')
-#
-# net_name = 'GRU-6IN-64H1-64H2-5OUT-0'
-# PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '250.csv'
-# TRAINING_FILES = glob.glob('./ExperimentRecordings/2500/Train/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Train/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Train/' + '*.csv')
-# VALIDATION_FILES = glob.glob('./ExperimentRecordings/2500/Validate/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Validate/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Validate/' + '*.csv')
-# TEST_FILES = glob.glob('./ExperimentRecordings/2500/Test/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/250/Test/' + '*.csv') + \
-#                     glob.glob('./ExperimentRecordings/25/Test/' + '*.csv')
-#
-# net_name = 'GRU-6IN-64H1-64H2-5OUT-1'
-# PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '2500_tailored.csv'
-# TRAINING_FILES = './ExperimentRecordings/2500/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/2500/Validate/'
-# TEST_FILES = './ExperimentRecordings/2500/Test/'
-#
-#
-# net_name = 'GRU-6IN-64H1-64H2-5OUT-2'
-# PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '2500.csv'
-# TRAINING_FILES = './ExperimentRecordings/2500/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/2500/Validate/'
-# TEST_FILES = './ExperimentRecordings/2500/Test/'
-#
-# net_name = 'GRU-6IN-64H1-64H2-5OUT-3'
-# PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + '250.csv'
-# TRAINING_FILES = './ExperimentRecordings/250/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/250/Validate/'
-# TEST_FILES = './ExperimentRecordings/250/Test/'
-
-
-# TRAINING_FILES = './ExperimentRecordings/25/Train/'
-# VALIDATION_FILES = './ExperimentRecordings/25/Validate/'
-# TEST_FILES = './ExperimentRecordings/25/Test/'
+TRAINING_FILES = './ExperimentRecordings/Dataset-1/Train/'
+VALIDATION_FILES = './ExperimentRecordings/Dataset-1/Validate/'
+TEST_FILES = './ExperimentRecordings/Dataset-1/Test/'
 
 
 
@@ -157,15 +75,15 @@ def args():
                         help='In RNN forward function this features will be fed beck from output to input')
 
     # Only valid for graphical testing:
-    parser.add_argument('--test_len', default=100, type=int,
+    parser.add_argument('--test_len', default=50, type=int,
                         help='For graphical testing only test_len samples from first test file is taken.')
-    parser.add_argument('--test_start_idx', default=1200, type=int, help='Indicates from which point data from test file should be taken.')
-    parser.add_argument('--test_max_horizon', default=10, type=int,
+    parser.add_argument('--test_start_idx', default=100, type=int, help='Indicates from which point data from test file should be taken.')
+    parser.add_argument('--test_max_horizon', default=5, type=int,
                         help='Indicates prediction horizon for testing.')
 
     # Training only:
     parser.add_argument('--wash_out_len', default=10, type=int, help='Number of timesteps for a wash-out sequence')
-    parser.add_argument('--post_wash_out_len', default=10, type=int,
+    parser.add_argument('--post_wash_out_len', default=50, type=int,
                         help='Number of timesteps after wash-out sequence (this is used to calculate loss)')
 
     # Training parameters

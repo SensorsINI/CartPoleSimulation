@@ -2,42 +2,41 @@
 Model Predictive Path Integral Controller
 Based on Williams, Aldrich, Theodorou (2015)
 """
+
+# Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
+# On other OS you have to chose a different interactive backend.
+# from matplotlib import use
+# # # use('TkAgg')
+# use('macOSX')
+
+
+from copy import deepcopy
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import (
-    P_GLOBALS,
-    Q2u,
-    _cartpole_ode,
-    k,
-    M,
-    m,
-    g,
-    J_fric,
-    M_fric,
-    L,
-    v_max,
-    u_max,
-    controlBias,
-    controlDisturbance,
-    TrackHalfLength,
-)
+from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import (
     create_cartpole_state,
     cartpole_state_varname_to_index,
+    ANGLE_IDX,
+    ANGLED_IDX,
+    POSITION_IDX,
+    POSITIOND_IDX,
 )
 
 from CartPole._CartPole_mathematical_helpers import (
     conditional_decorator,
     wrap_angle_rad_inplace,
 )
-from Predictores.predictor_ideal import predictor_ideal
 
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
+
+from numba import jit
 import numpy as np
 from numpy.random import SFC64, Generator
 
-from copy import deepcopy
-
+from others.globals_and_utils import Timer
+from Predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
+from Predictores.predictor_ideal import predictor_ideal
 
 """Timestep and sampling settings"""
 dt = 0.02  # s
@@ -45,13 +44,8 @@ mpc_horizon = 1.0
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 mc_samples = int(2e3)  # Number of Monte Carlo samples
 update_every = 1  # Cost weighted update of inputs every ... steps
-
-
-"""Define indices of values in state statically"""
-ANGLE_IDX = cartpole_state_varname_to_index("angle").item()
-ANGLED_IDX = cartpole_state_varname_to_index("angleD").item()
-POSITION_IDX = cartpole_state_varname_to_index("position").item()
-POSITIOND_IDX = cartpole_state_varname_to_index("positionD").item()
+predictor_type = 'Euler'
+# predictor_type = "NeuralNet"
 
 
 """MPPI constants"""
@@ -66,7 +60,8 @@ rng = Generator(SFC64(123))
 
 
 """Init logging variables"""
-LOGGING = False
+LOGGING = True
+# LOGGING = False
 # Save average cost for each cost component
 COST_TO_GO_LOGS = []
 COST_BREAKDOWN_LOGS = []
@@ -77,18 +72,38 @@ NOMINAL_ROLLOUT_LOGS = []
 
 
 """Cost function helpers"""
-E_kin_cart = lambda s: s[..., POSITIOND_IDX] ** 2
-E_kin_pol = lambda s: s[..., ANGLED_IDX] ** 2
-E_pot_cost = lambda s: ((1.0 - np.cos(s[..., ANGLE_IDX])) * 0.5) ** 2
-distance_difference_cost = lambda s, target_position: (
-    ((s[..., POSITION_IDX] - target_position) / (2 * TrackHalfLength)) ** 2
-    + (abs(abs(s[..., POSITION_IDX]) - TrackHalfLength) < 0.05 * TrackHalfLength)
-    * 1.0e3
-)
+@jit(nopython=True, cache=True, fastmath=True)
+def E_kin_cart(positionD): return positionD ** 2
+
+@jit(nopython=True, cache=True, fastmath=True)
+def E_kin_pol(angleD): return angleD ** 2
+
+@jit(nopython=True, cache=True, fastmath=True)
+def E_pot_cost(angle):
+    return 0.25 * (1 - np.cos(angle)) ** 2
+
+@jit(nopython=True, cache=True, fastmath=True)
+def distance_difference_cost(position, target_position):
+    return (
+        ((position - target_position) / (2.0 * TrackHalfLength)) ** 2
+        + (TrackHalfLength - np.abs(position) < 0.05 * TrackHalfLength) * 1.0e3
+    )
+
+@jit(nopython=True, cache=True, fastmath=True)
+def penalize_deviation(cc, u):
+    # Penalize if control deviation is outside constraint set.
+    I, J = cc.shape
+    for i in range(I):
+        for j in range(J):
+            if np.abs(u[i, j]) > 1.0: cc[i, j] = 1.0e5
+    return cc
 
 
 """Define Predictor"""
-predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
+if predictor_type == "Euler":
+    predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
+elif predictor_type == "NeuralNet":
+    predictor = predictor_autoregressive_tf(horizon=mpc_samples, batch_size=mc_samples)
 
 
 def trajectory_rollouts(
@@ -110,9 +125,8 @@ def trajectory_rollouts(
     S_tilde_k = np.sum(cost_increment, axis=1)
 
     if LOGGING:
-        cost_logs_internal = np.stack(
-            [dd, ep, ekp, ekc, cc], axis=1
-        )  # (mc_samples x 5 x mpc_samples)
+        cost_logs_internal = np.swapaxes(np.array([dd, ep, ekp, ekc, cc]), 0, 1)
+        # (mc_samples x 5 x mpc_samples)
 
         return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
     return S_tilde_k, None, None
@@ -120,10 +134,10 @@ def trajectory_rollouts(
 
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
-    dd = 5.0e1 * distance_difference_cost(s, target_position)
-    ep = 1.0e3 * E_pot_cost(s)
-    ekp = 1.0e-2 * E_kin_pol(s)
-    ekc = 5.0e0 * E_kin_cart(s)
+    dd = 5.0e1 * distance_difference_cost(s[:, :, POSITION_IDX], target_position)
+    ep = 5.0e4 * E_pot_cost(s[:, :, ANGLE_IDX])  # Frederik had 1.0e3
+    ekp = 1.0e-2 * E_kin_pol(s[:, :, ANGLED_IDX])
+    ekc = 5.0e0 * E_kin_cart(s[:, :, POSITIOND_IDX])
     cc = (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
@@ -136,6 +150,7 @@ def q(s, u, delta_u, target_position):
     return q, dd, ep, ekp, ekc, cc
 
 
+@jit(nopython=True, cache=True, fastmath=True)
 def reward_weighted_average(S, delta_u):
     """Average the perturbations delta_u based on their desirability"""
     rho = np.min(S)  # for numerical stability
@@ -145,6 +160,7 @@ def reward_weighted_average(S, delta_u):
     return b
 
 
+@jit(nopython=True, cache=True, fastmath=True)
 def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
     """
     :param u: Sampling mean / warm started control inputs of size (,mpc_samples)
@@ -158,8 +174,6 @@ class controller_mppi(template_controller):
     def __init__(self):
         # State of the cart
         self.s = create_cartpole_state()
-
-        np.random.seed(123)
 
         self.target_position = 0.0
 
@@ -212,6 +226,8 @@ class controller_mppi(template_controller):
         self.iteration += 1
 
         # Adjust horizon if changed in GUI while running
+        # FIXME: For this to work with NeuralNet predictor we need to build a setter,
+        #  which also reinitialize arrays which size depends on horizon
         predictor.horizon = mpc_samples
         if mpc_samples != self.u.size:
             self.update_control_vector()
@@ -238,9 +254,16 @@ class controller_mppi(template_controller):
                 STATE_LOGS.append(s_horizon[:, :, [POSITION_IDX, ANGLE_IDX]])
                 INPUT_LOGS.append(self.u)
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
-                predictor.setup(initial_state=self.s, prediction_denorm=True)
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
-                rollout_trajectory = predictor.predict(self.u)
+                if predictor_type == "Euler":
+                    predictor.setup(initial_state=deepcopy(self.s), prediction_denorm=True)
+                    rollout_trajectory = predictor.predict(self.u)
+                elif predictor_type == "NeuralNet":
+                    predictor.setup(initial_state=deepcopy(self.s), prediction_denorm=True)
+                    # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
+                    rollout_trajectory = predictor.predict(
+                        np.tile(self.u, (mc_samples, 1))
+                    )[0, ...]
                 NOMINAL_ROLLOUT_LOGS.append(
                     rollout_trajectory[:-1, [POSITION_IDX, ANGLE_IDX]]
                 )
@@ -256,7 +279,8 @@ class controller_mppi(template_controller):
         self.u[-1] = self.u[-1]
 
         # Prepare predictor for next timestep
-        predictor.update_internal_state(Q)
+        Q_update = np.tile(Q, (mc_samples, 1))
+        predictor.update_internal_state(Q_update)
 
         return Q  # normed control input in the range [-1,1]
 
@@ -443,6 +467,7 @@ class controller_mppi(template_controller):
     # but only if the controller is supposed to be reused without reloading (e.g. in GUI)
     def controller_reset(self):
         try:
+            # TODO: Not sure if this works for predictor autoregressive tf
             predictor.net.reset_states()
         except:
             pass

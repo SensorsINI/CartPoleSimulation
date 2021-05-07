@@ -4,7 +4,11 @@ Created on Fri Jun 19 06:21:32 2020
 
 @author: Marcin
 """
-import nni
+
+try:
+    import nni
+except ModuleNotFoundError:
+    print('Module nni not found - only needed to run training with NNI Framework')
 
 import matplotlib.pyplot as plt
 
@@ -24,7 +28,6 @@ from Modeling.TF.TF_Functions.Loss import loss_msr_sequence_customizable
 from Modeling.TF.TF_Functions.Dataset import Dataset, DatasetRandom
 from Modeling.load_and_normalize import load_data, normalize_df, \
     get_sampling_interval_from_datafile, get_paths_to_datafiles
-from Modeling.TF.TF_Functions.Test_predictions import get_predictions_TF
 
 # region Import and print "command line" arguments
 print('')
