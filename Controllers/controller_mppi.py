@@ -212,6 +212,23 @@ class controller_mppi(template_controller):
                     )
                     - self.u[i]
                 )
+        elif repeated:
+            delta_u = np.tile(
+                stdev * rng.standard_normal(size=(mc_samples, 1), dtype=np.float32),
+                (1, mpc_samples),
+            )
+        elif interpolate:
+            t = np.arange(start=0, stop=mpc_samples+1, step=10)
+            t_interp = np.arange(start=0, stop=mpc_samples+1, step=1)
+            t_interp = np.delete(t_interp, t)
+            delta_u = np.zeros(shape=(mc_samples, mpc_samples+1))
+            delta_u[:, t] = stdev * rng.standard_normal(
+                size=(mc_samples, t.size), dtype=np.float32
+            )
+            f = interp1d(t, delta_u[:, t])
+            delta_u[:, t_interp] = f(t_interp)
+            delta_u = delta_u[:, :-1]
+
         else:
             delta_u = stdev * rng.standard_normal(
                 size=(mc_samples, mpc_samples), dtype=np.float32
@@ -235,7 +252,7 @@ class controller_mppi(template_controller):
         if self.iteration % update_every == 0:
             # Initialize perturbations and cost arrays
             self.delta_u = self.initialize_perturbations(
-                stdev=self.rho_sqrt_inv / np.sqrt(dt)
+                stdev=0.2, random_walk=False, uniform=False, repeated=False, interpolate=True
             )  # du ~ N(mean=0, var=1/(rho*dt))
             self.S_tilde_k = np.zeros_like(self.S_tilde_k, dtype=np.float32)
 
