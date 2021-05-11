@@ -66,12 +66,10 @@ class controller_lqr(template_controller):
         self.X = X
         self.eigVals = eigVals
 
-    def step(self, state, PositionTarget, time=None):
-
-        s = state
+    def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
 
         state = np.array(
-            [[s[cartpole_state_varname_to_index('position')] - PositionTarget], [s[cartpole_state_varname_to_index('positionD')]], [s[cartpole_state_varname_to_index('angle')]], [s[cartpole_state_varname_to_index('angleD')]]])
+            [[s[cartpole_state_varname_to_index('position')] - target_position], [s[cartpole_state_varname_to_index('positionD')]], [s[cartpole_state_varname_to_index('angle')]], [s[cartpole_state_varname_to_index('angleD')]]])
 
         Q = np.asscalar(np.dot(-self.K, state))
 
