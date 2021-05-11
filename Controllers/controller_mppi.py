@@ -9,8 +9,6 @@ Based on Williams, Aldrich, Theodorou (2015)
 # # # use('TkAgg')
 # use('macOSX')
 
-
-from copy import deepcopy
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import (
@@ -33,6 +31,7 @@ from matplotlib.widgets import Slider
 from numba import jit
 import numpy as np
 from numpy.random import SFC64, Generator
+from scipy.interpolate import interp1d
 
 from others.globals_and_utils import Timer
 from Predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
@@ -44,7 +43,7 @@ mpc_horizon = 1.0
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 mc_samples = int(2e3)  # Number of Monte Carlo samples
 update_every = 1  # Cost weighted update of inputs every ... steps
-predictor_type = 'Euler'
+predictor_type = "Euler"
 # predictor_type = "NeuralNet"
 
 
@@ -72,22 +71,29 @@ NOMINAL_ROLLOUT_LOGS = []
 
 
 """Cost function helpers"""
-@jit(nopython=True, cache=True, fastmath=True)
-def E_kin_cart(positionD): return positionD ** 2
+
 
 @jit(nopython=True, cache=True, fastmath=True)
-def E_kin_pol(angleD): return angleD ** 2
+def E_kin_cart(positionD):
+    return positionD ** 2
+
+
+@jit(nopython=True, cache=True, fastmath=True)
+def E_kin_pol(angleD):
+    return angleD ** 2
+
 
 @jit(nopython=True, cache=True, fastmath=True)
 def E_pot_cost(angle):
     return 0.25 * (1 - np.cos(angle)) ** 2
 
+
 @jit(nopython=True, cache=True, fastmath=True)
 def distance_difference_cost(position, target_position):
-    return (
-        ((position - target_position) / (2.0 * TrackHalfLength)) ** 2
-        + (TrackHalfLength - np.abs(position) < 0.05 * TrackHalfLength) * 1.0e3
-    )
+    return ((position - target_position) / (2.0 * TrackHalfLength)) ** 2 + (
+        TrackHalfLength - np.abs(position) < 0.05 * TrackHalfLength
+    ) * 1.0e3
+
 
 @jit(nopython=True, cache=True, fastmath=True)
 def penalize_deviation(cc, u):
@@ -95,7 +101,8 @@ def penalize_deviation(cc, u):
     I, J = cc.shape
     for i in range(I):
         for j in range(J):
-            if np.abs(u[i, j]) > 1.0: cc[i, j] = 1.0e5
+            if np.abs(u[i, j]) > 1.0:
+                cc[i, j] = 1.0e5
     return cc
 
 
@@ -187,7 +194,12 @@ class controller_mppi(template_controller):
         self.S_tilde_k = np.zeros((mc_samples), dtype=np.float32)
 
     def initialize_perturbations(
-        self, stdev: float = 1.0, random_walk: bool = False, uniform: bool = False
+        self,
+        stdev: float = 1.0,
+        random_walk: bool = False,
+        uniform: bool = False,
+        repeated: bool = False,
+        interpolate: bool = False,
     ) -> np.ndarray:
         """
         Return a numpy array with the perturbations delta_u.
@@ -273,10 +285,14 @@ class controller_mppi(template_controller):
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
                 if predictor_type == "Euler":
-                    predictor.setup(initial_state=deepcopy(self.s), prediction_denorm=True)
+                    predictor.setup(
+                        initial_state=np.copy(self.s), prediction_denorm=True
+                    )
                     rollout_trajectory = predictor.predict(self.u)
                 elif predictor_type == "NeuralNet":
-                    predictor.setup(initial_state=deepcopy(self.s), prediction_denorm=True)
+                    predictor.setup(
+                        initial_state=np.copy(self.s), prediction_denorm=True
+                    )
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     rollout_trajectory = predictor.predict(
                         np.tile(self.u, (mc_samples, 1))
@@ -293,7 +309,7 @@ class controller_mppi(template_controller):
 
         # Index-shift inputs
         self.u[:-1] = self.u[1:]
-        self.u[-1] = self.u[-1]
+        # self.u = zeros_like(self.u)
 
         # Prepare predictor for next timestep
         Q_update = np.tile(Q, (mc_samples, 1))
