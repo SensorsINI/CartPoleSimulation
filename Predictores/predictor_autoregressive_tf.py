@@ -50,8 +50,8 @@ from types import SimpleNamespace
 from CartPole.state_utilities import STATE_VARIABLES, cartpole_state_varnames_to_indices, cartpole_state_varname_to_index
 
 
-NET_NAME = 'Dense-6IN-16H1-16H2-5OUT-0'
-# NET_NAME = 'GRU-6IN-16H1-16H2-5OUT-0'
+# NET_NAME = 'Dense-6IN-16H1-16H2-5OUT-0'
+NET_NAME = 'GRU-6IN-16H1-16H2-5OUT-0'
 
 PATH_TO_MODELS = './Modeling/TF/Models/'
 

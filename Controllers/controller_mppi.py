@@ -43,8 +43,8 @@ mpc_horizon = 1.0
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 mc_samples = int(2e3)  # Number of Monte Carlo samples
 update_every = 1  # Cost weighted update of inputs every ... steps
-predictor_type = "Euler"
-# predictor_type = "NeuralNet"
+# predictor_type = "Euler"
+predictor_type = "NeuralNet"
 
 
 """MPPI constants"""
@@ -193,6 +193,16 @@ class controller_mppi(template_controller):
         self.delta_u = np.zeros((mc_samples, mpc_samples), dtype=np.float32)
         self.S_tilde_k = np.zeros((mc_samples), dtype=np.float32)
 
+        self.warm_up_len = 100
+        self.warm_up_countdown = self.warm_up_len
+        try:
+            from Controllers.controller_lqr import controller_lqr
+            self.auxiliary_controller_available = True
+            self.auxiliary_controller = controller_lqr()
+        except ModuleNotFoundError:
+            self.auxiliary_controller_available = False
+            self.auxiliary_controller = None
+
     def initialize_perturbations(
         self,
         stdev: float = 1.0,
@@ -233,7 +243,7 @@ class controller_mppi(template_controller):
             t = np.arange(start=0, stop=mpc_samples+1, step=10)
             t_interp = np.arange(start=0, stop=mpc_samples+1, step=1)
             t_interp = np.delete(t_interp, t)
-            delta_u = np.zeros(shape=(mc_samples, mpc_samples+1))
+            delta_u = np.zeros(shape=(mc_samples, mpc_samples+1), dtype=np.float32)
             delta_u[:, t] = stdev * rng.standard_normal(
                 size=(mc_samples, t.size), dtype=np.float32
             )
@@ -290,9 +300,9 @@ class controller_mppi(template_controller):
                     )
                     rollout_trajectory = predictor.predict(self.u)
                 elif predictor_type == "NeuralNet":
-                    predictor.setup(
-                        initial_state=np.copy(self.s), prediction_denorm=True
-                    )
+                    # predictor.setup(
+                    #     initial_state=np.copy(self.s), prediction_denorm=True
+                    # )
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     rollout_trajectory = predictor.predict(
                         np.tile(self.u, (mc_samples, 1))
@@ -304,8 +314,14 @@ class controller_mppi(template_controller):
         if LOGGING:
             TRAJECTORY_LOGS.append(self.s[[POSITION_IDX, ANGLE_IDX]])
 
+        if self.warm_up_countdown > 0 and self.auxiliary_controller_available:
+            self.warm_up_countdown -= 1
+            Q = self.auxiliary_controller.step(s, target_position)
+        else:
+            Q = self.u[0]
+
         # Clip inputs to allowed range
-        Q = np.clip(self.u[0], -1.0, 1.0)
+        Q = np.clip(Q, -1.0, 1.0)
 
         # Index-shift inputs
         self.u[:-1] = self.u[1:]
@@ -500,6 +516,7 @@ class controller_mppi(template_controller):
     # but only if the controller is supposed to be reused without reloading (e.g. in GUI)
     def controller_reset(self):
         try:
+            self.warm_up_countdown = self.warm_up_len
             # TODO: Not sure if this works for predictor autoregressive tf
             predictor.net.reset_states()
         except:

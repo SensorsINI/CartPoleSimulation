@@ -41,7 +41,6 @@ class controller_lqr(template_controller):
         u = 0.0
 
         jacobian = cartpole_jacobian(s, u)
-
         A = jacobian[:, :-1]
         B = np.reshape(jacobian[:, -1], newshape=(4, 1)) * u_max
 
