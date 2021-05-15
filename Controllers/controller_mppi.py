@@ -49,7 +49,7 @@ predictor_type = "NeuralNet"
 
 """MPPI constants"""
 R = 1.0e0  # How much to punish Q
-LBD = 1.0e1  # Cost parameter lambda
+LBD = 1.0e2  # Cost parameter lambda
 NU = 1.0e3  # Exploration variance
 GAMMA = 1.00  # Future cost discount
 
@@ -91,8 +91,8 @@ def E_pot_cost(angle):
 @jit(nopython=True, cache=True, fastmath=True)
 def distance_difference_cost(position, target_position):
     return ((position - target_position) / (2.0 * TrackHalfLength)) ** 2 + (
-        TrackHalfLength - np.abs(position) < 0.05 * TrackHalfLength
-    ) * 1.0e3
+        TrackHalfLength - np.abs(position) < 0.005 * TrackHalfLength
+    ) * 1.0e3  # Hard constraint: Do not crash into border
 
 
 @jit(nopython=True, cache=True, fastmath=True)
@@ -142,7 +142,7 @@ def trajectory_rollouts(
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
     dd = 5.0e1 * distance_difference_cost(s[:, :, POSITION_IDX], target_position)
-    ep = 5.0e4 * E_pot_cost(s[:, :, ANGLE_IDX])  # Frederik had 1.0e3
+    ep = 1.0e5 * E_pot_cost(s[:, :, ANGLE_IDX])  # Frederik had 1.0e3
     ekp = 1.0e-2 * E_kin_pol(s[:, :, ANGLED_IDX])
     ekc = 5.0e0 * E_kin_cart(s[:, :, POSITIOND_IDX])
     cc = (
@@ -197,6 +197,7 @@ class controller_mppi(template_controller):
         self.warm_up_countdown = self.warm_up_len
         try:
             from Controllers.controller_lqr import controller_lqr
+
             self.auxiliary_controller_available = True
             self.auxiliary_controller = controller_lqr()
         except ModuleNotFoundError:
@@ -274,7 +275,11 @@ class controller_mppi(template_controller):
         if self.iteration % update_every == 0:
             # Initialize perturbations and cost arrays
             self.delta_u = self.initialize_perturbations(
-                stdev=0.2, random_walk=False, uniform=False, repeated=False, interpolate=True
+                stdev=0.1 * (1 + 1 / (self.iteration + 1)),
+                random_walk=False,
+                uniform=False,
+                repeated=False,
+                interpolate=True,
             )  # du ~ N(mean=0, var=1/(rho*dt))
             self.S_tilde_k = np.zeros_like(self.S_tilde_k, dtype=np.float32)
 
@@ -325,6 +330,7 @@ class controller_mppi(template_controller):
 
         # Index-shift inputs
         self.u[:-1] = self.u[1:]
+        self.u[-1] = 0
         # self.u = zeros_like(self.u)
 
         # Prepare predictor for next timestep
