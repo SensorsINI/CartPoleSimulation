@@ -37,6 +37,7 @@ class MPPIOptionsWindow(QWidget):
         self.ep_scale = controller_mppi.ep_scale
         self.ekp_scale = controller_mppi.ekp_scale * 1.0e3
         self.ekc_scale = controller_mppi.ekc_scale * 1.0e1
+        self.cc_scale = controller_mppi.cc_scale * 1.0e1
 
         layout = QVBoxLayout()
 
@@ -108,6 +109,18 @@ class MPPIOptionsWindow(QWidget):
         cost_weight_layout.addWidget(slider)
         slider.valueChanged.connect(self.ekc_scale_changed)
 
+        self.cc_scale_label = QLabel("")
+        self.cc_scale_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        cost_weight_layout.addWidget(self.cc_scale_label)
+        slider = QSlider(orientation=Qt.Horizontal)
+        slider.setRange(0, 99)
+        slider.setValue(self.cc_scale)
+        slider.setTickPosition(QSlider.TicksBelow)
+        slider.setTickInterval(1)
+        slider.setSingleStep(1)
+        cost_weight_layout.addWidget(slider)
+        slider.valueChanged.connect(self.cc_scale_changed)
+
         # Put together layout
         self.update_labels()
         layout.addLayout(horizon_options_layout)
@@ -152,6 +165,12 @@ class MPPIOptionsWindow(QWidget):
         controller_mppi.ekc_scale = self.ekc_scale * 1.0e-1
         self.update_labels()
     
+    def cc_scale_changed(self, length: int):
+        self.cc_scale = length
+        # TODO: Replace by setter method
+        controller_mppi.cc_scale = self.cc_scale * 1.0e-1
+        self.update_labels()
+    
     def update_labels(self):
         self.horizon_label.setText(
             f"Horizon: {self.horizon_steps} steps = {round(self.horizon_steps * controller_mppi.dt, 2)} s"
@@ -167,4 +186,7 @@ class MPPIOptionsWindow(QWidget):
         )
         self.ekc_scale_label.setText(
             f"Cart Kinetic Energy cost scale: {round(self.ekc_scale * 1.0e-1, 3)}"
+        )
+        self.cc_scale_label.setText(
+            f"Control cost scale: {round(self.cc_scale * 1.0e-1, 3)}"
         )
