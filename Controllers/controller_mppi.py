@@ -241,16 +241,18 @@ class controller_mppi(template_controller):
                 (1, mpc_samples),
             )
         elif interpolate:
-            t = np.arange(start=0, stop=mpc_samples+1, step=10)
-            t_interp = np.arange(start=0, stop=mpc_samples+1, step=1)
+            step=10
+            range_stop = int(np.ceil((mpc_samples)/step) * step) + 1
+            t = np.arange(start=0, stop=range_stop, step=step)
+            t_interp = np.arange(start=0, stop=range_stop, step=1)
             t_interp = np.delete(t_interp, t)
-            delta_u = np.zeros(shape=(mc_samples, mpc_samples+1), dtype=np.float32)
+            delta_u = np.zeros(shape=(mc_samples, range_stop), dtype=np.float32)
             delta_u[:, t] = stdev * rng.standard_normal(
                 size=(mc_samples, t.size), dtype=np.float32
             )
             f = interp1d(t, delta_u[:, t])
             delta_u[:, t_interp] = f(t_interp)
-            delta_u = delta_u[:, :-1]
+            delta_u = delta_u[:, :mpc_samples]
 
         else:
             delta_u = stdev * rng.standard_normal(
