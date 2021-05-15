@@ -47,6 +47,14 @@ update_every = 1  # Cost weighted update of inputs every ... steps
 predictor_type = "NeuralNet"
 
 
+"""Parameters weighting the different cost components"""
+dd_scale = 5.0e1
+ep_scale = 5.0e4
+ekp_scale = 1.0e-2
+ekc_scale = 5.0e0
+cc_scale = 1.0e0
+
+
 """MPPI constants"""
 R = 1.0e0  # How much to punish Q
 LBD = 1.0e2  # Cost parameter lambda
@@ -71,8 +79,6 @@ NOMINAL_ROLLOUT_LOGS = []
 
 
 """Cost function helpers"""
-
-
 @jit(nopython=True, cache=True, fastmath=True)
 def E_kin_cart(positionD):
     return positionD ** 2
@@ -141,11 +147,11 @@ def trajectory_rollouts(
 
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
-    dd = 5.0e1 * distance_difference_cost(s[:, :, POSITION_IDX], target_position)
-    ep = 1.0e5 * E_pot_cost(s[:, :, ANGLE_IDX])  # Frederik had 1.0e3
-    ekp = 1.0e-2 * E_kin_pol(s[:, :, ANGLED_IDX])
-    ekc = 5.0e0 * E_kin_cart(s[:, :, POSITIOND_IDX])
-    cc = (
+    dd = dd_scale * distance_difference_cost(s[:, :, POSITION_IDX], target_position)
+    ep = ep_scale * E_pot_cost(s[:, :, ANGLE_IDX])  # Frederik had 1.0e3
+    ekp = ekp_scale * E_kin_pol(s[:, :, ANGLED_IDX])
+    ekc = ekc_scale * E_kin_cart(s[:, :, POSITIOND_IDX])
+    cc = cc_scale * (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
 
@@ -241,8 +247,8 @@ class controller_mppi(template_controller):
                 (1, mpc_samples),
             )
         elif interpolate:
-            step=10
-            range_stop = int(np.ceil((mpc_samples)/step) * step) + 1
+            step = 10
+            range_stop = int(np.ceil((mpc_samples) / step) * step) + 1
             t = np.arange(start=0, stop=range_stop, step=step)
             t_interp = np.arange(start=0, stop=range_stop, step=1)
             t_interp = np.delete(t_interp, t)

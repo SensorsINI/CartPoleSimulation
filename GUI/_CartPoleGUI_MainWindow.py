@@ -345,6 +345,10 @@ class MainWindow(QMainWindow):
 
         # endregion
 
+        # region Open controller-specific popup windows
+        self.open_additional_widgets()
+        # endregion
+
         # region Activate functions capturing mouse movements and clicks over the slider
 
         # This line links function capturing the mouse position on the canvas of the Figure
