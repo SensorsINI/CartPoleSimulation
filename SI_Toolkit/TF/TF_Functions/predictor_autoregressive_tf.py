@@ -39,21 +39,21 @@ Using predictor:
 #   Updating it more often will lead to false results.
 
 # "Command line" parameters
-from Modeling.TF.TF_Functions.Network import *
-from Modeling.TF.TF_Functions.Initialization import get_net_and_norm_info
-from Modeling.load_and_normalize import *
+from SI_Toolkit.TF.TF_Functions.Initialization import get_net_and_norm_info
+from SI_Toolkit.TF.TF_Functions.Network import get_internal_states, load_internal_states
+from SI_Toolkit.load_and_normalize import *
 
 import numpy as np
 
 from types import SimpleNamespace
 
 from CartPole.state_utilities import STATE_VARIABLES, cartpole_state_varnames_to_indices, cartpole_state_varname_to_index
-
+import tensorflow as tf
 
 # NET_NAME = 'Dense-6IN-16H1-16H2-5OUT-0'
 NET_NAME = 'GRU-6IN-16H1-16H2-5OUT-0'
 
-PATH_TO_MODELS = './Modeling/TF/Models/'
+PATH_TO_MODELS = './SI_Toolkit/TF/Models/'
 
 class predictor_autoregressive_tf:
     def __init__(self, horizon=None, batch_size=None, net_name=None):

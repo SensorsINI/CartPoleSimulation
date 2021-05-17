@@ -8,18 +8,18 @@ Created on Fri Jun 19 08:29:29 2020
 import argparse
 from CartPole.state_utilities import STATE_VARIABLES_REDUCED, STATE_VARIABLES
 
-PATH_TO_MODELS = './Modeling/TF/Models/'
+PATH_TO_MODELS = './SI_Toolkit/TF/Models/'
 
 features = list(STATE_VARIABLES_REDUCED)
 
 tests = ['GRU-6IN-16H1-16H2-5OUT-0', 'Dense-6IN-16H1-16H2-5OUT-0', 'Euler-predictor']  # May be 'Euler', Euler-predictor, name of network or None = 'Dense-16H1-16H2'
-norm_infos = ['./Modeling/NormalizationInfo/' + 'Dataset-1-norm.csv']*len(tests) # Norm info for each test, for Euler has no effect, can be None or whatever
+norm_infos = ['./SI_Toolkit/NormalizationInfo/' + 'Dataset-1-norm.csv']*len(tests) # Norm info for each test, for Euler has no effect, can be None or whatever
 dt_euler = [0.002]*len(tests)  # Timestep of Euler (printed are only values, for which ground truth value exists), for neural network has no effect
 titles = tests  # Titles of tests to be printed in GUI
 
 TEST_FILE = ['./ExperimentRecordings/Dataset-1/Test/Test.csv']
 
-PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'Dataset-1-norm.csv'
+PATH_TO_NORMALIZATION_INFO = './SI_Toolkit/NormalizationInfo/' + 'Dataset-1-norm.csv'
 
 
 def args():

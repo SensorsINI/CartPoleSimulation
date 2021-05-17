@@ -9,7 +9,7 @@ from tensorflow.python.ops import gen_math_ops
 
 # These imports should be left
 import numpy as np
-from Modeling.TF.TF_Functions.Network import create_rnn_instance
+from Modeling.SI_Toolkit.TF.TF_Functions.Network import create_rnn_instance
 
 
 # Take care there is also other GRU implementation in TensorFlow

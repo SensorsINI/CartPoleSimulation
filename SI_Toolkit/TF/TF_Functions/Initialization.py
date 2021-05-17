@@ -2,13 +2,10 @@ import os
 # We use shutil to remove redundant dictionaries, os can remvove
 import shutil
 
-from types import SimpleNamespace
-
 import random as rnd
 
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras as keras
 
 from datetime import datetime
 try:
@@ -17,9 +14,8 @@ try:
 except:
     pass
 
-from Modeling.TF.TF_Functions.Network import compose_net_from_net_name, load_pretrained_net_weights, \
-    get_internal_states, load_internal_states
-from Modeling.load_and_normalize import load_normalization_info, get_sampling_interval_from_normalization_info
+from SI_Toolkit.TF.TF_Functions.Network import compose_net_from_net_name, load_pretrained_net_weights
+from SI_Toolkit.load_and_normalize import load_normalization_info, get_sampling_interval_from_normalization_info
 
 
 # Set seeds everywhere required to make results reproducible

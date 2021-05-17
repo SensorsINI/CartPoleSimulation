@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow import keras
-from Modeling.TF.TF_Functions.Network import create_rnn_instance
+from Modeling.SI_Toolkit.TF.TF_Functions.Network import create_rnn_instance
 
 RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0'
 RNN_PATH = './save_tf/'

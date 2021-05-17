@@ -92,10 +92,6 @@ class MainWindow(QMainWindow):
         self.setGeometry(300, 300, 2500, 1000)
         # endregion
 
-        # region - Feature selection
-
-        # endregion
-
         # region - Matplotlib figures (CartPole drawing and Slider)
         # Draw Figure
         self.fig = Figure(figsize=(25, 10))  # Regulates the size of Figure in inches, before scaling to window size.
@@ -228,7 +224,7 @@ class MainWindow(QMainWindow):
         w.setLayout(layout)
         self.setCentralWidget(w)
         self.show()
-        self.setWindowTitle('Testing TF model')
+        self.setWindowTitle('Testing System Model')
 
         # endregion
 
@@ -274,6 +270,7 @@ class MainWindow(QMainWindow):
     # The actions which has to be taken to properly terminate the application
     # The method is evoked after QUIT button is pressed
     # TODO: Can we connect it somehow also the the default cross closing the application?
+    #   If you find out, please correct for the same in CartPole simulator
     def quit_application(self):
         # Closes the GUI window
         self.close()
@@ -312,7 +309,7 @@ def brunton_widget(features, ground_truth, predictions_array, time_axis, axs=Non
         current_point_at_timeaxis = ground_truth.shape[0]//2
 
     if feature_to_display is None:
-        feature_to_display = 'position'
+        feature_to_display = features[0]
 
     if horizon is None:
         horizon = max_horizon

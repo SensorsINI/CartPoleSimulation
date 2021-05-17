@@ -2,13 +2,9 @@
 
 import scipy.optimize
 
-from CartPole.cartpole_model import P_GLOBALS
-
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index, \
     cartpole_state_indices_to_varnames
-from Modeling.TF.TF_Functions.Network import *
 from Predictores.predictor_ideal import predictor_ideal
-from Predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
 
 from Controllers.controller_lqr import controller_lqr
 

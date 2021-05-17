@@ -12,9 +12,7 @@ import random as rnd
 import copy
 
 from Modeling.Pytorch.utilis_rnn_specific import *
-from Modeling.load_and_normalize import load_normalization_info, load_data, normalize_df, denormalize_df
-
-from tqdm import tqdm
+from Modeling.SI_Toolkit.load_and_normalize import load_normalization_info, load_data, normalize_df, denormalize_df
 
 
 def get_device():

@@ -10,7 +10,7 @@ from CartPole.cartpole_model import Q2u, cartpole_ode
 
 
 DEFAULT_SAMPLING_INTERVAL = 0.02  # s, Corresponds to our lab cartpole
-def get_prediction_from_euler(a, dataset, dt_sampling, dt_sampling_by_dt_fine=1):
+def get_prediction_for_testing_gui_from_euler(a, dataset, dt_sampling, dt_sampling_by_dt_fine=1):
 
     # region In either case testing is done on a data collected offline
     output_array = np.zeros(shape=(a.test_max_horizon+1, a.test_len, len(a.features)+1))

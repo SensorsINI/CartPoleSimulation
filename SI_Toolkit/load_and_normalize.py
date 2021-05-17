@@ -21,7 +21,7 @@ try:
 except:
     pass
 
-PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/'
+PATH_TO_NORMALIZATION_INFO = './SI_Toolkit/NormalizationInfo/'
 PATH_TO_EXPERIMENT_RECORDINGS = './ExperimentRecordings/Train/'  # Path where the experiments data is stored
 normalization_rounding_decimals = 5
 

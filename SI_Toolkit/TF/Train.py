@@ -20,13 +20,13 @@ import timeit
 from warnings import warn as warning
 
 # "Command line" parameters
-from Modeling.TF.Parameters import args
+from SI_Toolkit.TF.Parameters import args
 
 # Custom functions
-from Modeling.TF.TF_Functions.Initialization import set_seed, create_full_name, create_log_file, get_net_and_norm_info
-from Modeling.TF.TF_Functions.Loss import loss_msr_sequence_customizable
-from Modeling.TF.TF_Functions.Dataset import Dataset, DatasetRandom
-from Modeling.load_and_normalize import load_data, normalize_df, \
+from SI_Toolkit.TF.TF_Functions.Initialization import set_seed, create_full_name, create_log_file, get_net_and_norm_info
+from SI_Toolkit.TF.TF_Functions.Loss import loss_msr_sequence_customizable
+from SI_Toolkit.TF.TF_Functions.Dataset import Dataset, DatasetRandom
+from SI_Toolkit.load_and_normalize import load_data, normalize_df, \
     get_sampling_interval_from_datafile, get_paths_to_datafiles
 
 # region Import and print "command line" arguments

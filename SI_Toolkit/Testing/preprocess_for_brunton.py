@@ -1,4 +1,4 @@
-from Modeling.load_and_normalize import \
+from SI_Toolkit.load_and_normalize import \
     load_data, get_sampling_interval_from_datafile
 
 

@@ -1,7 +1,5 @@
-from Modeling.TF.TF_Functions.Network import *
-
 from Controllers.template_controller import template_controller
-from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
+from CartPole.state_utilities import cartpole_state_varname_to_index
 
 
 RNN_FULL_NAME = 'GRU-5IN-64H1-64H2-1OUT-0'
