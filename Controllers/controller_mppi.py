@@ -55,6 +55,9 @@ ekc_scale = 5.0e0
 cc_scale = 1.0e0
 
 
+gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = np.zeros(1, dtype=np.float32)
+
+
 """MPPI constants"""
 R = 1.0e0  # How much to punish Q
 LBD = 1.0e2  # Cost parameter lambda
@@ -91,7 +94,8 @@ def E_kin_pol(angleD):
 
 @jit(nopython=True, cache=True, fastmath=True)
 def E_pot_cost(angle):
-    return 0.25 * (1 - np.cos(angle)) ** 2
+    return 0.25 * (1.0 - np.cos(angle)) ** 2
+    # return angle ** 2
 
 
 @jit(nopython=True, cache=True, fastmath=True)
@@ -137,6 +141,9 @@ def trajectory_rollouts(
     )
     S_tilde_k = np.sum(cost_increment, axis=1)
 
+    global gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc
+    gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc = np.mean(dd), np.mean(ep), np.mean(ekp), np.mean(ekc), np.mean(cc)
+
     if LOGGING:
         cost_logs_internal = np.swapaxes(np.array([dd, ep, ekp, ekc, cc]), 0, 1)
         # (mc_samples x 5 x mpc_samples)
@@ -147,10 +154,10 @@ def trajectory_rollouts(
 
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
-    dd = dd_scale * distance_difference_cost(s[:, :, POSITION_IDX], target_position)
-    ep = ep_scale * E_pot_cost(s[:, :, ANGLE_IDX])  # Frederik had 1.0e3
-    ekp = ekp_scale * E_kin_pol(s[:, :, ANGLED_IDX])
-    ekc = ekc_scale * E_kin_cart(s[:, :, POSITIOND_IDX])
+    dd = dd_scale * distance_difference_cost(s[:, :, POSITION_IDX], target_position).astype(np.float32)
+    ep = ep_scale * E_pot_cost(s[:, :, ANGLE_IDX]).astype(np.float32)  # Frederik had 1.0e3
+    ekp = ekp_scale * E_kin_pol(s[:, :, ANGLED_IDX]).astype(np.float32)
+    ekc = ekc_scale * E_kin_cart(s[:, :, POSITIOND_IDX]).astype(np.float32)
     cc = cc_scale * (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
@@ -269,7 +276,7 @@ class controller_mppi(template_controller):
 
     def step(self, s, target_position, time=None):
         self.s = s
-        self.target_position = target_position
+        self.target_position = np.float32(target_position)
 
         self.iteration += 1
 
