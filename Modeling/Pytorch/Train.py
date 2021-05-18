@@ -5,7 +5,6 @@ Created on Fri Jun 19 06:21:32 2020
 @author: Marcin
 """
 
-import os
 import timeit
 
 # Various
@@ -14,11 +13,8 @@ import torch.utils.data.dataloader
 from torch.optim import lr_scheduler
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
-from Modeling.load_and_normalize import calculate_normalization_info
+from Modeling.SI_Toolkit.load_and_normalize import calculate_normalization_info
 import torch.nn as nn
-import matplotlib.pyplot as plt
-from itertools import product
-import numpy as np
 # from ax.plot.contour import plot_contour
 # from ax.plot.trace import optimization_trace_single_method
 # from ax.service.managed_loop import optimize
@@ -26,7 +22,6 @@ import numpy as np
 # from ax.utils.tutorials.cnn_utils import load_mnist, train, evaluate, CNN
 # from memory_profiler import profile
 
-import re
 import time
 
 # Custom functions

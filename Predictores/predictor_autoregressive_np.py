@@ -12,9 +12,8 @@ While designing the controller you just chose the predictor you want,
 #   Updating it more often will lead to false results.
 
 
-from Modeling.TF.TF_Functions.Network import *
 import numpy as np
-from Modeling.TF.TF_Functions.TF2Numpy import create_rnn_instance_numpy
+from Modeling.SI_Toolkit.TF.TF_Functions import create_rnn_instance_numpy
 
 
 RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0' # DT = 0.1s for this net

@@ -32,29 +32,21 @@ Using predictor:
 #TODO: for the moment it is not possible to update RNN more often than mpc dt
 #   Updating it more often will lead to false results.
 
-import math
-
 from numba import jit
 import numpy as np
 
-from others.globals_and_utils import Timer
-from copy import deepcopy
-
-from Modeling.load_and_normalize import load_normalization_info, normalize_numpy_array
+from SI_Toolkit.load_and_normalize import load_normalization_info, normalize_numpy_array
 from CartPole.cartpole_model import (
-    Q2u, cartpole_ode, _angleDD, _positionDD, get_A,
-    TrackHalfLength, k, M, m, g, J_fric, M_fric, L, v_max, u_max
+    Q2u, _angleDD, _positionDD, get_A,
+    TrackHalfLength
 )
 
 from CartPole.state_utilities import (
-    create_cartpole_state,
-    cartpole_state_varname_to_index, cartpole_state_varnames_to_indices,
-    cartpole_state_indices_to_varnames,
     ANGLE_IDX, ANGLED_IDX, ANGLEDD_IDX, POSITION_IDX, POSITIOND_IDX, POSITIONDD_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX,
     STATE_VARIABLES
 )
 
-PATH_TO_NORMALIZATION_INFO = './Modeling/NormalizationInfo/' + 'Dataset-1-norm.csv'
+PATH_TO_NORMALIZATION_INFO = './SI_Toolkit/NormalizationInfo/' + 'Dataset-1-norm.csv'
 
 
 @jit(nopython=True, cache=True, fastmath=True)

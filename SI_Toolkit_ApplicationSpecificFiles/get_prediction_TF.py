@@ -7,15 +7,15 @@ from tqdm import trange
 import copy
 
 
-from Modeling.load_and_normalize import denormalize_numpy_array, normalize_numpy_array
-from Modeling.TF.TF_Functions.Network import load_internal_states, get_internal_states
+from SI_Toolkit.load_and_normalize import denormalize_numpy_array, normalize_numpy_array
+from SI_Toolkit.TF.TF_Functions.Network import load_internal_states, get_internal_states
 
 from CartPole.state_utilities import STATE_INDICES_REDUCED
 
 # This import mus go before pyplot so also before our scripts
 from matplotlib import use, get_backend
 # Use Agg if not in scientific mode of Pycharm
-from Modeling.TF.TF_Functions.Initialization import get_net_and_norm_info
+from SI_Toolkit.TF.TF_Functions.Initialization import get_net_and_norm_info
 
 if get_backend() != 'module://backend_interagg':
     use('Agg')

@@ -34,7 +34,7 @@ from numpy.random import SFC64, Generator
 from scipy.interpolate import interp1d
 
 from others.globals_and_utils import Timer
-from Predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
+from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import predictor_autoregressive_tf
 from Predictores.predictor_ideal import predictor_ideal
 
 """Timestep and sampling settings"""

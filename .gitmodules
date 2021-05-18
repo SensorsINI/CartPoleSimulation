@@ -1,0 +1,3 @@
+[submodule "SI_Toolkit"]
+	path = SI_Toolkit
+	url = https://github.com/SensorsINI/SI_Toolkit

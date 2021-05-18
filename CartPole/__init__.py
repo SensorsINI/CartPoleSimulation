@@ -34,12 +34,6 @@ try:
 except:
     pass
 
-try:
-    # Use gitpython to get a current revision number and use it in description of experimental data
-    from git import Repo
-except:
-    pass
-
 # check memory usage of chosen methods. Commented by default
 # from memory_profiler import profile
 
@@ -407,7 +401,7 @@ class CartPole:
             with open(self.csv_filepath, "a") as outfile:
                 writer = csv.writer(outfile)
 
-                writer.writerow(['# ' + 'This is CartPole experiment from {} at time {}'
+                writer.writerow(['# ' + 'This is CartPole simulation from {} at time {}'
                                 .format(datetime.now().strftime('%d.%m.%Y'), datetime.now().strftime('%H:%M:%S'))])
                 try:
                     repo = Repo()
