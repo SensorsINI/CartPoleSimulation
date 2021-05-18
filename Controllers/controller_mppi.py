@@ -161,6 +161,7 @@ def q(s, u, delta_u, target_position):
     cc = cc_scale * (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
+    # rterm = 1.0e4 * np.sum((delta_u[:,1:] - delta_u[:,:-1]) ** 2, axis=1, keepdims=True)
 
     # Penalize if control deviation is outside constraint set.
     cc[np.abs(u + delta_u) > 1.0] = 1.0e5
