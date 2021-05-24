@@ -34,7 +34,9 @@ from numpy.random import SFC64, Generator
 from scipy.interpolate import interp1d
 
 from others.globals_and_utils import Timer
-from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import predictor_autoregressive_tf
+from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
+    predictor_autoregressive_tf,
+)
 from Predictores.predictor_ideal import predictor_ideal
 
 """Timestep and sampling settings"""
@@ -63,7 +65,9 @@ R = 1.0e0  # How much to punish Q
 LBD = 1.0e2  # Cost parameter lambda
 NU = 1.0e3  # Exploration variance
 GAMMA = 1.00  # Future cost discount
-
+SAMPLING_TYPE = (
+    "iid"  # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
+)
 
 """Random number generator"""
 rng = Generator(SFC64(123))
@@ -82,6 +86,8 @@ NOMINAL_ROLLOUT_LOGS = []
 
 
 """Cost function helpers"""
+
+
 @jit(nopython=True, cache=True, fastmath=True)
 def E_kin_cart(positionD):
     return positionD ** 2
@@ -142,7 +148,13 @@ def trajectory_rollouts(
     S_tilde_k = np.sum(cost_increment, axis=1)
 
     global gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc
-    gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc = np.mean(dd), np.mean(ep), np.mean(ekp), np.mean(ekc), np.mean(cc)
+    gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc = (
+        np.mean(dd),
+        np.mean(ep),
+        np.mean(ekp),
+        np.mean(ekc),
+        np.mean(cc),
+    )
 
     if LOGGING:
         cost_logs_internal = np.swapaxes(np.array([dd, ep, ekp, ekc, cc]), 0, 1)
@@ -155,8 +167,12 @@ def trajectory_rollouts(
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
     # TODO: "weight"
-    dd = dd_weight * distance_difference_cost(s[:, :, POSITION_IDX], target_position).astype(np.float32)
-    ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX]).astype(np.float32)  # Frederik had 1.0e3
+    dd = dd_weight * distance_difference_cost(
+        s[:, :, POSITION_IDX], target_position
+    ).astype(np.float32)
+    ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX]).astype(
+        np.float32
+    )  # Frederik had 1.0e3
     ekp = ekp_weight * E_kin_pol(s[:, :, ANGLED_IDX]).astype(np.float32)
     ekc = ekc_weight * E_kin_cart(s[:, :, POSITIOND_IDX]).astype(np.float32)
     cc = cc_weight * (
@@ -220,19 +236,14 @@ class controller_mppi(template_controller):
             self.auxiliary_controller = None
 
     def initialize_perturbations(
-        self,
-        stdev: float = 1.0,
-        random_walk: bool = False,
-        uniform: bool = False,
-        repeated: bool = False,
-        interpolate: bool = False,
+        self, stdev: float = 1.0, sampling_type: str = None
     ) -> np.ndarray:
         """
         Return a numpy array with the perturbations delta_u.
         If random_walk is false, initialize with independent Gaussian samples
         If random_walk is true, each row represents a 1D random walk with Gaussian steps.
         """
-        if random_walk:
+        if sampling_type == "random_walk":
             delta_u = np.empty((mc_samples, mpc_samples), dtype=np.float32)
             delta_u[:, 0] = stdev * rng.standard_normal(
                 size=(mc_samples,), dtype=np.float32
@@ -241,7 +252,7 @@ class controller_mppi(template_controller):
                 delta_u[:, i] = delta_u[:, i - 1] + stdev * rng.standard_normal(
                     size=(mc_samples,), dtype=np.float32
                 )
-        elif uniform:
+        elif sampling_type == "uniform":
             delta_u = np.empty((mc_samples, mpc_samples), dtype=np.float32)
             for i in range(0, mpc_samples):
                 delta_u[:, i] = (
@@ -250,12 +261,12 @@ class controller_mppi(template_controller):
                     )
                     - self.u[i]
                 )
-        elif repeated:
+        elif sampling_type == "repeated":
             delta_u = np.tile(
                 stdev * rng.standard_normal(size=(mc_samples, 1), dtype=np.float32),
                 (1, mpc_samples),
             )
-        elif interpolate:
+        elif sampling_type == "interpolated":
             step = 10
             range_stop = int(np.ceil((mpc_samples) / step) * step) + 1
             t = np.arange(start=0, stop=range_stop, step=step)
@@ -268,7 +279,6 @@ class controller_mppi(template_controller):
             f = interp1d(t, delta_u[:, t])
             delta_u[:, t_interp] = f(t_interp)
             delta_u = delta_u[:, :mpc_samples]
-
         else:
             delta_u = stdev * rng.standard_normal(
                 size=(mc_samples, mpc_samples), dtype=np.float32
@@ -294,10 +304,7 @@ class controller_mppi(template_controller):
             self.delta_u = self.initialize_perturbations(
                 # stdev=0.1 * (1 + 1 / (self.iteration + 1)),
                 stdev=NU * 1e-4,
-                random_walk=False,
-                uniform=False,
-                repeated=False,
-                interpolate=True,
+                sampling_type=SAMPLING_TYPE,
             )  # du ~ N(mean=0, var=1/(rho*dt))
             self.S_tilde_k = np.zeros_like(self.S_tilde_k, dtype=np.float32)
 

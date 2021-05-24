@@ -174,6 +174,32 @@ class MPPIOptionsWindow(QWidget):
         h_layout.addWidget(textbox)
         mppi_constants_layout.addLayout(h_layout)
 
+        # Sampling type
+        h_layout = QHBoxLayout()
+        btn1 = QRadioButton("iid")
+        if btn1.text() == controller_mppi.SAMPLING_TYPE: btn1.setChecked(True)
+        btn1.toggled.connect(lambda: self.toggle_button(btn1))
+        h_layout.addWidget(btn1)
+        btn2 = QRadioButton("random_walk")
+        if btn2.text() == controller_mppi.SAMPLING_TYPE: btn2.setChecked(True)
+        btn2.toggled.connect(lambda: self.toggle_button(btn2))
+        h_layout.addWidget(btn2)
+        btn3 = QRadioButton("uniform")
+        if btn3.text() == controller_mppi.SAMPLING_TYPE: btn3.setChecked(True)
+        btn3.toggled.connect(lambda: self.toggle_button(btn3))
+        h_layout.addWidget(btn3)
+        btn4 = QRadioButton("repeated")
+        if btn4.text() == controller_mppi.SAMPLING_TYPE: btn4.setChecked(True)
+        btn4.toggled.connect(lambda: self.toggle_button(btn4))
+        h_layout.addWidget(btn4)
+        btn5 = QRadioButton("interpolated")
+        if btn5.text() == controller_mppi.SAMPLING_TYPE: btn5.setChecked(True)
+        btn5.toggled.connect(lambda: self.toggle_button(btn5))
+        h_layout.addWidget(btn5)
+        mppi_constants_layout.addWidget(QLabel("Sampling type:"))
+        mppi_constants_layout.addLayout(h_layout)
+
+
         ### Put together layout
         self.update_labels()
         self.update_slider_labels()
@@ -244,6 +270,9 @@ class MPPIOptionsWindow(QWidget):
         if val == '': val = '0'
         self.NU = float(val)
         controller_mppi.NU = self.NU
+
+    def toggle_button(self, b):
+        if b.isChecked(): controller_mppi.SAMPLING_TYPE = b.text()
     
     def update_slider_labels(self):
         self.horizon_label.setText(
