@@ -33,11 +33,11 @@ class MPPIOptionsWindow(QWidget):
         super(MPPIOptionsWindow, self).__init__()
 
         self.horizon_steps = 50
-        self.dd_scale = controller_mppi.dd_scale
-        self.ep_scale = controller_mppi.ep_scale
-        self.ekp_scale = controller_mppi.ekp_scale * 1.0e3
-        self.ekc_scale = controller_mppi.ekc_scale * 1.0e1
-        self.cc_scale = controller_mppi.cc_scale * 1.0e1
+        self.dd_weight = controller_mppi.dd_weight
+        self.ep_weight = controller_mppi.ep_weight
+        self.ekp_weight = controller_mppi.ekp_weight * 1.0e1
+        self.ekc_weight = controller_mppi.ekc_weight * 1.0e-1
+        self.cc_weight = controller_mppi.cc_weight * 1.0e-1
 
         layout = QVBoxLayout()
 
@@ -61,80 +61,85 @@ class MPPIOptionsWindow(QWidget):
         # Section: Set Cost Weights
         cost_weight_layout = QVBoxLayout()
         
-        self.dd_scale_label = QLabel("")
-        self.dd_scale_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
-        cost_weight_layout.addWidget(self.dd_scale_label)
+        # Distance difference cost
+        self.dd_weight_label = QLabel("")
+        self.dd_weight_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        cost_weight_layout.addWidget(self.dd_weight_label)
         self.dd_label = QLabel("")
         self.dd_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
         cost_weight_layout.addWidget(self.dd_label)
         slider = QSlider(orientation=Qt.Horizontal)
         slider.setRange(0, 990)
-        slider.setValue(self.dd_scale)
+        slider.setValue(self.dd_weight)
         slider.setTickPosition(QSlider.TicksBelow)
         slider.setTickInterval(10)
         slider.setSingleStep(10)
         cost_weight_layout.addWidget(slider)
-        slider.valueChanged.connect(self.dd_scale_changed)
+        slider.valueChanged.connect(self.dd_weight_changed)
 
-        self.ep_scale_label = QLabel("")
-        self.ep_scale_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
-        cost_weight_layout.addWidget(self.ep_scale_label)
+        # Potential energy cost
+        self.ep_weight_label = QLabel("")
+        self.ep_weight_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        cost_weight_layout.addWidget(self.ep_weight_label)
         self.ep_label = QLabel("")
         self.ep_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
         cost_weight_layout.addWidget(self.ep_label)
         slider = QSlider(orientation=Qt.Horizontal)
         slider.setRange(0, 1e5-1e3)
-        slider.setValue(self.ep_scale)
+        slider.setValue(self.ep_weight)
         slider.setTickPosition(QSlider.TicksBelow)
         slider.setTickInterval(1e3)
         slider.setSingleStep(1e3)
         cost_weight_layout.addWidget(slider)
-        slider.valueChanged.connect(self.ep_scale_changed)
+        slider.valueChanged.connect(self.ep_weight_changed)
 
-        self.ekp_scale_label = QLabel("")
-        self.ekp_scale_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
-        cost_weight_layout.addWidget(self.ekp_scale_label)
+        # Pole kinetic energy cost
+        self.ekp_weight_label = QLabel("")
+        self.ekp_weight_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        cost_weight_layout.addWidget(self.ekp_weight_label)
         self.ekp_label = QLabel("")
         self.ekp_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
         cost_weight_layout.addWidget(self.ekp_label)
         slider = QSlider(orientation=Qt.Horizontal)
         slider.setRange(0, 99)
-        slider.setValue(self.ekp_scale)
+        slider.setValue(self.ekp_weight)
         slider.setTickPosition(QSlider.TicksBelow)
         slider.setTickInterval(1)
         slider.setSingleStep(1)
         cost_weight_layout.addWidget(slider)
-        slider.valueChanged.connect(self.ekp_scale_changed)
+        slider.valueChanged.connect(self.ekp_weight_changed)
 
-        self.ekc_scale_label = QLabel("")
-        self.ekc_scale_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
-        cost_weight_layout.addWidget(self.ekc_scale_label)
+        # Cart kinetic energy cost
+        self.ekc_weight_label = QLabel("")
+        self.ekc_weight_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        cost_weight_layout.addWidget(self.ekc_weight_label)
         self.ekc_label = QLabel("")
         self.ekc_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
         cost_weight_layout.addWidget(self.ekc_label)
         slider = QSlider(orientation=Qt.Horizontal)
         slider.setRange(0, 99)
-        slider.setValue(self.ekc_scale)
+        slider.setValue(self.ekc_weight)
         slider.setTickPosition(QSlider.TicksBelow)
         slider.setTickInterval(1)
         slider.setSingleStep(1)
         cost_weight_layout.addWidget(slider)
-        slider.valueChanged.connect(self.ekc_scale_changed)
+        slider.valueChanged.connect(self.ekc_weight_changed)
 
-        self.cc_scale_label = QLabel("")
-        self.cc_scale_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
-        cost_weight_layout.addWidget(self.cc_scale_label)
+        # Control cost
+        self.cc_weight_label = QLabel("")
+        self.cc_weight_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        cost_weight_layout.addWidget(self.cc_weight_label)
         self.cc_label = QLabel("")
         self.cc_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
         cost_weight_layout.addWidget(self.cc_label)
         slider = QSlider(orientation=Qt.Horizontal)
         slider.setRange(0, 99)
-        slider.setValue(self.cc_scale)
+        slider.setValue(self.cc_weight)
         slider.setTickPosition(QSlider.TicksBelow)
         slider.setTickInterval(1)
         slider.setSingleStep(1)
         cost_weight_layout.addWidget(slider)
-        slider.valueChanged.connect(self.cc_scale_changed)
+        slider.valueChanged.connect(self.cc_weight_changed)
 
         # Put together layout
         self.update_labels()
@@ -144,7 +149,7 @@ class MPPIOptionsWindow(QWidget):
 
         self.setLayout(layout)
         self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
-        self.setGeometry(0, 0, 800, 100)
+        self.setGeometry(0, 0, 400, 50)
 
         self.show()
         self.setWindowTitle("MPPI Options")
@@ -155,60 +160,60 @@ class MPPIOptionsWindow(QWidget):
 
         controller_mppi.LOGGING = False
 
-    def horizon_length_changed(self, length: int):
-        self.horizon_steps = length
+    def horizon_length_changed(self, val: int):
+        self.horizon_steps = val
         # TODO: Replace by setter method
         controller_mppi.mpc_samples = self.horizon_steps
         self.update_slider_labels()
 
-    def dd_scale_changed(self, length: int):
-        self.dd_scale = length
+    def dd_weight_changed(self, val: int):
+        self.dd_weight = val
         # TODO: Replace by setter method
-        controller_mppi.dd_scale = self.dd_scale * 1.0
+        controller_mppi.dd_weight = self.dd_weight * 1.0
         self.update_slider_labels()
     
-    def ep_scale_changed(self, length: int):
-        self.ep_scale = length
+    def ep_weight_changed(self, val: int):
+        self.ep_weight = val
         # TODO: Replace by setter method
-        controller_mppi.ep_scale = self.ep_scale * 1.0
+        controller_mppi.ep_weight = self.ep_weight * 1.0
         self.update_slider_labels()
     
-    def ekp_scale_changed(self, length: int):
-        self.ekp_scale = length
+    def ekp_weight_changed(self, val: int):
+        self.ekp_weight = val
         # TODO: Replace by setter method
-        controller_mppi.ekp_scale = self.ekp_scale * 1.0e-3
+        controller_mppi.ekp_weight = self.ekp_weight * 1.0e-1
         self.update_slider_labels()
     
-    def ekc_scale_changed(self, length: int):
-        self.ekc_scale = length
+    def ekc_weight_changed(self, val: int):
+        self.ekc_weight = val
         # TODO: Replace by setter method
-        controller_mppi.ekc_scale = self.ekc_scale * 1.0e-1
+        controller_mppi.ekc_weight = self.ekc_weight * 1.0e1
         self.update_slider_labels()
     
-    def cc_scale_changed(self, length: int):
-        self.cc_scale = length
+    def cc_weight_changed(self, val: int):
+        self.cc_weight = val
         # TODO: Replace by setter method
-        controller_mppi.cc_scale = self.cc_scale * 1.0e-1
+        controller_mppi.cc_weight = self.cc_weight * 1.0e1
         self.update_slider_labels()
     
     def update_slider_labels(self):
         self.horizon_label.setText(
             f"Horizon: {self.horizon_steps} steps = {round(self.horizon_steps * controller_mppi.dt, 2)} s"
         )
-        self.dd_scale_label.setText(
-            f"Distance Difference cost scale: {round(self.dd_scale, 2)}"
+        self.dd_weight_label.setText(
+            f"Distance difference cost weight: {round(self.dd_weight, 2)}"
         )
-        self.ep_scale_label.setText(
-            f"Potential Energy cost scale: {round(self.ep_scale, 2)}"
+        self.ep_weight_label.setText(
+            f"Pole angle cost weight: {round(self.ep_weight, 2)}"
         )
-        self.ekp_scale_label.setText(
-            f"Pole Kinetic Energy cost scale: {round(self.ekp_scale * 1.0e-3, 4)}"
+        self.ekp_weight_label.setText(
+            f"Pole kinetic energy cost weight: {round(self.ekp_weight * 1.0e-1, 4)}"
         )
-        self.ekc_scale_label.setText(
-            f"Cart Kinetic Energy cost scale: {round(self.ekc_scale * 1.0e-1, 3)}"
+        self.ekc_weight_label.setText(
+            f"Cart kinetic energy cost weight: {round(self.ekc_weight * 1.0e1, 3)}"
         )
-        self.cc_scale_label.setText(
-            f"Control cost scale: {round(self.cc_scale * 1.0e-1, 3)}"
+        self.cc_weight_label.setText(
+            f"Control cost weight: {round(self.cc_weight * 1.0e1, 3)}"
         )
 
     def update_labels(self):

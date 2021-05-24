@@ -48,11 +48,11 @@ predictor_type = "NeuralNet"
 
 
 """Parameters weighting the different cost components"""
-dd_scale = 5.0e1
-ep_scale = 5.0e4
-ekp_scale = 1.0e-2
-ekc_scale = 5.0e0
-cc_scale = 1.0e0
+dd_weight = 5.0e1
+ep_weight = 5.0e4
+ekp_weight = 1.0e-2
+ekc_weight = 5.0e0
+cc_weight = 1.0e0
 
 
 gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = np.zeros(1, dtype=np.float32)
@@ -154,11 +154,12 @@ def trajectory_rollouts(
 
 def q(s, u, delta_u, target_position):
     """Cost function per iteration"""
-    dd = dd_scale * distance_difference_cost(s[:, :, POSITION_IDX], target_position).astype(np.float32)
-    ep = ep_scale * E_pot_cost(s[:, :, ANGLE_IDX]).astype(np.float32)  # Frederik had 1.0e3
-    ekp = ekp_scale * E_kin_pol(s[:, :, ANGLED_IDX]).astype(np.float32)
-    ekc = ekc_scale * E_kin_cart(s[:, :, POSITIOND_IDX]).astype(np.float32)
-    cc = cc_scale * (
+    # TODO: "weight"
+    dd = dd_weight * distance_difference_cost(s[:, :, POSITION_IDX], target_position).astype(np.float32)
+    ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX]).astype(np.float32)  # Frederik had 1.0e3
+    ekp = ekp_weight * E_kin_pol(s[:, :, ANGLED_IDX]).astype(np.float32)
+    ekc = ekc_weight * E_kin_cart(s[:, :, POSITIOND_IDX]).astype(np.float32)
+    cc = cc_weight * (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
     # rterm = 1.0e4 * np.sum((delta_u[:,1:] - delta_u[:,:-1]) ** 2, axis=1, keepdims=True)
