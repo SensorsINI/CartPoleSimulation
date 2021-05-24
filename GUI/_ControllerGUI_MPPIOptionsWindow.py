@@ -38,10 +38,13 @@ class MPPIOptionsWindow(QWidget):
         self.ekp_weight = controller_mppi.ekp_weight * 1.0e1
         self.ekc_weight = controller_mppi.ekc_weight * 1.0e-1
         self.cc_weight = controller_mppi.cc_weight * 1.0e-1
+        self.R = controller_mppi.R          # How much to punish Q
+        self.LBD = controller_mppi.LBD      # Cost parameter lambda
+        self.NU = controller_mppi.NU        # Exploration variance
 
         layout = QVBoxLayout()
 
-        # Section: Set Horizon Length
+        ### Set Horizon Length
         horizon_options_layout = QVBoxLayout()
 
         self.horizon_label = QLabel("")
@@ -58,7 +61,7 @@ class MPPIOptionsWindow(QWidget):
 
         slider.valueChanged.connect(self.horizon_length_changed)
 
-        # Section: Set Cost Weights
+        ### Set Cost Weights
         cost_weight_layout = QVBoxLayout()
         
         # Distance difference cost
@@ -141,11 +144,42 @@ class MPPIOptionsWindow(QWidget):
         cost_weight_layout.addWidget(slider)
         slider.valueChanged.connect(self.cc_weight_changed)
 
-        # Put together layout
+        ### Set some more MPPI constants
+        mppi_constants_layout = QVBoxLayout()
+
+        # Quadratic cost penalty R
+        textbox = QLineEdit()
+        textbox.setText(str(self.R))
+        textbox.textChanged.connect(self.R_changed)
+        h_layout = QHBoxLayout()
+        h_layout.addWidget(QLabel("Quadratic input cost penalty R ="))
+        h_layout.addWidget(textbox)
+        mppi_constants_layout.addLayout(h_layout)
+
+        # Quadratic cost penalty LBD
+        textbox = QLineEdit()
+        textbox.setText(str(self.LBD))
+        textbox.textChanged.connect(self.LBD_changed)
+        h_layout = QHBoxLayout()
+        h_layout.addWidget(QLabel("Importance of higher-cost rollouts LBD ="))
+        h_layout.addWidget(textbox)
+        mppi_constants_layout.addLayout(h_layout)
+
+        # Quadratic cost penalty NU
+        textbox = QLineEdit()
+        textbox.setText(str(self.NU))
+        textbox.textChanged.connect(self.NU_changed)
+        h_layout = QHBoxLayout()
+        h_layout.addWidget(QLabel("Exploration variance NU ="))
+        h_layout.addWidget(textbox)
+        mppi_constants_layout.addLayout(h_layout)
+
+        ### Put together layout
         self.update_labels()
         self.update_slider_labels()
         layout.addLayout(horizon_options_layout)
         layout.addLayout(cost_weight_layout)
+        layout.addLayout(mppi_constants_layout)
 
         self.setLayout(layout)
         self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
@@ -195,6 +229,21 @@ class MPPIOptionsWindow(QWidget):
         # TODO: Replace by setter method
         controller_mppi.cc_weight = self.cc_weight * 1.0e1
         self.update_slider_labels()
+
+    def R_changed(self, val: str):
+        if val == '': val = '0'
+        self.R = float(val)
+        controller_mppi.R = self.R
+    
+    def LBD_changed(self, val: str):
+        if val == '': val = '0'
+        self.LBD = float(val)
+        controller_mppi.LBD = self.LBD
+    
+    def NU_changed(self, val: str):
+        if val == '': val = '0'
+        self.NU = float(val)
+        controller_mppi.NU = self.NU
     
     def update_slider_labels(self):
         self.horizon_label.setText(
