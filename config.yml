@@ -1,0 +1,27 @@
+modeling:
+  NET_NAME: 'Dense-6IN-16H1-16H2-5OUT-0'
+  # NET_NAME: 'GRU-6IN-16H1-16H2-5OUT-0'
+  PATH_TO_MODELS: './SI_Toolkit/TF/Models/'
+  RNN_FULL_NAME: 'GRU-6IN-64H1-64H2-5OUT-0'
+  RNN_PATH: './save_tf/'
+  PATH_TO_NORMALIZATION_INFO: './SI_Toolkit/NormalizationInfo/Dataset-1-norm.csv'
+
+controller:
+  mppi:
+    dt: 0.02                              # sec
+    mpc_horizon: 1.0                      # sec
+    mc_samples: 2000                      # Number of Monte Carlo samples
+    update_every: 1                       # Cost weighted update of inputs every ... steps
+    # predictor_type: "Euler"
+    predictor_type: "NeuralNet"
+    dd_weight: 50.0
+    ep_weight: 50000.0
+    ekp_weight: 0.01
+    ekc_weight: 5.0
+    cc_weight: 1.0
+    R: 1.0                                # How much to punish Q
+    LBD: 100.0                            # Cost parameter lambda
+    NU: 1000.0                            # Exploration variance
+    GAMMA: 1.00                           # Future cost discount
+    SAMPLING_TYPE: "iid"                  # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
+    LOGGING: True

@@ -39,43 +39,42 @@ from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
 )
 from Predictores.predictor_ideal import predictor_ideal
 
+import yaml
+config = yaml.load(open('config.yml', 'r'), Loader=yaml.FullLoader)
+
 """Timestep and sampling settings"""
-dt = 0.02  # s
-mpc_horizon = 1.0
-mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
-mc_samples = int(2e3)  # Number of Monte Carlo samples
-update_every = 1  # Cost weighted update of inputs every ... steps
-# predictor_type = "Euler"
-predictor_type = "NeuralNet"
+dt =                config['controller']['mppi']['dt']
+mpc_horizon =       config['controller']['mppi']['mpc_horizon']
+mpc_samples =       int(mpc_horizon / dt)  # Number of steps in MPC horizon
+mc_samples =        config['controller']['mppi']['mc_samples']
+update_every =      config['controller']['mppi']['update_every']
+predictor_type =    config['controller']['mppi']['predictor_type']
 
 
 """Parameters weighting the different cost components"""
-dd_weight = 5.0e1
-ep_weight = 5.0e4
-ekp_weight = 1.0e-2
-ekc_weight = 5.0e0
-cc_weight = 1.0e0
+dd_weight =         config['controller']['mppi']['dd_weight']
+ep_weight =         config['controller']['mppi']['ep_weight']
+ekp_weight =        config['controller']['mppi']['ekp_weight']
+ekc_weight =        config['controller']['mppi']['ekc_weight']
+cc_weight =         config['controller']['mppi']['cc_weight']
 
 
 gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = np.zeros(1, dtype=np.float32)
 
 
 """MPPI constants"""
-R = 1.0e0  # How much to punish Q
-LBD = 1.0e2  # Cost parameter lambda
-NU = 1.0e3  # Exploration variance
-GAMMA = 1.00  # Future cost discount
-SAMPLING_TYPE = (
-    "iid"  # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
-)
+R =                 config['controller']['mppi']['R']
+LBD =               config['controller']['mppi']['LBD']
+NU =                config['controller']['mppi']['NU']
+GAMMA =             config['controller']['mppi']['GAMMA']
+SAMPLING_TYPE =     config['controller']['mppi']['SAMPLING_TYPE']
 
 """Random number generator"""
 rng = Generator(SFC64(123))
 
 
 """Init logging variables"""
-LOGGING = True
-# LOGGING = False
+LOGGING =           config['controller']['mppi']['LOGGING']
 # Save average cost for each cost component
 COST_TO_GO_LOGS = []
 COST_BREAKDOWN_LOGS = []
