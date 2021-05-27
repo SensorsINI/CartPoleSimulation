@@ -442,8 +442,11 @@ class MainWindow(QMainWindow):
             for line in reader:
                 line = line[0]
                 if line[:len('# Controller: ')] == '# Controller: ':
-                    self.CartPoleInstance.set_controller(line[len('# Controller: '):].rstrip("\n"))
-                    self.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
+                    controller_set = self.CartPoleInstance.set_controller(line[len('# Controller: '):].rstrip("\n"))
+                    if controller_set:
+                        self.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
+                    else:
+                        self.rbs_controllers[1].setChecked(True) # Set first, but not manual stabilization
                     break
 
         # Augment the experiment history with simulation time step size
@@ -467,7 +470,10 @@ class MainWindow(QMainWindow):
             self.CartPoleInstance.s[cartpole_state_varname_to_index('angle')] = row['angle']
             self.CartPoleInstance.time = row['time']
             self.CartPoleInstance.dt = row['dt']
-            self.CartPoleInstance.u = row['u']
+            try:
+                self.CartPoleInstance.u = row['u']
+            except KeyError:
+                pass
             self.CartPoleInstance.Q = row['Q']
             self.CartPoleInstance.target_position = row['target_position']
             if self.CartPoleInstance.controller_name == 'manual-stabilization':

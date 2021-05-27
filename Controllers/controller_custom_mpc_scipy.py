@@ -9,6 +9,7 @@ from Predictores.predictor_ideal import predictor_ideal
 from Controllers.controller_lqr import controller_lqr
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 predictor = predictor_ideal
 # WARNING: if using RNN to provide CartPole model to MPC
