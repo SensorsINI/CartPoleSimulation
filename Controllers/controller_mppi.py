@@ -258,7 +258,6 @@ class controller_mppi(template_controller):
                     rng.uniform(low=-1.0, high=1.0, size=(mc_samples,)).astype(
                         np.float32
                     )
-                    - self.u[i]
                 )
         elif sampling_type == "repeated":
             delta_u = np.tile(
