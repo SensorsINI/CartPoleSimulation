@@ -866,6 +866,8 @@ class MainWindow(QMainWindow):
         if self.CartPoleInstance.controller_name == 'mppi':
             self.optionsWidget = MPPIOptionsWindow()
         else:
+            try: self.optionsWidget.close()
+            except: pass
             self.optionsWidget = None
 
     # endregion
