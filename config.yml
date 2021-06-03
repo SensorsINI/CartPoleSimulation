@@ -13,7 +13,7 @@ controller:
     mc_samples: 2000                      # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_type: "NeuralNet"               # One of ["Euler", "NeuralNet"]
-    dd_weight: 50.0
+    dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01
     ekc_weight: 5.0
@@ -23,5 +23,5 @@ controller:
     LBD: 100.0                            # Cost parameter lambda
     NU: 1000.0                            # Exploration variance
     GAMMA: 1.00                           # Future cost discount
-    SAMPLING_TYPE: "iid"                  # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
+    SAMPLING_TYPE: "interpolated"                  # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     LOGGING: True
