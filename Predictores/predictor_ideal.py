@@ -82,7 +82,7 @@ def next_state_numba(angle, angleD, angleDD, angle_cos, angle_sin, position, pos
     return angle, angleD, angleDD, position, positionD, positionDD, angle_cos, angle_sin
 
 class predictor_ideal:
-    def __init__(self, horizon, dt):
+    def __init__(self, horizon, dt, intermediate_steps=1):
         try:
             self.normalization_info = load_normalization_info(PATH_TO_NORMALIZATION_INFO)
         except FileNotFoundError:
@@ -95,7 +95,7 @@ class predictor_ideal:
 
         self.horizon = horizon
 
-        self.intermediate_steps = 1
+        self.intermediate_steps = intermediate_steps
         self.t_step = dt / float(self.intermediate_steps)
 
         self.prediction_features_names = STATE_VARIABLES.tolist()
