@@ -503,6 +503,9 @@ class MainWindow(QMainWindow):
             if self.terminate_experiment_or_replay_thread:  # Means that stop button was pressed
                 break
 
+            while self.pause_experiment_or_replay_thread:  # Means that pause button was pressed
+                time.sleep(0.1)
+
         if self.show_experiment_summary:
             self.CartPoleInstance.dict_history = history_pd.loc[:index].to_dict(orient='list')
 
