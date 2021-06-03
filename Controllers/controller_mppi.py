@@ -82,6 +82,7 @@ COST_TO_GO_LOGS = []
 COST_BREAKDOWN_LOGS = []
 STATE_LOGS = []
 TRAJECTORY_LOGS = []
+TARGET_TRAJECTORY_LOGS = []
 INPUT_LOGS = []
 NOMINAL_ROLLOUT_LOGS = []
 
@@ -350,6 +351,7 @@ class controller_mppi(template_controller):
 
         if LOGGING:
             TRAJECTORY_LOGS.append(self.s[[POSITION_IDX, ANGLE_IDX]])
+            TARGET_TRAJECTORY_LOGS.append(target_position)
 
         if self.warm_up_countdown > 0 and self.auxiliary_controller_available:
             self.warm_up_countdown -= 1
@@ -469,6 +471,8 @@ class controller_mppi(template_controller):
             # shape(trjctlgs) = (update_every * ITERATIONS) x [position, angle]
             trjctlgs = np.stack(TRAJECTORY_LOGS[:-1], axis=0)
             wrap_angle_rad_inplace(trjctlgs[:, 1])
+            # shape(trgtlgs) = ITERATIONS x [position]
+            trgtlgs = np.stack(TARGET_TRAJECTORY_LOGS[:-1], axis=0)
 
             # Create figure
             fig, (ax1, ax2) = plt.subplots(
@@ -515,6 +519,15 @@ class controller_mppi(template_controller):
                     linestyle="-",
                     linewidth=1,
                     color="g",
+                )
+                # Plot target positions
+                ax1.plot(
+                    np.arange(0, np.shape(trgtlgs)[0]) * dt,
+                    trgtlgs,
+                    alpha=1.0,
+                    linestyle="--",
+                    linewidth=1,
+                    color="k",
                 )
                 # Plot trajectory planned by MPPI (= nominal trajectory)
                 ax1.plot(
