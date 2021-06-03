@@ -40,41 +40,42 @@ from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
 from Predictores.predictor_ideal import predictor_ideal
 
 import yaml
-config = yaml.load(open('config.yml', 'r'), Loader=yaml.FullLoader)
+
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 """Timestep and sampling settings"""
-dt =                config['controller']['mppi']['dt']
-mpc_horizon =       config['controller']['mppi']['mpc_horizon']
-mpc_samples =       int(mpc_horizon / dt)  # Number of steps in MPC horizon
-mc_samples =        config['controller']['mppi']['mc_samples']
-update_every =      config['controller']['mppi']['update_every']
-predictor_type =    config['controller']['mppi']['predictor_type']
+dt = config["controller"]["mppi"]["dt"]
+mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
+mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
+mc_samples = config["controller"]["mppi"]["mc_samples"]
+update_every = config["controller"]["mppi"]["update_every"]
+predictor_type = config["controller"]["mppi"]["predictor_type"]
 
 
 """Parameters weighting the different cost components"""
-dd_weight =         config['controller']['mppi']['dd_weight']
-ep_weight =         config['controller']['mppi']['ep_weight']
-ekp_weight =        config['controller']['mppi']['ekp_weight']
-ekc_weight =        config['controller']['mppi']['ekc_weight']
-cc_weight =         config['controller']['mppi']['cc_weight']
+dd_weight = config["controller"]["mppi"]["dd_weight"]
+ep_weight = config["controller"]["mppi"]["ep_weight"]
+ekp_weight = config["controller"]["mppi"]["ekp_weight"]
+ekc_weight = config["controller"]["mppi"]["ekc_weight"]
+cc_weight = config["controller"]["mppi"]["cc_weight"]
 
 
 gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = np.zeros(1, dtype=np.float32)
 
 
 """MPPI constants"""
-R =                 config['controller']['mppi']['R']
-LBD =               config['controller']['mppi']['LBD']
-NU =                config['controller']['mppi']['NU']
-GAMMA =             config['controller']['mppi']['GAMMA']
-SAMPLING_TYPE =     config['controller']['mppi']['SAMPLING_TYPE']
+R = config["controller"]["mppi"]["R"]
+LBD = config["controller"]["mppi"]["LBD"]
+NU = config["controller"]["mppi"]["NU"]
+GAMMA = config["controller"]["mppi"]["GAMMA"]
+SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
 
 """Random number generator"""
 rng = Generator(SFC64(123))
 
 
 """Init logging variables"""
-LOGGING =           config['controller']['mppi']['LOGGING']
+LOGGING = config["controller"]["mppi"]["LOGGING"]
 # Save average cost for each cost component
 COST_TO_GO_LOGS = []
 COST_BREAKDOWN_LOGS = []
@@ -254,11 +255,9 @@ class controller_mppi(template_controller):
         elif sampling_type == "uniform":
             delta_u = np.empty((mc_samples, mpc_samples), dtype=np.float32)
             for i in range(0, mpc_samples):
-                delta_u[:, i] = (
-                    rng.uniform(low=-1.0, high=1.0, size=(mc_samples,)).astype(
-                        np.float32
-                    )
-                )
+                delta_u[:, i] = rng.uniform(
+                    low=-1.0, high=1.0, size=(mc_samples,)
+                ).astype(np.float32)
         elif sampling_type == "repeated":
             delta_u = np.tile(
                 stdev * rng.standard_normal(size=(mc_samples, 1), dtype=np.float32),
