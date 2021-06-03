@@ -58,9 +58,10 @@ ep_weight = config["controller"]["mppi"]["ep_weight"]
 ekp_weight = config["controller"]["mppi"]["ekp_weight"]
 ekc_weight = config["controller"]["mppi"]["ekc_weight"]
 cc_weight = config["controller"]["mppi"]["cc_weight"]
+ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
 
 
-gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = np.zeros(1, dtype=np.float32)
+gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = gui_ccrc = np.zeros(1, dtype=np.float32)
 
 
 """MPPI constants"""
@@ -112,6 +113,11 @@ def distance_difference_cost(position, target_position):
 
 
 @jit(nopython=True, cache=True, fastmath=True)
+def control_change_rate_cost(u, u_prev):
+    return (u - u_prev) ** 2
+
+
+@jit(nopython=True, cache=True, fastmath=True)
 def penalize_deviation(cc, u):
     # Penalize if control deviation is outside constraint set.
     I, J = cc.shape
@@ -134,6 +140,7 @@ def trajectory_rollouts(
     S_tilde_k: np.ndarray,
     u: np.ndarray,
     delta_u: np.ndarray,
+    u_prev: np.ndarray,
     target_position: np.ndarray,
 ):
     s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size), dtype=np.float32)
@@ -142,29 +149,30 @@ def trajectory_rollouts(
     predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
     s_horizon = predictor.predict(u + delta_u)
 
-    cost_increment, dd, ep, ekp, ekc, cc = q(
-        s_horizon[:, 1:, :], u, delta_u, target_position
+    cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
+        s_horizon[:, 1:, :], u, delta_u, u_prev, target_position
     )
     S_tilde_k = np.sum(cost_increment, axis=1)
 
-    global gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc
-    gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc = (
+    global gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc, gui_ccrc
+    gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc, gui_ccrc = (
         np.mean(dd),
         np.mean(ep),
         np.mean(ekp),
         np.mean(ekc),
         np.mean(cc),
+        np.mean(ccrc)
     )
 
     if LOGGING:
-        cost_logs_internal = np.swapaxes(np.array([dd, ep, ekp, ekc, cc]), 0, 1)
-        # (mc_samples x 5 x mpc_samples)
+        cost_logs_internal = np.swapaxes(np.array([dd, ep, ekp, ekc, cc, ccrc]), 0, 1)
+        # (mc_samples x 6 x mpc_samples)
 
         return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
     return S_tilde_k, None, None
 
 
-def q(s, u, delta_u, target_position):
+def q(s, u, delta_u, u_prev, target_position):
     """Cost function per iteration"""
     # TODO: "weight"
     dd = dd_weight * distance_difference_cost(
@@ -178,14 +186,15 @@ def q(s, u, delta_u, target_position):
     cc = cc_weight * (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
+    ccrc = ccrc_weight * control_change_rate_cost(u + delta_u, u_prev).astype(np.float32)
     # rterm = 1.0e4 * np.sum((delta_u[:,1:] - delta_u[:,:-1]) ** 2, axis=1, keepdims=True)
 
     # Penalize if control deviation is outside constraint set.
     cc[np.abs(u + delta_u) > 1.0] = 1.0e5
 
-    q = dd + ep + ekp + ekc + cc
+    q = dd + ep + ekp + ekc + cc + ccrc
 
-    return q, dd, ep, ekp, ekc, cc
+    return q, dd, ep, ekp, ekc, cc, ccrc
 
 
 @jit(nopython=True, cache=True, fastmath=True)
@@ -221,6 +230,7 @@ class controller_mppi(template_controller):
 
         self.s_horizon = np.zeros((), dtype=np.float32)
         self.u = np.zeros((mpc_samples), dtype=np.float32)
+        self.u_prev = np.zeros_like(self.u, dtype=np.float32)
         self.delta_u = np.zeros((mc_samples, mpc_samples), dtype=np.float32)
         self.S_tilde_k = np.zeros((mc_samples), dtype=np.float32)
 
@@ -307,7 +317,7 @@ class controller_mppi(template_controller):
 
             # Run parallel trajectory rollouts for different input perturbations
             self.S_tilde_k, cost_logs_internal, s_horizon = trajectory_rollouts(
-                self.s, self.S_tilde_k, self.u, self.delta_u, self.target_position,
+                self.s, self.S_tilde_k, self.u, self.delta_u, self.u_prev, self.target_position,
             )
 
             # Update inputs with weighted perturbations
@@ -350,6 +360,9 @@ class controller_mppi(template_controller):
         # Clip inputs to allowed range
         Q = np.clip(Q, -1.0, 1.0)
 
+        # Preserve current series of inputs
+        self.u_prev = np.copy(self.u)
+
         # Index-shift inputs
         self.u[:-1] = self.u[1:]
         self.u[-1] = 0
@@ -371,6 +384,7 @@ class controller_mppi(template_controller):
         u_new = np.zeros((mpc_samples), dtype=np.float32)
         u_new[:update_length] = self.u[:update_length]
         self.u = u_new
+        self.u_prev = np.copy(self.u)
 
     def controller_report(self):
         if LOGGING:
@@ -385,7 +399,7 @@ class controller_mppi(template_controller):
             plt.show()
 
             ### Graph the different cost components per iteration
-            clgs = np.stack(COST_BREAKDOWN_LOGS, axis=0)  # ITERATIONS x 5 x mpc_samples
+            clgs = np.stack(COST_BREAKDOWN_LOGS, axis=0)  # ITERATIONS x 6 x mpc_samples
             time_axis = update_every * dt * np.arange(start=0, stop=np.shape(clgs)[0])
 
             plt.figure(num=3, figsize=(16, 9))
@@ -398,6 +412,7 @@ class controller_mppi(template_controller):
             plt.plot(time_axis, np.sum(clgs[:, 2, :], axis=-1), label="E_kin_pole cost")
             plt.plot(time_axis, np.sum(clgs[:, 3, :], axis=-1), label="E_kin_cart cost")
             plt.plot(time_axis, np.sum(clgs[:, 4, :], axis=-1), label="Control cost")
+            plt.plot(time_axis, np.sum(clgs[:, 5, :], axis=-1), label="Control change rate cost")
 
             plt.ylabel("total horizon cost")
             plt.xlabel("time (s)")

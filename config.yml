@@ -18,6 +18,7 @@ controller:
     ekp_weight: 0.01
     ekc_weight: 5.0
     cc_weight: 1.0
+    ccrc_weight: 1.0
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
     NU: 1000.0                            # Exploration variance
