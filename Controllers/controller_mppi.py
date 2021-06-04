@@ -40,46 +40,49 @@ from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
 from Predictores.predictor_ideal import predictor_ideal
 
 import yaml
-config = yaml.load(open('config.yml', 'r'), Loader=yaml.FullLoader)
+
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 """Timestep and sampling settings"""
-dt =                config['controller']['mppi']['dt']
-mpc_horizon =       config['controller']['mppi']['mpc_horizon']
-mpc_samples =       int(mpc_horizon / dt)  # Number of steps in MPC horizon
-mc_samples =        config['controller']['mppi']['mc_samples']
-update_every =      config['controller']['mppi']['update_every']
-predictor_type =    config['controller']['mppi']['predictor_type']
+dt = config["controller"]["mppi"]["dt"]
+mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
+mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
+mc_samples = config["controller"]["mppi"]["mc_samples"]
+update_every = config["controller"]["mppi"]["update_every"]
+predictor_type = config["controller"]["mppi"]["predictor_type"]
 
 
 """Parameters weighting the different cost components"""
-dd_weight =         config['controller']['mppi']['dd_weight']
-ep_weight =         config['controller']['mppi']['ep_weight']
-ekp_weight =        config['controller']['mppi']['ekp_weight']
-ekc_weight =        config['controller']['mppi']['ekc_weight']
-cc_weight =         config['controller']['mppi']['cc_weight']
+dd_weight = config["controller"]["mppi"]["dd_weight"]
+ep_weight = config["controller"]["mppi"]["ep_weight"]
+ekp_weight = config["controller"]["mppi"]["ekp_weight"]
+ekc_weight = config["controller"]["mppi"]["ekc_weight"]
+cc_weight = config["controller"]["mppi"]["cc_weight"]
+ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
 
 
-gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = np.zeros(1, dtype=np.float32)
+gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = gui_ccrc = np.zeros(1, dtype=np.float32)
 
 
 """MPPI constants"""
-R =                 config['controller']['mppi']['R']
-LBD =               config['controller']['mppi']['LBD']
-NU =                config['controller']['mppi']['NU']
-GAMMA =             config['controller']['mppi']['GAMMA']
-SAMPLING_TYPE =     config['controller']['mppi']['SAMPLING_TYPE']
+R = config["controller"]["mppi"]["R"]
+LBD = config["controller"]["mppi"]["LBD"]
+NU = config["controller"]["mppi"]["NU"]
+GAMMA = config["controller"]["mppi"]["GAMMA"]
+SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
 
 """Random number generator"""
 rng = Generator(SFC64(123))
 
 
 """Init logging variables"""
-LOGGING =           config['controller']['mppi']['LOGGING']
+LOGGING = config["controller"]["mppi"]["LOGGING"]
 # Save average cost for each cost component
 COST_TO_GO_LOGS = []
 COST_BREAKDOWN_LOGS = []
 STATE_LOGS = []
 TRAJECTORY_LOGS = []
+TARGET_TRAJECTORY_LOGS = []
 INPUT_LOGS = []
 NOMINAL_ROLLOUT_LOGS = []
 
@@ -111,6 +114,11 @@ def distance_difference_cost(position, target_position):
 
 
 @jit(nopython=True, cache=True, fastmath=True)
+def control_change_rate_cost(u, u_prev):
+    return (u - u_prev) ** 2
+
+
+@jit(nopython=True, cache=True, fastmath=True)
 def penalize_deviation(cc, u):
     # Penalize if control deviation is outside constraint set.
     I, J = cc.shape
@@ -123,7 +131,7 @@ def penalize_deviation(cc, u):
 
 """Define Predictor"""
 if predictor_type == "Euler":
-    predictor = predictor_ideal(horizon=mpc_samples, dt=dt)
+    predictor = predictor_ideal(horizon=mpc_samples, dt=dt, intermediate_steps=1)
 elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(horizon=mpc_samples, batch_size=mc_samples)
 
@@ -133,6 +141,7 @@ def trajectory_rollouts(
     S_tilde_k: np.ndarray,
     u: np.ndarray,
     delta_u: np.ndarray,
+    u_prev: np.ndarray,
     target_position: np.ndarray,
 ):
     s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size), dtype=np.float32)
@@ -141,29 +150,30 @@ def trajectory_rollouts(
     predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
     s_horizon = predictor.predict(u + delta_u)
 
-    cost_increment, dd, ep, ekp, ekc, cc = q(
-        s_horizon[:, 1:, :], u, delta_u, target_position
+    cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
+        s_horizon[:, 1:, :], u, delta_u, u_prev, target_position
     )
     S_tilde_k = np.sum(cost_increment, axis=1)
 
-    global gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc
-    gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc = (
+    global gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc, gui_ccrc
+    gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc, gui_ccrc = (
         np.mean(dd),
         np.mean(ep),
         np.mean(ekp),
         np.mean(ekc),
         np.mean(cc),
+        np.mean(ccrc),
     )
 
     if LOGGING:
-        cost_logs_internal = np.swapaxes(np.array([dd, ep, ekp, ekc, cc]), 0, 1)
-        # (mc_samples x 5 x mpc_samples)
+        cost_logs_internal = np.swapaxes(np.array([dd, ep, ekp, ekc, cc, ccrc]), 0, 1)
+        # (mc_samples x 6 x mpc_samples)
 
         return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
     return S_tilde_k, None, None
 
 
-def q(s, u, delta_u, target_position):
+def q(s, u, delta_u, u_prev, target_position):
     """Cost function per iteration"""
     # TODO: "weight"
     dd = dd_weight * distance_difference_cost(
@@ -177,14 +187,17 @@ def q(s, u, delta_u, target_position):
     cc = cc_weight * (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
+    ccrc = ccrc_weight * control_change_rate_cost(u + delta_u, u_prev).astype(
+        np.float32
+    )
     # rterm = 1.0e4 * np.sum((delta_u[:,1:] - delta_u[:,:-1]) ** 2, axis=1, keepdims=True)
 
     # Penalize if control deviation is outside constraint set.
     cc[np.abs(u + delta_u) > 1.0] = 1.0e5
 
-    q = dd + ep + ekp + ekc + cc
+    q = dd + ep + ekp + ekc + cc + ccrc
 
-    return q, dd, ep, ekp, ekc, cc
+    return q, dd, ep, ekp, ekc, cc, ccrc
 
 
 @jit(nopython=True, cache=True, fastmath=True)
@@ -220,6 +233,7 @@ class controller_mppi(template_controller):
 
         self.s_horizon = np.zeros((), dtype=np.float32)
         self.u = np.zeros((mpc_samples), dtype=np.float32)
+        self.u_prev = np.zeros_like(self.u, dtype=np.float32)
         self.delta_u = np.zeros((mc_samples, mpc_samples), dtype=np.float32)
         self.S_tilde_k = np.zeros((mc_samples), dtype=np.float32)
 
@@ -254,11 +268,9 @@ class controller_mppi(template_controller):
         elif sampling_type == "uniform":
             delta_u = np.empty((mc_samples, mpc_samples), dtype=np.float32)
             for i in range(0, mpc_samples):
-                delta_u[:, i] = (
-                    rng.uniform(low=-1.0, high=1.0, size=(mc_samples,)).astype(
-                        np.float32
-                    )
-                )
+                delta_u[:, i] = rng.uniform(
+                    low=-1.0, high=1.0, size=(mc_samples,)
+                ).astype(np.float32)
         elif sampling_type == "repeated":
             delta_u = np.tile(
                 stdev * rng.standard_normal(size=(mc_samples, 1), dtype=np.float32),
@@ -308,7 +320,12 @@ class controller_mppi(template_controller):
 
             # Run parallel trajectory rollouts for different input perturbations
             self.S_tilde_k, cost_logs_internal, s_horizon = trajectory_rollouts(
-                self.s, self.S_tilde_k, self.u, self.delta_u, self.target_position,
+                self.s,
+                self.S_tilde_k,
+                self.u,
+                self.delta_u,
+                self.u_prev,
+                self.target_position,
             )
 
             # Update inputs with weighted perturbations
@@ -316,10 +333,10 @@ class controller_mppi(template_controller):
 
             # Log states and costs incurred for plotting later
             if LOGGING:
-                COST_TO_GO_LOGS.append(self.S_tilde_k)
-                COST_BREAKDOWN_LOGS.append(np.mean(cost_logs_internal, axis=0))
+                COST_TO_GO_LOGS.append(np.copy(self.S_tilde_k))
+                COST_BREAKDOWN_LOGS.append(np.copy(np.mean(cost_logs_internal, axis=0)))
                 STATE_LOGS.append(s_horizon[:, :, [POSITION_IDX, ANGLE_IDX]])
-                INPUT_LOGS.append(self.u)
+                INPUT_LOGS.append(np.copy(self.u))
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
                 if predictor_type == "Euler":
@@ -328,19 +345,18 @@ class controller_mppi(template_controller):
                     )
                     rollout_trajectory = predictor.predict(self.u)
                 elif predictor_type == "NeuralNet":
-                    # predictor.setup(
-                    #     initial_state=np.copy(self.s), prediction_denorm=True
-                    # )
+                    predictor.setup(
+                        initial_state=np.tile(self.s, (mc_samples, 1)), prediction_denorm=True
+                    )
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     rollout_trajectory = predictor.predict(
                         np.tile(self.u, (mc_samples, 1))
                     )[0, ...]
-                NOMINAL_ROLLOUT_LOGS.append(
-                    rollout_trajectory[:-1, [POSITION_IDX, ANGLE_IDX]]
-                )
+                NOMINAL_ROLLOUT_LOGS.append(np.copy(rollout_trajectory[:-1, :8]))
 
         if LOGGING:
-            TRAJECTORY_LOGS.append(self.s[[POSITION_IDX, ANGLE_IDX]])
+            TRAJECTORY_LOGS.append(np.copy(self.s[[POSITION_IDX, ANGLE_IDX]]))
+            TARGET_TRAJECTORY_LOGS.append(np.copy(target_position))
 
         if self.warm_up_countdown > 0 and self.auxiliary_controller_available:
             self.warm_up_countdown -= 1
@@ -350,6 +366,9 @@ class controller_mppi(template_controller):
 
         # Clip inputs to allowed range
         Q = np.clip(Q, -1.0, 1.0)
+
+        # Preserve current series of inputs
+        self.u_prev = np.copy(self.u)
 
         # Index-shift inputs
         self.u[:-1] = self.u[1:]
@@ -372,6 +391,7 @@ class controller_mppi(template_controller):
         u_new = np.zeros((mpc_samples), dtype=np.float32)
         u_new[:update_length] = self.u[:update_length]
         self.u = u_new
+        self.u_prev = np.copy(self.u)
 
     def controller_report(self):
         if LOGGING:
@@ -386,7 +406,7 @@ class controller_mppi(template_controller):
             plt.show()
 
             ### Graph the different cost components per iteration
-            clgs = np.stack(COST_BREAKDOWN_LOGS, axis=0)  # ITERATIONS x 5 x mpc_samples
+            clgs = np.stack(COST_BREAKDOWN_LOGS, axis=0)  # ITERATIONS x 6 x mpc_samples
             time_axis = update_every * dt * np.arange(start=0, stop=np.shape(clgs)[0])
 
             plt.figure(num=3, figsize=(16, 9))
@@ -399,6 +419,11 @@ class controller_mppi(template_controller):
             plt.plot(time_axis, np.sum(clgs[:, 2, :], axis=-1), label="E_kin_pole cost")
             plt.plot(time_axis, np.sum(clgs[:, 3, :], axis=-1), label="E_kin_cart cost")
             plt.plot(time_axis, np.sum(clgs[:, 4, :], axis=-1), label="Control cost")
+            plt.plot(
+                time_axis,
+                np.sum(clgs[:, 5, :], axis=-1),
+                label="Control change rate cost",
+            )
 
             plt.ylabel("total horizon cost")
             plt.xlabel("time (s)")
@@ -450,11 +475,28 @@ class controller_mppi(template_controller):
             # shape(iplgs) = ITERATIONS x mpc_horizon
             iplgs = np.stack(INPUT_LOGS, axis=0)
             # shape(nrlgs) = ITERATIONS x mpc_horizon x [position, angle]
-            nrlgs = np.stack(NOMINAL_ROLLOUT_LOGS, axis=0)
+            nrlgs = np.stack(NOMINAL_ROLLOUT_LOGS, axis=0)[
+                :, :, [POSITION_IDX, ANGLE_IDX]
+            ]
             wrap_angle_rad_inplace(nrlgs[:, :, 1])
             # shape(trjctlgs) = (update_every * ITERATIONS) x [position, angle]
             trjctlgs = np.stack(TRAJECTORY_LOGS[:-1], axis=0)
             wrap_angle_rad_inplace(trjctlgs[:, 1])
+            # shape(trgtlgs) = ITERATIONS x [position]
+            trgtlgs = np.stack(TARGET_TRAJECTORY_LOGS[:-1], axis=0)
+            # For each rollout, calculate what the nominal trajectory would be using the known true model
+            # This can uncover if the model used makes inaccurate predictions
+            # shape(true_nominal_rollouts) = ITERATIONS x mpc_horizon x [position, positionD, angle, angleD]
+            predictor_true_equations = predictor_ideal(horizon=mpc_samples, dt=dt, intermediate_steps=10)
+            true_nominal_rollouts = np.stack(NOMINAL_ROLLOUT_LOGS, axis=0)
+            wrap_angle_rad_inplace(true_nominal_rollouts[:, :, ANGLE_IDX])
+            predictor_true_equations.setup(
+                np.copy(true_nominal_rollouts[:, 0, :]), prediction_denorm=True
+            )
+            true_nominal_rollouts = predictor_true_equations.predict(iplgs)[
+                :, :-1, [POSITION_IDX, ANGLE_IDX]
+            ]
+            wrap_angle_rad_inplace(true_nominal_rollouts[:, :, 1])
 
             # Create figure
             fig, (ax1, ax2) = plt.subplots(
@@ -463,7 +505,7 @@ class controller_mppi(template_controller):
                 num=4,
                 figsize=(16, 9),
                 sharex=True,
-                gridspec_kw={"bottom": 0.15},
+                gridspec_kw={"bottom": 0.15, "left": 0.1, "right": 0.84, "top": 0.95},
             )
 
             # Create time slider
@@ -493,6 +535,7 @@ class controller_mppi(template_controller):
                     linestyle="-",
                     linewidth=1,
                     color="g",
+                    label="realized trajectory",
                 )
                 ax2.plot(
                     np.arange(0, np.shape(trjctlgs)[0]) * dt,
@@ -501,6 +544,17 @@ class controller_mppi(template_controller):
                     linestyle="-",
                     linewidth=1,
                     color="g",
+                    label="realized trajectory",
+                )
+                # Plot target positions
+                ax1.plot(
+                    np.arange(0, np.shape(trgtlgs)[0]) * dt,
+                    trgtlgs,
+                    alpha=1.0,
+                    linestyle="--",
+                    linewidth=1,
+                    color="k",
+                    label="target position",
                 )
                 # Plot trajectory planned by MPPI (= nominal trajectory)
                 ax1.plot(
@@ -510,6 +564,7 @@ class controller_mppi(template_controller):
                     linestyle="-",
                     linewidth=1,
                     color="r",
+                    label="nominal trajectory\n(under trained model)",
                 )
                 ax2.plot(
                     (update_every * (i - 1) + np.arange(0, np.shape(nrlgs)[1])) * dt,
@@ -518,16 +573,49 @@ class controller_mppi(template_controller):
                     linestyle="-",
                     linewidth=1,
                     color="r",
+                    label="nominal trajectory\n(under trained model)",
                 )
+                # Plot the trajectory of rollout with cost-averaged nominal inputs if model were ideal
+                ax1.plot(
+                    (
+                        update_every * (i - 1)
+                        + np.arange(0, np.shape(true_nominal_rollouts)[1])
+                    )
+                    * dt,
+                    true_nominal_rollouts[i - 1, :, 0],
+                    alpha=1.0,
+                    linestyle="--",
+                    linewidth=1,
+                    color="r",
+                    label="nominal trajectory\n(under true model)",
+                )
+                ax2.plot(
+                    (
+                        update_every * (i - 1)
+                        + np.arange(0, np.shape(true_nominal_rollouts)[1])
+                    )
+                    * dt,
+                    true_nominal_rollouts[i - 1, :, 1] * 180.0 / np.pi,
+                    alpha=1.0,
+                    linestyle="--",
+                    linewidth=1,
+                    color="r",
+                    label="nominal trajectory\n(under true model)",
+                )
+                # Set axis limits
                 ax1.set_xlim(0, np.shape(trjctlgs)[0] * dt)
                 ax1.set_ylim(-TrackHalfLength * 1.05, TrackHalfLength * 1.05)
                 ax2.set_ylim(-180.0, 180.0)
 
-                # Set labels
+                # Set axis labels
                 ax1.set_ylabel("position (m)")
                 ax2.set_ylabel("angle (deg)")
                 ax2.set_xlabel("time (s)", loc="right")
                 ax1.set_title("Monte Carlo Rollouts")
+
+                # Set axis legends
+                ax1.legend(loc="upper left", fontsize=12, bbox_to_anchor=(1, 0, 0.16, 1))
+                ax2.legend(loc="upper left", fontsize=12, bbox_to_anchor=(1, 0, 0.16, 1))
 
             # Draw first iteration
             update_plot(1)

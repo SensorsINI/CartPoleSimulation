@@ -37,7 +37,8 @@ class MPPIOptionsWindow(QWidget):
         self.ep_weight = controller_mppi.ep_weight
         self.ekp_weight = controller_mppi.ekp_weight * 1.0e1
         self.ekc_weight = controller_mppi.ekc_weight * 1.0e-1
-        self.cc_weight = controller_mppi.cc_weight * 1.0e-1
+        self.cc_weight = controller_mppi.cc_weight * 1.0e-2
+        self.ccrc_weight = controller_mppi.ccrc_weight * 1.0e-2
         self.R = controller_mppi.R          # How much to punish Q
         self.LBD = controller_mppi.LBD      # Cost parameter lambda
         self.NU = controller_mppi.NU        # Exploration variance
@@ -143,6 +144,22 @@ class MPPIOptionsWindow(QWidget):
         slider.setSingleStep(1)
         cost_weight_layout.addWidget(slider)
         slider.valueChanged.connect(self.cc_weight_changed)
+
+        # Control change rate cost
+        self.ccrc_weight_label = QLabel("")
+        self.ccrc_weight_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        cost_weight_layout.addWidget(self.ccrc_weight_label)
+        self.ccrc_label = QLabel("")
+        self.ccrc_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        cost_weight_layout.addWidget(self.ccrc_label)
+        slider = QSlider(orientation=Qt.Horizontal)
+        slider.setRange(0, 99)
+        slider.setValue(self.ccrc_weight)
+        slider.setTickPosition(QSlider.TicksBelow)
+        slider.setTickInterval(1)
+        slider.setSingleStep(1)
+        cost_weight_layout.addWidget(slider)
+        slider.valueChanged.connect(self.ccrc_weight_changed)
 
         ### Set some more MPPI constants
         mppi_constants_layout = QVBoxLayout()
@@ -253,7 +270,13 @@ class MPPIOptionsWindow(QWidget):
     def cc_weight_changed(self, val: int):
         self.cc_weight = val
         # TODO: Replace by setter method
-        controller_mppi.cc_weight = self.cc_weight * 1.0e1
+        controller_mppi.cc_weight = self.cc_weight * 1.0e2
+        self.update_slider_labels()
+
+    def ccrc_weight_changed(self, val: int):
+        self.ccrc_weight = val
+        # TODO: Replace by setter method
+        controller_mppi.ccrc_weight = self.ccrc_weight * 1.0e2
         self.update_slider_labels()
 
     def R_changed(self, val: str):
@@ -291,7 +314,10 @@ class MPPIOptionsWindow(QWidget):
             f"Cart kinetic energy cost weight: {round(self.ekc_weight * 1.0e1, 3)}"
         )
         self.cc_weight_label.setText(
-            f"Control cost weight: {round(self.cc_weight * 1.0e1, 3)}"
+            f"Control cost weight: {round(self.cc_weight * 1.0e2, 3)}"
+        )
+        self.ccrc_weight_label.setText(
+            f"Control change rate cost weight: {round(self.ccrc_weight * 1.0e2, 3)}"
         )
 
     def update_labels(self):
@@ -309,4 +335,7 @@ class MPPIOptionsWindow(QWidget):
         )
         self.cc_label.setText(
             f"{round(controller_mppi.gui_cc.item(), 2)}"
+        )
+        self.ccrc_label.setText(
+            f"{round(controller_mppi.gui_ccrc.item(), 2)}"
         )
