@@ -13,7 +13,6 @@ from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import (
     create_cartpole_state,
-    cartpole_state_varname_to_index,
     ANGLE_IDX,
     ANGLED_IDX,
     POSITION_IDX,
@@ -45,16 +44,24 @@ mpc_horizon = 1.0
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 mc_samples = int(2e3)  # Number of Monte Carlo samples
 update_every = 1  # Cost weighted update of inputs every ... steps
-# predictor_type = "Euler"
-predictor_type = "NeuralNet"
+predictor_type = "Euler"
+# predictor_type = "NeuralNet"
 
+"""Perturbation factor"""
+p_Q = 0.0  # 0.05  # Noise on top of the calculated control input
+# Change of cost function
+dd_noise = 0.0  # 0.2
+ep_noise = 0.0  # 0.2
+ekp_noise = 0.0  # 0.2
+ekc_noise = 0.0  # 0.2
+cc_noise = 0.0  # 0.2
 
 """Parameters weighting the different cost components"""
-dd_weight = 5.0e1
-ep_weight = 5.0e4
-ekp_weight = 1.0e-2
-ekc_weight = 5.0e0
-cc_weight = 1.0e0
+dd_weight = 5.0e1*(1+dd_noise*np.random.uniform(-1.0, 1.0))
+ep_weight = 5.0e4*(1+ep_noise*np.random.uniform(-1.0, 1.0))
+ekp_weight = 1.0e-2*(1+ekp_noise*np.random.uniform(-1.0, 1.0))
+ekc_weight = 5.0e0*(1+ekc_noise*np.random.uniform(-1.0, 1.0))
+cc_weight = 1.0e0*(1+cc_noise*np.random.uniform(-1.0, 1.0))
 
 
 gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = np.zeros(1, dtype=np.float32)
@@ -70,6 +77,8 @@ SAMPLING_TYPE = (
 )
 
 """Random number generator"""
+# TODO: How to set the seed so that it is different for each realization
+#   in data_generator?
 rng = Generator(SFC64(123))
 
 
@@ -218,6 +227,7 @@ class controller_mppi(template_controller):
         self.rho_sqrt_inv = 0.01
 
         self.iteration = -1
+        self.control_enabled = True
 
         self.s_horizon = np.zeros((), dtype=np.float32)
         self.u = np.zeros((mpc_samples), dtype=np.float32)
@@ -350,6 +360,24 @@ class controller_mppi(template_controller):
         else:
             Q = self.u[0]
 
+        # A snippet of code to switch on and off the controller to cover better the statespace with experimental data
+        # It stops controller when Pole is well stabilized (starting inputing random input)
+        # And re-enables it when angle exceedes 90 deg.
+        # if (abs(self.s[[ANGLE_IDX]]) < 0.01
+        #     and abs(self.s[[POSITION_IDX]]-self.target_position < 0.02)
+        #         and abs(self.s[[ANGLED_IDX]]) < 0.1
+        #             and abs(self.s[[POSITIOND_IDX]]) < 0.05):
+        #     self.control_enabled = False
+        # elif abs(self.s[[ANGLE_IDX]]) > np.pi/2:
+        #     self.control_enabled = True
+        #
+        # if self.control_enabled is True:
+        #     Q = self.u[0]
+        # else:
+        #     Q = np.random.uniform(-1.0, 1.0)
+
+        # Add noise on top of the calculated Q value to better explore state space
+        Q = Q*(1 + p_Q * np.random.uniform(-1.0, 1.0))
         # Clip inputs to allowed range
         Q = np.clip(Q, -1.0, 1.0)
 
