@@ -9,6 +9,7 @@ except:
     pass
 
 import numpy as np
+import time
 
 # region Imports needed to create layout of the window in __init__ method
 
@@ -97,12 +98,17 @@ class MainWindow(QMainWindow):
         # region Variables controlling the state of various processes (DO NOT MODIFY)
 
         self.terminate_experiment_or_replay_thread = False  # True: gives signal causing thread to terminate
+        self.pause_experiment_or_replay_thread = False  # True: gives signal causing the thread to pause
+
         self.run_set_labels_thread = True  # True if gauges (labels) keep being repeatedly updated
         # Stop threads by setting False
 
         # Flag indicating if the "Start! / Stop!" button should act as start or as stop when pressed.
         # Can take values "Start!" or "Stop!"
         self.start_or_stop_action = "Start!"
+        # Flag indicating whether the pause button should pause or unpause.
+        self.pause_or_unpause_action = "PAUSE"
+
         # Flag indicating that saving of experiment recording to csv file has finished
         self.experiment_or_replay_thread_terminated = False
 
@@ -204,13 +210,19 @@ class MainWindow(QMainWindow):
 
         # endregion
 
-        # region - Buttons "START! / STOP!", "QUIT"
-        bss = QPushButton("START! / STOP!")
-        bss.pressed.connect(self.start_stop_button)
+        # region - Buttons "START!" / "STOP!", "PAUSE", "QUIT"
+        self.bss = QPushButton("START!")
+        self.bss.pressed.connect(self.start_stop_button)
+        self.bp = QPushButton("PAUSE")
+        self.bp.pressed.connect(self.pause_unpause_button)
         bq = QPushButton("QUIT")
         bq.pressed.connect(self.quit_application)
+        lspb = QHBoxLayout()  # Sub-Layout for Start/Stop and Pause Buttons
+        lspb.addWidget(self.bss)
+        lspb.addWidget(self.bp)
+
         lb = QVBoxLayout()  # Layout for buttons
-        lb.addWidget(bss)
+        lb.addLayout(lspb)
         lb.addWidget(bq)
         layout.addLayout(lb)
 
@@ -391,20 +403,22 @@ class MainWindow(QMainWindow):
 
         self.looper.start_loop()
         while not self.terminate_experiment_or_replay_thread:
+            if self.pause_experiment_or_replay_thread:
+                time.sleep(0.1)
+            else:
+                # Calculations of the Cart state in the next timestep
+                self.CartPoleInstance.update_state()
 
-            # Calculations of the Cart state in the next timestep
-            self.CartPoleInstance.update_state()
+                # Terminate thread if random experiment reached its maximal length
+                if (
+                        (self.CartPoleInstance.use_pregenerated_target_position is True)
+                        and
+                        (self.CartPoleInstance.time >= self.CartPoleInstance.t_max_pre)
+                ):
+                    self.terminate_experiment_or_replay_thread = True
 
-            # Terminate thread if random experiment reached it maximal length
-            if (
-                    (self.CartPoleInstance.use_pregenerated_target_position is True)
-                    and
-                    (self.CartPoleInstance.time >= self.CartPoleInstance.t_max_pre)
-            ):
-                self.terminate_experiment_or_replay_thread = True
-
-            # FIXME: when Speedup empty in GUI I expected inf speedup but got error Loop timer was not initialized properly
-            self.looper.sleep_leftover_time()
+                # FIXME: when Speedup empty in GUI I expected inf speedup but got error Loop timer was not initialized properly
+                self.looper.sleep_leftover_time()
 
         # Save simulation history if user chose to do so at the end of the simulation
         if self.save_history:
@@ -489,6 +503,9 @@ class MainWindow(QMainWindow):
             if self.terminate_experiment_or_replay_thread:  # Means that stop button was pressed
                 break
 
+            while self.pause_experiment_or_replay_thread:  # Means that pause button was pressed
+                time.sleep(0.1)
+
         if self.show_experiment_summary:
             self.CartPoleInstance.dict_history = history_pd.loc[:index].to_dict(orient='list')
 
@@ -503,15 +520,29 @@ class MainWindow(QMainWindow):
 
         # If "Start! / Stop!" button in "Start!" mode...
         if self.start_or_stop_action == 'Start!':
+            self.bss.setText("STOP!")
             self.start_thread()
 
         # If "Start! / Stop!" button in "Stop!" mode...
         elif self.start_or_stop_action == 'Stop!':
+            self.bss.setText("START!")
+            self.bp.setText("PAUSE")
             # This flag is periodically checked by thread. It terminates if set True.
             self.terminate_experiment_or_replay_thread = True
             # The stop_thread function is called automatically by the thread when it terminates
             # It is implemented this way, because thread my terminate not only due "Stop!" button
             # (e.g. replay thread when whole experiment is replayed)
+        
+    def pause_unpause_button(self):
+        # Only Pause if experiment is running
+        if self.pause_or_unpause_action == 'PAUSE' and self.start_or_stop_action == 'Stop!':
+            self.pause_or_unpause_action = 'UNPAUSE'
+            self.pause_experiment_or_replay_thread = True
+            self.bp.setText("UNPAUSE")
+        elif self.pause_or_unpause_action == 'UNPAUSE' and self.start_or_stop_action == 'Stop!':
+            self.pause_or_unpause_action = 'PAUSE'
+            self.pause_experiment_or_replay_thread = False
+            self.bp.setText("PAUSE")
 
     # Run thread. works for all simulator modes.
     def start_thread(self):
@@ -637,6 +668,9 @@ class MainWindow(QMainWindow):
             pass
         self.experiment_or_replay_thread_terminated = False  # This is a flag informing thread terminated
         self.terminate_experiment_or_replay_thread = False  # This is a command to terminate a thread
+        self.pause_experiment_or_replay_thread = False  # This is a command to pause a thread
+        self.start_or_stop_action = "START!"
+        self.pause_or_unpause_action = "PAUSE"
         self.looper.first_call_done = False
 
     ######################################################################################################
@@ -692,6 +726,7 @@ class MainWindow(QMainWindow):
         # Stops the two threads updating the GUI labels and updating the state of Cart instance
         self.run_set_labels_thread = False
         self.terminate_experiment_or_replay_thread = True
+        self.pause_experiment_or_replay_thread = False
         # Closes the GUI window
         self.close()
         # The standard command
