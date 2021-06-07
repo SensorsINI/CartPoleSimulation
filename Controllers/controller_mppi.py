@@ -39,9 +39,10 @@ from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
 )
 from Predictores.predictor_ideal import predictor_ideal
 
-import yaml
-
+import yaml, os
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+
+NET_NAME = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml'), 'r'), Loader=yaml.FullLoader)['modeling']['NET_NAME'].split("-")[0]
 
 """Timestep and sampling settings"""
 dt = config["controller"]["mppi"]["dt"]
@@ -85,6 +86,7 @@ TRAJECTORY_LOGS = []
 TARGET_TRAJECTORY_LOGS = []
 INPUT_LOGS = []
 NOMINAL_ROLLOUT_LOGS = []
+TRAJECTORY_COST_LOGS = []
 
 
 """Cost function helpers"""
@@ -337,6 +339,7 @@ class controller_mppi(template_controller):
                 COST_BREAKDOWN_LOGS.append(np.copy(np.mean(cost_logs_internal, axis=0)))
                 STATE_LOGS.append(s_horizon[:, :, [POSITION_IDX, ANGLE_IDX]])
                 INPUT_LOGS.append(np.copy(self.u))
+                # TRAJECTORY_COST_LOGS.append(q(np.copy(self.s), np.copy(self.u), np.zeros(shape=(1, mpc_samples)), self.u_prev, self.target_position)[0])
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
                 if predictor_type == "Euler":
@@ -358,7 +361,7 @@ class controller_mppi(template_controller):
             TRAJECTORY_LOGS.append(np.copy(self.s[[POSITION_IDX, ANGLE_IDX]]))
             TARGET_TRAJECTORY_LOGS.append(np.copy(target_position))
 
-        if self.warm_up_countdown > 0 and self.auxiliary_controller_available:
+        if self.warm_up_countdown > 0 and self.auxiliary_controller_available and NET_NAME=="GRU":
             self.warm_up_countdown -= 1
             Q = self.auxiliary_controller.step(s, target_position)
         else:
@@ -400,7 +403,7 @@ class controller_mppi(template_controller):
             time_axis = update_every * dt * np.arange(start=0, stop=np.shape(ctglgs)[0])
             plt.figure(num=2, figsize=(16, 9))
             plt.plot(time_axis, np.mean(ctglgs, axis=1))
-            plt.ylabel("avg_cost")
+            plt.ylabel("Average Running Cost")
             plt.xlabel("time (s)")
             plt.title("Cost-to-go per Timestep")
             plt.show()
@@ -502,7 +505,7 @@ class controller_mppi(template_controller):
             fig, (ax1, ax2) = plt.subplots(
                 nrows=2,
                 ncols=1,
-                num=4,
+                num=5,
                 figsize=(16, 9),
                 sharex=True,
                 gridspec_kw={"bottom": 0.15, "left": 0.1, "right": 0.84, "top": 0.95},
