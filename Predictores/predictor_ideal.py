@@ -45,8 +45,10 @@ from CartPole.state_utilities import (
     ANGLE_IDX, ANGLED_IDX, ANGLEDD_IDX, POSITION_IDX, POSITIOND_IDX, POSITIONDD_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX,
     STATE_VARIABLES
 )
+import yaml, os
+config = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml'), 'r'), Loader=yaml.FullLoader)
 
-PATH_TO_NORMALIZATION_INFO = './SI_Toolkit/NormalizationInfo/' + 'Dataset-1-norm.csv'
+PATH_TO_NORMALIZATION_INFO = config['modeling']['PATH_TO_NORMALIZATION_INFO']
 
 
 @jit(nopython=True, cache=True, fastmath=True)
