@@ -5,7 +5,9 @@ import numpy as np
 
 from Predictores.predictor_tests_plotting_helpers import pd_plotter_simple, pd_plotter_compare_2, get_predictions
 
-from Predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
+from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
+    predictor_autoregressive_tf,
+)
 from Predictores.predictor_ideal import predictor_ideal
 
 
