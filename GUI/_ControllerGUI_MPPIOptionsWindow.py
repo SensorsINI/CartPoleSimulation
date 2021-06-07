@@ -281,17 +281,22 @@ class MPPIOptionsWindow(QWidget):
 
     def R_changed(self, val: str):
         if val == '': val = '0'
-        self.R = float(val)
+        val = float(val)
+        self.R = val
         controller_mppi.R = self.R
     
     def LBD_changed(self, val: str):
         if val == '': val = '0'
-        self.LBD = float(val)
+        val = float(val)
+        if val == 0: val = 1.0
+        self.LBD = val
         controller_mppi.LBD = self.LBD
     
     def NU_changed(self, val: str):
         if val == '': val = '0'
-        self.NU = float(val)
+        val = float(val)
+        if val == 0: val = 1.0
+        self.NU = val
         controller_mppi.NU = self.NU
 
     def toggle_button(self, b):
