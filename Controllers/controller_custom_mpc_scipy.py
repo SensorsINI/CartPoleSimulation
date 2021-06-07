@@ -1,6 +1,7 @@
 """mpc controller"""
 
 import scipy.optimize
+import numpy as np
 
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index, \
     cartpole_state_indices_to_varnames
@@ -10,29 +11,32 @@ from Controllers.controller_lqr import controller_lqr
 
 import matplotlib.pyplot as plt
 
+import yaml
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+
 predictor = predictor_ideal
 # WARNING: if using RNN to provide CartPole model to MPC
 # make sure that it is trained to predict future states with this timestep
-DT = 0.1
+DT = config['controller']['custom_mpc_scipy']['DT']
 
 # method = 'L-BFGS-B'
-method = 'SLSQP'
-ftol = 1.0e-8
-mpc_horizon = 10
+method = config['controller']['custom_mpc_scipy']['method']
+ftol = config['controller']['custom_mpc_scipy']['ftol']
+mpc_horizon = config['controller']['custom_mpc_scipy']['mpc_horizon']
 
 # weights
-wr = 0.001  # rterm
+wr = config['controller']['custom_mpc_scipy']['wr']
 
-l1 = 100.0  # angle_cost
-l1_2 = 0.0  # angle_sin_cost
-l2 = 0.0  # angleD_cost
-l3 = 0.0  # position_cost
-l4 = 0.01  # positionD_cost
+l1 = config['controller']['custom_mpc_scipy']['l1']
+l1_2 = config['controller']['custom_mpc_scipy']['l1_2']
+l2 = config['controller']['custom_mpc_scipy']['l2']
+l3 = config['controller']['custom_mpc_scipy']['l3']
+l4 = config['controller']['custom_mpc_scipy']['l4']
 
-m1 = 0.0  # angle_sin_cost
-m2 = 0.0  # angleD_cost
-m3 = 0.0  # position_cost
-m4 = 0.0  # positionD_cost
+m1 = config['controller']['custom_mpc_scipy']['m1']
+m2 = config['controller']['custom_mpc_scipy']['m2']
+m3 = config['controller']['custom_mpc_scipy']['m3']
+m4 = config['controller']['custom_mpc_scipy']['m4']
 
 # w_sum = wr + l1 + l2 + l3 + m1 + m2 + m3 + m4
 w_sum = 1.0

@@ -10,6 +10,11 @@ from Controllers.template_controller import template_controller
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
 from CartPole.cartpole_model import cartpole_jacobian, u_max, s0
 
+import yaml
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+Q = np.diag(config["controller"]["lqr"]["Q"])
+R = config["controller"]["lqr"]["R"]
+
 class controller_lqr(template_controller):
     def __init__(self):
         # From https://github.com/markwmuller/controlpy/blob/master/controlpy/synthesis.py#L8
@@ -45,8 +50,8 @@ class controller_lqr(template_controller):
         B = np.reshape(jacobian[:, -1], newshape=(4, 1)) * u_max
 
         # Cost matrices for LQR controller
-        self.Q = np.diag([10.0, 1.0, 1.0, 1.0])  # How much to punish x, v, theta, omega
-        self.R = 1.0e1  # How much to punish Q
+        self.Q = Q  # How much to punish x, v, theta, omega
+        self.R = R  # How much to punish Q
 
         # first, try to solve the ricatti equation
         X = scipy.linalg.solve_continuous_are(A, B, self.Q, self.R)

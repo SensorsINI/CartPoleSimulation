@@ -10,8 +10,12 @@ import numpy as np
 import casadi
 
 
-dt_mpc_simulation = 0.2  # s
-mpc_horizon = 10
+import yaml
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+
+dt_mpc_simulation = config["controller"]["do_mpc_discrete"]["dt_mpc_simulation"]
+mpc_horizon = config["controller"]["do_mpc_discrete"]["mpc_horizon"]
+
 
 def mpc_next_state(s, u, dt):
     """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt

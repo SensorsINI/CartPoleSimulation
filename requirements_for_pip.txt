@@ -21,3 +21,4 @@ six @ file:///opt/concourse/worker/volumes/live/5b31cb27-1e37-4ca5-6e9f-86246eb2
 smmap==3.0.5
 tornado @ file:///opt/concourse/worker/volumes/live/05341796-4198-4ded-4a9a-332fde3cdfd1/volume/tornado_1606942323372/work
 tqdm @ file:///tmp/build/80754af9/tqdm_1611857934208/work
+pyyaml==5.4.1

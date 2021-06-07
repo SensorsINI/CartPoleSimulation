@@ -1,18 +1,10 @@
-modeling:
-  NET_NAME: 'Dense-6IN-16H1-16H2-5OUT-0'
-  # NET_NAME: 'GRU-6IN-16H1-16H2-5OUT-0'
-  PATH_TO_MODELS: './SI_Toolkit/TF/Models/'
-  RNN_FULL_NAME: 'GRU-6IN-64H1-64H2-5OUT-0'
-  RNN_PATH: './save_tf/'
-  PATH_TO_NORMALIZATION_INFO: './SI_Toolkit/NormalizationInfo/Dataset-1-norm.csv'
-
 controller:
   mppi:
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     mc_samples: 2000                      # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "NeuralNet"               # One of ["Euler", "NeuralNet"]
+    predictor_type: "Euler"               # One of ["Euler", "NeuralNet"]
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01
@@ -25,3 +17,47 @@ controller:
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"                  # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     LOGGING: True
+  custom_mpc_scipy:
+    DT: 0.1
+    # method: 'L-BFGS-B'
+    method: 'SLSQP'
+    ftol: 1.0e-8
+    mpc_horizon: 10
+    # weights
+    wr: 0.001  # rterm
+    l1: 100.0  # angle_cost
+    l1_2: 0.0  # angle_sin_cost
+    l2: 0.0  # angleD_cost
+    l3: 0.0  # position_cost
+    l4: 0.01  # positionD_cost
+    m1: 0.0  # angle_sin_cost
+    m2: 0.0  # angleD_cost
+    m3: 0.0  # position_cost
+    m4: 0.0  # positionD_cost
+  do_mpc_discrete:
+    dt_mpc_simulation: 0.2  # s
+    mpc_horizon: 10
+  do_mpc:
+    dt_mpc_simulation: 0.1  # s
+    mpc_horizon: 10
+    # Perturbation factors:
+    # Change of output from optimal
+    p_Q: 0.05
+    # p_Q: 0.0
+    # Change of cost function
+    p_position: 0.2
+    # p_position: 0.0
+    p_positionD: 0.2
+    # p_positionD: 0.0
+    p_angle: 0.2
+    # p_angle: 0.0
+    l_angle: 0.1
+    l_position: 2.0
+    l_positionD: 0.1
+  lqr:
+    Q: [10.0, 1.0, 1.0, 1.0]
+    R: 10.0
+  mpc_opti:
+    dt_mpc_simulation: 0.2  # s
+    mpc_horizon: 10
+  
