@@ -60,7 +60,7 @@ PATH_TO_EXPERIMENT_RECORDINGS = './ExperimentRecordings/'  # Path where the expe
 
 class CartPole:
 
-    def __init__(self):
+    def __init__(self, initial_state=s0):
 
         # Global time of the simulation
         self.time = 0.0
@@ -68,7 +68,7 @@ class CartPole:
         # CartPole is initialized with state, control input, target position all zero
         # This is however usually changed before running the simulation. Treat it just as placeholders.
         # Container for the augmented state (angle, position and their first and second derivatives)of the cart
-        self.s = s0  # (s like state)
+        self.s = initial_state  # (s like state)
         # Variables for control input and target position.
         self.u = 0.0  # Physical force acting on the cart
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method

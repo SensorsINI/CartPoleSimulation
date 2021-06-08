@@ -8,15 +8,16 @@ try:
 except:
     pass
 
+from CartPole.cartpole_model import TrackHalfLength
 import numpy as np
 
 # region Imports needed to create layout of the window in __init__ method
 
 # Import functions from PyQt5 module (creating GUI)
-from PyQt5.QtWidgets import QMainWindow, QRadioButton, QApplication, QVBoxLayout, \
+from PyQt5.QtWidgets import QMainWindow, QRadioButton, QApplication, QSlider, QVBoxLayout, \
     QHBoxLayout, QLabel, QPushButton, QWidget, QCheckBox, \
     QLineEdit, QMessageBox, QComboBox, QButtonGroup
-from PyQt5.QtCore import QThreadPool, QTimer
+from PyQt5.QtCore import QThreadPool, QTimer, Qt
 # The main drawing functionalities are implemented in CartPole Class
 # Some more functions needed for interaction of matplotlib with PyQt5
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -36,7 +37,7 @@ import csv
 # Import Cart class - the class keeping all the parameters and methods
 # related to CartPole which are not related to PyQt5 GUI
 from CartPole import CartPole
-from CartPole.state_utilities import cartpole_state_varname_to_index
+from CartPole.state_utilities import ANGLE_IDX, POSITION_IDX, cartpole_state_varname_to_index, create_cartpole_state
 
 from GUI.gui_default_params import *
 from GUI.loop_timer import loop_timer
@@ -54,7 +55,8 @@ class MainWindow(QMainWindow):
         # region Create CartPole instance and load initial settings
 
         # Create CartPole instance
-        self.CartPoleInstance = CartPole()
+        self.initial_state = create_cartpole_state()
+        self.CartPoleInstance = CartPole(initial_state=self.initial_state)
 
         # Set timescales
         self.CartPoleInstance.dt_simulation = dt_simulation
@@ -212,6 +214,22 @@ class MainWindow(QMainWindow):
         lb = QVBoxLayout()  # Layout for buttons
         lb.addWidget(bss)
         lb.addWidget(bq)
+        ip = QHBoxLayout()  # Layout for initial position sliders
+        self.initial_position_slider = QSlider(orientation=Qt.Horizontal)
+        self.initial_position_slider.setRange(-int(float(1000*TrackHalfLength)), int(float(1000*TrackHalfLength)))
+        self.initial_position_slider.setValue(0)
+        self.initial_position_slider.setSingleStep(1)
+        self.initial_position_slider.valueChanged.connect(self.update_initial_position)
+        self.initial_angle_slider = QSlider(orientation=Qt.Horizontal)
+        self.initial_angle_slider.setRange(-int(float(100*np.pi)), int(float(100*np.pi)))
+        self.initial_angle_slider.setValue(0)
+        self.initial_angle_slider.setSingleStep(1)
+        self.initial_angle_slider.valueChanged.connect(self.update_initial_angle)
+        ip.addWidget(QLabel("Initial position:"))
+        ip.addWidget(self.initial_position_slider)
+        ip.addWidget(QLabel("Initial angle:"))
+        ip.addWidget(self.initial_angle_slider)
+        lb.addLayout(ip)
         layout.addLayout(lb)
 
         # endregion
@@ -377,6 +395,12 @@ class MainWindow(QMainWindow):
         self.anim = self.CartPoleInstance.run_animation(self.fig)
         # endregion
 
+    def update_initial_position(self, value: str):
+        self.initial_state[POSITION_IDX] = float(value) / 1000.0
+
+    def update_initial_angle(self, value: str):
+        self.initial_state[ANGLE_IDX] = float(value) / 100.0
+
 
     # region Thread performing CartPole experiment, slider-controlled or random
     # It iteratively updates  CartPole state and save data to a .csv file
@@ -526,9 +550,9 @@ class MainWindow(QMainWindow):
         if self.simulator_mode != 'Replay':
             self.cb_show_experiment_summary.setEnabled(False)
 
-        # Set some random initial values for state (or its part) of the CartPole
+        # Set user-provided initial values for state (or its part) of the CartPole
         # Search implementation for more detail
-        self.reset_variables(1)
+        self.reset_variables(2, s=np.copy(self.initial_state), Q=self.CartPoleInstance.Q, target_position=self.CartPoleInstance.target_position)
 
         if self.simulator_mode == 'Random Experiment':
 
@@ -569,6 +593,10 @@ class MainWindow(QMainWindow):
     def finish_thread(self):
 
         self.CartPoleInstance.use_pregenerated_target_position = False
+        self.initial_state = create_cartpole_state()
+        self.initial_position_slider.setValue(0)
+        self.initial_angle_slider.setValue(0)
+        self.CartPoleInstance.s = self.initial_state
 
         # Some controllers may collect they own statistics about their usage and print it after experiment terminated
         if self.simulator_mode != 'Replay':
@@ -620,8 +648,8 @@ class MainWindow(QMainWindow):
         self.CartPoleInstance.turning_points = turning_points_init
 
     # Method resetting variables which change during experimental run
-    def reset_variables(self, reset_mode=1):
-        self.CartPoleInstance.set_cartpole_state_at_t0(reset_mode)
+    def reset_variables(self, reset_mode=1, s=None, Q=None, target_position=None):
+        self.CartPoleInstance.set_cartpole_state_at_t0(reset_mode, s=s, Q=Q, target_position=target_position)
         self.user_time_counter = 0
         # "Try" because this function is called for the first time during initialisation of the Window
         # when the timer label instance is not yer there.
