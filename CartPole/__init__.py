@@ -54,8 +54,11 @@ rc('font', **font)
 
 # endregion
 
-PATH_TO_CONTROLLERS = './Controllers/'  # Path where controllers are stored
-PATH_TO_EXPERIMENT_RECORDINGS = './ExperimentRecordings/'  # Path where the experiments data is stored
+import yaml
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+
+PATH_TO_CONTROLLERS = config["cartpole"]["PATH_TO_CONTROLLERS"]
+PATH_TO_EXPERIMENT_RECORDINGS = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS"]
 
 
 class CartPole:
