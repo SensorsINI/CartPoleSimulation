@@ -63,7 +63,7 @@ P_GLOBALS.controlDisturbance = config["cartpole"]["controlDisturbance"]
 P_GLOBALS.controlBias = config["cartpole"]["controlBias"]
 P_GLOBALS.sensorNoise = config["cartpole"]["sensorNoise"]
 
-P_GLOBALS.g = config["cartpole"]["sensorNoise"]
+P_GLOBALS.g = config["cartpole"]["g"]
 P_GLOBALS.k = float(config["cartpole"]["k"].split("/")[0])/float(config["cartpole"]["k"].split("/")[1])
 
 
