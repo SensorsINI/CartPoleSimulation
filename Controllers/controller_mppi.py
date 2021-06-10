@@ -9,39 +9,40 @@ Based on Williams, Aldrich, Theodorou (2015)
 # # # use('TkAgg')
 # use('macOSX')
 
-from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import TrackHalfLength
-from CartPole.state_utilities import (
-    create_cartpole_state,
-    ANGLE_IDX,
-    ANGLED_IDX,
-    POSITION_IDX,
-    POSITIOND_IDX,
-)
+import os
 
+import matplotlib.pyplot as plt
+import numpy as np
+import yaml
 from CartPole._CartPole_mathematical_helpers import (
     conditional_decorator,
     wrap_angle_rad_inplace,
 )
-
-import matplotlib.pyplot as plt
+from CartPole.cartpole_model import TrackHalfLength
+from CartPole.state_utilities import (
+    ANGLE_IDX,
+    ANGLED_IDX,
+    POSITION_IDX,
+    POSITIOND_IDX,
+    create_cartpole_state,
+)
 from matplotlib.widgets import Slider
-
 from numba import jit
-import numpy as np
 from numpy.random import SFC64, Generator
-from scipy.interpolate import interp1d
-
 from others.globals_and_utils import Timer
+from Predictores.predictor_ideal import predictor_ideal
+from scipy.interpolate import interp1d
 from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
     predictor_autoregressive_tf,
 )
-from Predictores.predictor_ideal import predictor_ideal
 
-import yaml, os
+from Controllers.template_controller import template_controller
+
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-NET_NAME = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml'), 'r'), Loader=yaml.FullLoader)['modeling']['NET_NAME'].split("-")[0]
+NET_NAME = yaml.load(
+    open(os.path.join("SI_Toolkit", "config.yml"), "r"), Loader=yaml.FullLoader
+)["modeling"]["NET_NAME"].split("-")[0]
 
 """Timestep and sampling settings"""
 dt = config["controller"]["mppi"]["dt"]
@@ -191,9 +192,7 @@ def q(s, u, delta_u, u_prev, target_position):
     dd = dd_weight * distance_difference_cost(
         s[:, :, POSITION_IDX], target_position
     ).astype(np.float32)
-    ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX]).astype(
-        np.float32
-    )
+    ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX]).astype(np.float32)
     ekp = ekp_weight * E_kin_pol(s[:, :, ANGLED_IDX]).astype(np.float32)
     ekc = ekc_weight * E_kin_cart(s[:, :, POSITIOND_IDX]).astype(np.float32)
     cc = cc_weight * (
@@ -360,7 +359,8 @@ class controller_mppi(template_controller):
                     rollout_trajectory = predictor.predict(self.u)
                 elif predictor_type == "NeuralNet":
                     predictor.setup(
-                        initial_state=np.tile(self.s, (mc_samples, 1)), prediction_denorm=True
+                        initial_state=np.tile(self.s, (mc_samples, 1)),
+                        prediction_denorm=True,
                     )
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     rollout_trajectory = predictor.predict(
@@ -372,7 +372,11 @@ class controller_mppi(template_controller):
             TRAJECTORY_LOGS.append(np.copy(self.s[[POSITION_IDX, ANGLE_IDX]]))
             TARGET_TRAJECTORY_LOGS.append(np.copy(target_position))
 
-        if self.warm_up_countdown > 0 and self.auxiliary_controller_available and NET_NAME=="GRU":
+        if (
+            self.warm_up_countdown > 0
+            and self.auxiliary_controller_available
+            and NET_NAME == "GRU"
+        ):
             self.warm_up_countdown -= 1
             Q = self.auxiliary_controller.step(s, target_position)
         else:
@@ -395,7 +399,7 @@ class controller_mppi(template_controller):
         #     Q = np.random.uniform(-1.0, 1.0)
 
         # Add noise on top of the calculated Q value to better explore state space
-        Q = Q*(1 + p_Q * np.random.uniform(-1.0, 1.0))
+        Q = Q * (1 + p_Q * np.random.uniform(-1.0, 1.0))
         # Clip inputs to allowed range
         Q = np.clip(Q, -1.0, 1.0)
 
@@ -519,7 +523,9 @@ class controller_mppi(template_controller):
             # For each rollout, calculate what the nominal trajectory would be using the known true model
             # This can uncover if the model used makes inaccurate predictions
             # shape(true_nominal_rollouts) = ITERATIONS x mpc_horizon x [position, positionD, angle, angleD]
-            predictor_true_equations = predictor_ideal(horizon=mpc_samples, dt=dt, intermediate_steps=10)
+            predictor_true_equations = predictor_ideal(
+                horizon=mpc_samples, dt=dt, intermediate_steps=10
+            )
             true_nominal_rollouts = np.stack(NOMINAL_ROLLOUT_LOGS, axis=0)
             wrap_angle_rad_inplace(true_nominal_rollouts[:, :, ANGLE_IDX])
             predictor_true_equations.setup(
@@ -646,8 +652,12 @@ class controller_mppi(template_controller):
                 ax1.set_title("Monte Carlo Rollouts")
 
                 # Set axis legends
-                ax1.legend(loc="upper left", fontsize=12, bbox_to_anchor=(1, 0, 0.16, 1))
-                ax2.legend(loc="upper left", fontsize=12, bbox_to_anchor=(1, 0, 0.16, 1))
+                ax1.legend(
+                    loc="upper left", fontsize=12, bbox_to_anchor=(1, 0, 0.16, 1)
+                )
+                ax2.legend(
+                    loc="upper left", fontsize=12, bbox_to_anchor=(1, 0, 0.16, 1)
+                )
 
             # Draw first iteration
             update_plot(1)
