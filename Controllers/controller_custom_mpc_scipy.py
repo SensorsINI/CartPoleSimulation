@@ -10,6 +10,7 @@ from Predictores.predictor_ideal import predictor_ideal
 from Controllers.controller_lqr import controller_lqr
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)

@@ -519,10 +519,16 @@ class CartPole:
         axs[1].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
         # Plot motor input command
-        axs[2].set_ylabel("motor (N)", fontsize=fontsize_labels)
-        axs[2].plot(self.dict_history['time'], self.dict_history['u'], 'r', markersize=12,
-                    label='motor')
-        axs[2].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+        try:
+            axs[2].set_ylabel("motor (N)", fontsize=fontsize_labels)
+            axs[2].plot(self.dict_history['time'], self.dict_history['u'], 'r', markersize=12,
+                        label='motor')
+            axs[2].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+        except KeyError:
+            axs[2].set_ylabel("motor normalized (-)", fontsize=fontsize_labels)
+            axs[2].plot(self.dict_history['time'], self.dict_history['Q'], 'r', markersize=12,
+                        label='motor')
+            axs[2].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
         # Plot target position
         axs[3].set_ylabel("position target (m)", fontsize=fontsize_labels)
@@ -781,7 +787,8 @@ class CartPole:
             try:
                 controller_idx = self.controller_names.index(controller_name)
             except ValueError:
-                raise ValueError('{} is not in list. \n In list are: {}'.format(controller_name, self.controller_names))
+                print('{} is not in list. \n In list are: {}'.format(controller_name, self.controller_names))
+                return False
         else:
             controller_name = self.controller_names[controller_idx]
 
@@ -804,6 +811,8 @@ class CartPole:
             self.Slider_Arrow.set_positions((0, 0), (0, 0))
         else:
             self.Slider_Bar.set_width(0.0)
+
+        return True
 
     # This method resets the internal state of the CartPole instance
     # The starting state (for t = 0) may be

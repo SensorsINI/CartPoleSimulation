@@ -28,17 +28,19 @@ dt_controller_update_DataGen = 0.02
 dt_save_DataGen = 0.02
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
-length_of_experiment_DataGen = 10.0  # Length of each experiment in s
+length_of_experiment_DataGen = 100.0  # Length of each experiment in s
 controller_DataGen = 'mppi'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'lqr'
-track_relative_complexity_DataGen = 2.0  # randomly placed target points/s
+track_relative_complexity_DataGen = 0.5  # randomly placed target points/s
 interpolation_type_DataGen = '0-derivative-smooth'  # Sets how to interpolate between turning points of random trace
 # Possible choices: '0-derivative-smooth', 'linear', 'previous'
 turning_points_period_DataGen = 'regular'  # How turning points should be distributed
 # Possible choices: 'regular', 'random'
+# Set the max for smoothly interpolated random target position to avoid bumping into track ends.
+used_track_fraction = 0.9
 # Where the target position of the random experiment starts and end
-start_random_target_position_at_DataGen = -0.5 * TrackHalfLength
+start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * np.random.uniform(-1.0, 1.0)
 end_random_target_position_at_DataGen = 0.0
 # The list of turning points is set to None, no matter what is in globals.py
 turning_points_DataGen = None
@@ -46,19 +48,17 @@ turning_points_DataGen = None
 # initial state
 # This is just one possibility how to set the initial state. Feel free to modify this code
 # [position, positionD, angle, angleD]
-# initial_state = [None, None, None, None]
+# initial_state = [start_random_target_position_at_DataGen, None, None, None]
 # initial_state = [0.5 * TrackHalfLength, 0, 180.0 * (np.pi / 180.0), 0]
-initial_state = [- 0.2 * TrackHalfLength, 0.0, 45.0 * (np.pi / 180.0), 0.0]
-initial_state_DataGen = create_cartpole_state()
+# initial_state = [- 0.2 * TrackHalfLength, 0.0, 45.0 * (np.pi / 180.0), 0.0]
 
-# Set the max for smoothly interpolated random target position to avoid bumping into track ends.
-used_track_fraction = 0.9
+initial_state_DataGen = create_cartpole_state()
 
 
 for i in range(number_of_experiments):
 
-    # start_random_target_position_at_DataGen = 0.0
-    # end_random_target_position_at_DataGen = 0.0
+    start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * np.random.uniform(-1.0, 1.0)
+    initial_state = [start_random_target_position_at_DataGen, None, None, None]
 
     if initial_state[0] is None:
         initial_state_DataGen[cartpole_state_varname_to_index('position')] = np.random.uniform(
