@@ -105,9 +105,9 @@ class MainWindow(QMainWindow):
         self.run_set_labels_thread = True  # True if gauges (labels) keep being repeatedly updated
         # Stop threads by setting False
 
-        # Flag indicating if the "Start! / Stop!" button should act as start or as stop when pressed.
-        # Can take values "Start!" or "Stop!"
-        self.start_or_stop_action = "Start!"
+        # Flag indicating if the "START! / STOP!" button should act as start or as stop when pressed.
+        # Can take values "START!" or "STOP!"
+        self.start_or_stop_action = "START!"
         # Flag indicating whether the pause button should pause or unpause.
         self.pause_or_unpause_action = "PAUSE"
 
@@ -539,31 +539,31 @@ class MainWindow(QMainWindow):
 
     # region "START! / STOP!" button -> run/stop slider-controlled experiment, random experiment or replay experiment recording
 
-    # Actions to be taken when "Start! / Stop!" button is clicked
+    # Actions to be taken when "START! / STOP!" button is clicked
     def start_stop_button(self):
 
-        # If "Start! / Stop!" button in "Start!" mode...
-        if self.start_or_stop_action == 'Start!':
+        # If "START! / STOP!" button in "START!" mode...
+        if self.start_or_stop_action == 'START!':
             self.bss.setText("STOP!")
             self.start_thread()
 
-        # If "Start! / Stop!" button in "Stop!" mode...
-        elif self.start_or_stop_action == 'Stop!':
+        # If "START! / STOP!" button in "STOP!" mode...
+        elif self.start_or_stop_action == 'STOP!':
             self.bss.setText("START!")
             self.bp.setText("PAUSE")
             # This flag is periodically checked by thread. It terminates if set True.
             self.terminate_experiment_or_replay_thread = True
             # The stop_thread function is called automatically by the thread when it terminates
-            # It is implemented this way, because thread my terminate not only due "Stop!" button
+            # It is implemented this way, because thread my terminate not only due "STOP!" button
             # (e.g. replay thread when whole experiment is replayed)
         
     def pause_unpause_button(self):
         # Only Pause if experiment is running
-        if self.pause_or_unpause_action == 'PAUSE' and self.start_or_stop_action == 'Stop!':
+        if self.pause_or_unpause_action == 'PAUSE' and self.start_or_stop_action == 'STOP!':
             self.pause_or_unpause_action = 'UNPAUSE'
             self.pause_experiment_or_replay_thread = True
             self.bp.setText("UNPAUSE")
-        elif self.pause_or_unpause_action == 'UNPAUSE' and self.start_or_stop_action == 'Stop!':
+        elif self.pause_or_unpause_action == 'UNPAUSE' and self.start_or_stop_action == 'STOP!':
             self.pause_or_unpause_action = 'PAUSE'
             self.pause_experiment_or_replay_thread = False
             self.bp.setText("PAUSE")
@@ -619,8 +619,8 @@ class MainWindow(QMainWindow):
         self.threadpool.start(worker)
 
 
-        # Determine what should happen when "Start! / Stop!" is pushed NEXT time
-        self.start_or_stop_action = "Stop!"
+        # Determine what should happen when "START! / STOP!" is pushed NEXT time
+        self.start_or_stop_action = "STOP!"
 
     # finish_threads works for all simulation modes
     # Some lines mya be redundant for replay,
@@ -668,7 +668,7 @@ class MainWindow(QMainWindow):
         for rb in self.rbs_controllers:
             rb.setEnabled(True)
 
-        self.start_or_stop_action = "Start!"  # What should happen when "Start! / Stop!" is pushed NEXT time
+        self.start_or_stop_action = "START!"  # What should happen when "START! / STOP!" is pushed NEXT time
 
     # endregion
 
@@ -739,7 +739,7 @@ class MainWindow(QMainWindow):
     #   It seems it sometimes counting time to slow. Consider replacing in future
     def set_user_time_label(self):
         # "If": Increment time counter only if simulation is running
-        if self.start_or_stop_action == "Stop!": # indicates what start button was pressed and some process is running
+        if self.start_or_stop_action == "STOP!": # indicates what start button was pressed and some process is running
             self.user_time_counter += 1
             # The updates are done smoother if the label is updated here
             # and not in the separate thread
