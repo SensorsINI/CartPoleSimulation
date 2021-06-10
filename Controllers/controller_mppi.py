@@ -83,6 +83,7 @@ SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
 """Random number generator"""
 # TODO: How to set the seed so that it is different for each realization
 #   in data_generator?
+# FIXME: Insert current time as seed
 rng = Generator(SFC64(123))
 
 
@@ -187,13 +188,12 @@ def trajectory_rollouts(
 
 def q(s, u, delta_u, u_prev, target_position):
     """Cost function per iteration"""
-    # TODO: "weight"
     dd = dd_weight * distance_difference_cost(
         s[:, :, POSITION_IDX], target_position
     ).astype(np.float32)
     ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX]).astype(
         np.float32
-    )  # Frederik had 1.0e3
+    )
     ekp = ekp_weight * E_kin_pol(s[:, :, ANGLED_IDX]).astype(np.float32)
     ekc = ekc_weight * E_kin_cart(s[:, :, POSITIOND_IDX]).astype(np.float32)
     cc = cc_weight * (
