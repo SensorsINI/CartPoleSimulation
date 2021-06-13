@@ -64,11 +64,18 @@ ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
 """Perturbation factor"""
 p_Q = 0.0  # 0.05  # Noise on top of the calculated control input
 # Change of cost function
-dd_noise = 0.0  # 0.2
-ep_noise = 0.0  # 0.2
-ekp_noise = 0.0  # 0.2
-ekc_noise = 0.0  # 0.2
-cc_noise = 0.0  # 0.2
+dd_noise = 0.2  # 0.2
+ep_noise = 0.2  # 0.2
+ekp_noise = 0.2  # 0.2
+ekc_noise = 0.2  # 0.2
+cc_noise = 0.2  # 0.2
+
+
+dd_weight = dd_weight * (1 + dd_noise * np.random.uniform(-1.0, 1.0))
+ep_weight = ep_weight * (1 + ep_noise * np.random.uniform(-1.0, 1.0))
+ekp_weight = ekp_weight * (1 + ekp_noise * np.random.uniform(-1.0, 1.0))
+ekc_weight = ekc_weight * (1 + ekc_noise * np.random.uniform(-1.0, 1.0))
+cc_weight = cc_weight * (1 + cc_noise * np.random.uniform(-1.0, 1.0))
 
 
 gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = gui_ccrc = np.zeros(1, dtype=np.float32)
