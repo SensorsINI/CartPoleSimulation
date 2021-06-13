@@ -20,10 +20,14 @@ from CartPole._CartPole_mathematical_helpers import (
 )
 from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import (
+    ANGLE_COS_IDX,
     ANGLE_IDX,
     ANGLED_IDX,
+    ANGLE_SIN_IDX,
     POSITION_IDX,
     POSITIOND_IDX,
+    STATE_VARIABLES_REDUCED,
+    STATE_INDICES_REDUCED,
     create_cartpole_state,
 )
 from matplotlib.widgets import Slider
@@ -113,22 +117,26 @@ TRAJECTORY_COST_LOGS = []
 
 @jit(nopython=True, cache=True, fastmath=True)
 def E_kin_cart(positionD):
+    """Compute penalty for kinetic energy of cart"""
     return positionD ** 2
 
 
 @jit(nopython=True, cache=True, fastmath=True)
 def E_kin_pol(angleD):
+    """Compute penalty for kinetic energy of pole"""
     return angleD ** 2
 
 
 @jit(nopython=True, cache=True, fastmath=True)
 def E_pot_cost(angle):
+    """Compute penalty for not balancing pole upright (penalize large angles)"""
     return 0.25 * (1.0 - np.cos(angle)) ** 2
     # return angle ** 2
 
 
 @jit(nopython=True, cache=True, fastmath=True)
 def distance_difference_cost(position, target_position):
+    """Compute penalty for distance of cart to the target position"""
     return ((position - target_position) / (2.0 * TrackHalfLength)) ** 2 + (
         TrackHalfLength - np.abs(position) < 0.005 * TrackHalfLength
     ) * 1.0e3  # Hard constraint: Do not crash into border
@@ -136,11 +144,13 @@ def distance_difference_cost(position, target_position):
 
 @jit(nopython=True, cache=True, fastmath=True)
 def control_change_rate_cost(u, u_prev):
+    """Compute penalty of control jerk, i.e. difference to previous control input"""
     return (u - u_prev) ** 2
 
 
 @jit(nopython=True, cache=True, fastmath=True)
 def penalize_deviation(cc, u):
+    """Compute penalty for producing inputs that do not fulfil input constraints"""
     # Penalize if control deviation is outside constraint set.
     I, J = cc.shape
     for i in range(I):
@@ -163,12 +173,49 @@ def trajectory_rollouts(
     u: np.ndarray,
     delta_u: np.ndarray,
     u_prev: np.ndarray,
-    target_position: np.ndarray,
+    target_position: np.float32,
 ):
+    """Sample thousands of rollouts using system model. Compute cost-weighted control update. Log states and costs if specified.
+
+    :param s: Current state of the system
+    :type s: np.ndarray
+    :param S_tilde_k: Placeholder array to store the cost of each rollout trajectory
+    :type S_tile_k: np.ndarray
+    :param u: Vector of nominal inputs computed in previous iteration
+    :type u: np.ndarray
+    :param delta_u: Array containing all input perturbation samples. Shape (num_rollouts x horizon_steps)
+    :type delta_u: np.ndarray
+    :param u_prev: Array with nominal inputs from previous iteration. Used to compute cost of control change
+    :type u_prev: np.ndarray
+    :param target_position: Target position where the cart should move to
+    :type target_position: np.float32
+
+    :return:
+        - S_tilde_k - Array filled with a cost for each rollout trajectory
+        - cost_logs_internal - If LOGGING enabled: Array with trajectory costs split up into their components
+        - s_horizon - If LOGGING enabled: An array with all states for all simulated rollouts
+    """
     s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size), dtype=np.float32)
     s_horizon[:, 0, :] = np.tile(s, (mc_samples, 1))
 
-    predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
+    if predictor_type == "NeuralNet":
+        predictor.setup(
+            initial_state=s_horizon[
+                :,
+                0,
+                [
+                    ANGLE_IDX,
+                    ANGLED_IDX,
+                    ANGLE_COS_IDX,
+                    ANGLE_SIN_IDX,
+                    POSITION_IDX,
+                    POSITIOND_IDX,
+                ],
+            ],
+            prediction_denorm=True,
+        )
+    else:
+        predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
     s_horizon = predictor.predict(u + delta_u)
 
     cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
@@ -194,8 +241,34 @@ def trajectory_rollouts(
     return S_tilde_k, None, None
 
 
-def q(s, u, delta_u, u_prev, target_position):
-    """Cost function per iteration"""
+def q(
+    s: np.ndarray,
+    u: np.ndarray,
+    delta_u: np.ndarray,
+    u_prev: np.ndarray,
+    target_position: np.float32,
+):
+    """Stage cost function. Computes stage-cost elementwise for all rollouts and all trajectory steps at once.
+
+    :param s: Current states of all rollouts
+    :type s: np.ndarray
+    :param u: Vector of nominal inputs
+    :type u: np.ndarray
+    :param delta_u: Array of perturbations
+    :type delta_u: np.ndarray
+    :param u_prev: Vector of nominal inputs of previous iteration
+    :type u_prev: np.ndarray
+    :param target_position: Target position where the cart should move to
+    :type target_position: np.float32
+    :return:
+        - q - Summed stage cost
+        - dd - Distance difference cost
+        - ep - Cost to keep pole upright
+        - ekp - Cost of pole kinetic energy
+        - ekc - Cost of cart kinetic energy
+        - cc - Control cost
+        - ccrc - Control change rate cost
+    """
     dd = dd_weight * distance_difference_cost(
         s[:, :, POSITION_IDX], target_position
     ).astype(np.float32)
@@ -219,8 +292,16 @@ def q(s, u, delta_u, u_prev, target_position):
 
 
 @jit(nopython=True, cache=True, fastmath=True)
-def reward_weighted_average(S, delta_u):
-    """Average the perturbations delta_u based on their desirability"""
+def reward_weighted_average(S: np.ndarray, delta_u: np.ndarray):
+    """Average the perturbations delta_u based on their desirability
+
+    :param S: Array of rollout costs
+    :type S: np.ndarray
+    :param delta_u: Array of perturbations
+    :type delta_u: np.ndarray
+    :return: Gain to update the vector of nominal inputs by. Vector of length (horizon_steps)
+    :rtype: np.ndarray
+    """    
     rho = np.min(S)  # for numerical stability
     exp_s = np.exp(-1.0 / LBD * (S - rho))
     a = np.sum(exp_s)
@@ -230,15 +311,24 @@ def reward_weighted_average(S, delta_u):
 
 @jit(nopython=True, cache=True, fastmath=True)
 def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
-    """
+    """Reward-weighted in-place update of nominal control inputs according to the MPPI method.
+
     :param u: Sampling mean / warm started control inputs of size (,mpc_samples)
+    :type u: np.ndarray
     :param S: Cost array of size (mc_samples)
-    :param delta_u: The input perturbations that had been used, size (mc_samples, mpc_samples)
+    :type S: np.ndarray
+    :param delta_u: The input perturbations that had been used, shape (mc_samples x mpc_samples)
+    :type delta_u: np.ndarray
     """
     u += reward_weighted_average(S, delta_u)
 
 
 class controller_mppi(template_controller):
+    """Controller implementing the Model Predictive Path Integral method (Williams et al. 2015)
+
+    :param template_controller: Superclass describing the basic controller interface
+    :type template_controller: abc.ABC
+    """    
     def __init__(self):
         # State of the cart
         self.s = create_cartpole_state()
@@ -270,6 +360,20 @@ class controller_mppi(template_controller):
     def initialize_perturbations(
         self, stdev: float = 1.0, sampling_type: str = None
     ) -> np.ndarray:
+        """Sample an array of control perturbations delta_u. Samples for two distinct rollouts are always independent
+
+        :param stdev: standard deviation of samples if Gaussian, defaults to 1.0
+        :type stdev: float, optional
+        :param sampling_type: defaults to None, can be one of
+            - "random_walk" - The next horizon step's perturbation is correlated with the previous one
+            - "uniform" - Draw uniformly distributed samples between -1.0 and 1.0
+            - "repeated" - Sample only one perturbation per rollout, apply it repeatedly over the course of the rollout
+            - "interpolated" - Sample a new independent perturbation every 10th MPC horizon step. Interpolate in between the samples
+            - "iid" - Sample independent and identically distributed samples of a Gaussian distribution
+        :type sampling_type: str, optional
+        :return: Independent perturbation samples of shape (num_rollouts x horizon_steps)
+        :rtype: np.ndarray
+        """    
         """
         Return a numpy array with the perturbations delta_u.
         If random_walk is false, initialize with independent Gaussian samples
@@ -315,7 +419,18 @@ class controller_mppi(template_controller):
 
         return delta_u
 
-    def step(self, s, target_position, time=None):
+    def step(self, s: np.ndarray, target_position: np.float64, time=None):
+        """Perform controller step
+
+        :param s: State passed to controller after system has evolved for one step
+        :type s: np.ndarray
+        :param target_position: Target position where the cart should move to
+        :type target_position: np.float64
+        :param time: Time in seconds that has passed in the current experiment, defaults to None
+        :type time: float, optional
+        :return: A normed control value in the range [-1.0, 1.0]
+        :rtype: np.float32
+        """        
         self.s = s
         self.target_position = np.float32(target_position)
 
@@ -366,7 +481,19 @@ class controller_mppi(template_controller):
                     rollout_trajectory = predictor.predict(self.u)
                 elif predictor_type == "NeuralNet":
                     predictor.setup(
-                        initial_state=np.tile(self.s, (mc_samples, 1)),
+                        initial_state=np.tile(
+                            self.s[
+                                [
+                                    ANGLE_IDX,
+                                    ANGLED_IDX,
+                                    ANGLE_COS_IDX,
+                                    ANGLE_SIN_IDX,
+                                    POSITION_IDX,
+                                    POSITIOND_IDX,
+                                ]
+                            ],
+                            (mc_samples, 1),
+                        ),
                         prediction_denorm=True,
                     )
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
@@ -383,6 +510,7 @@ class controller_mppi(template_controller):
             self.warm_up_countdown > 0
             and self.auxiliary_controller_available
             and NET_NAME == "GRU"
+            and predictor_type == "NeuralNet"
         ):
             self.warm_up_countdown -= 1
             Q = self.auxiliary_controller.step(s, target_position)
@@ -406,9 +534,9 @@ class controller_mppi(template_controller):
         #     Q = np.random.uniform(-1.0, 1.0)
 
         # Add noise on top of the calculated Q value to better explore state space
-        Q = Q * (1 + p_Q * np.random.uniform(-1.0, 1.0))
+        Q = np.float32(Q * (1 + p_Q * np.random.uniform(-1.0, 1.0)))
         # Clip inputs to allowed range
-        Q = np.clip(Q, -1.0, 1.0)
+        Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
 
         # Preserve current series of inputs
         self.u_prev = np.copy(self.u)
@@ -424,7 +552,7 @@ class controller_mppi(template_controller):
 
         return Q  # normed control input in the range [-1,1]
 
-    def update_control_vector(self):
+    def update_control_vector(self):   
         """
         MPPI stores a vector of best-guess-so-far control inputs for future steps.
         When adjusting the horizon length, need to adjust this vector too.
