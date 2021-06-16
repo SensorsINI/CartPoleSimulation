@@ -42,7 +42,7 @@ from CartPole.cartpole_model import (
 )
 
 from CartPole.state_utilities import (
-    ANGLE_IDX, ANGLED_IDX, ANGLEDD_IDX, POSITION_IDX, POSITIOND_IDX, POSITIONDD_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX,
+    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX,
     STATE_VARIABLES
 )
 import yaml, os
@@ -118,14 +118,13 @@ class predictor_ideal:
         self.batch_mode = not (self.batch_size == 1)
 
         if not self.batch_mode: initial_state = np.expand_dims(initial_state, 0)
+        self.angleDD = self.positionDD = 0
 
-        self.angle, self.angleD, self.angleDD, self.position, self.positionD, self.positionDD, self.angle_cos, self.angle_sin = (
+        self.angle, self.angleD, self.position, self.positionD, self.angle_cos, self.angle_sin = (
             initial_state[:, ANGLE_IDX],
             initial_state[:, ANGLED_IDX],
-            initial_state[:, ANGLEDD_IDX],
             initial_state[:, POSITION_IDX],
             initial_state[:, POSITIOND_IDX],
-            initial_state[:, POSITIONDD_IDX],
             initial_state[:, ANGLE_COS_IDX],
             initial_state[:, ANGLE_SIN_IDX],
         )
@@ -139,8 +138,6 @@ class predictor_ideal:
     def next_state(self, k):
         """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
         """
-        # # Calculates CURRENT second derivatives
-        # s[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s, u)
         (
             self.angle, self.angleD, self.angleDD, self.position, self.positionD, self.positionDD, self.angle_cos, self.angle_sin
         ) = next_state_numba(
@@ -195,10 +192,8 @@ class predictor_ideal:
     def write_outputs(self, iteration):
         self.output[:, iteration, ANGLE_IDX] = self.angle
         self.output[:, iteration, ANGLED_IDX] = self.angleD
-        self.output[:, iteration, ANGLEDD_IDX] = self.angleDD
         self.output[:, iteration, POSITION_IDX] = self.position
         self.output[:, iteration, POSITIOND_IDX] = self.positionD
-        self.output[:, iteration, POSITIONDD_IDX] = self.positionDD
         self.output[:, iteration, ANGLE_COS_IDX] = self.angle_cos
         self.output[:, iteration, ANGLE_SIN_IDX] = self.angle_sin
 

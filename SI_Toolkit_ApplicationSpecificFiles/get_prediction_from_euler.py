@@ -34,11 +34,14 @@ def get_prediction_for_testing_gui_from_euler(a, dataset, dt_sampling, dt_sampli
 
             for _ in range(dt_sampling_by_dt_fine):
 
-                s[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s, u)
+                angleDD, positionDD = cartpole_ode(s, u)
 
+                t_step = (dt_sampling/float(dt_sampling_by_dt_fine))
                 # Calculate next state
-                s[cartpole_state_varnames_to_indices(['position', 'positionD', 'angle', 'angleD'])] += \
-                    s[cartpole_state_varnames_to_indices(['positionD','positionDD', 'angleD', 'angleDD'])] * (dt_sampling/float(dt_sampling_by_dt_fine))
+                s[cartpole_state_varname_to_index("position")] += s[cartpole_state_varname_to_index("positionD")] * t_step
+                s[cartpole_state_varname_to_index("positionD")] += positionDD * t_step
+                s[cartpole_state_varname_to_index("angle")] += s[cartpole_state_varname_to_index("angleD")] * t_step
+                s[cartpole_state_varname_to_index("angleD")] += angleDD * t_step
 
                 s[cartpole_state_varname_to_index('angle')] = \
                     wrap_angle_rad(s[cartpole_state_varname_to_index('angle')])

@@ -72,6 +72,8 @@ class CartPole:
         # This is however usually changed before running the simulation. Treat it just as placeholders.
         # Container for the augmented state (angle, position and their first and second derivatives)of the cart
         self.s = initial_state  # (s like state)
+        self.angleDD = self.positionDD = 0.0
+        
         # Variables for control input and target position.
         self.u = 0.0  # Physical force acting on the cart
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
@@ -266,10 +268,10 @@ class CartPole:
         self.u = Q2u(self.Q)
 
         # Update second derivatives
-        self.s[cartpole_state_varname_to_index('angleDD')], self.s[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(self.s, self.u)
+        self.angleDD, self.positionDD = cartpole_ode(self.s, self.u)
 
         if zero_DD:
-            self.s[cartpole_state_varname_to_index('angleDD')] = 0.0
+            self.angleDD = 0.0
 
         # Calculate time steps from last saving
         # The counter should be initialized at max-1 to start with a control input update
@@ -286,12 +288,12 @@ class CartPole:
 
                 self.dict_history['angle'].append(self.s[cartpole_state_varname_to_index('angle')])
                 self.dict_history['angleD'].append(self.s[cartpole_state_varname_to_index('angleD')])
-                self.dict_history['angleDD'].append(self.s[cartpole_state_varname_to_index('angleDD')])
+                self.dict_history['angleDD'].append(self.angleDD)
                 self.dict_history['angle_cos'].append(self.s[cartpole_state_varname_to_index('angle_cos')])
                 self.dict_history['angle_sin'].append(self.s[cartpole_state_varname_to_index('angle_sin')])
                 self.dict_history['position'].append(self.s[cartpole_state_varname_to_index('position')])
                 self.dict_history['positionD'].append(self.s[cartpole_state_varname_to_index('positionD')])
-                self.dict_history['positionDD'].append(self.s[cartpole_state_varname_to_index('positionDD')])
+                self.dict_history['positionDD'].append(self.positionDD)
 
                 self.dict_history['Q'].append(self.Q)
                 self.dict_history['u'].append(self.u)
@@ -307,12 +309,12 @@ class CartPole:
 
                                      'angle': [self.s[cartpole_state_varname_to_index('angle')]],
                                      'angleD': [self.s[cartpole_state_varname_to_index('angleD')]],
-                                     'angleDD': [self.s[cartpole_state_varname_to_index('angleDD')]],
+                                     'angleDD': [self.angleDD],
                                      'angle_cos': [self.s[cartpole_state_varname_to_index('angle_cos')]],
                                      'angle_sin': [self.s[cartpole_state_varname_to_index('angle_sin')]],
                                      'position': [self.s[cartpole_state_varname_to_index('position')]],
                                      'positionD': [self.s[cartpole_state_varname_to_index('positionD')]],
-                                     'positionDD': [self.s[cartpole_state_varname_to_index('positionDD')]],
+                                     'positionDD': [self.positionDD],
 
 
                                      'Q': [self.Q],
@@ -339,10 +341,10 @@ class CartPole:
         """
 
         self.s[cartpole_state_varname_to_index('position')] += self.s[cartpole_state_varname_to_index('positionD')] * self.dt_simulation
-        self.s[cartpole_state_varname_to_index('positionD')] += self.s[cartpole_state_varname_to_index('positionDD')] * self.dt_simulation
+        self.s[cartpole_state_varname_to_index('positionD')] += self.positionDD * self.dt_simulation
 
         self.s[cartpole_state_varname_to_index('angle')] += self.s[cartpole_state_varname_to_index('angleD')] * self.dt_simulation
-        self.s[cartpole_state_varname_to_index('angleD')] += self.s[cartpole_state_varname_to_index('angleDD')] * self.dt_simulation
+        self.s[cartpole_state_varname_to_index('angleD')] += self.angleDD * self.dt_simulation
 
     # Determine the dimensionless [-1,1] value of the motor power Q
     # The function loads an external controller from PATH_TO_CONTROLLERS
@@ -739,7 +741,7 @@ class CartPole:
 
         if save_mode == 'offline':
             self.save_history_csv(csv_name=csv, mode='save offline')
-            self.summary_plots()
+            # self.summary_plots()
 
         # Set CartPole state - the only use is to make sure that experiment history is discared
         # Maybe you can delete this line
@@ -822,8 +824,8 @@ class CartPole:
     def set_cartpole_state_at_t0(self, reset_mode=1, s=None, Q=None, target_position=None):
         self.time = 0.0
         if reset_mode == 0:  # Don't change it
-            self.s[cartpole_state_varname_to_index('position')] = self.s[cartpole_state_varname_to_index('positionD')] = self.s[cartpole_state_varname_to_index('positionDD')] = 0.0
-            self.s[cartpole_state_varname_to_index('angle')] = self.s[cartpole_state_varname_to_index('angleD')] = self.s[cartpole_state_varname_to_index('angleDD')] = 0.0
+            self.s[cartpole_state_varname_to_index('position')] = self.s[cartpole_state_varname_to_index('positionD')] = self.positionDD = 0.0
+            self.s[cartpole_state_varname_to_index('angle')] = self.s[cartpole_state_varname_to_index('angleD')] = self.angleDD = 0.0
             self.Q = self.u = 0.0
             self.slider = self.target_position = 0.0
 
@@ -855,7 +857,7 @@ class CartPole:
                 self.slider = self.target_position = target_position
 
                 self.u = Q2u(self.Q)  # Calculate CURRENT control input
-                self.s[cartpole_state_varname_to_index('angleDD')], self.s[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(self.s,
+                self.angleDD, self.positionDD = cartpole_ode(self.s,
                                                                  self.u)  # Calculate CURRENT second derivatives
             else:
                 raise ValueError('s, Q or target position not provided for initial state')
@@ -869,12 +871,12 @@ class CartPole:
 
                              'angle': [self.s[cartpole_state_varname_to_index('angle')]],
                              'angleD': [self.s[cartpole_state_varname_to_index('angleD')]],
-                             'angleDD': [self.s[cartpole_state_varname_to_index('angleDD')]],
+                             'angleDD': [self.angleDD],
                              'angle_cos': [np.cos(self.s[cartpole_state_varname_to_index('angle')])],
                              'angle_sin': [np.sin(self.s[cartpole_state_varname_to_index('angle')])],
                              'position': [self.s[cartpole_state_varname_to_index('position')]],
                              'positionD': [self.s[cartpole_state_varname_to_index('positionD')]],
-                             'positionDD': [self.s[cartpole_state_varname_to_index('positionDD')]],
+                             'positionDD': [self.positionDD],
 
                              'Q': [self.Q],
                              'u': [self.u],

@@ -27,16 +27,16 @@ def mpc_next_state(s, u, dt):
 
     s_next = s
 
-    s_next[cartpole_state_varname_to_index('angleDD')], s_next[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(s_next, u)  # Calculates CURRENT second derivatives
+    angleDD, positionDD = cartpole_ode(s_next, u)  # Calculates CURRENT second derivatives
 
     # Calculate NEXT state:
-    s_next = cartpole_integration(s_next, dt)
+    s_next = cartpole_integration(s_next, angleDD, positionDD, dt)
 
     return s_next
 
 
 
-def cartpole_integration(s, dt):
+def cartpole_integration(s, angleDD, positionDD, dt):
     """
     Simple single step integration of CartPole state by dt
 
@@ -48,10 +48,10 @@ def cartpole_integration(s, dt):
     s_next = create_cartpole_state()
 
     s_next[cartpole_state_varname_to_index('position')] = s[cartpole_state_varname_to_index('position')] + s[cartpole_state_varname_to_index('positionD')] * dt
-    s_next[cartpole_state_varname_to_index('positionD')] = s[cartpole_state_varname_to_index('positionD')] + s[cartpole_state_varname_to_index('positionDD')] * dt
+    s_next[cartpole_state_varname_to_index('positionD')] = s[cartpole_state_varname_to_index('positionD')] + positionDD * dt
 
     s_next[cartpole_state_varname_to_index('angle')] = s[cartpole_state_varname_to_index('angle')] + s[cartpole_state_varname_to_index('angleD')] * dt
-    s_next[cartpole_state_varname_to_index('angleD')] = s[cartpole_state_varname_to_index('angleD')] + s[cartpole_state_varname_to_index('angleDD')] * dt
+    s_next[cartpole_state_varname_to_index('angleD')] = s[cartpole_state_varname_to_index('angleD')] + angleDD * dt
 
     return s_next
 

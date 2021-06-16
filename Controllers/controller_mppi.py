@@ -26,8 +26,8 @@ from CartPole.state_utilities import (
     ANGLE_SIN_IDX,
     POSITION_IDX,
     POSITIOND_IDX,
-    STATE_VARIABLES_REDUCED,
-    STATE_INDICES_REDUCED,
+    STATE_VARIABLES,
+    STATE_INDICES,
     create_cartpole_state,
 )
 from matplotlib.widgets import Slider
@@ -89,6 +89,7 @@ gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = gui_ccrc = np.zeros(1, dtype=np.f
 R = config["controller"]["mppi"]["R"]
 LBD = config["controller"]["mppi"]["LBD"]
 NU = config["controller"]["mppi"]["NU"]
+SQRTRHODTINV = config["controller"]["mppi"]["SQRTRHOINV"] * (1 / np.math.sqrt(dt))
 GAMMA = config["controller"]["mppi"]["GAMMA"]
 SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
 
@@ -102,14 +103,30 @@ rng = Generator(SFC64(123))
 """Init logging variables"""
 LOGGING = config["controller"]["mppi"]["LOGGING"]
 # Save average cost for each cost component
-COST_TO_GO_LOGS = []
-COST_BREAKDOWN_LOGS = []
-STATE_LOGS = []
-TRAJECTORY_LOGS = []
-TARGET_TRAJECTORY_LOGS = []
-INPUT_LOGS = []
-NOMINAL_ROLLOUT_LOGS = []
-TRAJECTORY_COST_LOGS = []
+# COST_TO_GO_LOGS = []
+# COST_BREAKDOWN_LOGS = []
+# STATE_LOGS = []
+# TRAJECTORY_LOGS = []
+# TARGET_TRAJECTORY_LOGS = []
+# INPUT_LOGS = []
+# NOMINAL_ROLLOUT_LOGS = []
+# TRAJECTORY_COST_LOGS = []
+LOGS = {
+    "cost_to_go": [],
+    "cost_breakdown": {
+        "cost_dd": [],
+        "cost_ep": [],
+        "cost_ekp": [],
+        "cost_ekc": [],
+        "cost_cc": [],
+        "cost_ccrc": [],
+    },
+    "states": [],
+    "trajectory": [],
+    "target_trajectory": [],
+    "inputs": [],
+    "nominal_rollouts": [],
+}
 
 
 """Cost function helpers"""
@@ -190,33 +207,12 @@ def trajectory_rollouts(
     :param target_position: Target position where the cart should move to
     :type target_position: np.float32
 
-    :return:
-        - S_tilde_k - Array filled with a cost for each rollout trajectory
-        - cost_logs_internal - If LOGGING enabled: Array with trajectory costs split up into their components
-        - s_horizon - If LOGGING enabled: An array with all states for all simulated rollouts
+    :return: S_tilde_k - Array filled with a cost for each rollout trajectory
     """
-    s_horizon = np.zeros((mc_samples, mpc_samples + 1, s.size), dtype=np.float32)
-    s_horizon[:, 0, :] = np.tile(s, (mc_samples, 1))
+    initial_state = np.tile(s, (mc_samples, 1))
 
-    if predictor_type == "NeuralNet":
-        predictor.setup(
-            initial_state=s_horizon[
-                :,
-                0,
-                [
-                    ANGLE_IDX,
-                    ANGLED_IDX,
-                    ANGLE_COS_IDX,
-                    ANGLE_SIN_IDX,
-                    POSITION_IDX,
-                    POSITIOND_IDX,
-                ],
-            ],
-            prediction_denorm=True,
-        )
-    else:
-        predictor.setup(initial_state=s_horizon[:, 0, :], prediction_denorm=True)
-    s_horizon = predictor.predict(u + delta_u)
+    predictor.setup(initial_state=initial_state, prediction_denorm=True)
+    s_horizon = predictor.predict(u + delta_u)[:, :, :len(STATE_INDICES)]
 
     cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
         s_horizon[:, 1:, :], u, delta_u, u_prev, target_position
@@ -234,11 +230,18 @@ def trajectory_rollouts(
     )
 
     if LOGGING:
-        cost_logs_internal = np.swapaxes(np.array([dd, ep, ekp, ekc, cc, ccrc]), 0, 1)
-        # (mc_samples x 6 x mpc_samples)
+        LOGS.get("cost_breakdown").get("cost_dd").append(np.mean(dd, 0))
+        LOGS.get("cost_breakdown").get("cost_ep").append(np.mean(ep, 0))
+        LOGS.get("cost_breakdown").get("cost_ekp").append(np.mean(ekp, 0))
+        LOGS.get("cost_breakdown").get("cost_ekc").append(np.mean(ekc, 0))
+        LOGS.get("cost_breakdown").get("cost_cc").append(np.mean(cc, 0))
+        LOGS.get("cost_breakdown").get("cost_ccrc").append(np.mean(ccrc, 0))
+        # (1 x mpc_samples)
+        LOGS.get("states").append(
+            np.copy(s_horizon[:, :-1, :])
+        )  # mc_samples x mpc_samples x STATE_VARIABLES
 
-        return S_tilde_k, cost_logs_internal, s_horizon[:, :-1, :]
-    return S_tilde_k, None, None
+    return S_tilde_k
 
 
 def q(
@@ -301,7 +304,7 @@ def reward_weighted_average(S: np.ndarray, delta_u: np.ndarray):
     :type delta_u: np.ndarray
     :return: Gain to update the vector of nominal inputs by. Vector of length (horizon_steps)
     :rtype: np.ndarray
-    """    
+    """
     rho = np.min(S)  # for numerical stability
     exp_s = np.exp(-1.0 / LBD * (S - rho))
     a = np.sum(exp_s)
@@ -328,7 +331,8 @@ class controller_mppi(template_controller):
 
     :param template_controller: Superclass describing the basic controller interface
     :type template_controller: abc.ABC
-    """    
+    """
+
     def __init__(self):
         # State of the cart
         self.s = create_cartpole_state()
@@ -373,7 +377,7 @@ class controller_mppi(template_controller):
         :type sampling_type: str, optional
         :return: Independent perturbation samples of shape (num_rollouts x horizon_steps)
         :rtype: np.ndarray
-        """    
+        """
         """
         Return a numpy array with the perturbations delta_u.
         If random_walk is false, initialize with independent Gaussian samples
@@ -430,7 +434,7 @@ class controller_mppi(template_controller):
         :type time: float, optional
         :return: A normed control value in the range [-1.0, 1.0]
         :rtype: np.float32
-        """        
+        """
         self.s = s
         self.target_position = np.float32(target_position)
 
@@ -447,13 +451,13 @@ class controller_mppi(template_controller):
             # Initialize perturbations and cost arrays
             self.delta_u = self.initialize_perturbations(
                 # stdev=0.1 * (1 + 1 / (self.iteration + 1)),
-                stdev=NU * 1e-4,
+                stdev=SQRTRHODTINV,
                 sampling_type=SAMPLING_TYPE,
             )  # du ~ N(mean=0, var=1/(rho*dt))
             self.S_tilde_k = np.zeros_like(self.S_tilde_k, dtype=np.float32)
 
             # Run parallel trajectory rollouts for different input perturbations
-            self.S_tilde_k, cost_logs_internal, s_horizon = trajectory_rollouts(
+            self.S_tilde_k = trajectory_rollouts(
                 self.s,
                 self.S_tilde_k,
                 self.u,
@@ -467,11 +471,9 @@ class controller_mppi(template_controller):
 
             # Log states and costs incurred for plotting later
             if LOGGING:
-                COST_TO_GO_LOGS.append(np.copy(self.S_tilde_k))
-                COST_BREAKDOWN_LOGS.append(np.copy(np.mean(cost_logs_internal, axis=0)))
-                STATE_LOGS.append(s_horizon[:, :, [POSITION_IDX, ANGLE_IDX]])
-                INPUT_LOGS.append(np.copy(self.u))
-                # TRAJECTORY_COST_LOGS.append(q(np.copy(self.s), np.copy(self.u), np.zeros(shape=(1, mpc_samples)), self.u_prev, self.target_position)[0])
+                LOGS.get("cost_to_go").append(np.copy(self.S_tilde_k))
+                LOGS.get("inputs").append(np.copy(self.u))
+
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
                 if predictor_type == "Euler":
@@ -481,30 +483,20 @@ class controller_mppi(template_controller):
                     rollout_trajectory = predictor.predict(self.u)
                 elif predictor_type == "NeuralNet":
                     predictor.setup(
-                        initial_state=np.tile(
-                            self.s[
-                                [
-                                    ANGLE_IDX,
-                                    ANGLED_IDX,
-                                    ANGLE_COS_IDX,
-                                    ANGLE_SIN_IDX,
-                                    POSITION_IDX,
-                                    POSITIOND_IDX,
-                                ]
-                            ],
-                            (mc_samples, 1),
-                        ),
+                        initial_state=np.tile(self.s, (mc_samples, 1)),
                         prediction_denorm=True,
                     )
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     rollout_trajectory = predictor.predict(
                         np.tile(self.u, (mc_samples, 1))
                     )[0, ...]
-                NOMINAL_ROLLOUT_LOGS.append(np.copy(rollout_trajectory[:-1, :8]))
+                LOGS.get("nominal_rollouts").append(
+                    np.copy(rollout_trajectory[:-1, :])
+                )
 
         if LOGGING:
-            TRAJECTORY_LOGS.append(np.copy(self.s[[POSITION_IDX, ANGLE_IDX]]))
-            TARGET_TRAJECTORY_LOGS.append(np.copy(target_position))
+            LOGS.get("trajectory").append(np.copy(self.s))
+            LOGS.get("target_trajectory").append(np.copy(target_position))
 
         if (
             self.warm_up_countdown > 0
@@ -552,7 +544,7 @@ class controller_mppi(template_controller):
 
         return Q  # normed control input in the range [-1,1]
 
-    def update_control_vector(self):   
+    def update_control_vector(self):
         """
         MPPI stores a vector of best-guess-so-far control inputs for future steps.
         When adjusting the horizon length, need to adjust this vector too.
@@ -567,7 +559,8 @@ class controller_mppi(template_controller):
     def controller_report(self):
         if LOGGING:
             ### Plot the average state cost per iteration
-            ctglgs = np.stack(COST_TO_GO_LOGS, axis=0)  # ITERATIONS x mc_samples
+            ctglgs = np.stack(LOGS.get("cost_to_go"), axis=0)  # ITERATIONS x mc_samples
+            NUM_ITERATIONS = np.shape(ctglgs)[0]
             time_axis = update_every * dt * np.arange(start=0, stop=np.shape(ctglgs)[0])
             plt.figure(num=2, figsize=(16, 9))
             plt.plot(time_axis, np.mean(ctglgs, axis=1))
@@ -577,23 +570,24 @@ class controller_mppi(template_controller):
             plt.show()
 
             ### Graph the different cost components per iteration
-            clgs = np.stack(COST_BREAKDOWN_LOGS, axis=0)  # ITERATIONS x 6 x mpc_samples
-            time_axis = update_every * dt * np.arange(start=0, stop=np.shape(clgs)[0])
+            LOGS["cost_breakdown"]["cost_dd"] = np.stack(LOGS.get("cost_breakdown").get("cost_dd"), axis=0)  # ITERATIONS x mpc_samples
+            LOGS["cost_breakdown"]["cost_ep"] = np.stack(LOGS.get("cost_breakdown").get("cost_ep"), axis=0)
+            LOGS["cost_breakdown"]["cost_ekp"] = np.stack(LOGS.get("cost_breakdown").get("cost_ekp"), axis=0)
+            LOGS["cost_breakdown"]["cost_ekc"] = np.stack(LOGS.get("cost_breakdown").get("cost_ekc"), axis=0)
+            LOGS["cost_breakdown"]["cost_cc"] = np.stack(LOGS.get("cost_breakdown").get("cost_cc"), axis=0)
+            LOGS["cost_breakdown"]["cost_ccrc"] = np.stack(LOGS.get("cost_breakdown").get("cost_ccrc"), axis=0)
+            time_axis = update_every * dt * np.arange(start=0, stop=NUM_ITERATIONS)
 
             plt.figure(num=3, figsize=(16, 9))
             plt.plot(
                 time_axis,
-                np.sum(clgs[:, 0, :], axis=-1),
-                label="Distance difference cost",
+                np.sum(LOGS.get("cost_breakdown").get("cost_dd"), axis=-1), label="Distance difference cost",
             )
-            plt.plot(time_axis, np.sum(clgs[:, 1, :], axis=-1), label="E_pot cost")
-            plt.plot(time_axis, np.sum(clgs[:, 2, :], axis=-1), label="E_kin_pole cost")
-            plt.plot(time_axis, np.sum(clgs[:, 3, :], axis=-1), label="E_kin_cart cost")
-            plt.plot(time_axis, np.sum(clgs[:, 4, :], axis=-1), label="Control cost")
-            plt.plot(
-                time_axis,
-                np.sum(clgs[:, 5, :], axis=-1),
-                label="Control change rate cost",
+            plt.plot(time_axis, np.sum(LOGS.get("cost_breakdown").get("cost_ep"), axis=-1), label="E_pot cost")
+            plt.plot(time_axis, np.sum(LOGS.get("cost_breakdown").get("cost_ekp"), axis=-1), label="E_kin_pole cost")
+            plt.plot(time_axis, np.sum(LOGS.get("cost_breakdown").get("cost_ekc"), axis=-1), label="E_kin_cart cost")
+            plt.plot(time_axis, np.sum(LOGS.get("cost_breakdown").get("cost_cc"), axis=-1), label="Control cost")
+            plt.plot( time_axis, np.sum(LOGS.get("cost_breakdown").get("cost_ccrc"), axis=-1), label="Control change rate cost",
             )
 
             plt.ylabel("total horizon cost")
@@ -604,19 +598,20 @@ class controller_mppi(template_controller):
 
             ### Draw the trajectory rollouts simulated by MPPI
             def draw_rollouts(
-                states: np.ndarray,
+                angles: np.ndarray,
+                positions: np.ndarray,
                 ax_position: plt.Axes,
                 ax_angle: plt.Axes,
                 costs: np.ndarray,
                 iteration: int,
             ):
-                mc_rollouts = np.shape(states)[0]
-                horizon_length = np.shape(states)[1]
+                mc_rollouts = np.shape(angles)[0]
+                horizon_length = np.shape(angles)[1]
                 # Loop over all MC rollouts
                 for i in range(mc_rollouts):
                     ax_position.plot(
                         (update_every * iteration + np.arange(0, horizon_length)) * dt,
-                        states[i, :, 0],
+                        positions[i, :],
                         linestyle="-",
                         linewidth=1,
                         color=(
@@ -628,7 +623,7 @@ class controller_mppi(template_controller):
                     )
                     ax_angle.plot(
                         (update_every * iteration + np.arange(0, horizon_length)) * dt,
-                        states[i, :, 1] * 180.0 / np.pi,
+                        angles[i, :] * 180.0 / np.pi,
                         linestyle="-",
                         linewidth=1,
                         color=(
@@ -640,36 +635,32 @@ class controller_mppi(template_controller):
                     )
 
             # Prepare data
-            # shape(slgs) = ITERATIONS x mc_samples x mpc_samples x [position, angle]
-            slgs = np.stack(STATE_LOGS, axis=0)
-            wrap_angle_rad_inplace(slgs[:, :, :, 1])
+            # shape(slgs) = ITERATIONS x mc_samples x mpc_samples x STATE_VARIABLES
+            slgs = np.stack(LOGS.get("states"), axis=0)
+            wrap_angle_rad_inplace(slgs[:, :, :, ANGLE_IDX])
             # shape(iplgs) = ITERATIONS x mpc_horizon
-            iplgs = np.stack(INPUT_LOGS, axis=0)
-            # shape(nrlgs) = ITERATIONS x mpc_horizon x [position, angle]
-            nrlgs = np.stack(NOMINAL_ROLLOUT_LOGS, axis=0)[
-                :, :, [POSITION_IDX, ANGLE_IDX]
-            ]
-            wrap_angle_rad_inplace(nrlgs[:, :, 1])
-            # shape(trjctlgs) = (update_every * ITERATIONS) x [position, angle]
-            trjctlgs = np.stack(TRAJECTORY_LOGS[:-1], axis=0)
-            wrap_angle_rad_inplace(trjctlgs[:, 1])
+            iplgs = np.stack(LOGS.get("inputs"), axis=0)
+            # shape(nrlgs) = ITERATIONS x mpc_horizon x STATE_VARIABLES
+            nrlgs = np.stack(LOGS.get("nominal_rollouts"), axis=0)
+            wrap_angle_rad_inplace(nrlgs[:, :, ANGLE_IDX])
+            # shape(trjctlgs) = (update_every * ITERATIONS) x STATE_VARIABLES
+            trjctlgs = np.stack(LOGS.get("trajectory")[:-1], axis=0)
+            wrap_angle_rad_inplace(trjctlgs[:, ANGLE_IDX])
             # shape(trgtlgs) = ITERATIONS x [position]
-            trgtlgs = np.stack(TARGET_TRAJECTORY_LOGS[:-1], axis=0)
+            trgtlgs = np.stack(LOGS.get("target_trajectory")[:-1], axis=0)
             # For each rollout, calculate what the nominal trajectory would be using the known true model
             # This can uncover if the model used makes inaccurate predictions
             # shape(true_nominal_rollouts) = ITERATIONS x mpc_horizon x [position, positionD, angle, angleD]
             predictor_true_equations = predictor_ideal(
                 horizon=mpc_samples, dt=dt, intermediate_steps=10
             )
-            true_nominal_rollouts = np.stack(NOMINAL_ROLLOUT_LOGS, axis=0)
-            wrap_angle_rad_inplace(true_nominal_rollouts[:, :, ANGLE_IDX])
             predictor_true_equations.setup(
-                np.copy(true_nominal_rollouts[:, 0, :]), prediction_denorm=True
+                np.copy(nrlgs[:, 0, :]), prediction_denorm=True
             )
             true_nominal_rollouts = predictor_true_equations.predict(iplgs)[
-                :, :-1, [POSITION_IDX, ANGLE_IDX]
+                :, :-1, :
             ]
-            wrap_angle_rad_inplace(true_nominal_rollouts[:, :, 1])
+            wrap_angle_rad_inplace(true_nominal_rollouts[:, :, ANGLE_IDX])
 
             # Create figure
             fig, (ax1, ax2) = plt.subplots(
@@ -698,12 +689,12 @@ class controller_mppi(template_controller):
                 ax2.clear()
 
                 # Plot Monte Carlo rollouts
-                draw_rollouts(slgs[i - 1, :, :, :], ax1, ax2, ctglgs[i - 1, :], i - 1)
+                draw_rollouts(slgs[i - 1, :, :, ANGLE_IDX], slgs[i - 1, :, :, POSITION_IDX], ax1, ax2, ctglgs[i - 1, :], i - 1)
 
                 # Plot the realized trajectory
                 ax1.plot(
                     np.arange(0, np.shape(trjctlgs)[0]) * dt,
-                    trjctlgs[:, 0],
+                    trjctlgs[:, POSITION_IDX],
                     alpha=1.0,
                     linestyle="-",
                     linewidth=1,
@@ -712,7 +703,7 @@ class controller_mppi(template_controller):
                 )
                 ax2.plot(
                     np.arange(0, np.shape(trjctlgs)[0]) * dt,
-                    trjctlgs[:, 1] * 180.0 / np.pi,
+                    trjctlgs[:, ANGLE_IDX] * 180.0 / np.pi,
                     alpha=1.0,
                     linestyle="-",
                     linewidth=1,
@@ -732,7 +723,7 @@ class controller_mppi(template_controller):
                 # Plot trajectory planned by MPPI (= nominal trajectory)
                 ax1.plot(
                     (update_every * (i - 1) + np.arange(0, np.shape(nrlgs)[1])) * dt,
-                    nrlgs[i - 1, :, 0],
+                    nrlgs[i - 1, :, POSITION_IDX],
                     alpha=1.0,
                     linestyle="-",
                     linewidth=1,
@@ -741,7 +732,7 @@ class controller_mppi(template_controller):
                 )
                 ax2.plot(
                     (update_every * (i - 1) + np.arange(0, np.shape(nrlgs)[1])) * dt,
-                    nrlgs[i - 1, :, 1] * 180.0 / np.pi,
+                    nrlgs[i - 1, :, ANGLE_IDX] * 180.0 / np.pi,
                     alpha=1.0,
                     linestyle="-",
                     linewidth=1,
@@ -755,7 +746,7 @@ class controller_mppi(template_controller):
                         + np.arange(0, np.shape(true_nominal_rollouts)[1])
                     )
                     * dt,
-                    true_nominal_rollouts[i - 1, :, 0],
+                    true_nominal_rollouts[i - 1, :, POSITION_IDX],
                     alpha=1.0,
                     linestyle="--",
                     linewidth=1,
@@ -768,7 +759,7 @@ class controller_mppi(template_controller):
                         + np.arange(0, np.shape(true_nominal_rollouts)[1])
                     )
                     * dt,
-                    true_nominal_rollouts[i - 1, :, 1] * 180.0 / np.pi,
+                    true_nominal_rollouts[i - 1, :, ANGLE_IDX] * 180.0 / np.pi,
                     alpha=1.0,
                     linestyle="--",
                     linewidth=1,

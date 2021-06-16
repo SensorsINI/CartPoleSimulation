@@ -3,19 +3,6 @@ import numpy as np
 
 
 STATE_VARIABLES = np.sort(
-    [
-        "angle",
-        "angleD",
-        "angle_cos",
-        "angle_sin",
-        "angleDD",
-        "position",
-        "positionD",
-        "positionDD",
-    ]
-)
-
-STATE_VARIABLES_REDUCED = np.sort(
     ['angle',
      'angleD',
      'angle_cos',
@@ -26,16 +13,13 @@ STATE_VARIABLES_REDUCED = np.sort(
 )
 
 STATE_INDICES = {x: np.where(STATE_VARIABLES==x)[0][0] for x in STATE_VARIABLES}
-STATE_INDICES_REDUCED = {x: np.where(STATE_VARIABLES_REDUCED==x)[0][0] for x in STATE_VARIABLES_REDUCED}
 
 
 """Define indices of values in state statically"""
 ANGLE_IDX = STATE_INDICES["angle"].item()
 ANGLED_IDX = STATE_INDICES["angleD"].item()
-ANGLEDD_IDX = STATE_INDICES["angleDD"].item()
 POSITION_IDX = STATE_INDICES["position"].item()
 POSITIOND_IDX = STATE_INDICES["positionD"].item()
-POSITIONDD_IDX = STATE_INDICES["positionDD"].item()
 ANGLE_COS_IDX = STATE_INDICES["angle_cos"].item()
 ANGLE_SIN_IDX = STATE_INDICES["angle_sin"].item()
 
@@ -49,10 +33,8 @@ def create_cartpole_state(state: dict={}, dtype=None) -> np.ndarray:
 
     :param angle: Pole angle. 0 means pole is upright. Clockwise angle rotation is defined as negative.
     :param angleD: Angular velocity of pole.
-    :param angleDD: Angular acceleration of pole.
     :param position: Horizontal position of pole.
     :param positionD: Horizontal velocity of pole. Cart movement to the right is positive.
-    :param positionDD: Horizontal acceleration of pole.
 
     :returns: A numpy.ndarray with values filled in order set by STATE_VARIABLES
     """
