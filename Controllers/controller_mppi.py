@@ -212,7 +212,7 @@ def trajectory_rollouts(
     initial_state = np.tile(s, (mc_samples, 1))
 
     predictor.setup(initial_state=initial_state, prediction_denorm=True)
-    s_horizon = predictor.predict(u + delta_u)[:, :, :len(STATE_INDICES)]
+    s_horizon = predictor.predict(u + delta_u)[:, :, : len(STATE_INDICES)]
 
     # Compute stage costs
     cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
@@ -254,7 +254,7 @@ def q(
     delta_u: np.ndarray,
     u_prev: np.ndarray,
     target_position: np.float32,
-):
+) -> np.ndarray:
     """Stage cost function. Computes stage-cost elementwise for all rollouts and all trajectory steps at once.
 
     :param s: Current states of all rollouts
@@ -516,9 +516,7 @@ class controller_mppi(template_controller):
                     rollout_trajectory = predictor.predict(
                         np.tile(self.u, (mc_samples, 1))
                     )[0, ...]
-                LOGS.get("nominal_rollouts").append(
-                    np.copy(rollout_trajectory[:-1, :])
-                )
+                LOGS.get("nominal_rollouts").append(np.copy(rollout_trajectory[:-1, :]))
 
         if LOGGING:
             LOGS.get("trajectory").append(np.copy(self.s))
@@ -596,24 +594,56 @@ class controller_mppi(template_controller):
             plt.show()
 
             ### Graph the different cost components per iteration
-            LOGS["cost_breakdown"]["cost_dd"] = np.stack(LOGS.get("cost_breakdown").get("cost_dd"), axis=0)  # ITERATIONS x mpc_samples
-            LOGS["cost_breakdown"]["cost_ep"] = np.stack(LOGS.get("cost_breakdown").get("cost_ep"), axis=0)
-            LOGS["cost_breakdown"]["cost_ekp"] = np.stack(LOGS.get("cost_breakdown").get("cost_ekp"), axis=0)
-            LOGS["cost_breakdown"]["cost_ekc"] = np.stack(LOGS.get("cost_breakdown").get("cost_ekc"), axis=0)
-            LOGS["cost_breakdown"]["cost_cc"] = np.stack(LOGS.get("cost_breakdown").get("cost_cc"), axis=0)
-            LOGS["cost_breakdown"]["cost_ccrc"] = np.stack(LOGS.get("cost_breakdown").get("cost_ccrc"), axis=0)
+            LOGS["cost_breakdown"]["cost_dd"] = np.stack(
+                LOGS.get("cost_breakdown").get("cost_dd"), axis=0
+            )  # ITERATIONS x mpc_samples
+            LOGS["cost_breakdown"]["cost_ep"] = np.stack(
+                LOGS.get("cost_breakdown").get("cost_ep"), axis=0
+            )
+            LOGS["cost_breakdown"]["cost_ekp"] = np.stack(
+                LOGS.get("cost_breakdown").get("cost_ekp"), axis=0
+            )
+            LOGS["cost_breakdown"]["cost_ekc"] = np.stack(
+                LOGS.get("cost_breakdown").get("cost_ekc"), axis=0
+            )
+            LOGS["cost_breakdown"]["cost_cc"] = np.stack(
+                LOGS.get("cost_breakdown").get("cost_cc"), axis=0
+            )
+            LOGS["cost_breakdown"]["cost_ccrc"] = np.stack(
+                LOGS.get("cost_breakdown").get("cost_ccrc"), axis=0
+            )
             time_axis = update_every * dt * np.arange(start=0, stop=NUM_ITERATIONS)
 
             plt.figure(num=3, figsize=(16, 9))
             plt.plot(
                 time_axis,
-                np.sum(LOGS.get("cost_breakdown").get("cost_dd"), axis=-1), label="Distance difference cost",
+                np.sum(LOGS.get("cost_breakdown").get("cost_dd"), axis=-1),
+                label="Distance difference cost",
             )
-            plt.plot(time_axis, np.sum(LOGS.get("cost_breakdown").get("cost_ep"), axis=-1), label="E_pot cost")
-            plt.plot(time_axis, np.sum(LOGS.get("cost_breakdown").get("cost_ekp"), axis=-1), label="E_kin_pole cost")
-            plt.plot(time_axis, np.sum(LOGS.get("cost_breakdown").get("cost_ekc"), axis=-1), label="E_kin_cart cost")
-            plt.plot(time_axis, np.sum(LOGS.get("cost_breakdown").get("cost_cc"), axis=-1), label="Control cost")
-            plt.plot( time_axis, np.sum(LOGS.get("cost_breakdown").get("cost_ccrc"), axis=-1), label="Control change rate cost",
+            plt.plot(
+                time_axis,
+                np.sum(LOGS.get("cost_breakdown").get("cost_ep"), axis=-1),
+                label="E_pot cost",
+            )
+            plt.plot(
+                time_axis,
+                np.sum(LOGS.get("cost_breakdown").get("cost_ekp"), axis=-1),
+                label="E_kin_pole cost",
+            )
+            plt.plot(
+                time_axis,
+                np.sum(LOGS.get("cost_breakdown").get("cost_ekc"), axis=-1),
+                label="E_kin_cart cost",
+            )
+            plt.plot(
+                time_axis,
+                np.sum(LOGS.get("cost_breakdown").get("cost_cc"), axis=-1),
+                label="Control cost",
+            )
+            plt.plot(
+                time_axis,
+                np.sum(LOGS.get("cost_breakdown").get("cost_ccrc"), axis=-1),
+                label="Control change rate cost",
             )
 
             plt.ylabel("total horizon cost")
@@ -634,7 +664,7 @@ class controller_mppi(template_controller):
                 mc_rollouts = np.shape(angles)[0]
                 horizon_length = np.shape(angles)[1]
                 # Loop over all MC rollouts
-                for i in range(mc_rollouts):
+                for i in range(0, 2000, 5):
                     ax_position.plot(
                         (update_every * iteration + np.arange(0, horizon_length)) * dt,
                         positions[i, :],
@@ -683,9 +713,7 @@ class controller_mppi(template_controller):
             predictor_true_equations.setup(
                 np.copy(nrlgs[:, 0, :]), prediction_denorm=True
             )
-            true_nominal_rollouts = predictor_true_equations.predict(iplgs)[
-                :, :-1, :
-            ]
+            true_nominal_rollouts = predictor_true_equations.predict(iplgs)[:, :-1, :]
             wrap_angle_rad_inplace(true_nominal_rollouts[:, :, ANGLE_IDX])
 
             # Create figure
@@ -715,7 +743,14 @@ class controller_mppi(template_controller):
                 ax2.clear()
 
                 # Plot Monte Carlo rollouts
-                draw_rollouts(slgs[i - 1, :, :, ANGLE_IDX], slgs[i - 1, :, :, POSITION_IDX], ax1, ax2, ctglgs[i - 1, :], i - 1)
+                draw_rollouts(
+                    slgs[i - 1, :, :, ANGLE_IDX],
+                    slgs[i - 1, :, :, POSITION_IDX],
+                    ax1,
+                    ax2,
+                    ctglgs[i - 1, :],
+                    i - 1,
+                )
 
                 # Plot the realized trajectory
                 ax1.plot(
