@@ -214,11 +214,15 @@ def trajectory_rollouts(
     predictor.setup(initial_state=initial_state, prediction_denorm=True)
     s_horizon = predictor.predict(u + delta_u)[:, :, :len(STATE_INDICES)]
 
+    # Compute stage costs
     cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
         s_horizon[:, 1:, :], u, delta_u, u_prev, target_position
     )
     S_tilde_k = np.sum(cost_increment, axis=1)
+    # Compute terminal cost
+    S_tilde_k += phi(s_horizon, target_position)
 
+    # Pass costs to GUI popup window
     global gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc, gui_ccrc
     gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc, gui_ccrc = (
         np.mean(dd),
@@ -292,6 +296,28 @@ def q(
     q = dd + ep + ekp + ekc + cc + ccrc
 
     return q, dd, ep, ekp, ekc, cc, ccrc
+
+
+@jit(nopython=True, cache=True, fastmath=True)
+def phi(s: np.ndarray, target_position: np.float32) -> np.ndarray:
+    """Calculate terminal cost of a set of trajectories
+
+    :param s: Reference to numpy array of states of all rollouts
+    :type s: np.ndarray
+    :param target_position: Target position to move the cart to
+    :type target_position: np.float32
+    :return: One terminal cost per rollout
+    :rtype: np.ndarray
+    """
+    terminal_states = s[:, -1, :]
+    terminal_cost = 10000 * (
+        (np.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
+        | (
+            np.abs(terminal_states[:, POSITION_IDX] - target_position)
+            > 0.1 * TrackHalfLength
+        )
+    )
+    return terminal_cost
 
 
 @jit(nopython=True, cache=True, fastmath=True)
