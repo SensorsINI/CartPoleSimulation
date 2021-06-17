@@ -695,7 +695,8 @@ class CartPole:
     # @profile(precision=4)
     def run_cartpole_random_experiment(self,
                                        csv=None,
-                                       save_mode='offline'
+                                       save_mode='offline',
+                                       show_summary_plots=True
                                        ):
         """
         This function runs a random CartPole experiment
@@ -743,7 +744,8 @@ class CartPole:
 
         if save_mode == 'offline':
             self.save_history_csv(csv_name=csv, mode='save offline')
-            self.summary_plots()
+        
+        if show_summary_plots: self.summary_plots()
 
         # Set CartPole state - the only use is to make sure that experiment history is discared
         # Maybe you can delete this line
