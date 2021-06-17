@@ -155,8 +155,8 @@ def E_pot_cost(angle):
 def distance_difference_cost(position, target_position):
     """Compute penalty for distance of cart to the target position"""
     return ((position - target_position) / (2.0 * TrackHalfLength)) ** 2 + (
-        TrackHalfLength - np.abs(position) < 0.005 * TrackHalfLength
-    ) * 1.0e3  # Hard constraint: Do not crash into border
+        np.abs(position) > 0.99 * TrackHalfLength
+    ) * 1.0e5  # Soft constraint: Do not crash into border
 
 
 @jit(nopython=True, cache=True, fastmath=True)
