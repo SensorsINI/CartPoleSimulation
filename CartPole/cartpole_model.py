@@ -88,39 +88,7 @@ k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, co
 s0 = create_cartpole_state()
 
 
-@jit(nopython=True, cache=True, fastmath=True)
-def _positionDD(angleD, positionD, ca, sa, A, u):
-    return (
-        (
-            + m * g * sa * ca  # Movement of the cart due to gravity
-            + ((J_fric * angleD * ca) / (L))  # Movement of the cart due to pend' s friction in the joint
-            + k * (
-                - (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                - M_fric * positionD  # Braking of the cart due its friction
-                + u  # Effect of force applied to cart
-            )
-        ) / A
-    )
-
-
-@jit(nopython=True, cache=True, fastmath=True)
-def _angleDD(angleD, positionD, ca, sa, A, u):
-    return (
-        (
-            + (m + M) * (
-                g * sa  # Movement of the pole due to gravity
-                - J_fric * angleD / (L * m)  # Braking of the pole due friction in its joint
-            )
-            - m * L * (angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
-            + ca * (
-                - M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
-                + u  # Effect of force applied to cart
-            )
-        ) / (A * L)
-    )
-
-
-def _cartpole_ode(angle, angleD, positionD, u):
+def _cartpole_ode_non_accelerated(angle, angleD, positionD, u):
     """
     Calculates current values of second derivative of angle and position
     from current value of angle and position, and their first derivatives
@@ -139,16 +107,18 @@ def _cartpole_ode(angle, angleD, positionD, u):
         # g (gravitational acceleration) is positive (absolute value)
         # Checked independently by Marcin and Krishna
 
-        A = k * (M + m) - m * (ca ** 2)
+        A = m * (ca ** 2) - (k + 1) * (M + m)
 
         positionDD = (
             (
-                + m * g * sa * ca  # Movement of the cart due to gravity
-                + ((J_fric * angleD * ca) / (L))  # Movement of the cart due to pend' s friction in the joint
-                - k * (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                - k * M_fric * positionD  # Braking of the cart due its friction
+                + m * g * (-sa) * ca  # Movement of the cart due to gravity
+                - ((J_fric * (-angleD) * ca) / L)  # Movement of the cart due to pend' s friction in the joint
+                - (k + 1) * (
+                    + (m * L * (angleD ** 2) * (-sa))  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                    - M_fric * positionD  # Braking of the cart due its friction
+                    + u  # Effect of force applied to cart
+                )
             ) / A
-            + (k / A) * u  # Effect of force applied to cart
         )
 
         # Making m go to 0 and setting J_fric=0 (fine for pole without mass)
@@ -160,65 +130,34 @@ def _cartpole_ode(angle, angleD, positionD, u):
 
         angleDD = (
             (
-                + g * (m + M) * sa  # Movement of the pole due to gravity
-                - ((J_fric * (m + M) * angleD) / (L * m))  # Braking of the pole due friction in its joint
-                - m * L * (angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                - ca * M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
-            ) / (A * L) 
-            + (ca / (A * L)) * u  # Effect of force applied to cart
-        )
+                g * (-sa) - positionDD * ca - (J_fric * (-angleD)) / (m * L) 
+            ) / ((k + 1) * L)
+        ) * (-1.0)
 
         # making M go to infinity makes angleDD = (g/k*L)sin(angle) - angleD*J_fric/(k*m*L^2)
         # This is the same as equation derived directly for a pendulum.
         # k is 4/3! It is the factor for pendulum with length 2L: I = k*m*L^2
-
-    elif CARTPOLE_EQUATIONS == 'Marcin-Sharpneat-Recommended':
-        # Distribute pole mass uniformly across pole 
-        # Eq. (56) & (57)
-        positionDD = (
-            (
-                m * g * (-sa) * ca 
-                - 7/3 * (
-                    u 
-                    + m * L * (angleD ** 2) * (-sa)
-                    - M_fric * positionD
-                )
-                - J_fric * (-angleD) * ca / L
-            ) / (
-                m * (ca ** 2)
-                - 7/3 * (M + m)
-            )
-        )
-        angleDD = - (
-            3 / (7 * L) * (
-                g * (-sa)
-                - positionDD * ca
-                - J_fric * (-angleD) / (m * L)
-            )
-        )
     else:
         raise ValueError('An undefined name for Cartpole equations')
 
-    return angleDD, positionDD
+    return angleDD, positionDD, ca, sa
+
+
+_cartpole_ode = jit(_cartpole_ode_non_accelerated, nopython=True, cache=True, fastmath=True)
 
 
 def cartpole_ode_namespace(s: SimpleNamespace, u: float):
-    return _cartpole_ode(
+    angleDD, positionDD, _, _ = _cartpole_ode_non_accelerated(
         s.angle, s.angleD, s.positionD, u
     )
+    return angleDD, positionDD
 
 
 def cartpole_ode(s: np.ndarray, u: float):
-    return _cartpole_ode(
-        s[..., ANGLE_IDX], s[..., ANGLED_IDX],
-        s[..., POSITIOND_IDX], u
+    angleDD, positionDD, _, _ = _cartpole_ode(
+        s[..., ANGLE_IDX], s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u
     )
-
-
-@jit(nopython=True, cache=True, fastmath=True)
-def get_A(ca):
-    A = k * (M + m) - m * (ca ** 2)
-    return A
+    return angleDD, positionDD
 
 
 def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):

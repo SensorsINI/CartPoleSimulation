@@ -4,8 +4,8 @@ import do_mpc
 import numpy as np
 
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import v_max, s0, Q2u, cartpole_ode_namespace, TrackHalfLength
-from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index, cartpole_state_vector_to_namespace
+from CartPole.cartpole_model import v_max, Q2u, cartpole_ode_namespace, TrackHalfLength
+from CartPole.state_utilities import cartpole_state_vector_to_namespace
 
 from types import SimpleNamespace
 
@@ -91,7 +91,7 @@ class controller_do_mpc_discrete(template_controller):
         self.model.set_rhs('s.positionD',s_next.positionD)
         self.model.set_rhs('s.angleD', s_next.angleD)
 
-        # Simplified, normalized expressions for E_kin and E_pot as a port of cost function
+        # Simplified, normalized expressions for E_kin and E_pot as a part of cost function
         E_kin_cart = (s.positionD / v_max) ** 2
         E_kin_pol = (s.angleD/(2*np.pi))**2
         E_pot = np.cos(s.angle)

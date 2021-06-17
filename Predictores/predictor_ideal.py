@@ -37,7 +37,7 @@ import numpy as np
 
 from SI_Toolkit.load_and_normalize import load_normalization_info, normalize_numpy_array
 from CartPole.cartpole_model import (
-    L, Q2u, _angleDD, _positionDD, get_A,
+    L, Q2u, _cartpole_ode,
     TrackHalfLength
 )
 
@@ -83,12 +83,7 @@ def next_state_numba(angle, angleD, angleDD, angle_cos, angle_sin, position, pos
 
         angle, angleD, position, positionD = edge_bounce_wrapper(angle, angleD, position, positionD, t_step)
 
-        angle_cos = np.cos(angle)
-        angle_sin = np.sin(angle)
-        A = get_A(angle_cos)
-
-        angleDD = _angleDD(angleD, positionD, angle_cos, angle_sin, A, u)
-        positionDD = _positionDD(angleD, positionD, angle_cos, angle_sin, A, u)
+        angleDD, positionDD, angle_cos, angle_sin = _cartpole_ode(angle, angleD, positionD, u)
 
     return angle, angleD, angleDD, position, positionD, positionDD, angle_cos, angle_sin
 
@@ -140,7 +135,6 @@ class predictor_ideal:
 
         self.prediction_denorm = prediction_denorm
 
-        self.A = np.zeros(shape=(self.batch_size), dtype=np.float32)
         self.u = np.zeros(shape=(self.batch_size, self.horizon), dtype=np.float32)
         self.output = np.zeros((self.batch_size, self.horizon+1, len(self.prediction_features_names)+1), dtype=np.float32)
     
@@ -177,9 +171,12 @@ class predictor_ideal:
         if self.u.ndim == 1: self.u = np.expand_dims(self.u, 0)
 
         # Calculate second derivatives of initial state
-        self.A = get_A(self.angle_cos)
-        self.angleDD = _angleDD(self.angleD, self.positionD, self.angle_cos, self.angle_sin, self.A, self.u[:, 0])
-        self.positionDD = _positionDD(self.angleD, self.positionD, self.angle_cos, self.angle_sin, self.A, self.u[:, 0])
+        self.angleDD, self.positionDD, self.angle_cos, self.angle_sin = _cartpole_ode(
+            self.angle,
+            self.angleD,
+            self.positionD,
+            self.u[:, 0]
+        )
         self.write_outputs(0)
 
         for k in range(self.horizon):
