@@ -37,7 +37,7 @@ import numpy as np
 
 from SI_Toolkit.load_and_normalize import load_normalization_info, normalize_numpy_array
 from CartPole.cartpole_model import (
-    Q2u, _angleDD, _positionDD, get_A,
+    L, Q2u, _angleDD, _positionDD, get_A,
     TrackHalfLength
 )
 
@@ -50,12 +50,21 @@ config = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml'), 'r'), Loader=y
 
 PATH_TO_NORMALIZATION_INFO = config['modeling']['PATH_TO_NORMALIZATION_INFO']
 
+@jit(nopython=True, cache=True, fastmath=True)
+def edge_bounce(angle, angleD, position, positionD, t_step):
+    if abs(position) >= TrackHalfLength:
+        angleD -= 2 * (positionD * np.cos(angle)) / L
+        angle += angleD * t_step
+        positionD = -positionD
+        position += positionD * t_step
+    return angle, angleD, position, positionD
+
 
 @jit(nopython=True, cache=True, fastmath=True)
-def edge_bounce(position, positionD):
+def edge_bounce_wrapper(angle, angleD, position, positionD, t_step):
     for i in range(position.size):
-        if abs(position[i]) > TrackHalfLength: positionD[i] = -positionD[i]
-    return positionD
+        angle[i], angleD[i], position[i], positionD[i] = edge_bounce(angle[i], angleD[i], position[i], positionD[i], t_step)
+    return angle, angleD, position, positionD
 
 
 @jit(nopython=True, cache=True, fastmath=True)
@@ -72,14 +81,14 @@ def next_state_numba(angle, angleD, angleDD, angle_cos, angle_sin, position, pos
         position = euler_step(position, positionD, t_step)
         positionD = euler_step(positionD, positionDD, t_step)
 
-        positionD = edge_bounce(position, positionD)
+        angle, angleD, position, positionD = edge_bounce_wrapper(angle, angleD, position, positionD, t_step)
 
+        angle_cos = np.cos(angle)
+        angle_sin = np.sin(angle)
         A = get_A(angle_cos)
 
         angleDD = _angleDD(angleD, positionD, angle_cos, angle_sin, A, u)
         positionDD = _positionDD(angleD, positionD, angle_cos, angle_sin, A, u)
-    angle_cos = np.cos(angle)
-    angle_sin = np.sin(angle)
 
     return angle, angleD, angleDD, position, positionD, positionDD, angle_cos, angle_sin
 
