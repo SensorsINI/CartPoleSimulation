@@ -9,8 +9,9 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 
 # region Imported modules
 
+from Predictores.predictor_ideal import edge_bounce, euler_step, next_state_numba
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
-from CartPole.state_utilities import cartpole_state_varname_to_index, cartpole_state_index_to_varname, cartpole_state_varnames_to_indices
+from CartPole.state_utilities import ANGLED_IDX, ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX, POSITIOND_IDX, POSITION_IDX, cartpole_state_varname_to_index, cartpole_state_index_to_varname, cartpole_state_varnames_to_indices
 from CartPole.cartpole_model import Q2u, cartpole_ode, P_GLOBALS, s0
 
 import numpy as np
@@ -255,12 +256,6 @@ class CartPole:
         self.s[cartpole_state_varname_to_index('angle_cos')] = np.cos(self.s[cartpole_state_varname_to_index('angle')])
         self.s[cartpole_state_varname_to_index('angle_sin')] = np.sin(self.s[cartpole_state_varname_to_index('angle')])
 
-        # In case in the next step the wheel of the cart
-        # went beyond the track
-        # Bump elastically into an (invisible) boarder
-        if abs(self.s[cartpole_state_varname_to_index('position')]) > self.p.TrackHalfLength:
-            self.s[cartpole_state_varname_to_index('positionD')] = -self.s[cartpole_state_varname_to_index('positionD')]
-
         # Determine the dimensionless [-1,1] value of the motor power Q
         self.Update_Q()
 
@@ -339,12 +334,19 @@ class CartPole:
         :param s: state of the CartPole (position, positionD, angle, angleD must be set). Array order follows global definition.
         :param dt: time step by which the CartPole state should be integrated
         """
+        self.s[POSITION_IDX] = euler_step(self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.dt_simulation)
+        self.s[POSITIOND_IDX] = euler_step(self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation)
+        self.s[ANGLE_IDX] = euler_step(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.dt_simulation)
+        self.s[ANGLED_IDX] = euler_step(self.s[ANGLED_IDX], self.angleDD, self.dt_simulation)
 
-        self.s[cartpole_state_varname_to_index('position')] += self.s[cartpole_state_varname_to_index('positionD')] * self.dt_simulation
-        self.s[cartpole_state_varname_to_index('positionD')] += self.positionDD * self.dt_simulation
-
-        self.s[cartpole_state_varname_to_index('angle')] += self.s[cartpole_state_varname_to_index('angleD')] * self.dt_simulation
-        self.s[cartpole_state_varname_to_index('angleD')] += self.angleDD * self.dt_simulation
+        # Elastic collision at edges
+        self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = edge_bounce(
+            self.s[ANGLE_IDX],
+            self.s[ANGLED_IDX],
+            self.s[POSITION_IDX],
+            self.s[POSITIOND_IDX],
+            self.dt_simulation
+        )
 
     # Determine the dimensionless [-1,1] value of the motor power Q
     # The function loads an external controller from PATH_TO_CONTROLLERS
@@ -741,7 +743,7 @@ class CartPole:
 
         if save_mode == 'offline':
             self.save_history_csv(csv_name=csv, mode='save offline')
-            # self.summary_plots()
+            self.summary_plots()
 
         # Set CartPole state - the only use is to make sure that experiment history is discared
         # Maybe you can delete this line
@@ -848,7 +850,7 @@ class CartPole:
                 self.Q = self.controller.step(self.s, self.target_position, self.time)
 
             self.u = Q2u(self.Q)
-            self.s[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(self.s, self.u)
+            self.angleDD, self.positionDD = cartpole_ode(self.s, self.u)
 
         elif reset_mode == 2:  # Don't change it
             if (s is not None) and (Q is not None) and (target_position is not None):
@@ -857,8 +859,7 @@ class CartPole:
                 self.slider = self.target_position = target_position
 
                 self.u = Q2u(self.Q)  # Calculate CURRENT control input
-                self.angleDD, self.positionDD = cartpole_ode(self.s,
-                                                                 self.u)  # Calculate CURRENT second derivatives
+                self.angleDD, self.positionDD = cartpole_ode(self.s, self.u)  # Calculate CURRENT second derivatives
             else:
                 raise ValueError('s, Q or target position not provided for initial state')
 
