@@ -302,6 +302,12 @@ def q(
 def phi(s: np.ndarray, target_position: np.float32) -> np.ndarray:
     """Calculate terminal cost of a set of trajectories
 
+    Williams et al use an indicator function type of terminal cost in
+    "Information theoretic MPC for model-based reinforcement learning"
+
+    TODO: Try a quadratic terminal cost => Use the LQR terminal cost term obtained
+    by linearizing the system around the unstable equilibrium.
+
     :param s: Reference to numpy array of states of all rollouts
     :type s: np.ndarray
     :param target_position: Target position to move the cart to
