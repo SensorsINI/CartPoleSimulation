@@ -1,7 +1,8 @@
 """mpc controller"""
 
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import P_GLOBALS, TrackHalfLength, s0, Q2u, cartpole_ode
+from CartPole.cartpole_model import TrackHalfLength, s0, Q2u, cartpole_ode
+from others.p_globals import P_GLOBALS
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
 
 import matplotlib.pyplot as plt

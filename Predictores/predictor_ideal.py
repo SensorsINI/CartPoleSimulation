@@ -37,8 +37,7 @@ import numpy as np
 
 from SI_Toolkit.load_and_normalize import load_normalization_info, normalize_numpy_array
 from CartPole.cartpole_model import (
-    L, Q2u, _cartpole_ode,
-    TrackHalfLength
+    L, Q2u, _cartpole_ode, TrackHalfLength
 )
 
 from CartPole.state_utilities import (

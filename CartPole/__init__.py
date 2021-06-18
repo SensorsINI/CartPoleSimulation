@@ -9,10 +9,11 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 
 # region Imported modules
 
-from Predictores.predictor_ideal import edge_bounce, euler_step, next_state_numba
+from Predictores.predictor_ideal import edge_bounce, euler_step
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
 from CartPole.state_utilities import ANGLED_IDX, ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX, POSITIOND_IDX, POSITION_IDX, cartpole_state_varname_to_index, cartpole_state_index_to_varname, cartpole_state_varnames_to_indices
-from CartPole.cartpole_model import Q2u, cartpole_ode, P_GLOBALS, s0
+from CartPole.cartpole_model import Q2u, cartpole_ode, s0
+from others.p_globals import P_GLOBALS
 
 import numpy as np
 import pandas as pd
