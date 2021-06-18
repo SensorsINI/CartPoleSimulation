@@ -52,7 +52,7 @@ NET_NAME = yaml.load(
 dt = config["controller"]["mppi"]["dt"]
 mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
-mc_samples = config["controller"]["mppi"]["mc_samples"]
+num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 update_every = config["controller"]["mppi"]["update_every"]
 predictor_type = config["controller"]["mppi"]["predictor_type"]
 
@@ -181,7 +181,7 @@ def penalize_deviation(cc, u):
 if predictor_type == "Euler":
     predictor = predictor_ideal(horizon=mpc_samples, dt=dt, intermediate_steps=1)
 elif predictor_type == "NeuralNet":
-    predictor = predictor_autoregressive_tf(horizon=mpc_samples, batch_size=mc_samples)
+    predictor = predictor_autoregressive_tf(horizon=mpc_samples, batch_size=num_rollouts)
 
 
 def trajectory_rollouts(
@@ -209,7 +209,7 @@ def trajectory_rollouts(
 
     :return: S_tilde_k - Array filled with a cost for each rollout trajectory
     """
-    initial_state = np.tile(s, (mc_samples, 1))
+    initial_state = np.tile(s, (num_rollouts, 1))
 
     predictor.setup(initial_state=initial_state, prediction_denorm=True)
     s_horizon = predictor.predict(u + delta_u)[:, :, : len(STATE_INDICES)]
@@ -243,7 +243,7 @@ def trajectory_rollouts(
         # (1 x mpc_samples)
         LOGS.get("states").append(
             np.copy(s_horizon[:, :-1, :])
-        )  # mc_samples x mpc_samples x STATE_VARIABLES
+        )  # num_rollouts x mpc_samples x STATE_VARIABLES
 
     return S_tilde_k
 
@@ -344,9 +344,9 @@ def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
 
     :param u: Sampling mean / warm started control inputs of size (,mpc_samples)
     :type u: np.ndarray
-    :param S: Cost array of size (mc_samples)
+    :param S: Cost array of size (num_rollouts)
     :type S: np.ndarray
-    :param delta_u: The input perturbations that had been used, shape (mc_samples x mpc_samples)
+    :param delta_u: The input perturbations that had been used, shape (num_rollouts x mpc_samples)
     :type delta_u: np.ndarray
     """
     u += reward_weighted_average(S, delta_u)
@@ -373,8 +373,8 @@ class controller_mppi(template_controller):
         self.s_horizon = np.zeros((), dtype=np.float32)
         self.u = np.zeros((mpc_samples), dtype=np.float32)
         self.u_prev = np.zeros_like(self.u, dtype=np.float32)
-        self.delta_u = np.zeros((mc_samples, mpc_samples), dtype=np.float32)
-        self.S_tilde_k = np.zeros((mc_samples), dtype=np.float32)
+        self.delta_u = np.zeros((num_rollouts, mpc_samples), dtype=np.float32)
+        self.S_tilde_k = np.zeros((num_rollouts), dtype=np.float32)
 
         self.warm_up_len = 100
         self.warm_up_countdown = self.warm_up_len
@@ -410,23 +410,23 @@ class controller_mppi(template_controller):
         If random_walk is true, each row represents a 1D random walk with Gaussian steps.
         """
         if sampling_type == "random_walk":
-            delta_u = np.empty((mc_samples, mpc_samples), dtype=np.float32)
+            delta_u = np.empty((num_rollouts, mpc_samples), dtype=np.float32)
             delta_u[:, 0] = stdev * rng.standard_normal(
-                size=(mc_samples,), dtype=np.float32
+                size=(num_rollouts,), dtype=np.float32
             )
             for i in range(1, mpc_samples):
                 delta_u[:, i] = delta_u[:, i - 1] + stdev * rng.standard_normal(
-                    size=(mc_samples,), dtype=np.float32
+                    size=(num_rollouts,), dtype=np.float32
                 )
         elif sampling_type == "uniform":
-            delta_u = np.empty((mc_samples, mpc_samples), dtype=np.float32)
+            delta_u = np.empty((num_rollouts, mpc_samples), dtype=np.float32)
             for i in range(0, mpc_samples):
                 delta_u[:, i] = rng.uniform(
-                    low=-1.0, high=1.0, size=(mc_samples,)
+                    low=-1.0, high=1.0, size=(num_rollouts,)
                 ).astype(np.float32)
         elif sampling_type == "repeated":
             delta_u = np.tile(
-                stdev * rng.standard_normal(size=(mc_samples, 1), dtype=np.float32),
+                stdev * rng.standard_normal(size=(num_rollouts, 1), dtype=np.float32),
                 (1, mpc_samples),
             )
         elif sampling_type == "interpolated":
@@ -435,16 +435,16 @@ class controller_mppi(template_controller):
             t = np.arange(start=0, stop=range_stop, step=step)
             t_interp = np.arange(start=0, stop=range_stop, step=1)
             t_interp = np.delete(t_interp, t)
-            delta_u = np.zeros(shape=(mc_samples, range_stop), dtype=np.float32)
+            delta_u = np.zeros(shape=(num_rollouts, range_stop), dtype=np.float32)
             delta_u[:, t] = stdev * rng.standard_normal(
-                size=(mc_samples, t.size), dtype=np.float32
+                size=(num_rollouts, t.size), dtype=np.float32
             )
             f = interp1d(t, delta_u[:, t])
             delta_u[:, t_interp] = f(t_interp)
             delta_u = delta_u[:, :mpc_samples]
         else:
             delta_u = stdev * rng.standard_normal(
-                size=(mc_samples, mpc_samples), dtype=np.float32
+                size=(num_rollouts, mpc_samples), dtype=np.float32
             )
 
         return delta_u
@@ -509,12 +509,12 @@ class controller_mppi(template_controller):
                     rollout_trajectory = predictor.predict(self.u)
                 elif predictor_type == "NeuralNet":
                     predictor.setup(
-                        initial_state=np.tile(self.s, (mc_samples, 1)),
+                        initial_state=np.tile(self.s, (num_rollouts, 1)),
                         prediction_denorm=True,
                     )
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     rollout_trajectory = predictor.predict(
-                        np.tile(self.u, (mc_samples, 1))
+                        np.tile(self.u, (num_rollouts, 1))
                     )[0, ...]
                 LOGS.get("nominal_rollouts").append(np.copy(rollout_trajectory[:-1, :]))
 
@@ -563,7 +563,7 @@ class controller_mppi(template_controller):
         # self.u = zeros_like(self.u)
 
         # Prepare predictor for next timestep
-        Q_update = np.tile(Q, (mc_samples, 1))
+        Q_update = np.tile(Q, (num_rollouts, 1))
         predictor.update_internal_state(Q_update)
 
         return Q  # normed control input in the range [-1,1]
@@ -583,7 +583,7 @@ class controller_mppi(template_controller):
     def controller_report(self):
         if LOGGING:
             ### Plot the average state cost per iteration
-            ctglgs = np.stack(LOGS.get("cost_to_go"), axis=0)  # ITERATIONS x mc_samples
+            ctglgs = np.stack(LOGS.get("cost_to_go"), axis=0)  # ITERATIONS x num_rollouts
             NUM_ITERATIONS = np.shape(ctglgs)[0]
             time_axis = update_every * dt * np.arange(start=0, stop=np.shape(ctglgs)[0])
             plt.figure(num=2, figsize=(16, 9))
@@ -691,7 +691,7 @@ class controller_mppi(template_controller):
                     )
 
             # Prepare data
-            # shape(slgs) = ITERATIONS x mc_samples x mpc_samples x STATE_VARIABLES
+            # shape(slgs) = ITERATIONS x num_rollouts x mpc_samples x STATE_VARIABLES
             slgs = np.stack(LOGS.get("states"), axis=0)
             wrap_angle_rad_inplace(slgs[:, :, :, ANGLE_IDX])
             # shape(iplgs) = ITERATIONS x mpc_horizon
@@ -733,7 +733,7 @@ class controller_mppi(template_controller):
             )
 
             # Normalize cost to go to use as opacity in plot
-            # shape(ctglgs) = ITERATIONS x mc_samples
+            # shape(ctglgs) = ITERATIONS x num_rollouts
             ctglgs = np.divide(ctglgs.T, np.max(np.abs(ctglgs), axis=1)).T
 
             # This function updates the plot when a new iteration is selected
