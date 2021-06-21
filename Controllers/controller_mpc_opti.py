@@ -1,7 +1,8 @@
 """mpc controller"""
 
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import P_GLOBALS, s0, Q2u, cartpole_ode
+from CartPole.cartpole_model import TrackHalfLength, s0, Q2u, cartpole_ode
+from others.p_globals import P_GLOBALS
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
 
 import matplotlib.pyplot as plt
@@ -10,8 +11,12 @@ import numpy as np
 import casadi
 
 
-dt_mpc_simulation = 0.2  # s
-mpc_horizon = 10
+import yaml
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+
+dt_mpc_simulation = config["controller"]["do_mpc_discrete"]["dt_mpc_simulation"]
+mpc_horizon = config["controller"]["do_mpc_discrete"]["mpc_horizon"]
+
 
 def mpc_next_state(s, u, dt):
     """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
@@ -23,16 +28,16 @@ def mpc_next_state(s, u, dt):
 
     s_next = s
 
-    s_next[cartpole_state_varname_to_index('angleDD')], s_next[cartpole_state_varname_to_index('positionDD')] = cartpole_ode(s_next, u)  # Calculates CURRENT second derivatives
+    angleDD, positionDD = cartpole_ode(s_next, u)  # Calculates CURRENT second derivatives
 
     # Calculate NEXT state:
-    s_next = cartpole_integration(s_next, dt)
+    s_next = cartpole_integration(s_next, angleDD, positionDD, dt)
 
     return s_next
 
 
 
-def cartpole_integration(s, dt):
+def cartpole_integration(s, angleDD, positionDD, dt):
     """
     Simple single step integration of CartPole state by dt
 
@@ -44,10 +49,10 @@ def cartpole_integration(s, dt):
     s_next = create_cartpole_state()
 
     s_next[cartpole_state_varname_to_index('position')] = s[cartpole_state_varname_to_index('position')] + s[cartpole_state_varname_to_index('positionD')] * dt
-    s_next[cartpole_state_varname_to_index('positionD')] = s[cartpole_state_varname_to_index('positionD')] + s[cartpole_state_varname_to_index('positionDD')] * dt
+    s_next[cartpole_state_varname_to_index('positionD')] = s[cartpole_state_varname_to_index('positionD')] + positionDD * dt
 
     s_next[cartpole_state_varname_to_index('angle')] = s[cartpole_state_varname_to_index('angle')] + s[cartpole_state_varname_to_index('angleD')] * dt
-    s_next[cartpole_state_varname_to_index('angleD')] = s[cartpole_state_varname_to_index('angleD')] + s[cartpole_state_varname_to_index('angleDD')] * dt
+    s_next[cartpole_state_varname_to_index('angleD')] = s[cartpole_state_varname_to_index('angleD')] + angleDD * dt
 
     return s_next
 

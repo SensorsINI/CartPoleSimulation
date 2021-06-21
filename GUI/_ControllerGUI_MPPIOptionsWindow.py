@@ -24,6 +24,7 @@ from PyQt5.QtWidgets import (
     QButtonGroup,
 )
 from PyQt5.QtCore import QThreadPool, QTimer, Qt
+from numpy.core.numeric import roll
 
 import Controllers.controller_mppi as controller_mppi
 
@@ -32,12 +33,14 @@ class MPPIOptionsWindow(QWidget):
     def __init__(self):
         super(MPPIOptionsWindow, self).__init__()
 
-        self.horizon_steps = 50
+        self.horizon_steps = controller_mppi.mpc_samples
+        self.num_rollouts = controller_mppi.num_rollouts
         self.dd_weight = controller_mppi.dd_weight
         self.ep_weight = controller_mppi.ep_weight
         self.ekp_weight = controller_mppi.ekp_weight * 1.0e1
         self.ekc_weight = controller_mppi.ekc_weight * 1.0e-1
-        self.cc_weight = controller_mppi.cc_weight * 1.0e-1
+        self.cc_weight = controller_mppi.cc_weight * 1.0e-2
+        self.ccrc_weight = controller_mppi.ccrc_weight * 1.0e-2
         self.R = controller_mppi.R          # How much to punish Q
         self.LBD = controller_mppi.LBD      # Cost parameter lambda
         self.NU = controller_mppi.NU        # Exploration variance
@@ -60,6 +63,23 @@ class MPPIOptionsWindow(QWidget):
         horizon_options_layout.addWidget(slider)
 
         slider.valueChanged.connect(self.horizon_length_changed)
+
+        ### Set Number of Rollouts
+        rollouts_options_layout = QVBoxLayout()
+
+        self.rollouts_label = QLabel("")
+        self.rollouts_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        rollouts_options_layout.addWidget(self.rollouts_label)
+
+        slider = QSlider(orientation=Qt.Horizontal)
+        slider.setRange(10, 3000)
+        slider.setValue(self.num_rollouts)
+        slider.setTickPosition(QSlider.TicksBelow)
+        slider.setTickInterval(10)
+        slider.setSingleStep(10)
+        rollouts_options_layout.addWidget(slider)
+
+        slider.valueChanged.connect(self.num_rollouts_changed)
 
         ### Set Cost Weights
         cost_weight_layout = QVBoxLayout()
@@ -144,6 +164,22 @@ class MPPIOptionsWindow(QWidget):
         cost_weight_layout.addWidget(slider)
         slider.valueChanged.connect(self.cc_weight_changed)
 
+        # Control change rate cost
+        self.ccrc_weight_label = QLabel("")
+        self.ccrc_weight_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        cost_weight_layout.addWidget(self.ccrc_weight_label)
+        self.ccrc_label = QLabel("")
+        self.ccrc_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        cost_weight_layout.addWidget(self.ccrc_label)
+        slider = QSlider(orientation=Qt.Horizontal)
+        slider.setRange(0, 99)
+        slider.setValue(self.ccrc_weight)
+        slider.setTickPosition(QSlider.TicksBelow)
+        slider.setTickInterval(1)
+        slider.setSingleStep(1)
+        cost_weight_layout.addWidget(slider)
+        slider.valueChanged.connect(self.ccrc_weight_changed)
+
         ### Set some more MPPI constants
         mppi_constants_layout = QVBoxLayout()
 
@@ -204,6 +240,7 @@ class MPPIOptionsWindow(QWidget):
         self.update_labels()
         self.update_slider_labels()
         layout.addLayout(horizon_options_layout)
+        layout.addLayout(rollouts_options_layout)
         layout.addLayout(cost_weight_layout)
         layout.addLayout(mppi_constants_layout)
 
@@ -224,6 +261,11 @@ class MPPIOptionsWindow(QWidget):
         self.horizon_steps = val
         # TODO: Replace by setter method
         controller_mppi.mpc_samples = self.horizon_steps
+        self.update_slider_labels()
+
+    def num_rollouts_changed(self, val: int):
+        self.num_rollouts = val
+        controller_mppi.num_rollouts = self.num_rollouts
         self.update_slider_labels()
 
     def dd_weight_changed(self, val: int):
@@ -253,22 +295,33 @@ class MPPIOptionsWindow(QWidget):
     def cc_weight_changed(self, val: int):
         self.cc_weight = val
         # TODO: Replace by setter method
-        controller_mppi.cc_weight = self.cc_weight * 1.0e1
+        controller_mppi.cc_weight = self.cc_weight * 1.0e2
+        self.update_slider_labels()
+
+    def ccrc_weight_changed(self, val: int):
+        self.ccrc_weight = val
+        # TODO: Replace by setter method
+        controller_mppi.ccrc_weight = self.ccrc_weight * 1.0e2
         self.update_slider_labels()
 
     def R_changed(self, val: str):
         if val == '': val = '0'
-        self.R = float(val)
+        val = float(val)
+        self.R = val
         controller_mppi.R = self.R
     
     def LBD_changed(self, val: str):
         if val == '': val = '0'
-        self.LBD = float(val)
+        val = float(val)
+        if val == 0: val = 1.0
+        self.LBD = val
         controller_mppi.LBD = self.LBD
     
     def NU_changed(self, val: str):
         if val == '': val = '0'
-        self.NU = float(val)
+        val = float(val)
+        if val == 0: val = 1.0
+        self.NU = val
         controller_mppi.NU = self.NU
 
     def toggle_button(self, b):
@@ -277,6 +330,9 @@ class MPPIOptionsWindow(QWidget):
     def update_slider_labels(self):
         self.horizon_label.setText(
             f"Horizon: {self.horizon_steps} steps = {round(self.horizon_steps * controller_mppi.dt, 2)} s"
+        )
+        self.rollouts_label.setText(
+            f"Rollouts: {self.num_rollouts}"
         )
         self.dd_weight_label.setText(
             f"Distance difference cost weight: {round(self.dd_weight, 2)}"
@@ -291,7 +347,10 @@ class MPPIOptionsWindow(QWidget):
             f"Cart kinetic energy cost weight: {round(self.ekc_weight * 1.0e1, 3)}"
         )
         self.cc_weight_label.setText(
-            f"Control cost weight: {round(self.cc_weight * 1.0e1, 3)}"
+            f"Control cost weight: {round(self.cc_weight * 1.0e2, 3)}"
+        )
+        self.ccrc_weight_label.setText(
+            f"Control change rate cost weight: {round(self.ccrc_weight * 1.0e2, 3)}"
         )
 
     def update_labels(self):
@@ -309,4 +368,7 @@ class MPPIOptionsWindow(QWidget):
         )
         self.cc_label.setText(
             f"{round(controller_mppi.gui_cc.item(), 2)}"
+        )
+        self.ccrc_label.setText(
+            f"{round(controller_mppi.gui_ccrc.item(), 2)}"
         )

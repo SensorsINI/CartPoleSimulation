@@ -4,6 +4,11 @@ from CartPole.state_utilities import (
     create_cartpole_state, cartpole_state_varname_to_index,
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
 )
+from others.p_globals import (
+    k, M, m, g, J_fric, M_fric, L, v_max, u_max,
+    sensorNoise, controlDisturbance, controlBias, TrackHalfLength
+)
+from others.jacobian import vv, vt, vo, vu, ov, ot, oo, ou
 
 from numba import float32, jit
 import numpy as np
@@ -42,79 +47,8 @@ ANGLE_CONVENTION = 'CLOCK-NEG'
 The 0-angle state is always defined as pole in upright position. This currently cannot be changed
 """
 
-# Parameters of the CartPole
-P_GLOBALS = SimpleNamespace()  # "p" like parameters
-P_GLOBALS.m = 0.087  # mass of pole, kg # Checked by Antonio & Tobi
-P_GLOBALS.M = 0.230  # mass of cart, kg # Checked by Antonio
-P_GLOBALS.L = 0.395/2.0  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi
-P_GLOBALS.u_max = 6.21  # max force produced by the motor, N # Checked by Marcin
-P_GLOBALS.M_fric = 6.34  # cart friction on track, N/m/s # Checked by Marcin
-P_GLOBALS.J_fric = 2.5e-4  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
-P_GLOBALS.v_max = 0.8  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented in model, but needed for MPC
-
-cart_length = 4.4e-2  # m, checked by Marcin&Asude
-usable_track_length = 44.0e-2  # m, checked by Marcin&Asude
-P_GLOBALS.TrackHalfLength = (usable_track_length-cart_length)/2.0  # m, effective length, by which cart center can move
-
-P_GLOBALS.controlDisturbance = 0.0  # disturbance, as factor of u_max
-P_GLOBALS.controlBias = 0.0  # bias of control input
-P_GLOBALS.sensorNoise = 0.0  # sensor noise added to output of the system TODO: not implemented yet
-
-P_GLOBALS.g = 9.81  # absolute value of gravity acceleration, m/s^2
-P_GLOBALS.k = 4.0 / 3.0  # Dimensionless factor of moment of inertia of the pole with length 2L: I = k*m*L^2 # FIXME: I think it should be 1/3
-# (I = k*m*L^2) (with L being half if the length)
-
-# Export variables as global
-k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, controlBias, TrackHalfLength = (
-    float32(P_GLOBALS.k),
-    float32(P_GLOBALS.M),
-    float32(P_GLOBALS.m),
-    float32(P_GLOBALS.g),
-    float32(P_GLOBALS.J_fric),
-    float32(P_GLOBALS.M_fric),
-    float32(P_GLOBALS.L),
-    float32(P_GLOBALS.v_max),
-    float32(P_GLOBALS.u_max),
-    float32(P_GLOBALS.sensorNoise),
-    float32(P_GLOBALS.controlDisturbance),
-    float32(P_GLOBALS.controlBias),
-    float32(P_GLOBALS.TrackHalfLength)
-)
-
 # Create initial state vector
 s0 = create_cartpole_state()
-
-
-@jit(nopython=True, cache=True, fastmath=True)
-def _positionDD(angleD, positionD, ca, sa, A, u):
-    return (
-        (
-            + m * g * sa * ca  # Movement of the cart due to gravity
-            + ((J_fric * angleD * ca) / (L))  # Movement of the cart due to pend' s friction in the joint
-            + k * (
-                - (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                - M_fric * positionD  # Braking of the cart due its friction
-                + u  # Effect of force applied to cart
-            )
-        ) / A
-    )
-
-
-@jit(nopython=True, cache=True, fastmath=True)
-def _angleDD(angleD, positionD, ca, sa, A, u):
-    return (
-        (
-            + (m + M) * (
-                g * sa  # Movement of the pole due to gravity
-                - J_fric * angleD / (L * m)  # Braking of the pole due friction in its joint
-            )
-            - m * L * (angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
-            + ca * (
-                - M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
-                + u  # Effect of force applied to cart
-            )
-        ) / (A * L)
-    )
 
 
 def _cartpole_ode(angle, angleD, positionD, u):
@@ -136,16 +70,18 @@ def _cartpole_ode(angle, angleD, positionD, u):
         # g (gravitational acceleration) is positive (absolute value)
         # Checked independently by Marcin and Krishna
 
-        A = k * (M + m) - m * (ca ** 2)
+        A = m * (ca ** 2) - (k + 1) * (M + m)
 
         positionDD = (
             (
-                + m * g * sa * ca  # Movement of the cart due to gravity
-                + ((J_fric * angleD * ca) / (L))  # Movement of the cart due to pend' s friction in the joint
-                - k * (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                - k * M_fric * positionD  # Braking of the cart due its friction
+                + m * g * (-sa) * ca  # Movement of the cart due to gravity
+                - ((J_fric * (-angleD) * ca) / L)  # Movement of the cart due to pend' s friction in the joint
+                - (k + 1) * (
+                    + (m * L * (angleD ** 2) * (-sa))  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                    - M_fric * positionD  # Braking of the cart due its friction
+                    + u  # Effect of force applied to cart
+                )
             ) / A
-            + (k / A) * u  # Effect of force applied to cart
         )
 
         # Making m go to 0 and setting J_fric=0 (fine for pole without mass)
@@ -157,65 +93,34 @@ def _cartpole_ode(angle, angleD, positionD, u):
 
         angleDD = (
             (
-                + g * (m + M) * sa  # Movement of the pole due to gravity
-                - ((J_fric * (m + M) * angleD) / (L * m))  # Braking of the pole due friction in its joint
-                - m * L * (angleD ** 2) * sa * ca  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                - ca * M_fric * positionD  # Friction of the cart on the track causing deceleration of cart and acceleration of pole in opposite direction due to intertia
-            ) / (A * L) 
-            + (ca / (A * L)) * u  # Effect of force applied to cart
-        )
+                g * (-sa) - positionDD * ca - (J_fric * (-angleD)) / (m * L) 
+            ) / ((k + 1) * L)
+        ) * (-1.0)
 
         # making M go to infinity makes angleDD = (g/k*L)sin(angle) - angleD*J_fric/(k*m*L^2)
         # This is the same as equation derived directly for a pendulum.
         # k is 4/3! It is the factor for pendulum with length 2L: I = k*m*L^2
-
-    elif CARTPOLE_EQUATIONS == 'Marcin-Sharpneat-Recommended':
-        # Distribute pole mass uniformly across pole 
-        # Eq. (56) & (57)
-        positionDD = (
-            (
-                m * g * (-sa) * ca 
-                - 7/3 * (
-                    u 
-                    + m * L * (angleD ** 2) * (-sa)
-                    - M_fric * positionD
-                )
-                - J_fric * (-angleD) * ca / L
-            ) / (
-                m * (ca ** 2)
-                - 7/3 * (M + m)
-            )
-        )
-        angleDD = - (
-            3 / (7 * L) * (
-                g * (-sa)
-                - positionDD * ca
-                - J_fric * (-angleD) / (m * L)
-            )
-        )
     else:
         raise ValueError('An undefined name for Cartpole equations')
 
-    return angleDD, positionDD
+    return angleDD, positionDD, ca, sa
+
+
+_cartpole_ode_numba = jit(_cartpole_ode, nopython=True, cache=True, fastmath=True)
 
 
 def cartpole_ode_namespace(s: SimpleNamespace, u: float):
-    return _cartpole_ode(
+    angleDD, positionDD, _, _ = _cartpole_ode(
         s.angle, s.angleD, s.positionD, u
     )
+    return angleDD, positionDD
 
 
 def cartpole_ode(s: np.ndarray, u: float):
-    return _cartpole_ode(
-        s[..., ANGLE_IDX], s[..., ANGLED_IDX],
-        s[..., POSITIOND_IDX], u
+    angleDD, positionDD, _, _ = _cartpole_ode_numba(
+        s[..., ANGLE_IDX], s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u
     )
-
-
-@jit(nopython=True, cache=True, fastmath=True)
-def get_A(ca):
-    A = k * (M + m) - m * (ca ** 2)
-    return A
+    return angleDD, positionDD
 
 
 def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
@@ -228,9 +133,10 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
         # angle     (t) |       tx              tv            tt       to         tu
         # angleD    (o) |   ox -> J[3,0]        ov            ot       oo      ou -> J[3,4]
     
-    :param p: Namespace containing environment variables such track length, cart mass and pole mass
     :param s: State vector following the globally defined variable order
     :param u: Force applied on cart in unnormalized range
+
+    The Jacobian is used to linearize the CartPole dynamics around the origin
 
     :returns: A 4x5 numpy.ndarray with all partial derivatives
     """
@@ -250,9 +156,6 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
     sa = np.sin(angle)
 
     if CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
-        # Helper function
-        A = k * (M + m) - m * (ca ** 2)
-
         # Jacobian entries
         J[0, 0] = 0.0  # xx
 
@@ -266,25 +169,13 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
 
         J[1, 0] = 0.0  # vx
 
-        J[1, 1] = -k * M_fric / A  # vv
+        J[1, 1] = vv(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
-        J[1, 2] = (    # vt
-                     -2.0 * k * u * ca * sa * m
-                     - 2.0 * ca * sa * m * (
-                             -k * L * (angleD**2) * sa * m
-                             + g * ca * sa * m - k * positionD * M_fric
-                             + (angleD * ca * J_fric/L)
-                                                                ))/(A**2) \
-             + (
-                     -k * L * (angleD**2) * ca * m
-                     +  g * ((ca**2)-(sa**2)) * m
-                     - (angleD * sa * J_fric)/L
-                                                                )/ A
+        J[1, 2] = vt(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
-        J[1, 3] = (-2.0 * k * L * angleD * sa * m  # vo
-              + (ca * J_fric / L)) / A
+        J[1, 3] = vo(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
-        J[1, 4] = k / A  # vu
+        J[1, 4] = vu(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
         J[2, 0] = 0.0  # tx
 
@@ -298,29 +189,13 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
 
         J[3, 0] = 0.0  # ox
 
-        J[3, 1] = -ca * M_fric / (L * A)  # ov
+        J[3, 1] = ov(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
-        J[3, 2] = (  # ot
-                    - 2.0 * u * (ca**2) * sa * m
-                    - 2.0 * ca * sa * m * (
-                            -L * (angleD**2) * ca * sa * m
-                            + g * sa * (M + m)
-                            - positionD * ca * M_fric
-                            - (angleD * (M+m) * J_fric)/(L*m))
-                                    )/(L*(A**2)) \
-             + (
-                     -u * sa
-                     + L * (angleD**2) * ((sa**2)-(ca**2)) * m
-                     + g*ca*(M+m)
-                     + positionD * sa * M_fric
-                                    )/(L*A)
+        J[3, 2] = ot(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
-        J[3, 3] = (  # oo
-                     -2.0*L*angleD*ca * sa * m
-                     - ((M+m) * J_fric)/(L*m)
-                                    ) / (L * A)
+        J[3, 3] = oo(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
-        J[3, 4] = ca / (L*A)  # ou
+        J[3, 4] = ou(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
         return J
 
@@ -333,7 +208,7 @@ def Q2u(Q):
     In future there might be implemented here a more sophisticated model of a motor driving CartPole
     """
     u = u_max * (
-        Q + controlDisturbance * rng.standard_normal(size=np.shape(Q), dtype=np.float32) + P_GLOBALS.controlBias
+        Q + controlDisturbance * rng.standard_normal(size=np.shape(Q), dtype=np.float32) + controlBias
     )  # Q is drive -1:1 range, add noise on control
 
     return u

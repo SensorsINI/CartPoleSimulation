@@ -32,7 +32,7 @@ closed_loop_list = outputs_list
 # closed_loop_list = []
 
 def args():
-    parser = argparse.ArgumentParser(description='Train a GRU network.')
+    parser = argparse.ArgumentParser(description='Train a GRU network.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     # Defining the model
     parser.add_argument('--rnn_name', nargs='?', const=RNN_name, default=None, type=str,

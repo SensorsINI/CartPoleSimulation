@@ -7,11 +7,13 @@ from Modeling.Pytorch.utilis_rnn import *
 from Controllers.template_controller import template_controller
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
 
+import yaml, os
+config = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml'), 'r'), Loader=yaml.FullLoader)
 
-RNN_FULL_NAME = 'GRU-5IN-32H1-32H2-1OUT-0'
-INPUTS_LIST = ['position', 'angle']
-OUTPUTS_LIST = ['Q']
-PATH_SAVE = './save/nets/rnn_as_mpc_pt/'
+RNN_FULL_NAME = config['modeling']['PyTorch']['RNN_FULL_NAME']
+INPUTS_LIST = config['modeling']['PyTorch']['INPUTS_LIST']
+OUTPUTS_LIST = config['modeling']['PyTorch']['OUTPUTS_LIST']
+PATH_SAVE = config['modeling']['PyTorch']['PATH_SAVE']
 
 
 class controller_rnn_as_mpc_pytorch(template_controller):

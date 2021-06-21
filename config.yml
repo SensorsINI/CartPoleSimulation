@@ -1,0 +1,77 @@
+controller:
+  mppi:
+    dt: 0.02                              # sec
+    mpc_horizon: 1.0                      # sec
+    num_rollouts: 2000                      # Number of Monte Carlo samples
+    update_every: 1                       # Cost weighted update of inputs every ... steps
+    predictor_type: "Euler"               # One of ["Euler", "NeuralNet"]
+    dd_weight: 120.0
+    ep_weight: 50000.0
+    ekp_weight: 0.01
+    ekc_weight: 5.0
+    cc_weight: 1.0
+    ccrc_weight: 1.0
+    R: 1.0                                # How much to punish Q
+    LBD: 100.0                            # Cost parameter lambda
+    NU: 1000.0                            # Exploration variance
+    SQRTRHOINV: 0.01                      # Sampling variance
+    GAMMA: 1.00                           # Future cost discount
+    SAMPLING_TYPE: "interpolated"                  # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
+    LOGGING: False
+  custom_mpc_scipy:
+    DT: 0.1
+    # method: 'L-BFGS-B'
+    method: 'SLSQP'
+    ftol: 1.0e-8
+    mpc_horizon: 10
+    # weights
+    wr: 0.001  # rterm
+    l1: 100.0  # angle_cost
+    l1_2: 0.0  # angle_sin_cost
+    l2: 0.0  # angleD_cost
+    l3: 0.0  # position_cost
+    l4: 0.01  # positionD_cost
+    m1: 0.0  # angle_sin_cost
+    m2: 0.0  # angleD_cost
+    m3: 0.0  # position_cost
+    m4: 0.0  # positionD_cost
+  do_mpc_discrete:
+    dt_mpc_simulation: 0.2  # s
+    mpc_horizon: 10
+  do_mpc:
+    dt_mpc_simulation: 0.1  # s
+    mpc_horizon: 10
+    # Perturbation factors:
+    # Change of output from optimal
+    p_Q: 0.00
+    # Random change of cost function by factor
+    p_position: 0.0
+    p_positionD: 0.0
+    p_angle: 0.0
+    # Cost factor
+    l_angle: 0.1
+    l_position: 1.0
+    l_positionD: 0.1
+  lqr:
+    Q: [10.0, 1.0, 1.0, 1.0]
+    R: 10.0
+  mpc_opti:
+    dt_mpc_simulation: 0.2  # s
+    mpc_horizon: 10
+cartpole:
+  PATH_TO_CONTROLLERS: './Controllers/'  # Path where controllers are stored
+  PATH_TO_EXPERIMENT_RECORDINGS: './ExperimentRecordings/'  # Path where the experiments data is stored
+  m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
+  M: 0.230  # mass of cart, kg # Checked by Antonio
+  L: "0.395/2.0"  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi
+  u_max: 6.21  # max force produced by the motor, N # Checked by Marcin
+  M_fric: 6.34  # cart friction on track, N/m/s # Checked by Marcin
+  J_fric: 2.5e-4  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
+  v_max: 0.8  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented in model, but needed for MPC
+  cart_length: 4.4e-2  # m, checked by Marcin&Asude
+  usable_track_length: 44.0e-2  # m, checked by Marcin&Asude
+  controlDisturbance: 0.0  # disturbance, as factor of u_max
+  controlBias: 0.0  # bias of control input
+  sensorNoise: 0.0  # sensor noise added to output of the system TODO: not implemented yet
+  g: 9.81  # absolute value of gravity acceleration, m/s^2
+  k: "4.0/3.0"  # Dimensionless factor of moment of inertia of the pole with length 2L: I: (1/3)*m*(2L)^2 = (4/3)*m*(L)^2

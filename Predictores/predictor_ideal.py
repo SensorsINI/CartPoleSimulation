@@ -37,23 +37,33 @@ import numpy as np
 
 from SI_Toolkit.load_and_normalize import load_normalization_info, normalize_numpy_array
 from CartPole.cartpole_model import (
-    Q2u, _angleDD, _positionDD, get_A,
-    TrackHalfLength
+    L, Q2u, _cartpole_ode_numba, TrackHalfLength
 )
 
 from CartPole.state_utilities import (
-    ANGLE_IDX, ANGLED_IDX, ANGLEDD_IDX, POSITION_IDX, POSITIOND_IDX, POSITIONDD_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX,
+    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX,
     STATE_VARIABLES
 )
+import yaml, os
+config = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml'), 'r'), Loader=yaml.FullLoader)
 
-PATH_TO_NORMALIZATION_INFO = './SI_Toolkit/NormalizationInfo/' + 'Dataset-1-norm.csv'
+PATH_TO_NORMALIZATION_INFO = config['modeling']['PATH_TO_NORMALIZATION_INFO']
+
+@jit(nopython=True, cache=True, fastmath=True)
+def edge_bounce(angle, angleD, position, positionD, t_step):
+    if abs(position) >= TrackHalfLength:
+        angleD -= 2 * (positionD * np.cos(angle)) / L
+        angle += angleD * t_step
+        positionD = -positionD
+        position += positionD * t_step
+    return angle, angleD, position, positionD
 
 
 @jit(nopython=True, cache=True, fastmath=True)
-def edge_bounce(position, positionD):
+def edge_bounce_wrapper(angle, angleD, position, positionD, t_step):
     for i in range(position.size):
-        if abs(position[i]) > TrackHalfLength: positionD[i] = -positionD[i]
-    return positionD
+        angle[i], angleD[i], position[i], positionD[i] = edge_bounce(angle[i], angleD[i], position[i], positionD[i], t_step)
+    return angle, angleD, position, positionD
 
 
 @jit(nopython=True, cache=True, fastmath=True)
@@ -70,19 +80,14 @@ def next_state_numba(angle, angleD, angleDD, angle_cos, angle_sin, position, pos
         position = euler_step(position, positionD, t_step)
         positionD = euler_step(positionD, positionDD, t_step)
 
-        positionD = edge_bounce(position, positionD)
+        angle, angleD, position, positionD = edge_bounce_wrapper(angle, angleD, position, positionD, t_step)
 
-        A = get_A(angle_cos)
-
-        angleDD = _angleDD(angleD, positionD, angle_cos, angle_sin, A, u)
-        positionDD = _positionDD(angleD, positionD, angle_cos, angle_sin, A, u)
-    angle_cos = np.cos(angle)
-    angle_sin = np.sin(angle)
+        angleDD, positionDD, angle_cos, angle_sin = _cartpole_ode_numba(angle, angleD, positionD, u)
 
     return angle, angleD, angleDD, position, positionD, positionDD, angle_cos, angle_sin
 
 class predictor_ideal:
-    def __init__(self, horizon, dt):
+    def __init__(self, horizon, dt, intermediate_steps=1):
         try:
             self.normalization_info = load_normalization_info(PATH_TO_NORMALIZATION_INFO)
         except FileNotFoundError:
@@ -95,7 +100,7 @@ class predictor_ideal:
 
         self.horizon = horizon
 
-        self.intermediate_steps = 1
+        self.intermediate_steps = intermediate_steps
         self.t_step = dt / float(self.intermediate_steps)
 
         self.prediction_features_names = STATE_VARIABLES.tolist()
@@ -116,29 +121,25 @@ class predictor_ideal:
         self.batch_mode = not (self.batch_size == 1)
 
         if not self.batch_mode: initial_state = np.expand_dims(initial_state, 0)
+        self.angleDD = self.positionDD = 0
 
-        self.angle, self.angleD, self.angleDD, self.position, self.positionD, self.positionDD, self.angle_cos, self.angle_sin = (
+        self.angle, self.angleD, self.position, self.positionD, self.angle_cos, self.angle_sin = (
             initial_state[:, ANGLE_IDX],
             initial_state[:, ANGLED_IDX],
-            initial_state[:, ANGLEDD_IDX],
             initial_state[:, POSITION_IDX],
             initial_state[:, POSITIOND_IDX],
-            initial_state[:, POSITIONDD_IDX],
             initial_state[:, ANGLE_COS_IDX],
             initial_state[:, ANGLE_SIN_IDX],
         )
 
         self.prediction_denorm = prediction_denorm
 
-        self.A = np.zeros(shape=(self.batch_size), dtype=np.float32)
         self.u = np.zeros(shape=(self.batch_size, self.horizon), dtype=np.float32)
         self.output = np.zeros((self.batch_size, self.horizon+1, len(self.prediction_features_names)+1), dtype=np.float32)
     
     def next_state(self, k):
         """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
         """
-        # # Calculates CURRENT second derivatives
-        # s[cartpole_state_varnames_to_indices(['angleDD', 'positionDD'])] = cartpole_ode(s, u)
         (
             self.angle, self.angleD, self.angleDD, self.position, self.positionD, self.positionDD, self.angle_cos, self.angle_sin
         ) = next_state_numba(
@@ -169,9 +170,12 @@ class predictor_ideal:
         if self.u.ndim == 1: self.u = np.expand_dims(self.u, 0)
 
         # Calculate second derivatives of initial state
-        self.A = get_A(self.angle_cos)
-        self.angleDD = _angleDD(self.angleD, self.positionD, self.angle_cos, self.angle_sin, self.A, self.u[:, 0])
-        self.positionDD = _positionDD(self.angleD, self.positionD, self.angle_cos, self.angle_sin, self.A, self.u[:, 0])
+        self.angleDD, self.positionDD, self.angle_cos, self.angle_sin = _cartpole_ode_numba(
+            self.angle,
+            self.angleD,
+            self.positionD,
+            self.u[:, 0]
+        )
         self.write_outputs(0)
 
         for k in range(self.horizon):
@@ -193,10 +197,8 @@ class predictor_ideal:
     def write_outputs(self, iteration):
         self.output[:, iteration, ANGLE_IDX] = self.angle
         self.output[:, iteration, ANGLED_IDX] = self.angleD
-        self.output[:, iteration, ANGLEDD_IDX] = self.angleDD
         self.output[:, iteration, POSITION_IDX] = self.position
         self.output[:, iteration, POSITIOND_IDX] = self.positionD
-        self.output[:, iteration, POSITIONDD_IDX] = self.positionDD
         self.output[:, iteration, ANGLE_COS_IDX] = self.angle_cos
         self.output[:, iteration, ANGLE_SIN_IDX] = self.angle_sin
 

@@ -9,27 +9,23 @@ from CartPole.state_utilities import cartpole_state_vector_to_namespace
 
 from types import SimpleNamespace
 
-dt_mpc_simulation = 0.1  # s
-mpc_horizon = 10
+import yaml
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+
+dt_mpc_simulation = config["controller"]["do_mpc"]["dt_mpc_simulation"]
+mpc_horizon = config["controller"]["do_mpc"]["mpc_horizon"]
 
 # Perturbation factors:
 # Change of output from optimal
-p_Q = 0.05
+p_Q = config["controller"]["do_mpc"]["p_Q"]
 # Change of cost function
-p_position = 0.2
-p_positionD = 0.2
-p_angle = 0.2
+p_position = config["controller"]["do_mpc"]["p_position"]
+p_positionD = config["controller"]["do_mpc"]["p_positionD"]
+p_angle = config["controller"]["do_mpc"]["p_angle"]
 
-# # Change of output from optimal
-# p_Q = 0.0
-# # Change of cost function
-# p_position = 0.0
-# p_positionD = 0.0
-# p_angle = 0.0
-
-l_angle = 0.1
-l_position = 2.0
-l_positionD = 0.1
+l_angle = config["controller"]["do_mpc"]["l_angle"]
+l_position = config["controller"]["do_mpc"]["l_position"]
+l_positionD = config["controller"]["do_mpc"]["l_positionD"]
 
 
 w_sum = l_angle + l_position + l_positionD

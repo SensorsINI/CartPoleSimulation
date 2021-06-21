@@ -1,5 +1,5 @@
 import numpy as np
-from CartPole.cartpole_model import P_GLOBALS
+from others.p_globals import P_GLOBALS
 
 
 def apply_user_defined_normalization_correction(df_norm_info):

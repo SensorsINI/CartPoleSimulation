@@ -1,11 +1,18 @@
 from Controllers.template_controller import template_controller
 from CartPole.state_utilities import cartpole_state_varname_to_index
+from SI_Toolkit.TF.TF_Functions.Network import create_rnn_instance
+from SI_Toolkit.load_and_normalize import load_normalization_info, normalize_df, denormalize_df
 
+import numpy as np, pandas as pd
 
-RNN_FULL_NAME = 'GRU-5IN-64H1-64H2-1OUT-0'
-INPUTS_LIST = ['position', 'angle', 'positionD', 'angleD', 'target_position']
-OUTPUTS_LIST = ['Q']
-PATH_SAVE = './controllers/nets/rnn_as_mpc_tf/'
+import copy
+import yaml, os
+config = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml'), 'r'), Loader=yaml.FullLoader)
+
+RNN_FULL_NAME = config['modeling']['TensorFlow']['RNN_FULL_NAME']
+INPUTS_LIST = config['modeling']['TensorFlow']['INPUTS_LIST']
+OUTPUTS_LIST = config['modeling']['TensorFlow']['OUTPUTS_LIST']
+PATH_SAVE = config['modeling']['TensorFlow']['PATH_SAVE']
 
 # TODO: For this moment it is just copied Pytorch version
 class controller_rnn_as_mpc_tf(template_controller):

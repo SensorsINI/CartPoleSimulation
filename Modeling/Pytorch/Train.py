@@ -13,7 +13,7 @@ import torch.utils.data.dataloader
 from torch.optim import lr_scheduler
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
-from Modeling.SI_Toolkit.load_and_normalize import calculate_normalization_info
+from SI_Toolkit.load_and_normalize import calculate_normalization_info
 import torch.nn as nn
 # from ax.plot.contour import plot_contour
 # from ax.plot.trace import optimization_trace_single_method

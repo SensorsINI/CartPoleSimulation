@@ -10,7 +10,7 @@ import copy
 from SI_Toolkit.load_and_normalize import denormalize_numpy_array, normalize_numpy_array
 from SI_Toolkit.TF.TF_Functions.Network import load_internal_states, get_internal_states
 
-from CartPole.state_utilities import STATE_INDICES_REDUCED
+from CartPole.state_utilities import STATE_INDICES
 
 # This import mus go before pyplot so also before our scripts
 from matplotlib import use, get_backend
@@ -115,21 +115,21 @@ def get_data_for_gui_TF(a, dataset, dataset_sampling_dt, net_name):
     net_outputs_denormalized = denormalize_numpy_array(normalized_net_output, net_for_inference_info.outputs, normalization_info)
 
     for output_idx in range(len(net_for_inference_info.outputs)):
-        output_array[1:,:,STATE_INDICES_REDUCED[net_for_inference_info.outputs[output_idx]]] = net_outputs_denormalized[:, :, 
+        output_array[1:,:,STATE_INDICES[net_for_inference_info.outputs[output_idx]]] = net_outputs_denormalized[:, :, 
                                                                                                output_idx]
 
     # Augment
     if 'angle' not in net_for_inference_info.outputs:
-        output_array[1:,:, STATE_INDICES_REDUCED['angle']] = \
+        output_array[1:,:, STATE_INDICES['angle']] = \
             np.arctan2(
-                output_array[1:,:, STATE_INDICES_REDUCED['angle_sin']],
-                output_array[1:,:, STATE_INDICES_REDUCED['angle_cos']])
+                output_array[1:,:, STATE_INDICES['angle_sin']],
+                output_array[1:,:, STATE_INDICES['angle_cos']])
     if 'angle_sin' not in net_for_inference_info.outputs:
-        output_array[1:,:, STATE_INDICES_REDUCED['angle_sin']] =\
-            np.sin(output_array[1:,:, STATE_INDICES_REDUCED['angle']])
+        output_array[1:,:, STATE_INDICES['angle_sin']] =\
+            np.sin(output_array[1:,:, STATE_INDICES['angle']])
     if 'angle_cos' not in net_for_inference_info.outputs:
-        output_array[1:,:, STATE_INDICES_REDUCED['angle_cos']] =\
-            np.sin(output_array[1:,:, STATE_INDICES_REDUCED['angle']])
+        output_array[1:,:, STATE_INDICES['angle_cos']] =\
+            np.sin(output_array[1:,:, STATE_INDICES['angle']])
 
     # time_axis is a time axis for ground truth
     return output_array.transpose((1,0,2))

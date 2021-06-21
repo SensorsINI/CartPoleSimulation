@@ -7,7 +7,9 @@ import numpy as np
 
 from Predictores.predictor_tests_plotting_helpers import pd_plotter_simple
 
-from Predictores.predictor_autoregressive_tf import predictor_autoregressive_tf
+from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
+    predictor_autoregressive_tf,
+)
 
 tested_predictor = predictor_autoregressive_tf
 
