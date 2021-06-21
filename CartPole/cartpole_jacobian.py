@@ -8,8 +8,13 @@ from CartPole.state_utilities import (
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
 )
 from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max,
-    sensorNoise, controlDisturbance, controlBias, TrackHalfLength,
+    k as param_k,
+    M as param_M,
+    m as param_m,
+    g as param_g,
+    J_fric as param_J_fric,
+    M_fric as param_M_fric,
+    L as param_L,
     CARTPOLE_EQUATIONS
 )
 
@@ -127,13 +132,13 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
 
         J[1, 0] = 0.0  # vx
 
-        J[1, 1] = vv(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
+        J[1, 1] = vv(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
-        J[1, 2] = vt(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
+        J[1, 2] = vt(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
-        J[1, 3] = vo(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
+        J[1, 3] = vo(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
-        J[1, 4] = vu(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
+        J[1, 4] = vu(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
         J[2, 0] = 0.0  # tx
 
@@ -147,13 +152,13 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
 
         J[3, 0] = 0.0  # ox
 
-        J[3, 1] = ov(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
+        J[3, 1] = ov(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
-        J[3, 2] = ot(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
+        J[3, 2] = ot(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
-        J[3, 3] = oo(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
+        J[3, 3] = oo(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
-        J[3, 4] = ou(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
+        J[3, 4] = ou(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
         return J
 
