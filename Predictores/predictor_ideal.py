@@ -37,7 +37,7 @@ import numpy as np
 
 from SI_Toolkit.load_and_normalize import load_normalization_info, normalize_numpy_array
 from CartPole.cartpole_model import (
-    L, Q2u, _cartpole_ode, TrackHalfLength
+    L, Q2u, _cartpole_ode_numba, TrackHalfLength
 )
 
 from CartPole.state_utilities import (
@@ -82,7 +82,7 @@ def next_state_numba(angle, angleD, angleDD, angle_cos, angle_sin, position, pos
 
         angle, angleD, position, positionD = edge_bounce_wrapper(angle, angleD, position, positionD, t_step)
 
-        angleDD, positionDD, angle_cos, angle_sin = _cartpole_ode(angle, angleD, positionD, u)
+        angleDD, positionDD, angle_cos, angle_sin = _cartpole_ode_numba(angle, angleD, positionD, u)
 
     return angle, angleD, angleDD, position, positionD, positionDD, angle_cos, angle_sin
 
@@ -170,7 +170,7 @@ class predictor_ideal:
         if self.u.ndim == 1: self.u = np.expand_dims(self.u, 0)
 
         # Calculate second derivatives of initial state
-        self.angleDD, self.positionDD, self.angle_cos, self.angle_sin = _cartpole_ode(
+        self.angleDD, self.positionDD, self.angle_cos, self.angle_sin = _cartpole_ode_numba(
             self.angle,
             self.angleD,
             self.positionD,

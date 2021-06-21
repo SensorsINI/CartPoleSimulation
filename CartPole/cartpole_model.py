@@ -8,6 +8,7 @@ from others.p_globals import (
     k, M, m, g, J_fric, M_fric, L, v_max, u_max,
     sensorNoise, controlDisturbance, controlBias, TrackHalfLength
 )
+from others.jacobian import vv, vt, vo, vu, ov, ot, oo, ou
 
 from numba import float32, jit
 import numpy as np
@@ -50,7 +51,7 @@ The 0-angle state is always defined as pole in upright position. This currently 
 s0 = create_cartpole_state()
 
 
-def _cartpole_ode_non_accelerated(angle, angleD, positionD, u):
+def _cartpole_ode(angle, angleD, positionD, u):
     """
     Calculates current values of second derivative of angle and position
     from current value of angle and position, and their first derivatives
@@ -105,18 +106,18 @@ def _cartpole_ode_non_accelerated(angle, angleD, positionD, u):
     return angleDD, positionDD, ca, sa
 
 
-_cartpole_ode = jit(_cartpole_ode_non_accelerated, nopython=True, cache=True, fastmath=True)
+_cartpole_ode_numba = jit(_cartpole_ode, nopython=True, cache=True, fastmath=True)
 
 
 def cartpole_ode_namespace(s: SimpleNamespace, u: float):
-    angleDD, positionDD, _, _ = _cartpole_ode_non_accelerated(
+    angleDD, positionDD, _, _ = _cartpole_ode(
         s.angle, s.angleD, s.positionD, u
     )
     return angleDD, positionDD
 
 
 def cartpole_ode(s: np.ndarray, u: float):
-    angleDD, positionDD, _, _ = _cartpole_ode(
+    angleDD, positionDD, _, _ = _cartpole_ode_numba(
         s[..., ANGLE_IDX], s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u
     )
     return angleDD, positionDD
@@ -132,9 +133,10 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
         # angle     (t) |       tx              tv            tt       to         tu
         # angleD    (o) |   ox -> J[3,0]        ov            ot       oo      ou -> J[3,4]
     
-    :param p: Namespace containing environment variables such track length, cart mass and pole mass
     :param s: State vector following the globally defined variable order
     :param u: Force applied on cart in unnormalized range
+
+    The Jacobian is used to linearize the CartPole dynamics around the origin
 
     :returns: A 4x5 numpy.ndarray with all partial derivatives
     """
@@ -154,9 +156,6 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
     sa = np.sin(angle)
 
     if CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
-        # Helper function
-        A = k * (M + m) - m * (ca ** 2)
-
         # Jacobian entries
         J[0, 0] = 0.0  # xx
 
@@ -170,25 +169,13 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
 
         J[1, 0] = 0.0  # vx
 
-        J[1, 1] = -k * M_fric / A  # vv
+        J[1, 1] = vv(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
-        J[1, 2] = (    # vt
-                     -2.0 * k * u * ca * sa * m
-                     - 2.0 * ca * sa * m * (
-                             -k * L * (angleD**2) * sa * m
-                             + g * ca * sa * m - k * positionD * M_fric
-                             + (angleD * ca * J_fric/L)
-                                                                ))/(A**2) \
-             + (
-                     -k * L * (angleD**2) * ca * m
-                     +  g * ((ca**2)-(sa**2)) * m
-                     - (angleD * sa * J_fric)/L
-                                                                )/ A
+        J[1, 2] = vt(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
-        J[1, 3] = (-2.0 * k * L * angleD * sa * m  # vo
-              + (ca * J_fric / L)) / A
+        J[1, 3] = vo(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
-        J[1, 4] = k / A  # vu
+        J[1, 4] = vu(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
         J[2, 0] = 0.0  # tx
 
@@ -202,29 +189,13 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
 
         J[3, 0] = 0.0  # ox
 
-        J[3, 1] = -ca * M_fric / (L * A)  # ov
+        J[3, 1] = ov(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
-        J[3, 2] = (  # ot
-                    - 2.0 * u * (ca**2) * sa * m
-                    - 2.0 * ca * sa * m * (
-                            -L * (angleD**2) * ca * sa * m
-                            + g * sa * (M + m)
-                            - positionD * ca * M_fric
-                            - (angleD * (M+m) * J_fric)/(L*m))
-                                    )/(L*(A**2)) \
-             + (
-                     -u * sa
-                     + L * (angleD**2) * ((sa**2)-(ca**2)) * m
-                     + g*ca*(M+m)
-                     + positionD * sa * M_fric
-                                    )/(L*A)
+        J[3, 2] = ot(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
-        J[3, 3] = (  # oo
-                     -2.0*L*angleD*ca * sa * m
-                     - ((M+m) * J_fric)/(L*m)
-                                    ) / (L * A)
+        J[3, 3] = oo(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
-        J[3, 4] = ca / (L*A)  # ou
+        J[3, 4] = ou(position, positionD, angle, angleD, u, k, M, m, L, J_fric, M_fric, g)
 
         return J
 
