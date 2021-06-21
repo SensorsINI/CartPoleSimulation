@@ -8,7 +8,8 @@ import numpy as np
 
 from Controllers.template_controller import template_controller
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
-from CartPole.cartpole_model import cartpole_jacobian, u_max, s0
+from CartPole.cartpole_model import u_max, s0
+from CartPole.cartpole_jacobian import cartpole_jacobian
 
 import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)

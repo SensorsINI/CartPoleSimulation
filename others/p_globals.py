@@ -41,3 +41,5 @@ k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, co
     float32(P_GLOBALS.controlBias),
     float32(P_GLOBALS.TrackHalfLength)
 )
+
+CARTPOLE_EQUATIONS = 'Marcin-Sharpneat'
