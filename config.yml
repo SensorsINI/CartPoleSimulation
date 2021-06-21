@@ -17,7 +17,7 @@ controller:
     SQRTRHOINV: 0.01                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"                  # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
-    LOGGING: True
+    LOGGING: False
   custom_mpc_scipy:
     DT: 0.1
     # method: 'L-BFGS-B'
