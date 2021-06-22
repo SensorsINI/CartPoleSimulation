@@ -38,7 +38,7 @@ import csv
 # Import Cart class - the class keeping all the parameters and methods
 # related to CartPole which are not related to PyQt5 GUI
 from CartPole import CartPole
-from CartPole.state_utilities import ANGLE_IDX, POSITION_IDX, cartpole_state_varname_to_index, create_cartpole_state
+from CartPole.state_utilities import ANGLED_IDX, ANGLE_IDX, POSITION_IDX, cartpole_state_varname_to_index, create_cartpole_state
 
 from GUI.gui_default_params import *
 from GUI.loop_timer import loop_timer
@@ -241,6 +241,20 @@ class MainWindow(QMainWindow):
         ip.addWidget(self.initial_position_slider)
         ip.addWidget(QLabel("Initial angle:"))
         ip.addWidget(self.initial_angle_slider)
+
+        kick_label = QLabel("Kick pole:")
+        kick_left_button = QPushButton()
+        kick_left_button.setText("Left")
+        kick_left_button.adjustSize()
+        kick_left_button.clicked.connect(self.kick_pole)
+        kick_right_button = QPushButton()
+        kick_right_button.setText("Right")
+        kick_right_button.adjustSize()
+        kick_right_button.clicked.connect(self.kick_pole)
+        ip.addWidget(kick_label)
+        ip.addWidget(kick_left_button)
+        ip.addWidget(kick_right_button)
+
         lb.addLayout(ip)
         layout.addLayout(lb)
 
@@ -412,6 +426,12 @@ class MainWindow(QMainWindow):
 
     def update_initial_angle(self, value: str):
         self.initial_state[ANGLE_IDX] = float(value) / 100.0
+    
+    def kick_pole(self):
+        if self.sender().text() == "Left":
+            self.CartPoleInstance.s[ANGLED_IDX] += .6
+        elif self.sender().text() == "Right":
+            self.CartPoleInstance.s[ANGLED_IDX] -= .6
 
 
     # region Thread performing CartPole experiment, slider-controlled or random
