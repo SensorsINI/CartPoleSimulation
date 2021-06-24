@@ -15,7 +15,7 @@ from CartPole.state_utilities import STATE_INDICES
 # This import mus go before pyplot so also before our scripts
 from matplotlib import use, get_backend
 # Use Agg if not in scientific mode of Pycharm
-from SI_Toolkit.TF.TF_Functions.Initialization import get_net_and_norm_info
+from SI_Toolkit.TF.TF_Functions.Initialization import get_net, get_norm_info_for_net
 
 if get_backend() != 'module://backend_interagg':
     use('Agg')
@@ -46,13 +46,15 @@ def get_data_for_gui_TF(a, dataset, dataset_sampling_dt, net_name):
     a.net_name = net_name
 
     if mode == 'batch':
-        net_for_inference, net_for_inference_info, normalization_info = \
-            get_net_and_norm_info(a, time_series_length=1,
-                                  batch_size=a.test_len, stateful=True)
+        net_for_inference, net_for_inference_info = \
+            get_net(a, time_series_length=1,
+                    batch_size=a.test_len, stateful=True)
+        normalization_info = get_norm_info_for_net(net_for_inference_info)
     elif mode == 'sequential':
         net_for_inference, net_for_inference_info, normalization_info = \
-            get_net_and_norm_info(a, time_series_length=1,
-                                  batch_size=1, stateful=True)
+            get_net(a, time_series_length=1,
+                    batch_size=1, stateful=True)
+        normalization_info = get_norm_info_for_net(net_for_inference_info)
 
     # Get features, target, and time axis
     # Format the experiment data
