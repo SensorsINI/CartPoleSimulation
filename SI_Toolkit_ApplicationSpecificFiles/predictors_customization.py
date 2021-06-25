@@ -1,9 +1,6 @@
 import numpy as np
 
-from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES
-
-NET_NAME = 'Dense-6IN-16H1-16H2-5OUT-0'
-# NET_NAME = 'GRU-6IN-16H1-16H2-5OUT-0'
+from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS
 
 def augment_predictor_output(output_array, net_info):
 

@@ -43,9 +43,11 @@ from Controllers.template_controller import template_controller
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-NET_NAME = yaml.load(
-    open(os.path.join("SI_Toolkit", "config.yml"), "r"), Loader=yaml.FullLoader
-)["modeling"]["NET_NAME"].split("-")[0]
+NET_NAME = config["controller"]["mppi"]["NET_NAME"]
+try:
+    NET_TYPE = NET_NAME.split("-")[0]
+except AttributeError:  # Should get Attribute Error if NET_NAME is None
+    NET_TYPE = None
 
 """Timestep and sampling settings"""
 dt = config["controller"]["mppi"]["dt"]
@@ -180,7 +182,7 @@ def penalize_deviation(cc, u):
 if predictor_type == "Euler":
     predictor = predictor_ideal(horizon=mpc_samples, dt=dt, intermediate_steps=1)
 elif predictor_type == "NeuralNet":
-    predictor = predictor_autoregressive_tf(horizon=mpc_samples, batch_size=num_rollouts)
+    predictor = predictor_autoregressive_tf(horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME)
 
 
 def trajectory_rollouts(
@@ -530,7 +532,7 @@ class controller_mppi(template_controller):
         if (
             self.warm_up_countdown > 0
             and self.auxiliary_controller_available
-            and NET_NAME == "GRU"
+            and (NET_TYPE == "GRU" or NET_TYPE == "LSTM" or NET_TYPE == "RNN")
             and predictor_type == "NeuralNet"
         ):
             self.warm_up_countdown -= 1
