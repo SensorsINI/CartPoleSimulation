@@ -33,7 +33,7 @@ from CartPole.state_utilities import (
 from matplotlib.widgets import Slider
 from numba import jit
 from numpy.random import SFC64, Generator
-from Predictores.predictor_ideal import predictor_ideal
+from SI_Toolkit_ApplicationSpecificFiles.predictor_ideal import predictor_ideal
 from scipy.interpolate import interp1d
 from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
     predictor_autoregressive_tf,
