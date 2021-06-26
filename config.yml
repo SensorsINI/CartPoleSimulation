@@ -4,7 +4,7 @@ controller:
     mpc_horizon: 1.0                      # sec
     num_rollouts: 2000                      # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "NeuralNet"               # One of ["Euler", "NeuralNet"]
+    predictor_type: "Euler"               # One of ["Euler", "NeuralNet"]
     NET_NAME: 'GRU-6IN-16H1-16H2-5OUT-0'  # Network to use for prediction with MPPI Controller. Only matters if predictor_type: "NeuralNet"
     dd_weight: 120.0
     ep_weight: 50000.0

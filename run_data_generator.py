@@ -19,7 +19,7 @@ import numpy as np
 # csv = '2500/Test'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
 # csv = '25/Train/Train'
 # csv = '25/Test/Test'
-csv = 'Dataset-15/Experiment'
+csv = 'Experiment'
 number_of_experiments = 400  # How many experiments will be generated
 save_mode = 'offline'  # It was intended to save memory usage, but it doesn't seems to help. Leave it false.
 
@@ -30,7 +30,7 @@ dt_save_DataGen = 0.02
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
 length_of_experiment_DataGen = 5  # Length of each experiment in s
-controller_DataGen = 'mppi'  # Controller which should be used in generated experiment
+controller_DataGen = 'lqr'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'lqr'
 track_relative_complexity_DataGen = 1  # randomly placed target points/s
