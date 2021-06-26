@@ -1,72 +1,96 @@
-# This file may be used to create an environment using:
-# $ conda create --name <env> --file <this file>
-# platform: osx-64
-appnope=0.1.2=py38hecd8cb5_1001
-backcall=0.2.0=pyhd3eb1b0_0
-blas=1.0=mkl
-brotlipy=0.7.0=py38h9ed2024_1003
-ca-certificates=2021.4.13=hecd8cb5_1
-certifi=2020.12.5=py38hecd8cb5_0
-cffi=1.14.3=py38h2125817_2
-chardet=3.0.4=py38hecd8cb5_1003
-conda=4.10.1=py38hecd8cb5_1
-conda-package-handling=1.7.2=py38h22f3db7_0
-cryptography=3.2.1=py38hbcfaee0_1
-decorator=5.0.6=pyhd3eb1b0_0
-idna=2.10=py_0
-intel-openmp=2021.2.0=hecd8cb5_564
-ipykernel=5.3.4=py38h5ca1d4c_0
-ipython=7.22.0=py38h01d92e1_0
-ipython_genutils=0.2.0=pyhd3eb1b0_1
-jedi=0.17.0=py38_0
-jupyter_client=6.1.12=pyhd3eb1b0_0
-jupyter_core=4.7.1=py38hecd8cb5_0
-libcxx=10.0.0=1
-libedit=3.1.20191231=h1de35cc_1
-libffi=3.3=hb1e8313_2
-libllvm10=10.0.1=h76017ad_5
-libsodium=1.0.18=h1de35cc_0
-llvm-openmp=10.0.0=h28b9765_0
-llvmlite=0.36.0=py38he4411ff_4
-mkl=2021.2.0=hecd8cb5_269
-mkl-service=2.3.0=py38h9ed2024_1
-mkl_fft=1.3.0=py38h4a7008c_2
-mkl_random=1.2.1=py38hb2f4e1b_2
-ncurses=6.2=h0a44026_1
-numba=0.53.1=py38hb2f4e1b_0
-numpy=1.20.1=py38hd6e1bb9_0
-numpy-base=1.20.1=py38h585ceec_0
-openssl=1.1.1k=h9ed2024_0
-parso=0.8.2=pyhd3eb1b0_0
-pexpect=4.8.0=pyhd3eb1b0_3
-pickleshare=0.7.5=pyhd3eb1b0_1003
-pip=20.2.4=py38hecd8cb5_0
-prompt-toolkit=3.0.17=pyh06a4308_0
-ptyprocess=0.7.0=pyhd3eb1b0_2
-pycosat=0.6.3=py38h1de35cc_1
-pycparser=2.20=py_2
-pygments=2.8.1=pyhd3eb1b0_0
-pyopenssl=19.1.0=pyhd3eb1b0_1
-pysocks=1.7.1=py38_1
-python=3.8.5=h26836e1_1
-python-dateutil=2.8.1=pyhd3eb1b0_0
-python.app=2=py38_10
-pyzmq=20.0.0=py38h23ab428_1
-readline=8.0=h1de35cc_0
-requests=2.24.0=py_0
-ruamel_yaml=0.15.87=py38haf1e3a3_1
-setuptools=50.3.1=py38hecd8cb5_1
-six=1.15.0=py38hecd8cb5_0
-sqlite=3.33.0=hffcf06c_0
-tbb=2020.3=h879752b_0
-tk=8.6.10=hb0a8c7a_0
-tornado=6.1=py38h9ed2024_0
-tqdm=4.51.0=pyhd3eb1b0_0
-traitlets=5.0.5=pyhd3eb1b0_0
-urllib3=1.25.11=py_0
-wcwidth=0.2.5=py_0
-wheel=0.35.1=pyhd3eb1b0_0
-xz=5.2.5=h1de35cc_0
-yaml=0.2.5=haf1e3a3_0
-zeromq=4.3.4=h23ab428_0
-zlib=1.2.11=h1de35cc_3
+absl-py==0.11.0
+astor==0.8.1
+astroid @ file:///opt/concourse/worker/volumes/live/343a8902-287c-47fb-6db8-923a63364302/volume/astroid_1613500849157/work
+astunparse==1.6.3
+cachetools==4.2.1
+casadi==3.5.5
+certifi==2020.12.5
+chardet==4.0.0
+colorama==0.4.4
+contextlib2==0.6.0.post1
+cycler==0.10.0
+decorator==4.4.2
+do-mpc==4.1.1
+engineering-notation==0.6.0
+filelock==3.0.12
+flatbuffers==1.12
+future==0.18.2
+gast==0.3.3
+gitdb==4.0.5
+GitPython==3.1.13
+google-auth==1.27.0
+google-auth-oauthlib==0.4.2
+google-pasta==0.2.0
+grpcio==1.32.0
+h5py==2.10.0
+hyperopt==0.1.2
+idna==2.10
+imageio==2.9.0
+imageio-ffmpeg==0.4.4
+isort @ file:///tmp/build/80754af9/isort_1612243941122/work
+joblib==1.0.1
+json-tricks==3.15.5
+Keras-Preprocessing==1.1.2
+kiwisolver @ file:///opt/concourse/worker/volumes/live/0b2f3e77-eaa3-4995-7dd0-c994762fcbde/volume/kiwisolver_1612282417472/work
+lazy-object-proxy @ file:///opt/concourse/worker/volumes/live/57602dd8-a9b0-4acd-437d-9483e38dc540/volume/lazy-object-proxy_1606850080641/work
+llvmlite==0.36.0
+Markdown==3.3.4
+matplotlib @ file:///opt/concourse/worker/volumes/live/41e8cd50-031f-4dda-5787-dd3c4f4e0f08/volume/matplotlib-suite_1613407855571/work
+mccabe==0.6.1
+mkl-fft==1.2.1
+mkl-random==1.1.1
+mkl-service==2.3.0
+moviepy==1.0.3
+netifaces==0.10.9
+networkx==2.5
+nni==2.0
+numba @ file:///opt/concourse/worker/volumes/live/cb17bb75-56fe-43c0-51cb-cedd1a7de55b/volume/numba_1615889208591/work
+numpy @ file:///opt/concourse/worker/volumes/live/5572694e-967a-4c0c-52cf-b53d43e72de9/volume/numpy_and_numpy_base_1603491881791/work
+oauthlib==3.1.0
+olefile==0.46
+opt-einsum==3.3.0
+pandas==1.2.2
+Pillow @ file:///opt/concourse/worker/volumes/live/705be880-f90c-4fb3-489d-9ee685c52cbe/volume/pillow_1609786792428/work
+prettytable==2.1.0
+proglog==0.1.9
+protobuf==3.15.3
+psutil==5.8.0
+ptvsd==4.3.2
+pyasn1==0.4.8
+pyasn1-modules==0.2.8
+pylint @ file:///opt/concourse/worker/volumes/live/e0784dc9-b2b2-4bba-69e9-ef2ac0338606/volume/pylint_1614007994558/work
+pymongo==3.11.3
+pyparsing @ file:///home/linux1/recipes/ci/pyparsing_1610983426697/work
+python-dateutil @ file:///home/ktietz/src/ci/python-dateutil_1611928101742/work
+PythonWebHDFS==0.2.3
+pytz @ file:///tmp/build/80754af9/pytz_1612215392582/work
+PyYAML==5.4.1
+requests==2.25.1
+requests-oauthlib==1.3.0
+responses==0.12.1
+rsa==4.7.2
+ruamel.yaml==0.16.13
+ruamel.yaml.clib==0.2.2
+schema==0.7.4
+scikit-learn==0.24.1
+scipy @ file:///opt/concourse/worker/volumes/live/7c142885-34bc-40e9-7fac-5aa9696f9b33/volume/scipy_1612469584314/work
+simplejson==3.17.2
+six @ file:///opt/concourse/worker/volumes/live/5b31cb27-1e37-4ca5-6e9f-86246eb206d2/volume/six_1605205320872/work
+sklearn==0.0
+smmap==3.0.5
+tensorboard==2.4.1
+tensorboard-plugin-wit==1.8.0
+tensorflow==2.4.1
+tensorflow-estimator==2.4.0
+termcolor==1.1.0
+threadpoolctl==2.1.0
+toml @ file:///tmp/build/80754af9/toml_1592853716807/work
+tornado @ file:///opt/concourse/worker/volumes/live/05341796-4198-4ded-4a9a-332fde3cdfd1/volume/tornado_1606942323372/work
+tqdm @ file:///tmp/build/80754af9/tqdm_1611857934208/work
+typing-extensions==3.7.4.3
+urllib3==1.26.3
+wcwidth==0.2.5
+websockets==8.1
+Werkzeug==1.0.1
+wrapt @ file:///opt/concourse/worker/volumes/live/e3646d84-e961-4523-6bed-01532273c57e/volume/wrapt_1597851473852/work
+yml==0.0.1
