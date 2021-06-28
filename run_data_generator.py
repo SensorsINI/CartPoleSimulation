@@ -60,7 +60,7 @@ initial_state_DataGen = create_cartpole_state()
 for i in range(number_of_experiments):
 
     start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * np.random.uniform(-1.0, 1.0)
-    initial_state = [start_random_target_position_at_DataGen, None, None, None]
+    initial_state = [start_random_target_position_at_DataGen, None, 0.0, None]
 
     if initial_state[0] is None:
         initial_state_DataGen[cartpole_state_varname_to_index('position')] = np.random.uniform(
