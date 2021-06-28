@@ -41,14 +41,14 @@ from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
 
 from Controllers.template_controller import template_controller
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
-
-NET_NAME = config["controller"]["mppi"]["NET_NAME"]
+config = yaml.load(open(os.path.join("SI_Toolkit", "config.yml"), "r"), Loader=yaml.FullLoader)
+NET_NAME = config["modeling"]["NET_NAME"]
 try:
     NET_TYPE = NET_NAME.split("-")[0]
 except AttributeError:  # Should get Attribute Error if NET_NAME is None
     NET_TYPE = None
 
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 """Timestep and sampling settings"""
 dt = config["controller"]["mppi"]["dt"]
 mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
@@ -156,8 +156,8 @@ def E_pot_cost(angle):
 def distance_difference_cost(position, target_position):
     """Compute penalty for distance of cart to the target position"""
     return ((position - target_position) / (2.0 * TrackHalfLength)) ** 2 + (
-        np.abs(position) > 0.99 * TrackHalfLength
-    ) * 1.0e5  # Soft constraint: Do not crash into border
+        np.abs(position) > 0.95 * TrackHalfLength
+    ) * 1.0e6  # Soft constraint: Do not crash into border
 
 
 @jit(nopython=True, cache=True, fastmath=True)
