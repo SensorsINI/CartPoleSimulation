@@ -1,0 +1,2 @@
+model_checkpoint_path: "GRU-6IN-32H1-32H2-5OUT-0.ckpt"
+all_model_checkpoint_paths: "GRU-6IN-32H1-32H2-5OUT-0.ckpt"
