@@ -4,8 +4,7 @@ controller:
     mpc_horizon: 1.0                      # sec
     num_rollouts: 2000                      # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "Euler"               # One of ["Euler", "NeuralNet"]
-    NET_NAME: 'GRU-6IN-16H1-16H2-5OUT-0'  # Network to use for prediction with MPPI Controller. Only matters if predictor_type: "NeuralNet"
+    predictor_type: "NeuralNet"               # One of ["Euler", "NeuralNet"]
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01
@@ -61,7 +60,6 @@ controller:
     mpc_horizon: 10
 cartpole:
   PATH_TO_CONTROLLERS: './Controllers/'  # Path where controllers are stored
-  PATH_TO_EXPERIMENT_RECORDINGS: './ExperimentRecordings/'  # Path where the experiments data is stored
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   M: 0.230  # mass of cart, kg # Checked by Antonio
   L: "0.395/2.0"  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi

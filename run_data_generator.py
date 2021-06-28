@@ -3,6 +3,7 @@ from CartPole.cartpole_model import create_cartpole_state, TrackHalfLength
 from others.p_globals import P_GLOBALS
 from CartPole.state_utilities import cartpole_state_varname_to_index, cartpole_state_varnames_to_indices
 
+import os
 from time import sleep
 import timeit
 import cProfile
@@ -16,11 +17,23 @@ import numpy as np
 # use('macOSX')
 
 # User defined simulation settings
-# csv = '2500/Test'  # Name with which data is saved, consecutive experiments will be save with increasing index attached
-# csv = '25/Train/Train'
-# csv = '25/Test/Test'
-csv = 'Experiment'
-number_of_experiments = 400  # How many experiments will be generated
+# Automatically create new path to save everything in
+
+import yaml, os
+config = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml')), Loader=yaml.FullLoader)
+
+experiment_index = 1
+while True:
+    record_path = "Experiment-" + str(experiment_index)
+    if os.path.exists(config['normalization']['PATH_TO_EXPERIMENT_RECORDINGS'] + record_path):
+        experiment_index += 1
+    else:
+        record_path += "/Recordings"
+        break
+
+number_of_experiments = 1000  # How many experiments will be generated
+frac_train = 0.8
+frac_val = 0.19
 save_mode = 'offline'  # It was intended to save memory usage, but it doesn't seems to help. Leave it false.
 
 # Timescales
@@ -58,6 +71,16 @@ initial_state_DataGen = create_cartpole_state()
 
 
 for i in range(number_of_experiments):
+    if i < int(frac_train*number_of_experiments):
+        csv = record_path + "/Train"
+    elif i < int((frac_train+frac_val)*number_of_experiments):
+        csv = record_path + "/Validate"
+    else:
+        csv = record_path + "/Test"
+    try: os.makedirs(config['normalization']['PATH_TO_EXPERIMENT_RECORDINGS'] + csv)
+    except: pass
+
+    csv += "/Experiment"
 
     start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * np.random.uniform(-1.0, 1.0)
     initial_state = [start_random_target_position_at_DataGen, None, 0.0, None]
@@ -77,18 +100,18 @@ for i in range(number_of_experiments):
 
     if initial_state[2] is None:
         if np.random.uniform()>0.5:
-            initial_state_DataGen[cartpole_state_varname_to_index('angle')] = np.random.uniform(low=90 * (np.pi / 180.0),
+            initial_state_DataGen[cartpole_state_varname_to_index('angle')] = np.random.uniform(low=45 * (np.pi / 180.0),
                                                                                                 high=180 * (np.pi / 180.0))
         else:
             initial_state_DataGen[cartpole_state_varname_to_index('angle')] = np.random.uniform(low=-180 * (np.pi / 180.0),
-                                                                                                high=-90 * (np.pi / 180.0))
+                                                                                                high=-45 * (np.pi / 180.0))
         # initial_state_DataGen[cartpole_state_varname_to_index('angle')] = np.pi
     else:
         initial_state_DataGen[cartpole_state_varname_to_index('angle')] = initial_state[2]
 
     if initial_state[3] is None:
-        initial_state_DataGen[cartpole_state_varname_to_index('angleD')] = np.random.uniform(low=-3.0 * (np.pi / 180.0),
-                                                                                             high=3.0 * (np.pi / 180.0))
+        initial_state_DataGen[cartpole_state_varname_to_index('angleD')] = np.random.uniform(low=-10.0 * (np.pi / 180.0),
+                                                                                             high=10.0 * (np.pi / 180.0))
     else:
         initial_state_DataGen[cartpole_state_varname_to_index('angleD')] = initial_state[3]
     

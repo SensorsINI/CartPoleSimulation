@@ -47,7 +47,8 @@ from CartPole.state_utilities import (
 import yaml, os
 config = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml'), 'r'), Loader=yaml.FullLoader)
 
-PATH_TO_NORMALIZATION_INFO = config['modeling']['PATH_TO_NORMALIZATION_INFO']
+PATH_TO_NORMALIZATION_INFO = config['normalization']['PATH_TO_EXPERIMENT_RECORDINGS'] + config['normalization']['path_to_experiment'] + "NormalizationInfo/"
+PATH_TO_NORMALIZATION_INFO += os.listdir(PATH_TO_NORMALIZATION_INFO)[0]
 
 @jit(nopython=True, cache=True, fastmath=True)
 def edge_bounce(angle, angleD, position, positionD, t_step):

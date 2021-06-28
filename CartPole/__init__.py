@@ -58,9 +58,10 @@ rc('font', **font)
 
 import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
-
 PATH_TO_CONTROLLERS = config["cartpole"]["PATH_TO_CONTROLLERS"]
-PATH_TO_EXPERIMENT_RECORDINGS = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS"]
+
+config = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml')), Loader=yaml.FullLoader)
+PATH_TO_EXPERIMENT_RECORDINGS = config["normalization"]["PATH_TO_EXPERIMENT_RECORDINGS"]
 
 
 class CartPole:
@@ -711,7 +712,7 @@ class CartPole:
         else:
             raise ValueError('Unknown save mode value')
 
-        # Create csv file for savign
+        # Create csv file for saving
         self.save_history_csv(csv_name=csv, mode='init', length_of_experiment=self.length_of_experiment)
 
         # Save 0th timestep
