@@ -31,7 +31,7 @@ while True:
         record_path += "/Recordings"
         break
 
-number_of_experiments = 1000  # How many experiments will be generated
+number_of_experiments = 500  # How many experiments will be generated
 frac_train = 0.8
 frac_val = 0.19
 save_mode = 'offline'  # It was intended to save memory usage, but it doesn't seems to help. Leave it false.
@@ -43,7 +43,7 @@ dt_save_DataGen = 0.02
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
 length_of_experiment_DataGen = 5  # Length of each experiment in s
-controller_DataGen = 'lqr'  # Controller which should be used in generated experiment
+controller_DataGen = 'mppi'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'lqr'
 track_relative_complexity_DataGen = 1  # randomly placed target points/s
@@ -100,11 +100,11 @@ for i in range(number_of_experiments):
 
     if initial_state[2] is None:
         if np.random.uniform()>0.5:
-            initial_state_DataGen[cartpole_state_varname_to_index('angle')] = np.random.uniform(low=45 * (np.pi / 180.0),
+            initial_state_DataGen[cartpole_state_varname_to_index('angle')] = np.random.uniform(low=90 * (np.pi / 180.0),
                                                                                                 high=180 * (np.pi / 180.0))
         else:
             initial_state_DataGen[cartpole_state_varname_to_index('angle')] = np.random.uniform(low=-180 * (np.pi / 180.0),
-                                                                                                high=-45 * (np.pi / 180.0))
+                                                                                                high=-90 * (np.pi / 180.0))
         # initial_state_DataGen[cartpole_state_varname_to_index('angle')] = np.pi
     else:
         initial_state_DataGen[cartpole_state_varname_to_index('angle')] = initial_state[2]
