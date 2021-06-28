@@ -749,6 +749,10 @@ class CartPole:
         
         if show_summary_plots: self.summary_plots()
 
+        mean_abs_dist = np.mean([np.abs(self.dict_history["position"][i] - self.dict_history["target_position"][i]) for i in range(len(self.dict_history["target_position"]))])
+        mean_abs_angle = np.mean(np.abs(self.dict_history["angle"])) * 180.0 / np.pi
+        print(f"Mean absolute distance to target: {mean_abs_dist}m\nMean absolute angle: {mean_abs_angle}deg")
+
         # Set CartPole state - the only use is to make sure that experiment history is discared
         # Maybe you can delete this line
         self.set_cartpole_state_at_t0(reset_mode=0)
