@@ -43,7 +43,7 @@ dt_save_DataGen = 0.02
 
 # CartPole settings - check the effect first in GUI before you launch big data generation
 length_of_experiment_DataGen = 60  # Length of each experiment in s
-controller_DataGen = 'lqr'  # Controller which should be used in generated experiment
+controller_DataGen = 'do-mpc-discrete'  # Controller which should be used in generated experiment
 # Possible options for controller:
 # 'manual-stabilization', 'do-mpc', 'lqr'
 track_relative_complexity_DataGen = 1  # randomly placed target points/s
@@ -57,6 +57,7 @@ used_track_fraction = 0.9
 start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * np.random.uniform(-1.0, 1.0)
 end_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * np.random.uniform(-1.0, 1.0)
 # The list of turning points is set to None, no matter what is in globals.py
+# turning_points_DataGen = [-.12, .12, -.12, .12, -.12, .12, -.12, .12, -.12, .12, -.12, .12]
 turning_points_DataGen = [0.0]
 show_summary_plots = True
 
