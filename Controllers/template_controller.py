@@ -3,6 +3,18 @@ import numpy as np
 from abc import ABC, abstractmethod
 
 
+"""
+For a controller to be found and imported by CartPoleGUI/DataGenerator it must:
+1. Be in Controller folder
+2. Have a name starting with "controller_"
+3. The name of the controller class must be the same as the name of the file.
+4. It must have __init__ and step methods
+
+We recommend you derive it from the provided template.
+See the provided examples of controllers to gain more insight.
+"""
+
+
 class template_controller(ABC):
 
     def __init__(self):
