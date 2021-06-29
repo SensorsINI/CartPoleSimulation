@@ -1,8 +1,8 @@
 CREATED:
-2021-06-28 at time 14:16:23
+2021-06-29 at time 12:25:39
 
 WITH GIT REVISION:
-9ab54784c4cae4d1816f9bc65ccb823c72761456
+fa815dbaab5046db804e0fabc5f04b5bccbe0ddf
 
 NET NAME:
 GRU-32H1-32H2
@@ -20,7 +20,7 @@ TYPE:
 GRU
 
 NORMALIZATION:
-./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-9/Models/GRU-6IN-32H1-32H2-5OUT-0/NI_2021-06-28_14-14-12.csv
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-32/Models/GRU-6IN-32H1-32H2-5OUT-0/NI_2021-06-29_12-02-03.csv
 
 SAMPLING INTERVAL:
 0.02 s
@@ -32,10 +32,10 @@ WASH OUT LENGTH:
 10
 
 TRAINING_FILES:
-./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-9//Recordings/Train/
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-32//Recordings/Train/
 
 VALIDATION_FILES:
-./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-9//Recordings/Train/
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-32//Recordings/Train/
 
 TEST_FILES:
-./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-9//Recordings/Train/
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-32//Recordings/Train/
