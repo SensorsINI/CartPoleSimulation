@@ -1,10 +1,19 @@
+# Ignore experiment data except specific provided models
+!/SI_Toolkit_ApplicationSpecificFiles/
+/SI_Toolkit_ApplicationSpecificFiles/*
+
+!/SI_Toolkit_ApplicationSpecificFiles/Experiments/
+/SI_Toolkit_ApplicationSpecificFiles/Experiments/*
+
+!/SI_Toolkit_ApplicationSpecificFiles/Experiments/Pretrained-RNN-1/
+
 .DS_Store
 *__pycache__
 *.pyc
-*.csv
+# *.csv
 *.png
-*.txt
-*.ckpt.*
+# *.txt
+# *.ckpt.*
 *.pt
 *.env
 *.vscode
