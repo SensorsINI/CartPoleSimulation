@@ -41,7 +41,9 @@ from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
 
 from Controllers.template_controller import template_controller
 
-config = yaml.load(open(os.path.join("SI_Toolkit", "config.yml"), "r"), Loader=yaml.FullLoader)
+config = yaml.load(
+    open(os.path.join("SI_Toolkit", "config.yml"), "r"), Loader=yaml.FullLoader
+)
 NET_NAME = config["modeling"]["NET_NAME"]
 try:
     NET_TYPE = NET_NAME.split("-")[0]
@@ -67,13 +69,10 @@ cc_weight = config["controller"]["mppi"]["cc_weight"]
 ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
 
 """Perturbation factor"""
-p_Q = 0.0  # 0.05  # Noise on top of the calculated control input
-# Change of cost function
-dd_noise = 0.2  # 0.2
-ep_noise = 0.2  # 0.2
-ekp_noise = 0.2  # 0.2
-ekc_noise = 0.2  # 0.2
-cc_noise = 0.2  # 0.2
+p_Q = config["controller"]["mppi"]["control_noise"]
+dd_noise = ep_noise = ekp_noise = ekc_noise = cc_noise = config["controller"]["mppi"][
+    "cost_noise"
+]
 
 
 dd_weight = dd_weight * (1 + dd_noise * np.random.uniform(-1.0, 1.0))
@@ -104,14 +103,6 @@ rng = Generator(SFC64(123))
 """Init logging variables"""
 LOGGING = config["controller"]["mppi"]["LOGGING"]
 # Save average cost for each cost component
-# COST_TO_GO_LOGS = []
-# COST_BREAKDOWN_LOGS = []
-# STATE_LOGS = []
-# TRAJECTORY_LOGS = []
-# TARGET_TRAJECTORY_LOGS = []
-# INPUT_LOGS = []
-# NOMINAL_ROLLOUT_LOGS = []
-# TRAJECTORY_COST_LOGS = []
 LOGS = {
     "cost_to_go": [],
     "cost_breakdown": {
@@ -182,7 +173,9 @@ def penalize_deviation(cc, u):
 if predictor_type == "Euler":
     predictor = predictor_ideal(horizon=mpc_samples, dt=dt, intermediate_steps=1)
 elif predictor_type == "NeuralNet":
-    predictor = predictor_autoregressive_tf(horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME)
+    predictor = predictor_autoregressive_tf(
+        horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
+    )
 
 
 def trajectory_rollouts(
@@ -590,7 +583,9 @@ class controller_mppi(template_controller):
     def controller_report(self):
         if LOGGING:
             ### Plot the average state cost per iteration
-            ctglgs = np.stack(LOGS.get("cost_to_go"), axis=0)  # ITERATIONS x num_rollouts
+            ctglgs = np.stack(
+                LOGS.get("cost_to_go"), axis=0
+            )  # ITERATIONS x num_rollouts
             NUM_ITERATIONS = np.shape(ctglgs)[0]
             time_axis = update_every * dt * np.arange(start=0, stop=np.shape(ctglgs)[0])
             plt.figure(num=2, figsize=(16, 9))
