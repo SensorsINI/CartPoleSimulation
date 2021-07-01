@@ -5,7 +5,9 @@ Check our [tutorial](https://youtu.be/ad3t2cUHbts "LTC Tutorial CartPoleSimulato
 
 ## Installation:
 
-Get the code from Github: https://github.com/SensorsINI/CartPoleSimulation/tree/Baseline
+Get the code from Github:
+
+	`git clone --recurse-submodules https://github.com/SensorsINI/CartPoleSimulation.git`
 
 Create conda environment with 
 
