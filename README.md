@@ -11,7 +11,7 @@ Get the code from Github:
 
 Create conda environment with 
 
-	conda create -n CartPoleSimulation python=3.8 matplotlib pyqt pandas tqdm scipy gitpython
+	conda create -n CartPoleSimulation python=3.8 matplotlib pyqt pandas tqdm scipy gitpython numba pyyaml tensorflow sympy
     pip install do_mpc
 
 n the “Manual Stabilization” mode you can provide the control input (motor power related to the force acting on the cart) by hovering with your mouse over the lower chart. Due to some bug (or maybe rather specific Cart-Pole system parameters) everything happens to fast to make it doable now.
