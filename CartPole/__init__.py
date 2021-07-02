@@ -60,8 +60,8 @@ import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 PATH_TO_CONTROLLERS = config["cartpole"]["PATH_TO_CONTROLLERS"]
 
-config = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml')), Loader=yaml.FullLoader)
-PATH_TO_EXPERIMENT_RECORDINGS = config["normalization"]["PATH_TO_EXPERIMENT_RECORDINGS"]
+config = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'config.yml')), Loader=yaml.FullLoader)
+PATH_TO_EXPERIMENT_RECORDINGS = config["paths"]["PATH_TO_EXPERIMENT_RECORDINGS"]
 
 
 class CartPole:
@@ -390,7 +390,7 @@ class CartPole:
                 self.csv_filepath = PATH_TO_EXPERIMENT_RECORDINGS + 'CP_' + self.controller_name + str(
                     datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')) + '.csv'
             else:
-                self.csv_filepath = PATH_TO_EXPERIMENT_RECORDINGS + csv_name
+                self.csv_filepath = csv_name
                 if csv_name[-4:] != '.csv':
                     self.csv_filepath += '.csv'
 

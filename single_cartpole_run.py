@@ -23,7 +23,7 @@ import numpy as np
 import yaml, os
 config = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'config.yml')), Loader=yaml.FullLoader)
 
-record_path = "./ExperimentRecordings/"
+record_path = "./Experiment_Recordings/"
 
 ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
 number_of_experiments = 1  # How many experiments will be generated

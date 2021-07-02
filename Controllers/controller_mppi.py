@@ -44,7 +44,7 @@ from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
 from Controllers.template_controller import template_controller
 
 config = yaml.load(
-    open(os.path.join("SI_Toolkit", "config.yml"), "r"), Loader=yaml.FullLoader
+    open(os.path.join("SI_Toolkit_ApplicationSpecificFiles", "config.yml"), "r"), Loader=yaml.FullLoader
 )
 NET_NAME = config["modeling"]["NET_NAME"]
 try:

@@ -8,7 +8,7 @@ from Controllers.template_controller import template_controller
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
 
 import yaml, os
-config = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml'), 'r'), Loader=yaml.FullLoader)
+config = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'config.yml'), 'r'), Loader=yaml.FullLoader)
 
 RNN_FULL_NAME = config['modeling']['PyTorch']['RNN_FULL_NAME']
 INPUTS_LIST = config['modeling']['PyTorch']['INPUTS_LIST']

@@ -7,7 +7,7 @@ import numpy as np, pandas as pd
 
 import copy
 import yaml, os
-config = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml'), 'r'), Loader=yaml.FullLoader)
+config = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'config.yml'), 'r'), Loader=yaml.FullLoader)
 
 RNN_FULL_NAME = config['modeling']['TensorFlow']['RNN_FULL_NAME']
 INPUTS_LIST = config['modeling']['TensorFlow']['INPUTS_LIST']
