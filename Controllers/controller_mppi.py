@@ -14,6 +14,8 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
+from datetime import datetime
+
 from CartPole._CartPole_mathematical_helpers import (
     conditional_decorator,
     wrap_angle_rad_inplace,
@@ -94,10 +96,7 @@ GAMMA = config["controller"]["mppi"]["GAMMA"]
 SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
 
 """Random number generator"""
-# TODO: How to set the seed so that it is different for each realization
-#   in data_generator?
-# FIXME: Insert current time as seed
-rng = Generator(SFC64(123))
+rng = Generator(SFC64(int((datetime.now() - datetime(1970, 1, 1)).total_seconds())))
 
 
 """Init logging variables"""
