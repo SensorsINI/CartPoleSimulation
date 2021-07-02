@@ -1,3 +1,4 @@
+from numpy.core.records import record
 from CartPole import CartPole
 from CartPole.cartpole_model import create_cartpole_state, TrackHalfLength
 from others.p_globals import P_GLOBALS
@@ -20,69 +21,72 @@ import numpy as np
 # Automatically create new path to save everything in
 
 import yaml, os
-config = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml')), Loader=yaml.FullLoader)
+config = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'config.yml')), Loader=yaml.FullLoader)
 
-experiment_index = 1
-while True:
-    record_path = "Experiment-" + str(experiment_index)
-    if os.path.exists(config['normalization']['PATH_TO_EXPERIMENT_RECORDINGS'] + record_path):
-        experiment_index += 1
-    else:
-        record_path += "/Recordings"
-        break
+record_path = "./ExperimentRecordings/"
 
+############ CHANGE THESE PARAMETERS AS YOU LIKE ############
 number_of_experiments = 1  # How many experiments will be generated
+
+###### Train/Val/Test split
 frac_train = 0.8
 frac_val = 0.19
+
 save_mode = 'offline'  # It was intended to save memory usage, but it doesn't seems to help. Leave it false.
 
-# Timescales
+###### Timescales
 dt_simulation_DataGen = 0.002  # simulation timestep
-dt_controller_update_DataGen = 0.02
-dt_save_DataGen = 0.02
+dt_controller_update_DataGen = 0.02  # control rate
+dt_save_DataGen = 0.02  # save datapoints in csv in this interval
 
-# CartPole settings - check the effect first in GUI before you launch big data generation
-length_of_experiment_DataGen = 12  # Length of each experiment in s
-controller_DataGen = 'mppi'  # Controller which should be used in generated experiment
-# Possible options for controller:
-# 'manual-stabilization', 'do-mpc', 'lqr'
-track_relative_complexity_DataGen = 1  # randomly placed target points/s
-interpolation_type_DataGen = 'previous'  # Sets how to interpolate between turning points of random trace
-# Possible choices: '0-derivative-smooth', 'linear', 'previous'
-turning_points_period_DataGen = 'regular'  # How turning points should be distributed
-# Possible choices: 'regular', 'random'
-# Set the max for smoothly interpolated random target position to avoid bumping into track ends.
+###### CartPole settings
+### Length of each experiment in s:
+length_of_experiment_DataGen = 12  
+
+### Controller which should be used in generated experiment:
+controller_DataGen = 'mppi'
+# Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
+
+### Randomly placed target points/s
+track_relative_complexity_DataGen = 1
+
+### How to interpolate between turning points of random trace
+interpolation_type_DataGen = 'previous'
+# Possible options: '0-derivative-smooth', 'linear', 'previous'
+
+### How turning points should be distributed
+turning_points_period_DataGen = 'regular'
+# Possible options: 'regular', 'random'
+
+### Set the max for smoothly interpolated random target position to avoid bumping into track ends.
 used_track_fraction = 0.9
-# Where the target position of the random experiment starts and end
+
+### Where the target positions of the random experiment start and end
 start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * np.random.uniform(-1.0, 1.0)
 end_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * np.random.uniform(-1.0, 1.0)
-# The list of turning points is set to None, no matter what is in globals.py
-# turning_points_DataGen = [-.12, .12, -.12, .12, -.12, .12, -.12, .12, -.12, .12, -.12, .12]
-turning_points_DataGen = [0.0]
+
+### List of target positions, can be None to simulate with random targets
+turning_points_DataGen = None
+# Example: turning_points_DataGen = [0.0, 0.1, -0.1, 0.0]
+
+### Show popup window in the end with summary of experiment?
 show_summary_plots = True
 
-# initial state
+### Initial state
 # This is just one possibility how to set the initial state. Feel free to modify this code
 # [position, positionD, angle, angleD]
-# initial_state = [start_random_target_position_at_DataGen, None, None, None]
-# initial_state = [0.5 * TrackHalfLength, 0, 180.0 * (np.pi / 180.0), 0]
-# initial_state = [0.0, 0.0, 0.0, 0.0]
-initial_state = [0.0, 0.0, np.pi, 0.0]
+# Unassigned variables will be randomly initialized (see below if interested)
+initial_state = [start_random_target_position_at_DataGen, None, None, None]
+
+############ END OF PARAMETERS SECTION ############
 
 initial_state_DataGen = create_cartpole_state()
 
-
 for i in range(number_of_experiments):
-    if i < int(frac_train*number_of_experiments):
-        csv = record_path + "/Train"
-    elif i < int((frac_train+frac_val)*number_of_experiments):
-        csv = record_path + "/Validate"
-    else:
-        csv = record_path + "/Test"
-    try: os.makedirs(config['normalization']['PATH_TO_EXPERIMENT_RECORDINGS'] + csv)
+    try: os.makedirs(record_path)
     except: pass
 
-    csv += "/Experiment"
+    csv = os.path.join(record_path, "Experiment")
 
     start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * np.random.uniform(-1.0, 1.0)
     # initial_state = [start_random_target_position_at_DataGen, None, 0.0, None]
@@ -102,12 +106,11 @@ for i in range(number_of_experiments):
 
     if initial_state[2] is None:
         if np.random.uniform()>0.5:
-            initial_state_DataGen[cartpole_state_varname_to_index('angle')] = np.random.uniform(low=90 * (np.pi / 180.0),
+            initial_state_DataGen[cartpole_state_varname_to_index('angle')] = np.random.uniform(low=0 * (np.pi / 180.0),
                                                                                                 high=180 * (np.pi / 180.0))
         else:
             initial_state_DataGen[cartpole_state_varname_to_index('angle')] = np.random.uniform(low=-180 * (np.pi / 180.0),
-                                                                                                high=-90 * (np.pi / 180.0))
-        # initial_state_DataGen[cartpole_state_varname_to_index('angle')] = np.pi
+                                                                                                high=-0 * (np.pi / 180.0))
     else:
         initial_state_DataGen[cartpole_state_varname_to_index('angle')] = initial_state[2]
 
@@ -117,7 +120,7 @@ for i in range(number_of_experiments):
     else:
         initial_state_DataGen[cartpole_state_varname_to_index('angleD')] = initial_state[3]
     
-    # Add cos/sin values
+    # Add cos/sin values to state
     initial_state_DataGen[cartpole_state_varnames_to_indices(['angle_cos', 'angle_sin'])] = [
         np.cos(initial_state_DataGen[cartpole_state_varname_to_index('angle')]),
         np.sin(initial_state_DataGen[cartpole_state_varname_to_index('angle')])
@@ -154,6 +157,7 @@ for i in range(number_of_experiments):
     )
     gen_start = timeit.default_timer()
 
+    ############ Profiling ############
     # with cProfile.Profile() as pr:
     #     CartPoleInstance.run_cartpole_random_experiment(
     #         csv=csv,
@@ -165,6 +169,7 @@ for i in range(number_of_experiments):
     #     stats.sort_stats('time')
     #     stats.dump_stats('.prof_stats')
     #     stats.print_stats()
+    ###################################
 
     CartPoleInstance.run_cartpole_random_experiment(
         csv=csv,
