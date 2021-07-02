@@ -31,7 +31,9 @@ while True:
         record_path += "/Recordings"
         break
 
-number_of_experiments = 500  # How many experiments will be generated
+############ CHANGE THESE PARAMETERS AS YOU LIKE ############
+# How many experiments will be generated
+number_of_experiments = 500
 
 ###### Train/Val/Test split
 frac_train = 0.8
@@ -45,7 +47,7 @@ dt_save_DataGen = 0.02  # save datapoints in csv in this interval
 
 ###### CartPole settings
 ### Length of each experiment in s:
-length_of_experiment_DataGen = 12  
+length_of_experiment_DataGen = 4  
 
 ### Controller which should be used in generated experiment:
 controller_DataGen = 'mppi'
@@ -169,18 +171,6 @@ for i in range(number_of_experiments):
     )
     gen_start = timeit.default_timer()
 
-    # with cProfile.Profile() as pr:
-    #     CartPoleInstance.run_cartpole_random_experiment(
-    #         csv=csv,
-    #         save_mode=save_mode
-    #     )
-    # with open('profiling_stats.txt', 'w') as stream:
-    #     stats = Stats(pr, stream=stream)
-    #     stats.strip_dirs()
-    #     stats.sort_stats('time')
-    #     stats.dump_stats('.prof_stats')
-    #     stats.print_stats()
-
     CartPoleInstance.run_cartpole_random_experiment(
         csv=csv,
         save_mode=save_mode,
@@ -190,10 +180,5 @@ for i in range(number_of_experiments):
     gen_end = timeit.default_timer()
     gen_dt = (gen_end - gen_start) * 1000.0
     print('time to generate data: {} ms'.format(gen_dt))
-
-    # try:
-    #     CartPoleInstance.controller.controller_report()
-    # except:
-    #     pass
 
 # os.system('say "Antonio! Todo ha terminado!"')

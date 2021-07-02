@@ -26,12 +26,6 @@ config = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'con
 record_path = "./Experiment_Recordings/"
 
 ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
-number_of_experiments = 1  # How many experiments will be generated
-
-###### Train/Val/Test split
-frac_train = 0.8
-frac_val = 0.19
-
 save_mode = 'offline'  # It was intended to save memory usage, but it doesn't seems to help. Leave it false.
 
 ###### Timescales
@@ -82,7 +76,7 @@ initial_state = [start_random_target_position_at_DataGen, None, None, None]
 
 initial_state_DataGen = create_cartpole_state()
 
-for i in range(number_of_experiments):
+for i in range(1):
     try: os.makedirs(record_path)
     except: pass
 
