@@ -37,7 +37,7 @@ Optionally:
     conda install memory_profiler imageio
     pip install ptvsd
 
-Alternatively, you can create a pip venv and `pip install -r requirements.txt`. Note that in this case you might want to uninstall the `ptvsd` package unless you use VS Code. Commands to create requirements files in macOS are `conda list -e > requirements.txt` and `pip freeze > requirements.txt`.
+Alternatively, you can `pip install -r requirements.txt` in a conda env or pip venv. Note that in this case you might want to uninstall the `ptvsd` package unless you use VS Code. Commands to create requirements files in macOS are `conda list -e > requirements.txt` and `pip freeze > requirements.txt`.
 
 ## Basic Operation
 1. **Run GUI:** Run `python run_cartpole_gui.py` from top-level path.
