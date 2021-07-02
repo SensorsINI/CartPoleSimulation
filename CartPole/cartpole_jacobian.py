@@ -3,6 +3,7 @@ from typing import Union
 
 import numpy as np
 
+from CartPole.cartpole_model import _cartpole_ode
 from CartPole.state_utilities import (
     create_cartpole_state, cartpole_state_varname_to_index,
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
@@ -23,42 +24,12 @@ import sympy as sym
 from sympy.utilities.lambdify import lambdify, implemented_function
 
 
-def _cartpole_ode(angle, angleD, positionD, u):
-    """Should be the same function as in CartPole.cartpole_model,
-    except that sympy trigonometric functions are used here
-    """
-    ca = sym.cos(-angle)
-    sa = sym.sin(-angle)
-
-    A = m * (ca ** 2) - (k + 1) * (M + m)
-
-    positionDD = (
-        (
-            + m * g * sa * ca
-            - ((J_fric * (-angleD) * ca) / L)
-            - (k + 1) * (
-                + (m * L * (angleD ** 2) * sa)
-                - M_fric * positionD
-                + u
-            )
-        ) / A
-    )
-
-    angleDD = (
-        (
-            g * sa - positionDD * ca - (J_fric * (-angleD)) / (m * L) 
-        ) / ((k + 1) * L)
-    ) * (-1.0)
-
-    return angleDD, positionDD
-
-
 x, v, t, o, u = sym.symbols("x,v,t,o,u")
 k, M, m, L, J_fric, M_fric, g = sym.symbols("k,M,m,L,J_fric,M_fric,g")
 
 xD = v
 tD = o
-oD, vD = _cartpole_ode(t, o, v, u)
+oD, vD, _, _ = _cartpole_ode(sym.cos(-t), sym.sin(-t), o, v, u)
 
 
 xx = sym.diff(xD, x, 1)

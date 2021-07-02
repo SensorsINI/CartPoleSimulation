@@ -58,9 +58,10 @@ rc('font', **font)
 
 import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
-
 PATH_TO_CONTROLLERS = config["cartpole"]["PATH_TO_CONTROLLERS"]
-PATH_TO_EXPERIMENT_RECORDINGS = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS"]
+
+config = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'config.yml')), Loader=yaml.FullLoader)
+PATH_TO_EXPERIMENT_RECORDINGS = config["paths"]["PATH_TO_EXPERIMENT_RECORDINGS"]
 
 
 class CartPole:
@@ -389,7 +390,7 @@ class CartPole:
                 self.csv_filepath = PATH_TO_EXPERIMENT_RECORDINGS + 'CP_' + self.controller_name + str(
                     datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')) + '.csv'
             else:
-                self.csv_filepath = PATH_TO_EXPERIMENT_RECORDINGS + csv_name
+                self.csv_filepath = csv_name
                 if csv_name[-4:] != '.csv':
                     self.csv_filepath += '.csv'
 
@@ -711,7 +712,7 @@ class CartPole:
         else:
             raise ValueError('Unknown save mode value')
 
-        # Create csv file for savign
+        # Create csv file for saving
         self.save_history_csv(csv_name=csv, mode='init', length_of_experiment=self.length_of_experiment)
 
         # Save 0th timestep
@@ -747,6 +748,10 @@ class CartPole:
             self.save_history_csv(csv_name=csv, mode='save offline')
         
         if show_summary_plots: self.summary_plots()
+
+        mean_abs_dist = np.mean([np.abs(self.dict_history["position"][i] - self.dict_history["target_position"][i]) for i in range(len(self.dict_history["target_position"]))])
+        mean_abs_angle = np.mean(np.abs(self.dict_history["angle"])) * 180.0 / np.pi
+        print(f"Mean absolute distance to target: {mean_abs_dist}m\nMean absolute angle: {mean_abs_angle}deg")
 
         # Set CartPole state - the only use is to make sure that experiment history is discared
         # Maybe you can delete this line

@@ -45,9 +45,10 @@ from CartPole.state_utilities import (
     STATE_VARIABLES
 )
 import yaml, os
-config = yaml.load(open(os.path.join('SI_Toolkit', 'config.yml'), 'r'), Loader=yaml.FullLoader)
+config = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'config.yml'), 'r'), Loader=yaml.FullLoader)
 
-PATH_TO_NORMALIZATION_INFO = config['modeling']['PATH_TO_NORMALIZATION_INFO']
+PATH_TO_NORMALIZATION_INFO = config['paths']['PATH_TO_EXPERIMENT_RECORDINGS'] + config['paths']['path_to_experiment'] + "NormalizationInfo/"
+PATH_TO_NORMALIZATION_INFO += os.listdir(PATH_TO_NORMALIZATION_INFO)[0]
 
 @jit(nopython=True, cache=True, fastmath=True)
 def edge_bounce(angle, angleD, position, positionD, t_step):
@@ -82,7 +83,7 @@ def next_state_numba(angle, angleD, angleDD, angle_cos, angle_sin, position, pos
 
         angle, angleD, position, positionD = edge_bounce_wrapper(angle, angleD, position, positionD, t_step)
 
-        angleDD, positionDD, angle_cos, angle_sin = _cartpole_ode_numba(angle, angleD, positionD, u)
+        angleDD, positionDD, angle_cos, angle_sin = _cartpole_ode_numba(np.cos(-angle), np.sin(-angle), angleD, positionD, u)
 
     return angle, angleD, angleDD, position, positionD, positionDD, angle_cos, angle_sin
 
@@ -171,7 +172,8 @@ class predictor_ideal:
 
         # Calculate second derivatives of initial state
         self.angleDD, self.positionDD, self.angle_cos, self.angle_sin = _cartpole_ode_numba(
-            self.angle,
+            np.cos(-self.angle),
+            np.sin(-self.angle),
             self.angleD,
             self.positionD,
             self.u[:, 0]

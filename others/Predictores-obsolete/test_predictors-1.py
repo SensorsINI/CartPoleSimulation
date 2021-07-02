@@ -19,7 +19,7 @@ horizon = 10 // downsampling
 start_at = 20
 autoregres_at_after_start = 20
 
-datafile = glob.glob('./ExperimentRecordings/Test/' + '*.csv')[0]
+datafile = glob.glob('./Experiment_Recordings/Test/' + '*.csv')[0]
 features = ['angle_cos', 'angle_sin', 'angle', 'angleD', 'position', 'positionD']
 feature_to_plot = features[4]
 

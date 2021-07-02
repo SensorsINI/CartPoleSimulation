@@ -40,7 +40,7 @@ except:
         raise AttributeError('Normalization info not found.')
 
 # datafile = glob.glob('./data/validate/' + '*.csv')[0]
-datafile = glob.glob('./ExperimentRecordings/Test/' + '*.csv')[0]
+datafile = glob.glob('./Experiment_Recordings/Test/' + '*.csv')[0]
 features = ['angle_cos', 'angle_sin', 'angle', 'angleD', 'position', 'positionD']
 feature_to_plot = features[2]
 

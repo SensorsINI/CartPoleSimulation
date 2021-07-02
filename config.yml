@@ -5,20 +5,21 @@ controller:
     num_rollouts: 2000                      # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_type: "Euler"               # One of ["Euler", "NeuralNet"]
-    NET_NAME: 'GRU-6IN-16H1-16H2-5OUT-0'  # Network to use for prediction with MPPI Controller. Only matters if predictor_type: "NeuralNet"
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01
     ekc_weight: 5.0
     cc_weight: 1.0
     ccrc_weight: 1.0
+    cost_noise: 0.0                       # Noise on stage cost weights by +/- this value
+    control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
     NU: 1000.0                            # Exploration variance
     SQRTRHOINV: 0.01                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"                  # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
-    LOGGING: False
+    LOGGING: False                        # Collect and show detailed insights into the controller's behavior
   custom_mpc_scipy:
     DT: 0.1
     # method: 'L-BFGS-B'
@@ -37,11 +38,11 @@ controller:
     m3: 0.0  # position_cost
     m4: 0.0  # positionD_cost
   do_mpc_discrete:
-    dt_mpc_simulation: 0.2  # s
-    mpc_horizon: 10
+    dt_mpc_simulation: 0.02  # s
+    mpc_horizon: 50
   do_mpc:
-    dt_mpc_simulation: 0.2  # s
-    mpc_horizon: 10
+    dt_mpc_simulation: 0.02  # s
+    mpc_horizon: 50
     # Perturbation factors:
     # Change of output from optimal
     p_Q: 0.00
@@ -61,7 +62,6 @@ controller:
     mpc_horizon: 10
 cartpole:
   PATH_TO_CONTROLLERS: './Controllers/'  # Path where controllers are stored
-  PATH_TO_EXPERIMENT_RECORDINGS: './ExperimentRecordings/'  # Path where the experiments data is stored
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   M: 0.230  # mass of cart, kg # Checked by Antonio
   L: "0.395/2.0"  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi

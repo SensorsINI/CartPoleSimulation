@@ -21,7 +21,7 @@ tested_predictor_1 = predictor_autoregressive_tf(horizon=horizon, dt=DT)
 tested_predictor_2 = predictor_ideal(horizon=horizon, dt=DT)
 
 # datafile = glob.glob('./data/validate/' + '*.csv')[0]
-datafile = glob.glob('./ExperimentRecordings/Test/' + '*.csv')[0]
+datafile = glob.glob('./Experiment_Recordings/Test/' + '*.csv')[0]
 features = ['angle_cos', 'angle_sin', 'angle', 'angleD', 'position', 'positionD']
 feature_to_plot = features[0]
 
