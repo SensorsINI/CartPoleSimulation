@@ -42,7 +42,7 @@ controller:
     mpc_horizon: 50
   do_mpc:
     dt_mpc_simulation: 0.02  # s
-    mpc_horizon: 10
+    mpc_horizon: 50
     # Perturbation factors:
     # Change of output from optimal
     p_Q: 0.00
