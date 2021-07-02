@@ -51,7 +51,7 @@ The 0-angle state is always defined as pole in upright position. This currently 
 s0 = create_cartpole_state()
 
 
-def _cartpole_ode(angle, angleD, positionD, u):
+def _cartpole_ode(ca, sa, angleD, positionD, u):
     """
     Calculates current values of second derivative of angle and position
     from current value of angle and position, and their first derivatives
@@ -61,9 +61,6 @@ def _cartpole_ode(angle, angleD, positionD, u):
 
     :returns: angular acceleration, horizontal acceleration
     """
-    ca = np.cos(angle)
-    sa = np.sin(angle)
-
     if CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
         # Clockwise rotation is defined as negative
         # force and cart movement to the right are defined as positive
@@ -74,10 +71,10 @@ def _cartpole_ode(angle, angleD, positionD, u):
 
         positionDD = (
             (
-                + m * g * (-sa) * ca  # Movement of the cart due to gravity
+                + m * g * sa * ca  # Movement of the cart due to gravity
                 - ((J_fric * (-angleD) * ca) / L)  # Movement of the cart due to pend' s friction in the joint
                 - (k + 1) * (
-                    + (m * L * (angleD ** 2) * (-sa))  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                    + (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
                     - M_fric * positionD  # Braking of the cart due its friction
                     + u  # Effect of force applied to cart
                 )
@@ -93,7 +90,7 @@ def _cartpole_ode(angle, angleD, positionD, u):
 
         angleDD = (
             (
-                g * (-sa) - positionDD * ca - (J_fric * (-angleD)) / (m * L) 
+                g * sa - positionDD * ca - (J_fric * (-angleD)) / (m * L) 
             ) / ((k + 1) * L)
         ) * (-1.0)
 
@@ -103,7 +100,7 @@ def _cartpole_ode(angle, angleD, positionD, u):
     else:
         raise ValueError('An undefined name for Cartpole equations')
 
-    return angleDD, positionDD, ca, sa
+    return angleDD, positionDD, ca, -sa
 
 
 _cartpole_ode_numba = jit(_cartpole_ode, nopython=True, cache=True, fastmath=True)
@@ -111,14 +108,15 @@ _cartpole_ode_numba = jit(_cartpole_ode, nopython=True, cache=True, fastmath=Tru
 
 def cartpole_ode_namespace(s: SimpleNamespace, u: float):
     angleDD, positionDD, _, _ = _cartpole_ode(
-        s.angle, s.angleD, s.positionD, u
+        np.cos(-s.angle), np.sin(-s.angle), s.angleD, s.positionD, u
     )
     return angleDD, positionDD
 
 
 def cartpole_ode(s: np.ndarray, u: float):
+    angle = s[..., ANGLE_IDX]
     angleDD, positionDD, _, _ = _cartpole_ode_numba(
-        s[..., ANGLE_IDX], s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u
+        np.cos(-angle), np.sin(-angle), s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u
     )
     return angleDD, positionDD
 
