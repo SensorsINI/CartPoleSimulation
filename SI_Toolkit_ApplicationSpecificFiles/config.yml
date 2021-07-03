@@ -1,0 +1,26 @@
+modeling:
+  NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'
+  RNN_FULL_NAME: 'GRU-6IN-64H1-64H2-5OUT-0'
+  RNN_PATH: './save_tf/'
+  PREDICTION_FEATURES_NAMES: ['angle_cos', 'angle_sin', 'angleD', 'position', 'positionD']
+
+paths:
+  # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
+  path_to_experiment: 'Pretrained-RNN-1/'
+  PATH_TO_EXPERIMENT_RECORDINGS: './SI_Toolkit_ApplicationSpecificFiles/Experiments/'  # Path where the experiments data is stored
+
+training_default:
+  # For training closed loop dynamics model:
+  control_inputs: ['Q']
+  state_inputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
+  outputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
+  # For training open loop dynamics model:
+  # inputs = ['position', 'positionD', 'angle_sin', 'angle_cos', 'angleD']
+  # outputs = inputs_list
+  # For training of RNN imitating MPC:
+  # inputs = ['position', 'positionD', 'angle', 'angleD', 'target_position']
+  # outputs = ['Q']
+
+testing:
+  tests: ['GRU-6IN-32H1-32H2-5OUT-0']  # May be 'Euler', Euler-predictor, name of network or None = 'Dense-16H1-16H2'
+  TEST_FILE: 'Experiment-1.csv'
