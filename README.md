@@ -93,7 +93,7 @@ For Pycharm default, for Atom install
 
 ## Parameter exploration with NNI
 
-For intellegent parameter space exploration with NNI, we have 2 special files : 
+For intelligent parameter space exploration with NNI, we have 2 special files : 
 
 1. modeling/rnn_tf/search_space.json : Search space for parameter search
 2. config.yml : Configuring the NNI experiments. 
