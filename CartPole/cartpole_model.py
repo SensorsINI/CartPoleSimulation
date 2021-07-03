@@ -121,6 +121,23 @@ def cartpole_ode(s: np.ndarray, u: float):
     return angleDD, positionDD
 
 
+@jit(nopython=True, cache=True, fastmath=True)
+def edge_bounce(angle, angleD, position, positionD, t_step):
+    if abs(position) >= TrackHalfLength:
+        angleD -= 2 * (positionD * np.cos(angle)) / L
+        angle += angleD * t_step
+        positionD = -positionD
+        position += positionD * t_step
+    return angle, angleD, position, positionD
+
+
+@jit(nopython=True, cache=True, fastmath=True)
+def edge_bounce_wrapper(angle, angleD, position, positionD, t_step):
+    for i in range(position.size):
+        angle[i], angleD[i], position[i], positionD[i] = edge_bounce(angle[i], angleD[i], position[i], positionD[i], t_step)
+    return angle, angleD, position, positionD
+
+
 def Q2u(Q):
     """
     Converts dimensionless motor power [-1,1] to a physical force acting on a cart.
@@ -132,6 +149,27 @@ def Q2u(Q):
     )  # Q is drive -1:1 range, add noise on control
 
     return u
+
+
+@jit(nopython=True, cache=True, fastmath=True)
+def euler_step(state, stateD, t_step):
+    state += stateD * t_step
+    return state
+
+
+@jit(nopython=True, cache=True, fastmath=True)
+def next_state_numba(angle, angleD, angleDD, angle_cos, angle_sin, position, positionD, positionDD, u, t_step, intermediate_steps):
+    for _ in range(intermediate_steps):
+        angle = euler_step(angle, angleD, t_step)
+        angleD = euler_step(angleD, angleDD, t_step)
+        position = euler_step(position, positionD, t_step)
+        positionD = euler_step(positionD, positionDD, t_step)
+
+        angle, angleD, position, positionD = edge_bounce_wrapper(angle, angleD, position, positionD, t_step)
+
+        angleDD, positionDD, angle_cos, angle_sin = _cartpole_ode_numba(np.cos(-angle), np.sin(-angle), angleD, positionD, u)
+
+    return angle, angleD, angleDD, position, positionD, positionDD, angle_cos, angle_sin
 
 
 if __name__ == '__main__':

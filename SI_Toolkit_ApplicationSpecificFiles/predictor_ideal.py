@@ -32,12 +32,11 @@ Using predictor:
 #TODO: for the moment it is not possible to update RNN more often than mpc dt
 #   Updating it more often will lead to false results.
 
-from numba import jit
 import numpy as np
 
 from SI_Toolkit.load_and_normalize import load_normalization_info, normalize_numpy_array
 from CartPole.cartpole_model import (
-    L, Q2u, _cartpole_ode_numba, TrackHalfLength
+    L, Q2u, _cartpole_ode_numba, TrackHalfLength, next_state_numba
 )
 
 from CartPole.state_utilities import (
@@ -50,42 +49,6 @@ config = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'con
 PATH_TO_NORMALIZATION_INFO = config['paths']['PATH_TO_EXPERIMENT_RECORDINGS'] + config['paths']['path_to_experiment'] + "NormalizationInfo/"
 PATH_TO_NORMALIZATION_INFO += os.listdir(PATH_TO_NORMALIZATION_INFO)[0]
 
-@jit(nopython=True, cache=True, fastmath=True)
-def edge_bounce(angle, angleD, position, positionD, t_step):
-    if abs(position) >= TrackHalfLength:
-        angleD -= 2 * (positionD * np.cos(angle)) / L
-        angle += angleD * t_step
-        positionD = -positionD
-        position += positionD * t_step
-    return angle, angleD, position, positionD
-
-
-@jit(nopython=True, cache=True, fastmath=True)
-def edge_bounce_wrapper(angle, angleD, position, positionD, t_step):
-    for i in range(position.size):
-        angle[i], angleD[i], position[i], positionD[i] = edge_bounce(angle[i], angleD[i], position[i], positionD[i], t_step)
-    return angle, angleD, position, positionD
-
-
-@jit(nopython=True, cache=True, fastmath=True)
-def euler_step(state, stateD, t_step):
-    state += stateD * t_step
-    return state
-
-
-@jit(nopython=True, cache=True, fastmath=True)
-def next_state_numba(angle, angleD, angleDD, angle_cos, angle_sin, position, positionD, positionDD, u, t_step, intermediate_steps):
-    for _ in range(intermediate_steps):
-        angle = euler_step(angle, angleD, t_step)
-        angleD = euler_step(angleD, angleDD, t_step)
-        position = euler_step(position, positionD, t_step)
-        positionD = euler_step(positionD, positionDD, t_step)
-
-        angle, angleD, position, positionD = edge_bounce_wrapper(angle, angleD, position, positionD, t_step)
-
-        angleDD, positionDD, angle_cos, angle_sin = _cartpole_ode_numba(np.cos(-angle), np.sin(-angle), angleD, positionD, u)
-
-    return angle, angleD, angleDD, position, positionD, positionDD, angle_cos, angle_sin
 
 class predictor_ideal:
     def __init__(self, horizon, dt, intermediate_steps=1):
@@ -110,7 +73,6 @@ class predictor_ideal:
         self.batch_mode = False
 
         self.output = None
-
 
     def setup(self, initial_state: np.ndarray, prediction_denorm=False):
 
@@ -156,7 +118,6 @@ class predictor_ideal:
             t_step=self.t_step,
             intermediate_steps=self.intermediate_steps
         )
-
 
     def predict(self, Q: np.ndarray) -> np.ndarray:
 

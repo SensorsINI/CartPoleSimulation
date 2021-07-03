@@ -9,10 +9,9 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 
 # region Imported modules
 
-from SI_Toolkit_ApplicationSpecificFiles.predictor_ideal import edge_bounce, euler_step
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
 from CartPole.state_utilities import ANGLED_IDX, ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX, POSITIOND_IDX, POSITION_IDX, cartpole_state_varname_to_index, cartpole_state_index_to_varname, cartpole_state_varnames_to_indices
-from CartPole.cartpole_model import Q2u, cartpole_ode, s0
+from CartPole.cartpole_model import Q2u, cartpole_ode, s0, edge_bounce, euler_step
 from others.p_globals import P_GLOBALS
 
 import numpy as np
@@ -59,10 +58,7 @@ rc('font', **font)
 import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 PATH_TO_CONTROLLERS = config["cartpole"]["PATH_TO_CONTROLLERS"]
-
-config = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'config.yml')), Loader=yaml.FullLoader)
-PATH_TO_EXPERIMENT_RECORDINGS = config["paths"]["PATH_TO_EXPERIMENT_RECORDINGS"]
-
+PATH_TO_EXPERIMENT_RECORDINGS = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS"]
 
 class CartPole:
 
@@ -351,7 +347,6 @@ class CartPole:
         )
 
     # Determine the dimensionless [-1,1] value of the motor power Q
-    # The function loads an external controller from PATH_TO_CONTROLLERS
     # This function should be called for the first time to calculate 0th time step
     # Otherwise it goes out of sync with saving
     def Update_Q(self):
