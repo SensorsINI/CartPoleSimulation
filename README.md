@@ -1,5 +1,7 @@
 # README
 
+![Alt Text](https://github.com)
+
 ## Tutorial
 Check our [tutorial](https://youtu.be/ad3t2cUHbts "LTC Tutorial CartPoleSimulator") which will guide you through installation and explain basic functionalities! It is now our most up to date resource!
 
