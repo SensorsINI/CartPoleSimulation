@@ -58,11 +58,16 @@ rc('font', **font)
 import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 PATH_TO_CONTROLLERS = config["cartpole"]["PATH_TO_CONTROLLERS"]
-PATH_TO_EXPERIMENT_RECORDINGS = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS"]
+PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
 class CartPole:
 
-    def __init__(self, initial_state=s0):
+    def __init__(self, initial_state=s0, path_to_experiment_recordings=None):
+
+        if path_to_experiment_recordings is None:
+            self.path_to_experiment_recordings = PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT
+        else:
+            self.path_to_experiment_recordings = path_to_experiment_recordings
 
         # Global time of the simulation
         self.time = 0.0
@@ -376,13 +381,13 @@ class CartPole:
 
             # Make folder to save data (if not yet existing)
             try:
-                os.makedirs(PATH_TO_EXPERIMENT_RECORDINGS[:-1])
+                os.makedirs(self.path_to_experiment_recordings[:-1])
             except FileExistsError:
                 pass
 
             # Set path where to save the data
             if csv_name is None or csv_name == '':
-                self.csv_filepath = PATH_TO_EXPERIMENT_RECORDINGS + 'CP_' + self.controller_name + str(
+                self.csv_filepath = self.path_to_experiment_recordings + 'CP_' + self.controller_name + str(
                     datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')) + '.csv'
             else:
                 self.csv_filepath = csv_name
@@ -467,11 +472,12 @@ class CartPole:
 
     # load csv file with experiment recording (e.g. for replay)
     def load_history_csv(self, csv_name=None):
+
         # Set path where to save the data
         if csv_name is None or csv_name == '':
-            # get the latest file
+            # get the latest file from the default location
             try:
-                list_of_files = glob.glob(PATH_TO_EXPERIMENT_RECORDINGS + '/*.csv')
+                list_of_files = glob.glob(self.path_to_experiment_recordings + '/*.csv')
                 file_path = max(list_of_files, key=os.path.getctime)
             except FileNotFoundError:
                 print('Cannot load: No experiment recording found in data folder ' + './data/')
@@ -483,12 +489,14 @@ class CartPole:
 
             # check if file found in DATA_FOLDER_NAME or at local starting point
             if not os.path.isfile(filename):
-                file_path = os.path.join(PATH_TO_EXPERIMENT_RECORDINGS, filename)
+                file_path = os.path.join(self.path_to_experiment_recordings, filename)
                 if not os.path.isfile(file_path):
                     print(
                         'Cannot load: There is no experiment recording file with name {} at local folder or in {}'.format(
-                            filename, PATH_TO_EXPERIMENT_RECORDINGS))
+                            filename, self.path_to_experiment_recordings))
                     return False
+            else:
+                file_path = filename
 
         # Get race recording
         print('Loading file {}'.format(file_path))
