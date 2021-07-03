@@ -1,11 +1,11 @@
 # README
 
-![Alt Text](https://github.com)
+![Alt Text](https://raw.githubusercontent.com/SensorsINI/CartPoleSimulation/master/others/Media/CartPoleSimulator.gif "CartPole Simulator Demo")
 
 ## Tutorial
-Check our [tutorial](https://youtu.be/ad3t2cUHbts "LTC Tutorial CartPoleSimulator") which will guide you through installation and explain basic functionalities! It is now our most up to date resource!
+Check our [tutorial](https://youtu.be/ad3t2cUHbts "LTC Tutorial CartPoleSimulator") which will guide you through installation and explain basic functionalities!
 
-## Installation:
+## Installation
 
 Get the code from Github:
 
@@ -13,33 +13,25 @@ Get the code from Github:
 
 Create conda environment with 
 
-	conda create -n CartPoleSimulation python=3.8 matplotlib pyqt pandas tqdm scipy gitpython numba pyyaml tensorflow sympy
-    pip install do_mpc
+	conda create -n CartPoleSimulation python=3.8
+    conda activate CartPoleSimulation
 
-In the “Manual Stabilization” mode you can provide the control input (motor power related to the force acting on the cart) by hovering with your mouse over the lower chart. Due to some bug (or maybe rather specific Cart-Pole system parameters) everything happens to fast to make it doable now.
+Preferable way to install python packages:
+`pip install -r requirements.txt` in a conda env or pip venv.
 
-    conda install memory_profiler
+This file was created and tested on macOS,
+running on Linux and Windows may require some minor changes
+and/or installing some packages manually.
+However, the Simulator should work on all major OSes (macOS, Linux, Windows).
 
-Optionally to create gifs:
+Note that you might want to uninstall the `ptvsd` package
+unless you use VS Code. This package enables debugging in VS Code,
+however causes proliferation of useless warnings if imported in another environment.
 
-    conda install imageio
-
-Optionally if you work in Visual Studio Code IDE:
-(Don't install otherwise you will get a lot of ugly warnings)
-
-    pip install ptvsd
-
-If environment already created, install packages with:
-
-    conda install matplotlib pyqt pandas tqdm scipy gitpython
-    pip install do_mpc
-
-Optionally:
-
-    conda install memory_profiler imageio
-    pip install ptvsd
-
-Alternatively, you can `pip install -r requirements.txt` in a conda env or pip venv. Note that in this case you might want to uninstall the `ptvsd` package unless you use VS Code. Commands to create requirements files in macOS are `conda list -e > requirements.txt` and `pip freeze > requirements.txt`.
+We created the requirements.txt
+on macOS with `pip list --format=freeze > requirements.txt`.
+It required some minor manual corrections (deleting the package versions) to make the re-installation smooth.
+It should be also possible to create this file with `conda list -e > requirements.txt`.
 
 ## Basic Operation
 1. **Run GUI:** Run `python run_cartpole_gui.py` from top-level path.
@@ -55,6 +47,7 @@ You can use this repository to generate training data, train a neural network mo
 4. Normalize the data using `python -m SI_Toolkit.load_and_normalize`. This creates a normalization file within the experiment folder set in step 3.
 5. Train a model. Type `python -m SI_Toolkit.TF.Train -h` for a list of parameters you can define. Some default values are set in the same config as in step 3 and can also be modified there. Now run the Train module with all parameter flags that you wish. You will want to specify the network architecture. Training will store a new model within a subfolder `Models/` in the chosen experiment folder.
 6. Test the model. Run `python -m SI_Toolkit.Testing.run_brunton_test` which selects the test run set in config and compares the model's predictions versus true model behavior in Brunton-style plots. You can again see all params with the flag `-h`. If the script breaks, set a smaller `--test_len`.
+   ![Alt Text](https://raw.githubusercontent.com/SensorsINI/CartPoleSimulation/master/others/Media/Brunton.gif "Brunton plots Demo")
 7. Run MPPI with the trained model. Define an experiment in `single_cartpole_run.py`, and select "NeuralNet" in the top-level config file. The results can be replayed in GUI.
 
 ## Structure:
