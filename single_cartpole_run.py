@@ -163,6 +163,9 @@ for i in range(1):
     #     stats.sort_stats('time')
     #     stats.dump_stats('.prof_stats')
     #     stats.print_stats()
+    # This will save a file profiling_stats.txt in top-level directory
+    # Visualize bottlenecks and code runtime using
+    # snakeviz profiling_stats.txt
     ###################################
 
     CartPoleInstance.run_cartpole_random_experiment(
