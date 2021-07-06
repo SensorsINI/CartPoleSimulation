@@ -3,22 +3,14 @@ import numpy as np
 
 
 STATE_VARIABLES = np.sort(
-    ['angle',
-     'angleD',
-     'angle_cos',
-     'angle_sin',
-     'position',
-     'positionD',
-     ]
+    ["angle", "angleD", "angle_cos", "angle_sin", "position", "positionD",]
 )
 
-STATE_INDICES = {x: np.where(STATE_VARIABLES==x)[0][0] for x in STATE_VARIABLES}
+STATE_INDICES = {x: np.where(STATE_VARIABLES == x)[0][0] for x in STATE_VARIABLES}
 
-CONTROL_INPUTS = np.sort(
-    ['Q']
-)
+CONTROL_INPUTS = np.sort(["Q"])
 
-CONTROL_INDICES = {x: np.where(CONTROL_INPUTS==x)[0][0] for x in CONTROL_INPUTS}
+CONTROL_INDICES = {x: np.where(CONTROL_INPUTS == x)[0][0] for x in CONTROL_INPUTS}
 
 """Define indices of values in state statically"""
 ANGLE_IDX = STATE_INDICES["angle"].item()
@@ -29,7 +21,7 @@ ANGLE_COS_IDX = STATE_INDICES["angle_cos"].item()
 ANGLE_SIN_IDX = STATE_INDICES["angle_sin"].item()
 
 
-def create_cartpole_state(state: dict={}, dtype=None) -> np.ndarray:
+def create_cartpole_state(state: dict = {}, dtype=None) -> np.ndarray:
     """
     Constructor of cartpole state from named arguments. The order of variables is fixed in STATE_VARIABLES.
 
