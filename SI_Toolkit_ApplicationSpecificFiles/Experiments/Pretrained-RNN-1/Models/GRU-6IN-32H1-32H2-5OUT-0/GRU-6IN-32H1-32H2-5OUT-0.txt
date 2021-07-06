@@ -20,7 +20,7 @@ TYPE:
 GRU
 
 NORMALIZATION:
-./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-32/Models/GRU-6IN-32H1-32H2-5OUT-0/NI_2021-06-29_12-02-03.csv
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/Pretrained-RNN-1/Models/GRU-6IN-32H1-32H2-5OUT-0/NI_2021-06-29_12-02-03.csv
 
 SAMPLING INTERVAL:
 0.02 s
@@ -32,10 +32,10 @@ WASH OUT LENGTH:
 10
 
 TRAINING_FILES:
-./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-32//Recordings/Train/
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/Pretrained-RNN-1/Recordings/Train/
 
 VALIDATION_FILES:
-./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-32//Recordings/Train/
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/Pretrained-RNN-1/Recordings/Train/
 
 TEST_FILES:
-./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-32//Recordings/Train/
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/Pretrained-RNN-1/Recordings/Train/
