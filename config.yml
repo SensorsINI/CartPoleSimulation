@@ -62,7 +62,7 @@ controller:
     mpc_horizon: 10
 cartpole:
   PATH_TO_CONTROLLERS: './Controllers/'  # Path where controllers are stored
-  PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './ExperimentRecordings/'   # Where to save experiment recording per default
+  PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   M: 0.230  # mass of cart, kg # Checked by Antonio
   L: "0.395/2.0"  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi
