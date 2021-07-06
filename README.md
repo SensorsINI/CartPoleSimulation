@@ -41,14 +41,14 @@ It should be also possible to create this file with `conda list -e > requirement
 
 You can use this repository to generate training data, train a neural network model using SI_Toolkit, and run the resulting controller.
 
-1. Define all the params in `run_data_generator.py` and `config.yml` to your liking.
-2. Run `python run_data_generator.py`. This will create a new experiment folder `./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-[X]/`. You will work in this folder from now on. Within there, in `Recordings/` there is now a set of CSVs saved and split up into Train/Validate/Test folders.
+1. Define all the parameters in `run_data_generator.py` and `config.yml` to your liking.
+2. Run `python -m SI_Toolkit_ApplicationSpecificFiles.run_data_generator_for_ML_Pipeline`. This will create a new experiment folder `./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-[X]/`. You will work in this folder from now on. Within there, in `Recordings/` there is now a set of CSVs saved and split up into Train/Validate/Test folders. Also, copies of the current configuration files are saved there.
 3. In `./SI_Toolkit_ApplicationSpecificFiles/config.yml` you can now set `paths/path_to_experiment:` to the newly created one. All pipeline-related scripts access this parameter to know which data to work on and where to store the models.
 4. Normalize the data using `python -m SI_Toolkit.load_and_normalize`. This creates a normalization file within the experiment folder set in step 3.
 5. Train a model. Type `python -m SI_Toolkit.TF.Train -h` for a list of parameters you can define. Some default values are set in the same config as in step 3 and can also be modified there. Now run the Train module with all parameter flags that you wish. You will want to specify the network architecture. Training will store a new model within a subfolder `Models/` in the chosen experiment folder.
 6. Test the model. Run `python -m SI_Toolkit.Testing.run_brunton_test` which selects the test run set in config and compares the model's predictions versus true model behavior in Brunton-style plots. You can again see all params with the flag `-h`. If the script breaks, set a smaller `--test_len`.
    ![Alt Text](https://raw.githubusercontent.com/SensorsINI/CartPoleSimulation/master/others/Media/Brunton.gif "Brunton plots Demo")
-7. Run MPPI with the trained model. Define an experiment in `single_cartpole_run.py`, and select "NeuralNet" in the top-level config file. The results can be replayed in GUI.
+7. Run MPPI with the trained model. Define an experiment in `run_data_generator.py`, select "NeuralNet" in the top-level config file, and run `python -m run_data_generator`. The results can be replayed in GUI.
 
 ## Structure:
 
