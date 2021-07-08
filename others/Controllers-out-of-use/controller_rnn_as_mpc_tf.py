@@ -9,7 +9,7 @@ import copy
 import yaml, os
 config = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'config.yml'), 'r'), Loader=yaml.FullLoader)
 
-RNN_FULL_NAME = config['modeling']['TensorFlow']['RNN_FULL_NAME']
+RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0'
 INPUTS_LIST = config['modeling']['TensorFlow']['INPUTS_LIST']
 OUTPUTS_LIST = config['modeling']['TensorFlow']['OUTPUTS_LIST']
 PATH_SAVE = config['modeling']['TensorFlow']['PATH_SAVE']

@@ -10,7 +10,7 @@ from CartPole.state_utilities import create_cartpole_state, cartpole_state_varna
 import yaml, os
 config = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'config.yml'), 'r'), Loader=yaml.FullLoader)
 
-RNN_FULL_NAME = config['modeling']['PyTorch']['RNN_FULL_NAME']
+RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0'
 INPUTS_LIST = config['modeling']['PyTorch']['INPUTS_LIST']
 OUTPUTS_LIST = config['modeling']['PyTorch']['OUTPUTS_LIST']
 PATH_SAVE = config['modeling']['PyTorch']['PATH_SAVE']
