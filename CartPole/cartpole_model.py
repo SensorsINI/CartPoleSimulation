@@ -51,7 +51,8 @@ The 0-angle state is always defined as pole in upright position. This currently 
 s0 = create_cartpole_state()
 
 
-def _cartpole_ode(ca, sa, angleD, positionD, u):
+def _cartpole_ode_adaptive(ca, sa, angleD, positionD, u,
+                            k, M, m, g, J_fric, M_fric, L):
     """
     Calculates current values of second derivative of angle and position
     from current value of angle and position, and their first derivatives
@@ -102,13 +103,21 @@ def _cartpole_ode(ca, sa, angleD, positionD, u):
 
     return angleDD, positionDD, ca, -sa
 
+def _cartpole_ode(ca, sa, angleD, positionD, u):
+    return _cartpole_ode_adaptive(ca, sa, angleD, positionD, u,
+                                    k, M, m, g, J_fric, M_fric, L)
 
-_cartpole_ode_numba = jit(_cartpole_ode, nopython=True, cache=True, fastmath=True)
 
+_cartpole_ode_numba_adaptive = jit(_cartpole_ode_adaptive, nopython=True, cache=True, fastmath=True)
+
+def _cartpole_ode_numba(ca, sa, angleD, positionD, u):
+    return _cartpole_ode_numba_adaptive(ca, sa, angleD, positionD, u,
+                                        k, M, m, g, J_fric, M_fric, L)
 
 def cartpole_ode_namespace(s: SimpleNamespace, u: float):
-    angleDD, positionDD, _, _ = _cartpole_ode(
-        np.cos(-s.angle), np.sin(-s.angle), s.angleD, s.positionD, u
+    angleDD, positionDD, _, _ = _cartpole_ode_adaptive(
+        np.cos(-s.angle), np.sin(-s.angle), s.angleD, s.positionD, u,
+        k, M, m, g, J_fric, M_fric, L
     )
     return angleDD, positionDD
 
@@ -122,7 +131,7 @@ def cartpole_ode(s: np.ndarray, u: float):
 
 
 @jit(nopython=True, cache=True, fastmath=True)
-def edge_bounce(angle, angleD, position, positionD, t_step):
+def edge_bounce_adaptive(angle, angleD, position, positionD, t_step, L):
     if abs(position) >= TrackHalfLength:
         angleD -= 2 * (positionD * np.cos(angle)) / L
         angle += angleD * t_step
@@ -131,12 +140,17 @@ def edge_bounce(angle, angleD, position, positionD, t_step):
     return angle, angleD, position, positionD
 
 
+def edge_bounce(angle, angleD, position, positionD, t_step):
+    return edge_bounce_adaptive(angle, angleD, position, positionD, t_step, L)
+
 @jit(nopython=True, cache=True, fastmath=True)
-def edge_bounce_wrapper(angle, angleD, position, positionD, t_step):
+def edge_bounce_wrapper_adaptive(angle, angleD, position, positionD, t_step, L):
     for i in range(position.size):
-        angle[i], angleD[i], position[i], positionD[i] = edge_bounce(angle[i], angleD[i], position[i], positionD[i], t_step)
+        angle[i], angleD[i], position[i], positionD[i] = edge_bounce_adaptive(angle[i], angleD[i], position[i], positionD[i], t_step, L)
     return angle, angleD, position, positionD
 
+def edge_bounce_wrapper(angle, angleD, position, positionD, t_step):
+    return edge_bounce_wrapper_adaptive(angle, angleD, position, positionD, t_step, L)
 
 def Q2u(Q):
     """
@@ -158,18 +172,25 @@ def euler_step(state, stateD, t_step):
 
 
 @jit(nopython=True, cache=True, fastmath=True)
-def next_state_numba(angle, angleD, angleDD, angle_cos, angle_sin, position, positionD, positionDD, u, t_step, intermediate_steps):
+def next_state_numba_adaptive(angle, angleD, angleDD, angle_cos, angle_sin, position, positionD, positionDD, u, t_step, intermediate_steps,
+                              k, M, m, g, J_fric, M_fric, L):
     for _ in range(intermediate_steps):
         angle = euler_step(angle, angleD, t_step)
         angleD = euler_step(angleD, angleDD, t_step)
         position = euler_step(position, positionD, t_step)
         positionD = euler_step(positionD, positionDD, t_step)
 
-        angle, angleD, position, positionD = edge_bounce_wrapper(angle, angleD, position, positionD, t_step)
+        angle, angleD, position, positionD = edge_bounce_wrapper_adaptive(angle, angleD, position, positionD, t_step, L)
 
-        angleDD, positionDD, angle_cos, angle_sin = _cartpole_ode_numba(np.cos(-angle), np.sin(-angle), angleD, positionD, u)
+        angleDD, positionDD, angle_cos, angle_sin = _cartpole_ode_numba_adaptive(np.cos(-angle), np.sin(-angle), angleD, positionD, u,
+                                                                                 k, M, m, g, J_fric, M_fric, L)
 
     return angle, angleD, angleDD, position, positionD, positionDD, angle_cos, angle_sin
+
+
+def next_state_numba(angle, angleD, angleDD, angle_cos, angle_sin, position, positionD, positionDD, u, t_step, intermediate_steps):
+    return next_state_numba_adaptive(angle, angleD, angleDD, angle_cos, angle_sin, position, positionD, positionDD, u, t_step, intermediate_steps,
+                                     k, M, m, g, J_fric, M_fric, L)
 
 
 if __name__ == '__main__':
