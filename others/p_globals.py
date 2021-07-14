@@ -27,7 +27,8 @@ P_GLOBALS.k = float(config["cartpole"]["k"].split("/")[0])/float(config["cartpol
 
 
 # Export variables as global
-k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, controlBias, TrackHalfLength = (
+def export_globals():
+    return (
     np.array(P_GLOBALS.k, dtype=np.float32),
     np.array(P_GLOBALS.M, dtype=np.float32),
     np.array(P_GLOBALS.m, dtype=np.float32),
@@ -42,6 +43,8 @@ k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, co
     np.array(P_GLOBALS.controlBias, dtype=np.float32),
     np.array(P_GLOBALS.TrackHalfLength, dtype=np.float32)
 )
+
+k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, controlBias, TrackHalfLength = export_globals()
 
 
 

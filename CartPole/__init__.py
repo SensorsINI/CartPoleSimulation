@@ -17,6 +17,7 @@ from others.p_globals import P_GLOBALS
 from others.p_globals import (
     k, M, m, g, J_fric, M_fric, L, v_max, u_max,
     sensorNoise, controlDisturbance, controlBias, TrackHalfLength,
+    export_globals
 )
 
 import numpy as np
@@ -379,7 +380,7 @@ class CartPole:
         ...
         # Example code incrementing Cart mass at each iteration
         # global L
-        # L[...] = L*0.99
+        # L[...] = L*0.9999
 
 
     # endregion
@@ -847,6 +848,11 @@ class CartPole:
     # set in this function (reset_mode = 1)
     # provide by user (reset_mode = 1), by giving s, Q and target_position
     def set_cartpole_state_at_t0(self, reset_mode=1, s=None, Q=None, target_position=None):
+
+        # reset global variables
+        global k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, controlBias, TrackHalfLength
+        k[...], M[...], m[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], sensorNoise[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
+
         self.time = 0.0
         if reset_mode == 0:  # Don't change it
             self.s[cartpole_state_varname_to_index('position')] = self.s[cartpole_state_varname_to_index('positionD')] = self.positionDD = 0.0
@@ -981,6 +987,7 @@ class CartPole:
         self.y_plane = 0.0
         self.y_wheel = self.y_plane + self.WheelRadius
         self.MastHight = 10.0  # For drawing only. For calculation see L
+        self.PoleInitialPhysicalHight = float(L)
         self.MastThickness = 0.05
         self.TrackHalfLengthGraphics = 50.0  # Full Length of the track
 
@@ -1115,6 +1122,7 @@ class CartPole:
         # Draw mast
         mast_position = (self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics - (self.MastThickness / 2.0))
         self.Mast.set_x(mast_position)
+        self.Mast.set_height(self.MastHight*(float(L)/self.PoleInitialPhysicalHight))
         # Draw rotated mast
         t21 = transforms.Affine2D().translate(-mast_position, -1.25 * self.WheelRadius)
         if ANGLE_CONVENTION == 'CLOCK-NEG':
