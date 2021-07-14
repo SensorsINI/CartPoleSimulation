@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 from numpy import float32
+import numpy as np
 import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
@@ -27,19 +28,19 @@ P_GLOBALS.k = float(config["cartpole"]["k"].split("/")[0])/float(config["cartpol
 
 # Export variables as global
 k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, controlBias, TrackHalfLength = (
-    float32(P_GLOBALS.k),
-    float32(P_GLOBALS.M),
-    float32(P_GLOBALS.m),
-    float32(P_GLOBALS.g),
-    float32(P_GLOBALS.J_fric),
-    float32(P_GLOBALS.M_fric),
-    float32(P_GLOBALS.L),
-    float32(P_GLOBALS.v_max),
-    float32(P_GLOBALS.u_max),
-    float32(P_GLOBALS.sensorNoise),
-    float32(P_GLOBALS.controlDisturbance),
-    float32(P_GLOBALS.controlBias),
-    float32(P_GLOBALS.TrackHalfLength)
+    np.array(P_GLOBALS.k),
+    np.array(P_GLOBALS.M),
+    np.array(P_GLOBALS.m),
+    np.array(P_GLOBALS.g),
+    np.array(P_GLOBALS.J_fric),
+    np.array(P_GLOBALS.M_fric),
+    np.array(P_GLOBALS.L),
+    np.array(P_GLOBALS.v_max),
+    np.array(P_GLOBALS.u_max),
+    np.array(P_GLOBALS.sensorNoise),
+    np.array(P_GLOBALS.controlDisturbance),
+    np.array(P_GLOBALS.controlBias),
+    np.array(P_GLOBALS.TrackHalfLength)
 )
 
 CARTPOLE_EQUATIONS = 'Marcin-Sharpneat'
