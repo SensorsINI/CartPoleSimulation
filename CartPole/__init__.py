@@ -14,6 +14,11 @@ from CartPole.state_utilities import ANGLED_IDX, ANGLE_COS_IDX, ANGLE_IDX, ANGLE
 from CartPole.cartpole_model import Q2u, cartpole_ode, s0, edge_bounce, euler_step
 from others.p_globals import P_GLOBALS
 
+from others.p_globals import (
+    k, M, m, g, J_fric, M_fric, L, v_max, u_max,
+    sensorNoise, controlDisturbance, controlBias, TrackHalfLength,
+)
+
 import numpy as np
 import pandas as pd
 
@@ -82,9 +87,6 @@ class CartPole:
         self.u = 0.0  # Physical force acting on the cart
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
         self.target_position = 0.0
-
-        # Physical parameters of the CartPole
-        self.p = P_GLOBALS
 
         # region Time scales for simulation step, controller update and saving data
         # See last paragraph of "Time scales" section for explanations
@@ -216,6 +218,9 @@ class CartPole:
     # We assume this function is called for the first time to calculate first time step
     # @profile(precision=4)
     def update_state(self):
+
+        self.update_parameters()
+
         # Update the total time of the simulation
         self.time = self.time + self.dt_simulation
 
@@ -227,13 +232,13 @@ class CartPole:
                 return
 
             self.target_position = self.random_track_f(self.time)
-            self.slider_value = self.target_position/self.p.TrackHalfLength  # Assign target position to slider to display it
+            self.slider_value = self.target_position/TrackHalfLength  # Assign target position to slider to display it
         else:
             if self.controller_name == 'manual-stabilization':
                 self.target_position = 0.0  # In this case target position is not used.
                 # This just fill the corresponding column in history with zeros
             else:
-                self.target_position = self.slider_value * self.p.TrackHalfLength  # Get target position from slider
+                self.target_position = self.slider_value * TrackHalfLength  # Get target position from slider
 
         # Calculate the next state
         self.cartpole_integration()
@@ -370,6 +375,13 @@ class CartPole:
 
             self.dt_controller_steps_counter = 0
 
+    def update_parameters(self):
+        ...
+        # Example code incrementing Cart mass at each iteration
+        # global L
+        # L[...] = L*0.99
+
+
     # endregion
 
     # region 2. Methods related to experiment history as a whole: saving, loading, plotting, resetting
@@ -435,8 +447,8 @@ class CartPole:
 
                 writer.writerow(['#'])
                 writer.writerow(['# Parameters:'])
-                for k in self.p.__dict__:
-                    writer.writerow(['# ' + k + ': ' + str(getattr(self.p, k))])
+                for k in P_GLOBALS.__dict__:
+                    writer.writerow(['# ' + k + ': ' + str(getattr(P_GLOBALS, k))])
                 writer.writerow(['#'])
 
                 writer.writerow(['# Data:'])
@@ -564,7 +576,7 @@ class CartPole:
             number_of_turning_points = int(np.floor(self.length_of_experiment * self.track_relative_complexity))
 
             y = np.random.uniform(-1.0, 1.0, number_of_turning_points)
-            y = y * self.used_track_fraction * self.p.TrackHalfLength
+            y = y * self.used_track_fraction * TrackHalfLength
 
             if number_of_turning_points == 0:
                 y = np.append(y, 0.0)
@@ -622,10 +634,10 @@ class CartPole:
         def random_track_f_truncated(time):
 
             target_position = random_track_f(time)
-            if target_position > 0.8 * self.p.TrackHalfLength:
-                target_position = 0.8 * self.p.TrackHalfLength
-            elif target_position < -0.8 * self.p.TrackHalfLength:
-                target_position = -0.8 * self.p.TrackHalfLength
+            if target_position > 0.8 * TrackHalfLength:
+                target_position = 0.8 * TrackHalfLength
+            elif target_position < -0.8 * TrackHalfLength:
+                target_position = -0.8 * TrackHalfLength
 
             return target_position
 
@@ -852,7 +864,7 @@ class CartPole:
             if self.controller_name == 'manual-stabilization':
                 self.target_position = 0.0
             else:
-                self.target_position = self.slider_value * self.p.TrackHalfLength
+                self.target_position = self.slider_value * TrackHalfLength
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
@@ -972,7 +984,7 @@ class CartPole:
         self.MastThickness = 0.05
         self.TrackHalfLengthGraphics = 50.0  # Full Length of the track
 
-        self.physical_to_graphics = (self.TrackHalfLengthGraphics-self.WheelToMiddle)/self.p.TrackHalfLength  # TrackHalfLength is the effective length of track
+        self.physical_to_graphics = (self.TrackHalfLengthGraphics-self.WheelToMiddle)/TrackHalfLength  # TrackHalfLength is the effective length of track
         self.graphics_to_physical = 1.0/self.physical_to_graphics
 
         self.y_acceleration_arrow = 1.5 * self.WheelRadius
@@ -1076,7 +1088,7 @@ class CartPole:
             pass
         else:
             locs = np.array([-50.0, -37.5, -25.0, -12.5, - 0.0, 12.5, 25.0, 37.5, 50.0])/50.0
-            labels = [str(np.around(np.array(x * self.p.TrackHalfLength), 3)) for x in locs]
+            labels = [str(np.around(np.array(x * TrackHalfLength), 3)) for x in locs]
             AxSlider.xaxis.set_major_locator(plt.FixedLocator(locs))
             AxSlider.xaxis.set_major_formatter(plt.FixedFormatter(labels))
 

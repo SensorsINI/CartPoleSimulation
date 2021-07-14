@@ -43,6 +43,8 @@ from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
 
 from Controllers.template_controller import template_controller
 
+from others.p_globals import L
+
 config = yaml.load(
     open(os.path.join("SI_Toolkit_ApplicationSpecificFiles", "config.yml"), "r"), Loader=yaml.FullLoader
 )
@@ -460,6 +462,7 @@ class controller_mppi(template_controller):
         :return: A normed control value in the range [-1.0, 1.0]
         :rtype: np.float32
         """
+
         self.s = s
         self.target_position = np.float32(target_position)
 

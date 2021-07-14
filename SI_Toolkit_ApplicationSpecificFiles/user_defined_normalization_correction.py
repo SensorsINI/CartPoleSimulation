@@ -1,5 +1,5 @@
 import numpy as np
-from others.p_globals import P_GLOBALS
+from others.p_globals import TrackHalfLength, u_max
 
 
 def apply_user_defined_normalization_correction(df_norm_info):
@@ -33,8 +33,8 @@ def apply_user_defined_normalization_correction(df_norm_info):
 
     df_norm_info.loc['mean', 'position'] = 0.0
     df_norm_info.loc['std', 'position'] = df_norm_info.loc['std', 'position']  # no change
-    df_norm_info.loc['max', 'position'] = P_GLOBALS.TrackHalfLength
-    df_norm_info.loc['min', 'position'] = -P_GLOBALS.TrackHalfLength
+    df_norm_info.loc['max', 'position'] = np.float32(TrackHalfLength)
+    df_norm_info.loc['min', 'position'] = -np.float32(TrackHalfLength)
 
     df_norm_info.loc['mean', 'positionD'] = 0.0
     df_norm_info.loc['std', 'positionD'] = df_norm_info.loc['std', 'positionD']
@@ -50,8 +50,8 @@ def apply_user_defined_normalization_correction(df_norm_info):
 
     df_norm_info.loc['mean', 'u'] = 0.0
     df_norm_info.loc['std', 'u'] = df_norm_info.loc['std', 'u']
-    df_norm_info.loc['max', 'u'] = P_GLOBALS.u_max
-    df_norm_info.loc['min', 'u'] = - P_GLOBALS.u_max
+    df_norm_info.loc['max', 'u'] = np.float32(u_max)
+    df_norm_info.loc['min', 'u'] = - np.float32(u_max)
 
     df_norm_info.loc['mean', 'Q'] = 0.0
     df_norm_info.loc['std', 'Q'] = df_norm_info.loc['std', 'Q']
@@ -60,7 +60,7 @@ def apply_user_defined_normalization_correction(df_norm_info):
 
     df_norm_info.loc['mean', 'target_position'] = 0.0
     df_norm_info.loc['std', 'target_position'] = df_norm_info.loc['std', 'target_position']
-    df_norm_info.loc['max', 'target_position'] = P_GLOBALS.TrackHalfLength
-    df_norm_info.loc['min', 'target_position'] = -P_GLOBALS.TrackHalfLength
+    df_norm_info.loc['max', 'target_position'] = np.float32(TrackHalfLength)
+    df_norm_info.loc['min', 'target_position'] = -np.float32(TrackHalfLength)
 
     return df_norm_info

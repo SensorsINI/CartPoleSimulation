@@ -2,7 +2,7 @@
 
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import TrackHalfLength, s0, Q2u, cartpole_ode
-from others.p_globals import P_GLOBALS
+from others.p_globals import v_max
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
 
 import matplotlib.pyplot as plt
@@ -77,7 +77,7 @@ class controller_mpc_opti(template_controller):
         self.Q_hat0 = np.zeros(self.mpc_horizon)  # initial guess for future control inputs to be predicted
         self.Q_previous = 0.0
 
-        self.E_kin_cart = lambda s: (s[cartpole_state_varname_to_index('positionD')] / P_GLOBALS.v_max) ** 2
+        self.E_kin_cart = lambda s: (s[cartpole_state_varname_to_index('positionD')] / v_max) ** 2
         self.E_kin_pol = lambda s: (s[cartpole_state_varname_to_index('angleD')] / (2 * np.pi)) ** 2
         self.E_pot_cost = lambda s: 1-np.cos(s[cartpole_state_varname_to_index('angle')])
         self.distance_difference = lambda s: (((s[cartpole_state_varname_to_index('position')] - self.target_position) / TrackHalfLength)) ** 2

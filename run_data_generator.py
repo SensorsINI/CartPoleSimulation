@@ -1,6 +1,6 @@
 from CartPole import CartPole
 from CartPole.cartpole_model import create_cartpole_state, TrackHalfLength
-from others.p_globals import P_GLOBALS
+from others.p_globals import TrackHalfLength
 from CartPole.state_utilities import cartpole_state_varname_to_index, cartpole_state_varnames_to_indices
 
 import os
@@ -112,7 +112,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
         if initial_state[1] is None:
             initial_state_DataGen[cartpole_state_varname_to_index('positionD')] = np.random.uniform(low=-1.0,
-                                                                                                    high=1.0) * P_GLOBALS.TrackHalfLength *0.01
+                                                                                                    high=1.0) * TrackHalfLength *0.01
         else:
             initial_state_DataGen[cartpole_state_varname_to_index('positionD')] = initial_state[1]
 

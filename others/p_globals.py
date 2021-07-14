@@ -28,19 +28,21 @@ P_GLOBALS.k = float(config["cartpole"]["k"].split("/")[0])/float(config["cartpol
 
 # Export variables as global
 k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, controlBias, TrackHalfLength = (
-    np.array(P_GLOBALS.k),
-    np.array(P_GLOBALS.M),
-    np.array(P_GLOBALS.m),
-    np.array(P_GLOBALS.g),
-    np.array(P_GLOBALS.J_fric),
-    np.array(P_GLOBALS.M_fric),
-    np.array(P_GLOBALS.L),
-    np.array(P_GLOBALS.v_max),
-    np.array(P_GLOBALS.u_max),
-    np.array(P_GLOBALS.sensorNoise),
-    np.array(P_GLOBALS.controlDisturbance),
-    np.array(P_GLOBALS.controlBias),
-    np.array(P_GLOBALS.TrackHalfLength)
+    np.array(P_GLOBALS.k, dtype=np.float32),
+    np.array(P_GLOBALS.M, dtype=np.float32),
+    np.array(P_GLOBALS.m, dtype=np.float32),
+    np.array(P_GLOBALS.g, dtype=np.float32),
+    np.array(P_GLOBALS.J_fric, dtype=np.float32),
+    np.array(P_GLOBALS.M_fric, dtype=np.float32),
+    np.array(P_GLOBALS.L, dtype=np.float32),
+    np.array(P_GLOBALS.v_max, dtype=np.float32),
+    np.array(P_GLOBALS.u_max, dtype=np.float32),
+    np.array(P_GLOBALS.sensorNoise, dtype=np.float32),
+    np.array(P_GLOBALS.controlDisturbance, dtype=np.float32),
+    np.array(P_GLOBALS.controlBias, dtype=np.float32),
+    np.array(P_GLOBALS.TrackHalfLength, dtype=np.float32)
 )
+
+
 
 CARTPOLE_EQUATIONS = 'Marcin-Sharpneat'
