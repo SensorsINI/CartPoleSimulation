@@ -2,19 +2,12 @@
 Model Predictive Path Integral Controller
 Based on Williams, Aldrich, Theodorou (2015)
 """
-
+from SI_Toolkit.TF.TF_Functions.Loss import loss_msr_sequence_customizable
 # Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
 # On other OS you have to chose a different interactive backend.
 # from matplotlib import use
 # # # use('TkAgg')
 # use('macOSX')
-
-import copy
-
-from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max,
-    sensorNoise, controlDisturbance, controlBias, TrackHalfLength,
-)
 
 import os
 
@@ -49,14 +42,19 @@ from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
 )
 
 from Controllers.template_controller import template_controller
-
-from others.p_globals import L
+from SI_Toolkit.TF.Parameters import args
+import tensorflow as tf
+from SI_Toolkit.TF.TF_Functions.Loss import loss_msr_sequence_customizable
+from tensorflow import keras
 
 config = yaml.load(
     open(os.path.join("SI_Toolkit_ApplicationSpecificFiles", "config.yml"), "r"), Loader=yaml.FullLoader
 )
-
+config_top = yaml.load(
+    open("config.yml", "r"), Loader=yaml.FullLoader
+)
 NET_NAME = config["modeling"]["NET_NAME"]
+ADAPT = config_top["controller"]["mppi"]["adapt"]
 try:
     NET_TYPE = NET_NAME.split("-")[0]
 except AttributeError:  # Should get Attribute Error if NET_NAME is None
@@ -71,7 +69,6 @@ num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 update_every = config["controller"]["mppi"]["update_every"]
 predictor_type = config["controller"]["mppi"]["predictor_type"]
 
-WASH_OUT_LEN = config["controller"]["mppi"]["WASH_OUT_LEN"]
 
 """Parameters weighting the different cost components"""
 dd_weight = config["controller"]["mppi"]["dd_weight"]
@@ -87,6 +84,14 @@ dd_noise = ep_noise = ekp_noise = ekc_noise = cc_noise = config["controller"]["m
     "cost_noise"
 ]
 
+
+dd_weight = dd_weight * (1 + dd_noise * np.random.uniform(-1.0, 1.0))
+ep_weight = ep_weight * (1 + ep_noise * np.random.uniform(-1.0, 1.0))
+ekp_weight = ekp_weight * (1 + ekp_noise * np.random.uniform(-1.0, 1.0))
+ekc_weight = ekc_weight * (1 + ekc_noise * np.random.uniform(-1.0, 1.0))
+cc_weight = cc_weight * (1 + cc_noise * np.random.uniform(-1.0, 1.0))
+
+
 gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = gui_ccrc = np.zeros(1, dtype=np.float32)
 
 
@@ -97,6 +102,9 @@ NU = config["controller"]["mppi"]["NU"]
 SQRTRHODTINV = config["controller"]["mppi"]["SQRTRHOINV"] * (1 / np.math.sqrt(dt))
 GAMMA = config["controller"]["mppi"]["GAMMA"]
 SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
+
+"""Random number generator"""
+rng = Generator(SFC64(int((datetime.now() - datetime(1970, 1, 1)).total_seconds())))
 
 
 """Init logging variables"""
@@ -170,15 +178,12 @@ def penalize_deviation(cc, u):
 
 """Define Predictor"""
 if predictor_type == "Euler":
-    predictor = predictor_ideal(horizon=mpc_samples, dt=dt, intermediate_steps=10)
+    predictor = predictor_ideal(horizon=mpc_samples, dt=dt, intermediate_steps=1)
 elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
         horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
 
-predictor_true_equations = predictor_ideal(
-    horizon=mpc_samples, dt=dt, intermediate_steps=10
-)
 
 def trajectory_rollouts(
     s: np.ndarray,
@@ -362,22 +367,30 @@ class controller_mppi(template_controller):
     """
 
     def __init__(self):
+        if ADAPT:
+            self.measured_system_state = None  # MT
+            self.predicted_system_state = None  # MT
+            self.prev_control_input = None  # MT
+            self.prev_system_state = None  # MT
+            self.shift_reg_len = 5#10000
+            self.window_len = 2
+            self.training_shift_reg_input = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.inputs)))
+            self.training_shift_reg_output = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.outputs)))
+            self.window_counter = 0
+            self.shift_reg_index = 0
+            self.ready_to_train = False
+            self.training_count = 0
+            self.window_error = np.zeros((self.window_len, len(predictor.net_info.outputs)))
 
-        """Random number generator"""
-        SEED = config["controller"]["mppi"]["SEED"]
-        if SEED == "None":
-            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
-        self.rng_mppi = Generator(SFC64(SEED))
-        self.rng_mppi_rnn = Generator(SFC64(SEED*2)) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
 
-
-        global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
-        dd_weight = dd_weight * (1 + dd_noise * self.rng_mppi.uniform(-1.0, 1.0))
-        ep_weight = ep_weight * (1 + ep_noise * self.rng_mppi.uniform(-1.0, 1.0))
-        ekp_weight = ekp_weight * (1 + ekp_noise * self.rng_mppi.uniform(-1.0, 1.0))
-        ekc_weight = ekc_weight * (1 + ekc_noise * self.rng_mppi.uniform(-1.0, 1.0))
-        cc_weight = cc_weight * (1 + cc_noise * self.rng_mppi.uniform(-1.0, 1.0))
-
+            a = args()
+            predictor.net.compile(
+                #loss=loss_msr_sequence_customizable(wash_out_len=a.wash_out_len,
+                #                                    post_wash_out_len=a.post_wash_out_len,
+                #                                    discount_factor=1.0),
+                loss=keras.losses.MeanSquaredError(),
+                optimizer=keras.optimizers.Adam(0.000001)
+            )
         # State of the cart
         self.s = create_cartpole_state()
 
@@ -394,8 +407,8 @@ class controller_mppi(template_controller):
         self.delta_u = np.zeros((num_rollouts, mpc_samples), dtype=np.float32)
         self.S_tilde_k = np.zeros((num_rollouts), dtype=np.float32)
 
-        self.wash_out_len = WASH_OUT_LEN
-        self.warm_up_countdown = self.wash_out_len
+        self.warm_up_len = 100
+        self.warm_up_countdown = self.warm_up_len
         try:
             from Controllers.controller_lqr import controller_lqr
 
@@ -429,22 +442,22 @@ class controller_mppi(template_controller):
         """
         if sampling_type == "random_walk":
             delta_u = np.empty((num_rollouts, mpc_samples), dtype=np.float32)
-            delta_u[:, 0] = stdev * self.rng_mppi.standard_normal(
+            delta_u[:, 0] = stdev * rng.standard_normal(
                 size=(num_rollouts,), dtype=np.float32
             )
             for i in range(1, mpc_samples):
-                delta_u[:, i] = delta_u[:, i - 1] + stdev * self.rng_mppi.standard_normal(
+                delta_u[:, i] = delta_u[:, i - 1] + stdev * rng.standard_normal(
                     size=(num_rollouts,), dtype=np.float32
                 )
         elif sampling_type == "uniform":
             delta_u = np.empty((num_rollouts, mpc_samples), dtype=np.float32)
             for i in range(0, mpc_samples):
-                delta_u[:, i] = self.rng_mppi.uniform(
+                delta_u[:, i] = rng.uniform(
                     low=-1.0, high=1.0, size=(num_rollouts,)
                 ).astype(np.float32)
         elif sampling_type == "repeated":
             delta_u = np.tile(
-                stdev * self.rng_mppi.standard_normal(size=(num_rollouts, 1), dtype=np.float32),
+                stdev * rng.standard_normal(size=(num_rollouts, 1), dtype=np.float32),
                 (1, mpc_samples),
             )
         elif sampling_type == "interpolated":
@@ -454,14 +467,14 @@ class controller_mppi(template_controller):
             t_interp = np.arange(start=0, stop=range_stop, step=1)
             t_interp = np.delete(t_interp, t)
             delta_u = np.zeros(shape=(num_rollouts, range_stop), dtype=np.float32)
-            delta_u[:, t] = stdev * self.rng_mppi.standard_normal(
+            delta_u[:, t] = stdev * rng.standard_normal(
                 size=(num_rollouts, t.size), dtype=np.float32
             )
             f = interp1d(t, delta_u[:, t])
             delta_u[:, t_interp] = f(t_interp)
             delta_u = delta_u[:, :mpc_samples]
         else:
-            delta_u = stdev * self.rng_mppi.standard_normal(
+            delta_u = stdev * rng.standard_normal(
                 size=(num_rollouts, mpc_samples), dtype=np.float32
             )
 
@@ -480,6 +493,40 @@ class controller_mppi(template_controller):
         :rtype: np.float32
         """
 
+        if ADAPT:
+            self.measured_system_state = s.copy()
+            if self.prev_control_input is not None:
+                model_input = np.insert(self.prev_system_state[1:], 0, self.prev_control_input)
+                x = tf.reshape(model_input,
+                               [-1, 1, len(predictor.net_info.inputs)])
+                y = tf.reshape(self.measured_system_state[1:],
+                               [-1, 1, len(predictor.net_info.outputs)])
+                self.training_shift_reg_input[self.shift_reg_index] = x
+                self.training_shift_reg_output[self.shift_reg_index] = y
+                self.shift_reg_index += 1
+
+                percent_error = np.abs(
+                    (self.predicted_system_state - self.measured_system_state[1:]) / 1)
+                self.window_error[self.window_counter] = percent_error
+                if self.shift_reg_index == self.shift_reg_len:
+                    self.shift_reg_index = 0
+                    if self.ready_to_train is False:
+                        self.ready_to_train = True
+                if self.window_counter == self.window_len - 1:
+                    if self.ready_to_train:
+                        print('\nADAPTIVE TRAINING! @ Time = ', time)
+                        self.training_count += 1
+                        print('Training Count: ', self.training_count)
+                        predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=1,
+                                          batch_size=8, shuffle=True)  # make this
+                        # predictor.net.evaluate(x=self.training_shift_reg_input, y=self.training_shift_reg_output,
+                        #                  batch_size=32)
+                    self.window_counter = 0
+                    print('\nWindow Avg Error: ', np.round(np.mean(self.window_error, axis=0), 4))
+                    print('AVG: ', np.mean(np.mean(self.window_error, axis=0)))
+                else:
+                    self.window_counter += 1
+        # Need to find the current measured system state, the predicted system state and the control input
         self.s = s
         self.target_position = np.float32(target_position)
 
@@ -548,10 +595,7 @@ class controller_mppi(template_controller):
             and predictor_type == "NeuralNet"
         ):
             self.warm_up_countdown -= 1
-            if abs(s[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small
-                Q = self.auxiliary_controller.step(s, target_position)
-            else:
-                Q = self.rng_mppi_rnn.uniform(-1, 1)  # Apply random input to let RNN "feel" the system behaviour
+            Q = self.auxiliary_controller.step(s, target_position)
         else:
             Q = self.u[0]
 
@@ -572,7 +616,7 @@ class controller_mppi(template_controller):
         #     Q = np.random.uniform(-1.0, 1.0)
 
         # Add noise on top of the calculated Q value to better explore state space
-        Q = np.float32(Q * (1 + p_Q * self.rng_mppi.uniform(-1.0, 1.0)))
+        Q = np.float32(Q * (1 + p_Q * np.random.uniform(-1.0, 1.0)))
         # Clip inputs to allowed range
         Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
 
@@ -588,7 +632,217 @@ class controller_mppi(template_controller):
         Q_update = np.tile(Q, (num_rollouts, 1))
         predictor.update_internal_state(Q_update)
 
+        # MT
+        if ADAPT:
+            self.prev_control_input = Q.copy()
+            x = np.insert(self.measured_system_state[1:], 0, Q)
+            model_input = tf.reshape(x,
+                                     [-1, 1, len(predictor.net_info.inputs)])
+            self.predicted_system_state = np.reshape(predictor.net.predict(model_input), (5,))
+
+            self.prev_system_state = self.measured_system_state.copy()
+
         return Q  # normed control input in the range [-1,1]
+
+    # def step(self, s: np.ndarray, target_position: np.float64, time=None):
+    #     """Perform controller step
+    #
+    #     :param s: State passed to controller after system has evolved for one step
+    #     :type s: np.ndarray
+    #     :param target_position: Target position where the cart should move to
+    #     :type target_position: np.float64
+    #     :param time: Time in seconds that has passed in the current experiment, defaults to None
+    #     :type time: float, optional
+    #     :return: A normed control value in the range [-1.0, 1.0]
+    #     :rtype: np.float32
+    #     """
+    #     #my code
+    #     #print('Window: ', self.window_counter)
+    #
+    #     if ADAPT:
+    #         self.prev_system_state = self.measured_system_state
+    #         self.measured_system_state = s  # MT index 0 might be angle....
+    #         if self.prev_control_input is not None:
+    #             # print('Measured :',  self.prev_control_input, np.round(self.measured_system_state[1:], 4))
+    #             # print('Predicted:', np.round(self.predicted_system_state, 4))
+    #             # mse_arr = (self.measured_system_state[1:] - self.predicted_system_state) ** 2
+    #             # mse = mse_arr.sum()
+    #             # #print('MSE_ARR  : ', np.round(mse_arr, 7))
+    #             # #print('MSE: ', mse)
+    #             # p_error = np.abs((self.measured_system_state[1:] - self.predicted_system_state) / self.predicted_system_state)
+    #             # print('Percent Error:', np.round(p_error, 5))
+    #             # avg_p_error = np.mean(p_error)
+    #             # print('AVG P Error:', np.round(avg_p_error, 5))
+    #             # print('In response to Q= ', self.prev_control_input)
+    #
+    #             # if avg_p_error > 0.25:
+    #             #     print('ADAPTING!')
+    #             #     model_input = np.insert(self.prev_system_state[1:], 0, self.prev_control_input)
+    #             #     x = tf.reshape(model_input,
+    #             #                      [-1, 1, len(predictor.net_info.inputs)])
+    #             #     y = tf.reshape(self.measured_system_state[1:],
+    #             #                      [-1, 1, len(predictor.net_info.outputs)])
+    #             #     print('Model input: ', x)
+    #             #     print('Model output: ', y)
+    #             #     predictor.net.fit(x=x, y=y, epochs=1) #make this >1?
+    #             model_input = np.insert(self.prev_system_state[1:], 0, self.prev_control_input)
+    #             x = tf.reshape(model_input,
+    #                            [-1, 1, len(predictor.net_info.inputs)])
+    #             y = tf.reshape(self.measured_system_state[1:],
+    #                            [-1, 1, len(predictor.net_info.outputs)])
+    #             self.training_shift_reg_input[self.shift_reg_index] = x
+    #             self.training_shift_reg_output[self.shift_reg_index] = y
+    #             self.shift_reg_index += 1
+    #
+    #             percent_error = np.abs(
+    #                 (self.predicted_system_state - self.measured_system_state[1:]) / 1)
+    #             avg_percent_error = np.mean(percent_error)
+    #
+    #             # print()
+    #             # print('Previous System State: ', x)
+    #             # print('Current System State:  ', y)
+    #             # print('Predicted System State: ', self.predicted_system_state)
+    #             # print('Percent Error:', percent_error)
+    #             # print('AVG: ', avg_percent_error)
+    #             # print()
+    #             self.window_error[self.window_counter] = percent_error
+    #             if self.shift_reg_index == self.shift_reg_len:
+    #                 self.shift_reg_index = 0
+    #                 if self.ready_to_train is False:
+    #                     self.ready_to_train = True
+    #             if self.window_counter == self.window_len - 1:
+    #                 if self.ready_to_train:
+    #                     print('\nADAPTIVE TRAINING! @ Time = ', time)
+    #                     #print('Model input: ', x)
+    #                     #print('Model output: ', y)
+    #                     self.training_count += 1
+    #                     print('Training Count: ', self.training_count)
+    #                     predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=1, batch_size=8, shuffle=True) #make this
+    #                     #predictor.net.evaluate(x=self.training_shift_reg_input, y=self.training_shift_reg_output,
+    #                     #                  batch_size=32)
+    #                 self.window_counter = 0
+    #                 print('\nWindow Avg Error: ', np.round(np.mean(self.window_error, axis=0),4))
+    #                 print('AVG: ', np.mean(np.mean(self.window_error, axis=0)))
+    #             else:
+    #                 self.window_counter += 1
+    #
+    #             #print()
+    #     # Need to find the current measured system state, the predicted system state and the control input
+    #     self.s = s
+    #     self.target_position = np.float32(target_position)
+    #
+    #     self.iteration += 1
+    #
+    #     # Adjust horizon if changed in GUI while running
+    #     # FIXME: For this to work with NeuralNet predictor we need to build a setter,
+    #     #  which also reinitialize arrays which size depends on horizon
+    #     predictor.horizon = mpc_samples
+    #     if mpc_samples != self.u.size:
+    #         self.update_control_vector()
+    #
+    #     if self.iteration % update_every == 0:
+    #         # Initialize perturbations and cost arrays
+    #         self.delta_u = self.initialize_perturbations(
+    #             # stdev=0.1 * (1 + 1 / (self.iteration + 1)),
+    #             stdev=SQRTRHODTINV,
+    #             sampling_type=SAMPLING_TYPE,
+    #         )  # du ~ N(mean=0, var=1/(rho*dt))
+    #         self.S_tilde_k = np.zeros_like(self.S_tilde_k, dtype=np.float32)
+    #
+    #         # Run parallel trajectory rollouts for different input perturbations
+    #         self.S_tilde_k = trajectory_rollouts(
+    #             self.s,
+    #             self.S_tilde_k,
+    #             self.u,
+    #             self.delta_u,
+    #             self.u_prev,
+    #             self.target_position,
+    #         )
+    #
+    #         # Update inputs with weighted perturbations
+    #         update_inputs(self.u, self.S_tilde_k, self.delta_u)
+    #
+    #         # Log states and costs incurred for plotting later
+    #         if LOGGING:
+    #             LOGS.get("cost_to_go").append(np.copy(self.S_tilde_k))
+    #             LOGS.get("inputs").append(np.copy(self.u))
+    #
+    #             # Simulate nominal rollout to plot the trajectory the controller wants to make
+    #             # Compute one rollout of shape (mpc_samples + 1) x s.size
+    #             if predictor_type == "Euler":
+    #                 predictor.setup(
+    #                     initial_state=np.copy(self.s), prediction_denorm=True
+    #                 )
+    #                 rollout_trajectory = predictor.predict(self.u)
+    #             elif predictor_type == "NeuralNet":
+    #                 predictor.setup(
+    #                     initial_state=np.tile(self.s, (num_rollouts, 1)),
+    #                     prediction_denorm=True,
+    #                 )
+    #                 # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
+    #                 rollout_trajectory = predictor.predict(
+    #                     np.tile(self.u, (num_rollouts, 1))
+    #                 )[0, ...]
+    #             LOGS.get("nominal_rollouts").append(np.copy(rollout_trajectory[:-1, :]))
+    #
+    #     if LOGGING:
+    #         LOGS.get("trajectory").append(np.copy(self.s))
+    #         LOGS.get("target_trajectory").append(np.copy(target_position))
+    #
+    #     if (
+    #         self.warm_up_countdown > 0
+    #         and self.auxiliary_controller_available
+    #         and (NET_TYPE == "GRU" or NET_TYPE == "LSTM" or NET_TYPE == "RNN")
+    #         and predictor_type == "NeuralNet"
+    #     ):
+    #         self.warm_up_countdown -= 1
+    #         Q = self.auxiliary_controller.step(s, target_position)
+    #     else:
+    #         Q = self.u[0]
+    #
+    #     # A snippet of code to switch on and off the controller to cover better the statespace with experimental data
+    #     # It stops controller when Pole is well stabilized (starting inputing random input)
+    #     # And re-enables it when angle exceedes 90 deg.
+    #     # if (abs(self.s[[ANGLE_IDX]]) < 0.01
+    #     #     and abs(self.s[[POSITION_IDX]]-self.target_position < 0.02)
+    #     #         and abs(self.s[[ANGLED_IDX]]) < 0.1
+    #     #             and abs(self.s[[POSITIOND_IDX]]) < 0.05):
+    #     #     self.control_enabled = False
+    #     # elif abs(self.s[[ANGLE_IDX]]) > np.pi/2:
+    #     #     self.control_enabled = True
+    #     #
+    #     # if self.control_enabled is True:
+    #     #     Q = self.u[0]
+    #     # else:
+    #     #     Q = np.random.uniform(-1.0, 1.0)
+    #
+    #     # Add noise on top of the calculated Q value to better explore state space
+    #     Q = np.float32(Q * (1 + p_Q * np.random.uniform(-1.0, 1.0)))
+    #     # Clip inputs to allowed range
+    #     Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
+    #
+    #     # Preserve current series of inputs
+    #     self.u_prev = np.copy(self.u)
+    #
+    #     # Index-shift inputs
+    #     self.u[:-1] = self.u[1:]
+    #     self.u[-1] = 0
+    #     # self.u = zeros_like(self.u)
+    #
+    #     # Prepare predictor for next timestep
+    #     Q_update = np.tile(Q, (num_rollouts, 1))
+    #     predictor.update_internal_state(Q_update)
+    #
+    #     # MT
+    #     if ADAPT:
+    #         self.prev_control_input = Q
+    #         x = np.insert(self.measured_system_state[1:], 0, Q)
+    #         model_input = tf.reshape(x,
+    #                                  [-1, 1, len(predictor.net_info.inputs)])
+    #         #print('Predict input: ', model_input)
+    #         self.predicted_system_state = np.reshape(predictor.net.predict(model_input), (5,))
+    #
+    #     return Q  # normed control input in the range [-1,1]
 
     def update_control_vector(self):
         """
@@ -731,6 +985,9 @@ class controller_mppi(template_controller):
             # For each rollout, calculate what the nominal trajectory would be using the known true model
             # This can uncover if the model used makes inaccurate predictions
             # shape(true_nominal_rollouts) = ITERATIONS x mpc_horizon x [position, positionD, angle, angleD]
+            predictor_true_equations = predictor_ideal(
+                horizon=mpc_samples, dt=dt, intermediate_steps=10
+            )
             predictor_true_equations.setup(
                 np.copy(nrlgs[:, 0, :]), prediction_denorm=True
             )
@@ -883,7 +1140,7 @@ class controller_mppi(template_controller):
     # but only if the controller is supposed to be reused without reloading (e.g. in GUI)
     def controller_reset(self):
         try:
-            self.warm_up_countdown = self.wash_out_len
+            self.warm_up_countdown = self.warm_up_len
             # TODO: Not sure if this works for predictor autoregressive tf
             predictor.net.reset_states()
         except:
