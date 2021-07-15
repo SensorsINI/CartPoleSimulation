@@ -87,7 +87,6 @@ def _cartpole_ode(ca, sa, angleD, positionD, u):
         # u_max = M*a = 0.230*19.6 = 4.5, 0.317*19.6 = 6.21, (Second option is if I account for pole mass)
         # M_fric = M*b = 0.230*20 = 4.6, 0.317*20 = 6.34
         # From experiment b = 20, a = 28
-
         angleDD = (
             (
                 g * sa - positionDD * ca - (J_fric * (-angleD)) / (m * L) 
@@ -114,6 +113,7 @@ def cartpole_ode_namespace(s: SimpleNamespace, u: float):
 
 
 def cartpole_ode(s: np.ndarray, u: float):
+    #print('Mass in Model: ', M)
     angle = s[..., ANGLE_IDX]
     angleDD, positionDD, _, _ = _cartpole_ode_numba(
         np.cos(-angle), np.sin(-angle), s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u

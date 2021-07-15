@@ -1,18 +1,19 @@
 controller:
   mppi:
+    adapt: True                           #True or False
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
-    num_rollouts: 2000                      # Number of Monte Carlo samples
+    num_rollouts: 2000 #2000 (750)                     # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "Euler"               # One of ["Euler", "NeuralNet"]
+    predictor_type: "NeuralNet"               # One of ["Euler", "NeuralNet"]
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01
     ekc_weight: 5.0
     cc_weight: 1.0
     ccrc_weight: 1.0
-    cost_noise: 0.0                       # Noise on stage cost weights by +/- this value
-    control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value
+    cost_noise: 0.0      #0.2 / Gen:0.5                # Noise on stage cost weights by +/- this value
+    control_noise: 0.1   #0.0 / Gen:0.5                 # Noise on top of the calculated control input by +/- this value
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
     NU: 1000.0                            # Exploration variance
@@ -64,11 +65,11 @@ cartpole:
   PATH_TO_CONTROLLERS: './Controllers/'  # Path where controllers are stored
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
-  M: 0.230  # mass of cart, kg # Checked by Antonio
-  L: "0.395/2.0"  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi
+  M: 0.230  # mass of cart, kg # Checked by Antonio #(0.230)
+  L: "0.395/2.0"  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi (0.395/2.0)
   u_max: 6.21  # max force produced by the motor, N # Checked by Marcin
   M_fric: 6.34  # cart friction on track, N/m/s # Checked by Marcin
-  J_fric: 2.5e-4  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
+  J_fric: 2.5e-4 #2.5e-4  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
   v_max: 0.8  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented in model, but needed for MPC
   cart_length: 4.4e-2  # m, checked by Marcin&Asude
   usable_track_length: 44.0e-2  # m, checked by Marcin&Asude

@@ -21,6 +21,7 @@ config_CartPole = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
+    #csv = './adaptive_test/Experiment.csv'
     if record_path is None:
         record_path = config_CartPole["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
         csv = record_path + '/Experiment'
@@ -28,12 +29,13 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     # User defined simulation settings
     ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
     # How many experiments will be generated
-    number_of_experiments = 500
+    #number_of_experiments = 2000
+    number_of_experiments = 4
 
     ###### Train/Val/Test split - only matters if you run it in ML Pipeline mode
-    frac_train = 0.8
-    frac_val = 0.19
-
+    frac_train = 0.5
+    #frac_val = 0.2 - (5/number_of_experiments)  # 0.18
+    frac_val = 0.25
     save_mode = 'offline'  # It was intended to save memory usage, but it doesn't seems to help
 
     ###### Timescales
@@ -43,7 +45,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     ###### CartPole settings
     ### Length of each experiment in s:
-    length_of_experiment_DataGen = 12
+    length_of_experiment_DataGen = 3*60
 
     ### Controller which should be used in generated experiment:
     controller_DataGen = 'mppi'
@@ -101,8 +103,9 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
             csv += "/Experiment"
 
         start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * np.random.uniform(-1.0, 1.0)
-        initial_state = [start_random_target_position_at_DataGen, None, 0.0, None]
-
+        #initial_state = [start_random_target_position_at_DataGen, None, 0.0, None]
+        #initial_state = [start_random_target_position_at_DataGen, None, None, None]
+        initial_state = [0.0, None, 0.0, None]
         if initial_state[0] is None:
             initial_state_DataGen[cartpole_state_varname_to_index('position')] = np.random.uniform(
                 low=-TrackHalfLength / 2.0,
