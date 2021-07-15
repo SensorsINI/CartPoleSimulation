@@ -47,6 +47,8 @@ import tensorflow as tf
 from SI_Toolkit.TF.TF_Functions.Loss import loss_msr_sequence_customizable
 from tensorflow import keras
 
+from others.p_globals import L
+
 config = yaml.load(
     open(os.path.join("SI_Toolkit_ApplicationSpecificFiles", "config.yml"), "r"), Loader=yaml.FullLoader
 )
