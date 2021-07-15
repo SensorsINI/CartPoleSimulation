@@ -336,6 +336,65 @@ def plot_progression_multistep(save=False):
         ani = animation.FuncAnimation(fig, run, p_saved_changed, interval=10)
         plt.show()
 
+def plot_brunton(p, save=False):
+    start_indices = range(file_start_index, file_end_plot_index-file_plot_steps, 5)
+
+    fig, axis = plt.subplots(2, 2)
+    x_datas = []
+    y_datas = []
+    lines = []
+    axis = axis.flatten()
+
+
+    i_to_c = dict((index, n_to_c[name]) for index, name in enumerate(['position', 'positionD', 'angle', 'angleD']))
+    i_to_n = ['position', 'velocity', 'angle', 'angular velocity']
+    i_to_ylim = [(-0.1, 0.1),
+                 (-0.5, 0.5),
+                 (-0.25, 0.25),
+                 (-1, 1)]
+    i_to_ylabel = ['m', 'm/s', 'rad', 'rad/s']
+
+    t_span = (y[file_start_index, n_to_c['time']], y[file_end_plot_index-1, n_to_c['time']])
+
+    for i, ax in enumerate(axis):
+        ax.grid()
+        x_datas.append([])
+        y_datas.append([])
+
+        line1, = ax.plot([], [], lw=2)
+        line2, = ax.plot([], [], lw=2)
+        lines.append((line1, line2))
+
+        ax.set_xlim(t_span)
+        ax.set_ylim(i_to_ylim[i])
+        ax.set_title(i_to_n[i])
+        ax.set_xlabel('time (seconds)')
+        ax.set_ylabel(i_to_ylabel[i])
+
+    def run(start_index):
+        data = solve_cartpole_reinit(y, p, start_index, start_index+file_plot_steps+1, steps=file_plot_steps)
+
+        for i, (ax, line) in enumerate(zip(axis, lines)):
+            data_end_index = start_index+data.shape[0]
+
+            line[0].set_data(y[:, n_to_c['time']], y[:, i_to_c[i]])
+            line[1].set_data(y[start_index:data_end_index, n_to_c['time']], data[:, i])
+            #ax.figure.canvas.draw()
+
+    if save:
+        Writer = animation.writers['ffmpeg']
+        writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=8000)
+        ani = animation.FuncAnimation(fig, run, start_indices, interval=33)
+
+        plt.tight_layout()
+        ani.save('im.mp4', writer=writer, dpi=300)
+    else:
+        ani = animation.FuncAnimation(fig, run, start_indices, interval=33)
+        plt.tight_layout()
+        plt.show()
+
+
+
 def plot_final(p):
     file_end_index = 2000
 
@@ -445,8 +504,9 @@ def plot_final_multistep(p):
 file = 'cartpole-2021-07-13-17-59-28.csv'
 file_start_index = 0
 file_end_index = 1000 + 50
-file_end_plot_index = 4316
-file_plot_steps = 150
+file_end_plot_index = 2000
+# file_end_plot_index = 4316
+file_plot_steps = 100
 file_animate = False
 file_residual_weight = np.array([0.1, 5.0, 20.0, 0.01])
 
@@ -499,5 +559,10 @@ if file_animate:
 
 #plot_final(res.x)
 
+#params = [-0.621, 0.597, 0.117, 0.938, -0.075049]
+
+plot_brunton(res.x, save=False)
+
 y_unfilt, n_to_c = read_data(file)
-plot_final_multistep(res.x)
+#plot_final_multistep(res.x)
+
