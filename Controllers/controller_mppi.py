@@ -368,27 +368,21 @@ class controller_mppi(template_controller):
 
     def __init__(self):
         if ADAPT:
-            self.measured_system_state = None  # MT
-            self.predicted_system_state = None  # MT
-            self.prev_control_input = None  # MT
-            self.prev_system_state = None  # MT
-            self.shift_reg_len = 5#10000
-            self.window_len = 2
+            self.measured_system_state = None   # MT TODO: Replace with self.s
+            self.predicted_system_state = None  # MT Currently unused
+            self.prev_control_input = None      # Control input given to the system at the end of the last step
+            self.prev_system_state = None       # The previous measured system state
+            self.shift_reg_len = 9000           # How many samples to store before training
+            self.shift_reg_index = 0            # Index to keep track of index in the buffer
+            self.training_count = 0             # Debug info: How many online training cycle have completed?
+            # Buffers to store input and output
             self.training_shift_reg_input = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.inputs)))
             self.training_shift_reg_output = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.outputs)))
-            self.window_counter = 0
-            self.shift_reg_index = 0
-            self.ready_to_train = False
-            self.training_count = 0
-            self.window_error = np.zeros((self.window_len, len(predictor.net_info.outputs)))
 
-
-            a = args()
+            # Compiling the network for training
+            # TODO: Try replacing MSE with percent error does running .evaluate still give reasonable results?
             predictor.net.compile(
-                #loss=loss_msr_sequence_customizable(wash_out_len=a.wash_out_len,
-                #                                    post_wash_out_len=a.post_wash_out_len,
-                #                                    discount_factor=1.0),
-                loss=keras.losses.MeanSquaredError(),
+                loss=keras.losses.MeanSquaredError(),   #
                 optimizer=keras.optimizers.Adam(0.000001)
             )
         # State of the cart
@@ -495,8 +489,11 @@ class controller_mppi(template_controller):
 
         if ADAPT:
             self.measured_system_state = s.copy()
-            if self.prev_control_input is not None:
+            if self.prev_control_input is not None:  # Skips the first step where previous state is unknown
+                # Angle is stored in the first element of s, replaced with control input
                 model_input = np.insert(self.prev_system_state[1:], 0, self.prev_control_input)
+
+                # Format for training
                 x = tf.reshape(model_input,
                                [-1, 1, len(predictor.net_info.inputs)])
                 y = tf.reshape(self.measured_system_state[1:],
@@ -505,27 +502,16 @@ class controller_mppi(template_controller):
                 self.training_shift_reg_output[self.shift_reg_index] = y
                 self.shift_reg_index += 1
 
-                percent_error = np.abs(
-                    (self.predicted_system_state - self.measured_system_state[1:]) / 1)
-                self.window_error[self.window_counter] = percent_error
+                # If the buffer is full, reset and fit the model to stored data
                 if self.shift_reg_index == self.shift_reg_len:
                     self.shift_reg_index = 0
-                    if self.ready_to_train is False:
-                        self.ready_to_train = True
-                if self.window_counter == self.window_len - 1:
-                    if self.ready_to_train:
-                        print('\nADAPTIVE TRAINING! @ Time = ', time)
-                        self.training_count += 1
-                        print('Training Count: ', self.training_count)
-                        predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=1,
-                                          batch_size=8, shuffle=True)  # make this
-                        # predictor.net.evaluate(x=self.training_shift_reg_input, y=self.training_shift_reg_output,
-                        #                  batch_size=32)
-                    self.window_counter = 0
-                    print('\nWindow Avg Error: ', np.round(np.mean(self.window_error, axis=0), 4))
-                    print('AVG: ', np.mean(np.mean(self.window_error, axis=0)))
-                else:
-                    self.window_counter += 1
+                    print('\nADAPTIVE TRAINING! @ Time = ', time, 'Training Count=', self.training_count)
+                    self.training_count += 1
+                    predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=1,
+                                                                batch_size=32, shuffle=True, verbose=2)
+                    # predictor.net.evaluate(x=self.training_shift_reg_input, y=self.training_shift_reg_output,
+                    #                                                   batch_size=32)
+
         # Need to find the current measured system state, the predicted system state and the control input
         self.s = s
         self.target_position = np.float32(target_position)
@@ -634,215 +620,17 @@ class controller_mppi(template_controller):
 
         # MT
         if ADAPT:
-            self.prev_control_input = Q.copy()
-            x = np.insert(self.measured_system_state[1:], 0, Q)
-            model_input = tf.reshape(x,
-                                     [-1, 1, len(predictor.net_info.inputs)])
-            self.predicted_system_state = np.reshape(predictor.net.predict(model_input), (5,))
+            self.prev_control_input = Q.copy()                          # Store control input for next step
+            self.prev_system_state = self.measured_system_state.copy()  # Store measured state as previous state
 
-            self.prev_system_state = self.measured_system_state.copy()
+            # Code to calculate predicted state if you want to compare measurements to predictions
+            #x = np.insert(self.measured_system_state[1:], 0, Q)
+            #model_input = tf.reshape(x,
+            #                         [-1, 1, len(predictor.net_info.inputs)])
+            #self.predicted_system_state = np.reshape(predictor.net.predict(model_input), (5,))
+            #
 
         return Q  # normed control input in the range [-1,1]
-
-    # def step(self, s: np.ndarray, target_position: np.float64, time=None):
-    #     """Perform controller step
-    #
-    #     :param s: State passed to controller after system has evolved for one step
-    #     :type s: np.ndarray
-    #     :param target_position: Target position where the cart should move to
-    #     :type target_position: np.float64
-    #     :param time: Time in seconds that has passed in the current experiment, defaults to None
-    #     :type time: float, optional
-    #     :return: A normed control value in the range [-1.0, 1.0]
-    #     :rtype: np.float32
-    #     """
-    #     #my code
-    #     #print('Window: ', self.window_counter)
-    #
-    #     if ADAPT:
-    #         self.prev_system_state = self.measured_system_state
-    #         self.measured_system_state = s  # MT index 0 might be angle....
-    #         if self.prev_control_input is not None:
-    #             # print('Measured :',  self.prev_control_input, np.round(self.measured_system_state[1:], 4))
-    #             # print('Predicted:', np.round(self.predicted_system_state, 4))
-    #             # mse_arr = (self.measured_system_state[1:] - self.predicted_system_state) ** 2
-    #             # mse = mse_arr.sum()
-    #             # #print('MSE_ARR  : ', np.round(mse_arr, 7))
-    #             # #print('MSE: ', mse)
-    #             # p_error = np.abs((self.measured_system_state[1:] - self.predicted_system_state) / self.predicted_system_state)
-    #             # print('Percent Error:', np.round(p_error, 5))
-    #             # avg_p_error = np.mean(p_error)
-    #             # print('AVG P Error:', np.round(avg_p_error, 5))
-    #             # print('In response to Q= ', self.prev_control_input)
-    #
-    #             # if avg_p_error > 0.25:
-    #             #     print('ADAPTING!')
-    #             #     model_input = np.insert(self.prev_system_state[1:], 0, self.prev_control_input)
-    #             #     x = tf.reshape(model_input,
-    #             #                      [-1, 1, len(predictor.net_info.inputs)])
-    #             #     y = tf.reshape(self.measured_system_state[1:],
-    #             #                      [-1, 1, len(predictor.net_info.outputs)])
-    #             #     print('Model input: ', x)
-    #             #     print('Model output: ', y)
-    #             #     predictor.net.fit(x=x, y=y, epochs=1) #make this >1?
-    #             model_input = np.insert(self.prev_system_state[1:], 0, self.prev_control_input)
-    #             x = tf.reshape(model_input,
-    #                            [-1, 1, len(predictor.net_info.inputs)])
-    #             y = tf.reshape(self.measured_system_state[1:],
-    #                            [-1, 1, len(predictor.net_info.outputs)])
-    #             self.training_shift_reg_input[self.shift_reg_index] = x
-    #             self.training_shift_reg_output[self.shift_reg_index] = y
-    #             self.shift_reg_index += 1
-    #
-    #             percent_error = np.abs(
-    #                 (self.predicted_system_state - self.measured_system_state[1:]) / 1)
-    #             avg_percent_error = np.mean(percent_error)
-    #
-    #             # print()
-    #             # print('Previous System State: ', x)
-    #             # print('Current System State:  ', y)
-    #             # print('Predicted System State: ', self.predicted_system_state)
-    #             # print('Percent Error:', percent_error)
-    #             # print('AVG: ', avg_percent_error)
-    #             # print()
-    #             self.window_error[self.window_counter] = percent_error
-    #             if self.shift_reg_index == self.shift_reg_len:
-    #                 self.shift_reg_index = 0
-    #                 if self.ready_to_train is False:
-    #                     self.ready_to_train = True
-    #             if self.window_counter == self.window_len - 1:
-    #                 if self.ready_to_train:
-    #                     print('\nADAPTIVE TRAINING! @ Time = ', time)
-    #                     #print('Model input: ', x)
-    #                     #print('Model output: ', y)
-    #                     self.training_count += 1
-    #                     print('Training Count: ', self.training_count)
-    #                     predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=1, batch_size=8, shuffle=True) #make this
-    #                     #predictor.net.evaluate(x=self.training_shift_reg_input, y=self.training_shift_reg_output,
-    #                     #                  batch_size=32)
-    #                 self.window_counter = 0
-    #                 print('\nWindow Avg Error: ', np.round(np.mean(self.window_error, axis=0),4))
-    #                 print('AVG: ', np.mean(np.mean(self.window_error, axis=0)))
-    #             else:
-    #                 self.window_counter += 1
-    #
-    #             #print()
-    #     # Need to find the current measured system state, the predicted system state and the control input
-    #     self.s = s
-    #     self.target_position = np.float32(target_position)
-    #
-    #     self.iteration += 1
-    #
-    #     # Adjust horizon if changed in GUI while running
-    #     # FIXME: For this to work with NeuralNet predictor we need to build a setter,
-    #     #  which also reinitialize arrays which size depends on horizon
-    #     predictor.horizon = mpc_samples
-    #     if mpc_samples != self.u.size:
-    #         self.update_control_vector()
-    #
-    #     if self.iteration % update_every == 0:
-    #         # Initialize perturbations and cost arrays
-    #         self.delta_u = self.initialize_perturbations(
-    #             # stdev=0.1 * (1 + 1 / (self.iteration + 1)),
-    #             stdev=SQRTRHODTINV,
-    #             sampling_type=SAMPLING_TYPE,
-    #         )  # du ~ N(mean=0, var=1/(rho*dt))
-    #         self.S_tilde_k = np.zeros_like(self.S_tilde_k, dtype=np.float32)
-    #
-    #         # Run parallel trajectory rollouts for different input perturbations
-    #         self.S_tilde_k = trajectory_rollouts(
-    #             self.s,
-    #             self.S_tilde_k,
-    #             self.u,
-    #             self.delta_u,
-    #             self.u_prev,
-    #             self.target_position,
-    #         )
-    #
-    #         # Update inputs with weighted perturbations
-    #         update_inputs(self.u, self.S_tilde_k, self.delta_u)
-    #
-    #         # Log states and costs incurred for plotting later
-    #         if LOGGING:
-    #             LOGS.get("cost_to_go").append(np.copy(self.S_tilde_k))
-    #             LOGS.get("inputs").append(np.copy(self.u))
-    #
-    #             # Simulate nominal rollout to plot the trajectory the controller wants to make
-    #             # Compute one rollout of shape (mpc_samples + 1) x s.size
-    #             if predictor_type == "Euler":
-    #                 predictor.setup(
-    #                     initial_state=np.copy(self.s), prediction_denorm=True
-    #                 )
-    #                 rollout_trajectory = predictor.predict(self.u)
-    #             elif predictor_type == "NeuralNet":
-    #                 predictor.setup(
-    #                     initial_state=np.tile(self.s, (num_rollouts, 1)),
-    #                     prediction_denorm=True,
-    #                 )
-    #                 # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
-    #                 rollout_trajectory = predictor.predict(
-    #                     np.tile(self.u, (num_rollouts, 1))
-    #                 )[0, ...]
-    #             LOGS.get("nominal_rollouts").append(np.copy(rollout_trajectory[:-1, :]))
-    #
-    #     if LOGGING:
-    #         LOGS.get("trajectory").append(np.copy(self.s))
-    #         LOGS.get("target_trajectory").append(np.copy(target_position))
-    #
-    #     if (
-    #         self.warm_up_countdown > 0
-    #         and self.auxiliary_controller_available
-    #         and (NET_TYPE == "GRU" or NET_TYPE == "LSTM" or NET_TYPE == "RNN")
-    #         and predictor_type == "NeuralNet"
-    #     ):
-    #         self.warm_up_countdown -= 1
-    #         Q = self.auxiliary_controller.step(s, target_position)
-    #     else:
-    #         Q = self.u[0]
-    #
-    #     # A snippet of code to switch on and off the controller to cover better the statespace with experimental data
-    #     # It stops controller when Pole is well stabilized (starting inputing random input)
-    #     # And re-enables it when angle exceedes 90 deg.
-    #     # if (abs(self.s[[ANGLE_IDX]]) < 0.01
-    #     #     and abs(self.s[[POSITION_IDX]]-self.target_position < 0.02)
-    #     #         and abs(self.s[[ANGLED_IDX]]) < 0.1
-    #     #             and abs(self.s[[POSITIOND_IDX]]) < 0.05):
-    #     #     self.control_enabled = False
-    #     # elif abs(self.s[[ANGLE_IDX]]) > np.pi/2:
-    #     #     self.control_enabled = True
-    #     #
-    #     # if self.control_enabled is True:
-    #     #     Q = self.u[0]
-    #     # else:
-    #     #     Q = np.random.uniform(-1.0, 1.0)
-    #
-    #     # Add noise on top of the calculated Q value to better explore state space
-    #     Q = np.float32(Q * (1 + p_Q * np.random.uniform(-1.0, 1.0)))
-    #     # Clip inputs to allowed range
-    #     Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
-    #
-    #     # Preserve current series of inputs
-    #     self.u_prev = np.copy(self.u)
-    #
-    #     # Index-shift inputs
-    #     self.u[:-1] = self.u[1:]
-    #     self.u[-1] = 0
-    #     # self.u = zeros_like(self.u)
-    #
-    #     # Prepare predictor for next timestep
-    #     Q_update = np.tile(Q, (num_rollouts, 1))
-    #     predictor.update_internal_state(Q_update)
-    #
-    #     # MT
-    #     if ADAPT:
-    #         self.prev_control_input = Q
-    #         x = np.insert(self.measured_system_state[1:], 0, Q)
-    #         model_input = tf.reshape(x,
-    #                                  [-1, 1, len(predictor.net_info.inputs)])
-    #         #print('Predict input: ', model_input)
-    #         self.predicted_system_state = np.reshape(predictor.net.predict(model_input), (5,))
-    #
-    #     return Q  # normed control input in the range [-1,1]
 
     def update_control_vector(self):
         """

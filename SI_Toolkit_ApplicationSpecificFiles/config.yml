@@ -1,10 +1,10 @@
 modeling:
   #if you specify inputs and outputs here, will look for pretrained
   #NET_NAME: 'Dense-64H1-64H2-64H3-32H4'
-  NET_NAME: 'Dense-6IN-64H1-64H2-64H3-32H4-5OUT-2'
+  #NET_NAME: 'Dense-6IN-64H1-64H2-64H3-32H4-5OUT-2'
 
-  #NET_NAME: 'Dense-6IN-64H1-64H2-5OUT-6'
-  #NET_NAME: 'GRU-32H1-32H2'
+  #NET_NAME: 'Dense-6IN-64H1-64H2-5OUT-0'
+  NET_NAME: 'GRU-32H1-32H2'
   #NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-2'
   RNN_PATH: './save_tf/'
   PREDICTION_FEATURES_NAMES: ['angle_cos', 'angle_sin', 'angleD', 'position', 'positionD']
