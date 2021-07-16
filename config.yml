@@ -1,25 +1,25 @@
 controller:
   mppi:
-    adapt: True                           #True or False
+    adapt: False                          # True or False (Currently not working)
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
-    num_rollouts: 2000 #2000 (750)                     # Number of Monte Carlo samples
+    num_rollouts: 2000                    # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "NeuralNet"               # One of ["Euler", "NeuralNet"]
+    predictor_type: "NeuralNet"           # One of ["Euler", "NeuralNet"]
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01
     ekc_weight: 5.0
     cc_weight: 1.0
     ccrc_weight: 1.0
-    cost_noise: 0.0      #0.2 / Gen:0.5                # Noise on stage cost weights by +/- this value
-    control_noise: 0.1   #0.0 / Gen:0.5                 # Noise on top of the calculated control input by +/- this value
+    cost_noise: 0.0                       # Noise on stage cost weights by +/- this value
+    control_noise: 0.1                    # Noise on top of the calculated control input by +/- this value
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
     NU: 1000.0                            # Exploration variance
     SQRTRHOINV: 0.01                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
-    SAMPLING_TYPE: "interpolated"                  # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
+    SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     LOGGING: False                        # Collect and show detailed insights into the controller's behavior
   custom_mpc_scipy:
     DT: 0.1
