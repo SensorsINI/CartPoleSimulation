@@ -536,7 +536,7 @@ class MainWindow(QMainWindow):
             if self.CartPoleInstance.controller_name == 'manual-stabilization':
                 self.CartPoleInstance.slider_value = self.CartPoleInstance.Q
             else:
-                self.CartPoleInstance.slider_value = self.CartPoleInstance.target_position/self.CartPoleInstance.p.TrackHalfLength
+                self.CartPoleInstance.slider_value = self.CartPoleInstance.target_position/TrackHalfLength
 
             dt_target = (self.CartPoleInstance.dt / self.speedup)
             replay_looper.dt_target = dt_target
