@@ -2,7 +2,7 @@
 Model Predictive Path Integral Controller
 Based on Williams, Aldrich, Theodorou (2015)
 """
-from SI_Toolkit.TF.TF_Functions.Loss import loss_msr_sequence_customizable
+
 # Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
 # On other OS you have to chose a different interactive backend.
 # from matplotlib import use
@@ -30,6 +30,7 @@ from CartPole.state_utilities import (
     POSITIOND_IDX,
     STATE_VARIABLES,
     STATE_INDICES,
+    CONTROL_INPUTS,
     create_cartpole_state,
 )
 from matplotlib.widgets import Slider
@@ -46,15 +47,13 @@ from SI_Toolkit.TF.Parameters import args
 import tensorflow as tf
 from SI_Toolkit.TF.TF_Functions.Loss import loss_msr_sequence_customizable
 from tensorflow import keras
+from SI_Toolkit.load_and_normalize import normalize_numpy_array, denormalize_numpy_array
 
 config = yaml.load(
     open(os.path.join("SI_Toolkit_ApplicationSpecificFiles", "config.yml"), "r"), Loader=yaml.FullLoader
 )
-config_top = yaml.load(
-    open("config.yml", "r"), Loader=yaml.FullLoader
-)
+
 NET_NAME = config["modeling"]["NET_NAME"]
-ADAPT = config_top["controller"]["mppi"]["adapt"]
 try:
     NET_TYPE = NET_NAME.split("-")[0]
 except AttributeError:  # Should get Attribute Error if NET_NAME is None
@@ -62,6 +61,7 @@ except AttributeError:  # Should get Attribute Error if NET_NAME is None
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 """Timestep and sampling settings"""
+ADAPT = config["controller"]["mppi"]["adapt"]
 dt = config["controller"]["mppi"]["dt"]
 mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
@@ -368,11 +368,11 @@ class controller_mppi(template_controller):
 
     def __init__(self):
         if ADAPT:
-            self.measured_system_state = None   # MT TODO: Replace with self.s
+            self.current_system_state = None   # MT TODO: Replace with self.s
             self.predicted_system_state = None  # MT Currently unused
             self.prev_control_input = None      # Control input given to the system at the end of the last step
             self.prev_system_state = None       # The previous measured system state
-            self.shift_reg_len = 9000           # How many samples to store before training
+            self.shift_reg_len = 1000           # How many samples to store before training
             self.shift_reg_index = 0            # Index to keep track of index in the buffer
             self.training_count = 0             # Debug info: How many online training cycle have completed?
             # Buffers to store input and output
@@ -382,8 +382,8 @@ class controller_mppi(template_controller):
             # Compiling the network for training
             # TODO: Try replacing MSE with percent error does running .evaluate still give reasonable results?
             predictor.net.compile(
-                loss=keras.losses.MeanSquaredError(),   #
-                optimizer=keras.optimizers.Adam(0.000001)
+                loss=keras.losses.MeanSquaredError(),
+                optimizer=keras.optimizers.Adam(5.0e-4)
             )
         # State of the cart
         self.s = create_cartpole_state()
@@ -488,18 +488,23 @@ class controller_mppi(template_controller):
         """
 
         if ADAPT:
-            self.measured_system_state = s.copy()
+            self.current_system_state = s.copy()
             if self.prev_control_input is not None:  # Skips the first step where previous state is unknown
-                # Angle is stored in the first element of s, replaced with control input
-                model_input = np.insert(self.prev_system_state[1:], 0, self.prev_control_input)
+
+                model_input_net_without_Q = self.prev_system_state[
+                    ..., [STATE_INDICES.get(key) for key in predictor.net_info.inputs[len(CONTROL_INPUTS):]]]
+
+                model_input = np.concatenate((self.prev_control_input, model_input_net_without_Q), axis=0)
+                model_input_normed = normalize_numpy_array(model_input,
+                                                                    predictor.net_info.inputs, predictor.normalization_info)
+                
+                model_output = self.current_system_state[
+                    ..., [STATE_INDICES.get(key) for key in predictor.net_info.outputs]]
+                model_output_normed = normalize_numpy_array(model_output, predictor.net_info.outputs, predictor.normalization_info)
 
                 # Format for training
-                x = tf.reshape(model_input,
-                               [-1, 1, len(predictor.net_info.inputs)])
-                y = tf.reshape(self.measured_system_state[1:],
-                               [-1, 1, len(predictor.net_info.outputs)])
-                self.training_shift_reg_input[self.shift_reg_index] = x
-                self.training_shift_reg_output[self.shift_reg_index] = y
+                self.training_shift_reg_input[self.shift_reg_index, ...] = model_input_normed
+                self.training_shift_reg_output[self.shift_reg_index, ...] = model_output_normed
                 self.shift_reg_index += 1
 
                 # If the buffer is full, reset and fit the model to stored data
@@ -620,11 +625,11 @@ class controller_mppi(template_controller):
 
         # MT
         if ADAPT:
-            self.prev_control_input = Q.copy()                          # Store control input for next step
-            self.prev_system_state = self.measured_system_state.copy()  # Store measured state as previous state
+            self.prev_control_input = np.array(Q.copy(), ndmin=1)                          # Store control input for next step
+            self.prev_system_state = self.current_system_state.copy()  # Store measured state as previous state
 
             # Code to calculate predicted state if you want to compare measurements to predictions
-            #x = np.insert(self.measured_system_state[1:], 0, Q)
+            #x = np.insert(self.current_system_state[1:], 0, Q)
             #model_input = tf.reshape(x,
             #                         [-1, 1, len(predictor.net_info.inputs)])
             #self.predicted_system_state = np.reshape(predictor.net.predict(model_input), (5,))
