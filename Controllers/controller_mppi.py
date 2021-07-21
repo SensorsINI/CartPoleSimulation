@@ -9,6 +9,11 @@ Based on Williams, Aldrich, Theodorou (2015)
 # # # use('TkAgg')
 # use('macOSX')
 
+from others.p_globals import (
+    k, M, m, g, J_fric, M_fric, L, v_max, u_max,
+    sensorNoise, controlDisturbance, controlBias, TrackHalfLength,
+)
+
 import os
 
 import matplotlib.pyplot as plt
@@ -368,16 +373,23 @@ class controller_mppi(template_controller):
 
     def __init__(self):
         if ADAPT:
-            self.current_system_state = None   # MT TODO: Replace with self.s
+            self.current_system_state = None    # MT TODO: Replace with self.s
             self.predicted_system_state = None  # MT Currently unused
             self.prev_control_input = None      # Control input given to the system at the end of the last step
             self.prev_system_state = None       # The previous measured system state
+            self.adapt_idle_counter_pre_change_max = 500  # time between retraining and subsequent change of parameters
+            self.adapt_idle_counter_post_change_max = 1  # time between change of parameters and starting filling the buffer (make it bigger if you buffer is small so that you can observe effect of parameters change). Should be at least 1 so that the "previous" value is already with a new parameter
             self.shift_reg_len = 1000           # How many samples to store before training
             self.shift_reg_index = 0            # Index to keep track of index in the buffer
             self.training_count = 0             # Debug info: How many online training cycle have completed?
+            self.adapt_mode = 'idle_pre'        # Possible 'idle_pre', 'idle_post', 'filling buffer'
             # Buffers to store input and output
             self.training_shift_reg_input = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.inputs)))
             self.training_shift_reg_output = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.outputs)))
+            self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
+            self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
+
+
 
             # Compiling the network for training
             # TODO: Try replacing MSE with percent error does running .evaluate still give reasonable results?
@@ -487,8 +499,37 @@ class controller_mppi(template_controller):
         :rtype: np.float32
         """
 
+
+
+        if self.adapt_mode == 'idle_pre':
+            if self.adapt_idle_counter_pre == 0:
+                global L
+                L[...] = L*0.75
+                print('Entered idle_post')
+                self.adapt_mode = 'idle_post'
+                self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
+            else:
+                self.adapt_idle_counter_pre -= 1
+        elif self.adapt_mode == 'idle_post':
+            if self.adapt_idle_counter_post == 0:
+                print('Entered filling_buffer')
+                self.adapt_mode = 'filling_buffer'
+                self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
+            else:
+                self.adapt_idle_counter_post -= 1
+        elif self.adapt_mode == 'filling_buffer':
+            if self.shift_reg_index == 0:
+                print('Entered idle_pre')
+                self.adapt_mode = 'idle_pre'
+                # shift_reg_index is set to 0 whereelse
+
+            # Change parameter
+            # Start filling the buffer
+
         if ADAPT:
             self.current_system_state = s.copy()
+
+        if ADAPT and (self.adapt_mode == 'filling_buffer'):
             if self.prev_control_input is not None:  # Skips the first step where previous state is unknown
 
                 model_input_net_without_Q = self.prev_system_state[
@@ -497,7 +538,7 @@ class controller_mppi(template_controller):
                 model_input = np.concatenate((self.prev_control_input, model_input_net_without_Q), axis=0)
                 model_input_normed = normalize_numpy_array(model_input,
                                                                     predictor.net_info.inputs, predictor.normalization_info)
-                
+
                 model_output = self.current_system_state[
                     ..., [STATE_INDICES.get(key) for key in predictor.net_info.outputs]]
                 model_output_normed = normalize_numpy_array(model_output, predictor.net_info.outputs, predictor.normalization_info)
@@ -512,7 +553,7 @@ class controller_mppi(template_controller):
                     self.shift_reg_index = 0
                     print('\nADAPTIVE TRAINING! @ Time = ', time, 'Training Count=', self.training_count)
                     self.training_count += 1
-                    predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=1,
+                    predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=3,
                                                                 batch_size=32, shuffle=True, verbose=2)
                     # predictor.net.evaluate(x=self.training_shift_reg_input, y=self.training_shift_reg_output,
                     #                                                   batch_size=32)
