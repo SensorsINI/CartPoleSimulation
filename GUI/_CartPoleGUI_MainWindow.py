@@ -8,9 +8,15 @@ try:
 except:
     pass
 
-from CartPole.cartpole_model import TrackHalfLength
 import numpy as np
 import time
+
+import sys
+
+from others.p_globals import (
+    k, M, m, g, J_fric, M_fric, L, v_max, u_max,
+    sensorNoise, controlDisturbance, controlBias, TrackHalfLength,
+)
 
 # region Imports needed to create layout of the window in __init__ method
 
@@ -521,6 +527,7 @@ class MainWindow(QMainWindow):
 
         # Start looping over history
         replay_looper.start_loop()
+        global L
         for index, row in history_pd.iterrows():
             self.CartPoleInstance.s[cartpole_state_varname_to_index('position')] = row['position']
             self.CartPoleInstance.s[cartpole_state_varname_to_index('positionD')] = row['positionD']
@@ -537,6 +544,15 @@ class MainWindow(QMainWindow):
                 self.CartPoleInstance.slider_value = self.CartPoleInstance.Q
             else:
                 self.CartPoleInstance.slider_value = self.CartPoleInstance.target_position/TrackHalfLength
+
+            try:
+                L[...] = row['L']
+            except KeyError:
+                pass
+            except:
+                print('Error while assigning L')
+                print("Unexpected error:", sys.exc_info()[0])
+                print("Unexpected error:", sys.exc_info()[1])
 
             dt_target = (self.CartPoleInstance.dt / self.speedup)
             replay_looper.dt_target = dt_target

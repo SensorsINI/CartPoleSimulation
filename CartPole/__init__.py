@@ -41,6 +41,8 @@ try:
 except:
     pass
 
+import sys
+
 # check memory usage of chosen methods. Commented by default
 # from memory_profiler import profile
 
@@ -306,6 +308,8 @@ class CartPole:
                 # If it is not meaningful all values in this column are set to 0
                 self.dict_history['target_position'].append(self.target_position)
 
+                self.dict_history['L'].append(L)
+
             else:
 
                 self.dict_history = {
@@ -325,6 +329,8 @@ class CartPole:
                                      'u': [self.u],
 
                                      'target_position': [self.target_position],
+
+                                     'L': [L]
 
                                      }
 
@@ -912,6 +918,8 @@ class CartPole:
                              'u': [self.u],
 
                              'target_position': [self.target_position],
+
+                             'L': [L]  # Length of the pole
 
                              }
 
