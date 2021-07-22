@@ -30,13 +30,13 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
     # How many experiments will be generated
     #number_of_experiments = 2000
-    number_of_experiments = 4
+    number_of_experiments = 1
 
     ###### Train/Val/Test split - only matters if you run it in ML Pipeline mode
     frac_train = 0.5
     #frac_val = 0.2 - (5/number_of_experiments)  # 0.18
     frac_val = 0.25
-    save_mode = 'offline'  # It was intended to save memory usage, but it doesn't seems to help
+    save_mode = 'online'  # It was intended to save memory usage, but it doesn't seems to help
 
     ###### Timescales
     dt_simulation_DataGen = 0.002  # simulation timestep
@@ -45,7 +45,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     ###### CartPole settings
     ### Length of each experiment in s:
-    length_of_experiment_DataGen = 3*60
+    length_of_experiment_DataGen = 20*60
 
     ### Controller which should be used in generated experiment:
     controller_DataGen = 'mppi'
