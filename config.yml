@@ -13,7 +13,7 @@ controller:
     cc_weight: 1.0
     ccrc_weight: 1.0
     cost_noise: 0.0                       # Noise on stage cost weights by +/- this value
-    control_noise: 0.1                    # Noise on top of the calculated control input by +/- this value
+    control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
     NU: 1000.0                            # Exploration variance
