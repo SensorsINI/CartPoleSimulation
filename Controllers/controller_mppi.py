@@ -385,12 +385,12 @@ class controller_mppi(template_controller):
         self.shift_reg_index = 0  # Index to keep track of index in the buffer
         self.training_count = 0  # Debug info: How many online training cycle have completed?
         self.adapt_mode = 'idle_pre'  # Possible 'idle_pre', 'idle_post', 'filling buffer'
-        # Buffers to store input and output
-        self.training_shift_reg_input = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.inputs)))
-        self.training_shift_reg_output = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.outputs)))
         self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
         self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
-        if ADAPT:
+        if ADAPT and predictor_type == 'NeuralNet':
+            # Buffers to store input and output
+            self.training_shift_reg_input = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.inputs)))
+            self.training_shift_reg_output = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.outputs)))
             # Compiling the network for training
             # TODO: Try replacing MSE with percent error does running .evaluate still give reasonable results?
             predictor.net.compile(
@@ -526,10 +526,10 @@ class controller_mppi(template_controller):
             # Change parameter
             # Start filling the buffer
 
-        if ADAPT:
+        if ADAPT and predictor_type == 'NeuralNet':
             self.current_system_state = s.copy()
 
-        if ADAPT and (self.adapt_mode == 'filling_buffer'):
+        if ADAPT and predictor_type == 'NeuralNet' and (self.adapt_mode == 'filling_buffer'):
             if self.prev_control_input is not None:  # Skips the first step where previous state is unknown
 
                 model_input_net_without_Q = self.prev_system_state[
