@@ -15,8 +15,8 @@ class SummaryWindow(QWidget):
         self.fig, self.axs = summary_plots()
         for axis in self.axs:
             axis.tick_params(axis='both', which='major', labelsize=9)
-            axis.xaxis.label.set_fontsize(11)
-            axis.yaxis.label.set_fontsize(11)
+            axis.xaxis.label.set_fontsize(10)
+            axis.yaxis.label.set_fontsize(10)
         self.fig.subplots_adjust(bottom=0.11)
         self.fig.subplots_adjust(hspace=0.3)
         self.canvas = FigureCanvas(self.fig)
@@ -36,7 +36,7 @@ class SummaryWindow(QWidget):
         layout.addLayout(lb)
 
         self.setLayout(layout)
-        self.setGeometry(100, 150, 1500, 800)
+        self.setGeometry(100, 150, 1500, 900)
         # self.adjustSize()
         self.show()
         self.setWindowTitle('Last experiment summary')

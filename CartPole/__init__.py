@@ -23,6 +23,8 @@ from others.p_globals import (
 import numpy as np
 import pandas as pd
 
+import traceback
+
 # Import module to save history of the simulation as csv file
 import csv
 # To detect the latest csv file
@@ -310,6 +312,15 @@ class CartPole:
 
                 self.dict_history['L'].append(L)
 
+                try:
+                    for key, value in self.controller.controller_data_for_csv.items():
+                        self.dict_history[key].append(value[0])
+                except AttributeError:
+                    pass
+                except Exception:
+                    print(traceback.format_exc())
+
+
             else:
 
                 self.dict_history = {
@@ -333,6 +344,12 @@ class CartPole:
                                      'L': [L]
 
                                      }
+                try:
+                    self.dict_history.update(self.controller.controller_data_for_csv)
+                except AttributeError:
+                    pass
+                except Exception:
+                    print(traceback.format_exc())
 
                 self.save_flag = True
 
@@ -529,10 +546,18 @@ class CartPole:
 
     # Method plotting the dynamic evolution over time of the CartPole
     # It should be called after an experiment and only if experiment data was saved
-    def summary_plots(self):
-        fontsize_labels = 14
-        fontsize_ticks = 12
-        fig, axs = plt.subplots(4, 1, figsize=(16, 9), sharex=True)  # share x axis so zoom zooms all plots
+    def summary_plots(self, adaptive_mode=True):
+
+        if adaptive_mode:
+            number_of_subplots = 5
+            fontsize_labels = 8
+            fontsize_ticks = 8
+        else:
+            number_of_subplots = 4
+            fontsize_labels = 14
+            fontsize_ticks = 12
+
+        fig, axs = plt.subplots(number_of_subplots, 1, figsize=(16, 9), sharex=True)  # share x axis so zoom zooms all plots
 
         # Plot angle error
         axs[0].set_ylabel("Angle (deg)", fontsize=fontsize_labels)
@@ -563,7 +588,35 @@ class CartPole:
         axs[3].plot(self.dict_history['time'], self.dict_history['target_position'], 'k')
         axs[3].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
-        axs[3].set_xlabel('Time (s)', fontsize=fontsize_labels)
+
+
+        if adaptive_mode:
+            # Plot parameter change and moments of training
+            axs[4].set_ylabel("Pole length [cm]", fontsize=fontsize_labels)
+            axs[4].plot(np.array(self.dict_history['time']), np.array(self.dict_history['L'])*2.0*100.0,
+                        'g', markersize=12, label='Ground Truth')
+            axs[4].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+
+            idx_retraining = [i for i, x in enumerate(np.array(self.dict_history['retraining_now'])) if x]
+
+            retraining_time = np.array(self.dict_history['time'])[idx_retraining]
+            for xc in retraining_time:
+                plt.axvline(x=xc, color='k', linestyle='--', clip_on=False,)
+
+
+            # Plot the difference in cost of best trajectory vs. predicted one
+            # df = pd.DataFrame.from_dict(self.dict_history)
+            # gb = df.groupby(['training_count', 'adapt_mode'])
+            # data_stat = gb.size().reset_index()
+            # data_stat['relative_cost_difference_mean'] = gb['relative_cost_difference'].mean()['relative_cost_difference'].reset_index()
+            # A = gb['relative_cost_difference'].median()
+            # new_frame = gb.reset_index()
+
+
+
+            axs[4].set_xlabel('Time (s)', fontsize=fontsize_labels)
+        else:
+            axs[3].set_xlabel('Time (s)', fontsize=fontsize_labels)
 
         fig.align_ylabels()
 
@@ -922,6 +975,12 @@ class CartPole:
                              'L': [L]  # Length of the pole
 
                              }
+        try:
+            self.dict_history.update(self.controller.controller_data_for_csv)
+        except AttributeError:
+            pass
+        except Exception:
+            print(traceback.format_exc())
 
     # region Get and set timescales
 

@@ -81,9 +81,9 @@ class predictor_ideal:
         # Shape of state: (batch size x state variables)
 
         self.batch_size = np.size(initial_state, 0) if initial_state.ndim > 1 else 1
-        self.batch_mode = not (self.batch_size == 1)
+        # self.batch_mode = not (self.batch_size == 1)
 
-        if not self.batch_mode: initial_state = np.expand_dims(initial_state, 0)
+        # if not self.batch_mode: initial_state = np.expand_dims(initial_state, 0)
         self.angleDD = self.positionDD = 0
 
         self.angle, self.angleD, self.position, self.positionD, self.angle_cos, self.angle_sin = (

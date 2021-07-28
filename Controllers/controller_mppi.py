@@ -191,10 +191,73 @@ elif predictor_type == "NeuralNet":
         horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
 
+predictor_true_equations = predictor_ideal(
+    horizon=mpc_samples, dt=dt, intermediate_steps=10
+)
+
+
+def total_cost(s_horizon, u, delta_u, u_prev, target_position, EXPORT=True, LOGGING=False):
+
+
+
+    # Compute stage costs
+    cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
+        s_horizon[:, 1:, :], u, delta_u, u_prev, target_position
+    )
+    S_tilde_k = np.sum(cost_increment, axis=1)
+    # Compute terminal cost
+    S_tilde_k += phi(s_horizon, target_position)
+
+    # Pass costs to GUI popup window
+    if EXPORT:
+        global gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc, gui_ccrc
+        gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc, gui_ccrc = (
+            np.mean(dd),
+            np.mean(ep),
+            np.mean(ekp),
+            np.mean(ekc),
+            np.mean(cc),
+            np.mean(ccrc),
+        )
+
+    if LOGGING:
+        LOGS.get("cost_breakdown").get("cost_dd").append(np.mean(dd, 0))
+        LOGS.get("cost_breakdown").get("cost_ep").append(np.mean(ep, 0))
+        LOGS.get("cost_breakdown").get("cost_ekp").append(np.mean(ekp, 0))
+        LOGS.get("cost_breakdown").get("cost_ekc").append(np.mean(ekc, 0))
+        LOGS.get("cost_breakdown").get("cost_cc").append(np.mean(cc, 0))
+        LOGS.get("cost_breakdown").get("cost_ccrc").append(np.mean(ccrc, 0))
+        # (1 x mpc_samples)
+        LOGS.get("states").append(
+            np.copy(s_horizon[:, :-1, :])
+        )  # num_rollouts x mpc_samples x STATE_VARIABLES
+
+    return S_tilde_k
+
+
+def predict_trajectories(s, u, IDEAL_PREDICTION=False):
+
+    """ Given initial state and array of control input scenarios this function calculates the resulting trajectories
+
+    :param s: Current state of the system
+    :param u: array of control inputs scenarios"""
+
+    if IDEAL_PREDICTION:
+        initial_state = np.tile(s, (1, 1))
+        predictor_true_equations.setup(initial_state=initial_state, prediction_denorm=True)
+        s_horizon = predictor_true_equations.predict(u)#[:, :, : len(STATE_INDICES)]
+        s_horizon = np.expand_dims(s_horizon, axis=0)
+    else:
+        initial_state = np.tile(s, (num_rollouts, 1))
+        predictor.setup(initial_state=initial_state, prediction_denorm=True)
+        s_horizon = predictor.predict(u)[:, :, : len(STATE_INDICES)]
+
+    return s_horizon
+
+
 
 def trajectory_rollouts(
     s: np.ndarray,
-    S_tilde_k: np.ndarray,
     u: np.ndarray,
     delta_u: np.ndarray,
     u_prev: np.ndarray,
@@ -217,41 +280,10 @@ def trajectory_rollouts(
 
     :return: S_tilde_k - Array filled with a cost for each rollout trajectory
     """
-    initial_state = np.tile(s, (num_rollouts, 1))
 
-    predictor.setup(initial_state=initial_state, prediction_denorm=True)
-    s_horizon = predictor.predict(u + delta_u)[:, :, : len(STATE_INDICES)]
+    s_horizon = predict_trajectories(s, u+delta_u)
 
-    # Compute stage costs
-    cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
-        s_horizon[:, 1:, :], u, delta_u, u_prev, target_position
-    )
-    S_tilde_k = np.sum(cost_increment, axis=1)
-    # Compute terminal cost
-    S_tilde_k += phi(s_horizon, target_position)
-
-    # Pass costs to GUI popup window
-    global gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc, gui_ccrc
-    gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc, gui_ccrc = (
-        np.mean(dd),
-        np.mean(ep),
-        np.mean(ekp),
-        np.mean(ekc),
-        np.mean(cc),
-        np.mean(ccrc),
-    )
-
-    if LOGGING:
-        LOGS.get("cost_breakdown").get("cost_dd").append(np.mean(dd, 0))
-        LOGS.get("cost_breakdown").get("cost_ep").append(np.mean(ep, 0))
-        LOGS.get("cost_breakdown").get("cost_ekp").append(np.mean(ekp, 0))
-        LOGS.get("cost_breakdown").get("cost_ekc").append(np.mean(ekc, 0))
-        LOGS.get("cost_breakdown").get("cost_cc").append(np.mean(cc, 0))
-        LOGS.get("cost_breakdown").get("cost_ccrc").append(np.mean(ccrc, 0))
-        # (1 x mpc_samples)
-        LOGS.get("states").append(
-            np.copy(s_horizon[:, :-1, :])
-        )  # num_rollouts x mpc_samples x STATE_VARIABLES
+    S_tilde_k = total_cost(s_horizon, u, delta_u, u_prev, target_position, EXPORT=True, LOGGING=LOGGING)
 
     return S_tilde_k
 
@@ -353,7 +385,7 @@ def reward_weighted_average(S: np.ndarray, delta_u: np.ndarray):
 
 
 @jit(nopython=True, cache=True, fastmath=True)
-def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
+def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray, INPLACE=True):
     """Reward-weighted in-place update of nominal control inputs according to the MPPI method.
 
     :param u: Sampling mean / warm started control inputs of size (,mpc_samples)
@@ -363,7 +395,12 @@ def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
     :param delta_u: The input perturbations that had been used, shape (num_rollouts x mpc_samples)
     :type delta_u: np.ndarray
     """
-    u += reward_weighted_average(S, delta_u)
+    if INPLACE:
+        u += reward_weighted_average(S, delta_u)
+    else:
+        u_new = np.copy(u)
+        u_new += reward_weighted_average(S, delta_u)
+        return u_new
 
 
 class controller_mppi(template_controller):
@@ -375,18 +412,21 @@ class controller_mppi(template_controller):
 
     def __init__(self):
 
+        self.controller_data_for_csv = {'adapt_mode':[], 'retraining_now':[],}
+
         self.current_system_state = None  # MT TODO: Replace with self.s
         self.predicted_system_state = None  # MT Currently unused
         self.prev_control_input = None  # Control input given to the system at the end of the last step
         self.prev_system_state = None  # The previous measured system state
-        self.adapt_idle_counter_pre_change_max = 50  # time between retraining and subsequent change of parameters
+        self.adapt_idle_counter_pre_change_max = 250  # time between retraining and subsequent change of parameters
         self.adapt_idle_counter_post_change_max = 1  # time between change of parameters and starting filling the buffer (make it bigger if you buffer is small so that you can observe effect of parameters change). Should be at least 1 so that the "previous" value is already with a new parameter
-        self.shift_reg_len = 100  # How many samples to store before training
+        self.shift_reg_len = 500  # How many samples to store before training
         self.shift_reg_index = 0  # Index to keep track of index in the buffer
         self.training_count = 0  # Debug info: How many online training cycle have completed?
         self.adapt_mode = 'idle_pre'  # Possible 'idle_pre', 'idle_post', 'filling buffer'
         self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
         self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
+        self.retraining_now = False
         if ADAPT and predictor_type == 'NeuralNet':
             # Buffers to store input and output
             self.training_shift_reg_input = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.inputs)))
@@ -412,6 +452,10 @@ class controller_mppi(template_controller):
         self.u_prev = np.zeros_like(self.u, dtype=np.float32)
         self.delta_u = np.zeros((num_rollouts, mpc_samples), dtype=np.float32)
         self.S_tilde_k = np.zeros((num_rollouts), dtype=np.float32)
+
+        self.cost_trajectory_from_u_predicted = 0.0
+        self.cost_trajectory_from_u_true_equations = 0.0
+        self.relative_cost_difference = 0.0
 
         self.warm_up_len = 100
         self.warm_up_countdown = self.warm_up_len
@@ -504,7 +548,7 @@ class controller_mppi(template_controller):
         if self.adapt_mode == 'idle_pre':
             if self.adapt_idle_counter_pre == 0:
                 global L
-                # L[...] = L*0.75
+                L[...] = L*0.75
                 print('Entered idle_post')
                 self.adapt_mode = 'idle_post'
                 self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
@@ -519,6 +563,7 @@ class controller_mppi(template_controller):
                 self.adapt_idle_counter_post -= 1
         elif self.adapt_mode == 'filling_buffer':
             if self.shift_reg_index == 0:
+                self.retraining_now = False
                 print('Entered idle_pre')
                 self.adapt_mode = 'idle_pre'
                 # shift_reg_index is set to 0 whereelse
@@ -551,6 +596,7 @@ class controller_mppi(template_controller):
                 # If the buffer is full, reset and fit the model to stored data
                 if self.shift_reg_index == self.shift_reg_len:
                     self.shift_reg_index = 0
+                    self.retraining_now = True
                     print('\nADAPTIVE TRAINING! @ Time = ', time, 'Training Count=', self.training_count)
                     self.training_count += 1
                     predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=3,
@@ -583,7 +629,6 @@ class controller_mppi(template_controller):
             # Run parallel trajectory rollouts for different input perturbations
             self.S_tilde_k = trajectory_rollouts(
                 self.s,
-                self.S_tilde_k,
                 self.u,
                 self.delta_u,
                 self.u_prev,
@@ -591,7 +636,31 @@ class controller_mppi(template_controller):
             )
 
             # Update inputs with weighted perturbations
-            update_inputs(self.u, self.S_tilde_k, self.delta_u)
+            u_predicted = update_inputs(self.u, self.S_tilde_k, self.delta_u, INPLACE=False)
+            delta_u_predicted = u_predicted-self.u
+
+            # Get u_predicted_ideal with MPPI based on true equations
+            s_horizon_true_equations = predict_trajectories(self.s, self.u+self.delta_u, IDEAL_PREDICTION=True)
+            S_tilde_k = total_cost(s_horizon_true_equations, self.u, self.delta_u, self.u_prev, self.target_position, EXPORT=False, LOGGING=LOGGING)
+            del s_horizon_true_equations
+            u_true_equations = update_inputs(self.u, S_tilde_k, self.delta_u, INPLACE=False)
+            delta_u_true_equations = u_true_equations-self.u
+
+            # Get the true trajectories resulting from both u_predicted and u_predicted_true_equations
+
+            trajectory_from_u_predicted = predict_trajectories(self.s, u_predicted, IDEAL_PREDICTION=True)
+            trajectory_from_u_true_equations = predict_trajectories(self.s, u_true_equations, IDEAL_PREDICTION=True)
+
+            # Assign cost to these trajectories
+            self.cost_trajectory_from_u_predicted = float(total_cost(trajectory_from_u_predicted, self.u, delta_u_predicted, self.u_prev, self.target_position, EXPORT=False, LOGGING=False))
+            self.cost_trajectory_from_u_true_equations = float(total_cost(trajectory_from_u_true_equations, self.u, delta_u_true_equations, self.u_prev, self.target_position, EXPORT=False, LOGGING=False))
+
+            # Relative cost difference in % !!!!
+            self.relative_cost_difference = ((self.cost_trajectory_from_u_true_equations-self.cost_trajectory_from_u_predicted)/self.cost_trajectory_from_u_predicted) * 100.0
+
+            self.u = u_predicted
+
+            # based on found
 
             # Log states and costs incurred for plotting later
             if LOGGING:
@@ -675,7 +744,16 @@ class controller_mppi(template_controller):
             #                         [-1, 1, len(predictor.net_info.inputs)])
             #self.predicted_system_state = np.reshape(predictor.net.predict(model_input), (5,))
             #
+        if self.adapt_mode == 'idle_pre':
+            adapt_mode = 'after_training'
+        elif (self.adapt_mode == 'idle_post') or (self.adapt_mode == 'filling_buffer'):
+            adapt_mode = 'before_training'
 
+        self.controller_data_for_csv = {'adapt_mode': [adapt_mode], 'retraining_now': [self.retraining_now],
+                                        'cost_trajectory_from_u_predicted': [self.cost_trajectory_from_u_predicted],
+                                        'cost_trajectory_from_u_true_equations': [self.cost_trajectory_from_u_true_equations],
+                                        'relative_cost_difference': [self.relative_cost_difference],
+                                        'training_count': [self.training_count]}
         return Q  # normed control input in the range [-1,1]
 
     def update_control_vector(self):
@@ -819,9 +897,6 @@ class controller_mppi(template_controller):
             # For each rollout, calculate what the nominal trajectory would be using the known true model
             # This can uncover if the model used makes inaccurate predictions
             # shape(true_nominal_rollouts) = ITERATIONS x mpc_horizon x [position, positionD, angle, angleD]
-            predictor_true_equations = predictor_ideal(
-                horizon=mpc_samples, dt=dt, intermediate_steps=10
-            )
             predictor_true_equations.setup(
                 np.copy(nrlgs[:, 0, :]), prediction_denorm=True
             )
