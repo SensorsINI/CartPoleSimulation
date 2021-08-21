@@ -43,7 +43,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     frac_train = 0.8
     frac_val = 0.19
 
-    save_mode = 'offline'  # It was intended to save memory usage, but it doesn't seems to help
+    save_mode = 'online'  # It was intended to save memory usage, but it doesn't seems to help
 
     ###### Timescales
     dt_simulation_DataGen = 0.002  # simulation timestep

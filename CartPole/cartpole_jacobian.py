@@ -15,8 +15,7 @@ from others.p_globals import (
     g as param_g,
     J_fric as param_J_fric,
     M_fric as param_M_fric,
-    L as param_L,
-    CARTPOLE_EQUATIONS
+    L as param_L
 )
 
 
@@ -29,7 +28,7 @@ k, M, m, L, J_fric, M_fric, g = sym.symbols("k,M,m,L,J_fric,M_fric,g")
 
 xD = v
 tD = o
-oD, vD, _, _ = _cartpole_ode(sym.cos(-t), sym.sin(-t), o, v, u)
+oD, vD, _, _ = _cartpole_ode(sym.cos(t), sym.sin(t), o, v, u)
 
 
 xx = sym.diff(xD, x, 1)
@@ -89,49 +88,48 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
     ca = np.cos(angle)
     sa = np.sin(angle)
 
-    if CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
-        # Jacobian entries
-        J[0, 0] = 0.0  # xx
+    # Jacobian entries
+    J[0, 0] = 0.0  # xx
 
-        J[0, 1] = 1.0  # xv
+    J[0, 1] = 1.0  # xv
 
-        J[0, 2] = 0.0  # xt
+    J[0, 2] = 0.0  # xt
 
-        J[0, 3] = 0.0  # xo
+    J[0, 3] = 0.0  # xo
 
-        J[0, 4] = 0.0  # xu
+    J[0, 4] = 0.0  # xu
 
-        J[1, 0] = 0.0  # vx
+    J[1, 0] = 0.0  # vx
 
-        J[1, 1] = vv(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
+    J[1, 1] = vv(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
-        J[1, 2] = vt(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
+    J[1, 2] = vt(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
-        J[1, 3] = vo(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
+    J[1, 3] = vo(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
-        J[1, 4] = vu(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
+    J[1, 4] = vu(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
-        J[2, 0] = 0.0  # tx
+    J[2, 0] = 0.0  # tx
 
-        J[2, 1] = 0.0  # tv
+    J[2, 1] = 0.0  # tv
 
-        J[2, 2] = 0.0  # tt
+    J[2, 2] = 0.0  # tt
 
-        J[2, 3] = 1.0  # to
+    J[2, 3] = 1.0  # to
 
-        J[2, 4] = 0.0  # tu
+    J[2, 4] = 0.0  # tu
 
-        J[3, 0] = 0.0  # ox
+    J[3, 0] = 0.0  # ox
 
-        J[3, 1] = ov(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
+    J[3, 1] = ov(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
-        J[3, 2] = ot(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
+    J[3, 2] = ot(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
-        J[3, 3] = oo(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
+    J[3, 3] = oo(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
-        J[3, 4] = ou(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
+    J[3, 4] = ou(position, positionD, angle, angleD, u, param_k, param_M, param_m, param_L, param_J_fric, param_M_fric, param_g)
 
-        return J
+    return J
 
 
 s0 = create_cartpole_state()

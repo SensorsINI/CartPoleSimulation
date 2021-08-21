@@ -133,8 +133,8 @@ class predictor_ideal:
 
         # Calculate second derivatives of initial state
         self.angleDD, self.positionDD, self.angle_cos, self.angle_sin = _cartpole_ode_numba(
-            np.cos(-self.angle),
-            np.sin(-self.angle),
+            np.cos(self.angle),
+            np.sin(self.angle),
             self.angleD,
             self.positionD,
             self.u[:, 0]

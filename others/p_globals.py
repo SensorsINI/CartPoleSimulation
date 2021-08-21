@@ -45,7 +45,3 @@ def export_globals():
 )
 
 k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, controlBias, TrackHalfLength = export_globals()
-
-
-
-CARTPOLE_EQUATIONS = 'Marcin-Sharpneat'
