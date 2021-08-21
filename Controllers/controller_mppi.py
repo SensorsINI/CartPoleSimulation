@@ -8,6 +8,7 @@ Based on Williams, Aldrich, Theodorou (2015)
 # from matplotlib import use
 # # # use('TkAgg')
 # use('macOSX')
+import copy
 
 from others.p_globals import (
     k, M, m, g, J_fric, M_fric, L, v_max, u_max,
@@ -74,6 +75,8 @@ num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 update_every = config["controller"]["mppi"]["update_every"]
 predictor_type = config["controller"]["mppi"]["predictor_type"]
 
+INITIAL_L = copy.deepcopy(L)
+
 
 """Parameters weighting the different cost components"""
 dd_weight = config["controller"]["mppi"]["dd_weight"]
@@ -89,14 +92,6 @@ dd_noise = ep_noise = ekp_noise = ekc_noise = cc_noise = config["controller"]["m
     "cost_noise"
 ]
 
-
-dd_weight = dd_weight * (1 + dd_noise * np.random.uniform(-1.0, 1.0))
-ep_weight = ep_weight * (1 + ep_noise * np.random.uniform(-1.0, 1.0))
-ekp_weight = ekp_weight * (1 + ekp_noise * np.random.uniform(-1.0, 1.0))
-ekc_weight = ekc_weight * (1 + ekc_noise * np.random.uniform(-1.0, 1.0))
-cc_weight = cc_weight * (1 + cc_noise * np.random.uniform(-1.0, 1.0))
-
-
 gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = gui_ccrc = np.zeros(1, dtype=np.float32)
 
 
@@ -107,9 +102,6 @@ NU = config["controller"]["mppi"]["NU"]
 SQRTRHODTINV = config["controller"]["mppi"]["SQRTRHOINV"] * (1 / np.math.sqrt(dt))
 GAMMA = config["controller"]["mppi"]["GAMMA"]
 SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
-
-"""Random number generator"""
-rng = Generator(SFC64(int((datetime.now() - datetime(1970, 1, 1)).total_seconds())))
 
 
 """Init logging variables"""
@@ -183,7 +175,7 @@ def penalize_deviation(cc, u):
 
 """Define Predictor"""
 if predictor_type == "Euler":
-    predictor = predictor_ideal(horizon=mpc_samples, dt=dt, intermediate_steps=1)
+    predictor = predictor_ideal(horizon=mpc_samples, dt=dt, intermediate_steps=10)
 elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
         horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
@@ -233,57 +225,30 @@ def total_cost(s_horizon, u, delta_u, u_prev, target_position, EXPORT=True, LOGG
     return S_tilde_k
 
 
-def predict_trajectories(s, u, IDEAL_PREDICTION=False):
+def predict_trajectories(s, u, PREDICTION_MODE='normal-multi'):
 
     """ Given initial state and array of control input scenarios this function calculates the resulting trajectories
 
     :param s: Current state of the system
     :param u: array of control inputs scenarios"""
-
-    if IDEAL_PREDICTION:
+    if PREDICTION_MODE=='ideal-single':
         initial_state = np.tile(s, (1, 1))
         predictor_true_equations.setup(initial_state=initial_state, prediction_denorm=True)
-        s_horizon = predictor_true_equations.predict(u)#[:, :, : len(STATE_INDICES)]
+        s_horizon = predictor_true_equations.predict(u, pole_half_length=L)
         s_horizon = np.expand_dims(s_horizon, axis=0)
-    else:
+    elif PREDICTION_MODE=='ideal-multi':
+        initial_state = np.tile(s, (num_rollouts, 1))
+        predictor_true_equations.setup(initial_state=initial_state, prediction_denorm=True)
+        s_horizon = predictor_true_equations.predict(u, pole_half_length=L)[:, :, : len(STATE_INDICES)]
+    elif PREDICTION_MODE=='normal-multi':
         initial_state = np.tile(s, (num_rollouts, 1))
         predictor.setup(initial_state=initial_state, prediction_denorm=True)
-        s_horizon = predictor.predict(u)[:, :, : len(STATE_INDICES)]
+        if predictor_type=='NeuralNet':
+            s_horizon = predictor.predict(u)[:, :, : len(STATE_INDICES)]
+        elif predictor_type=='Euler':
+            s_horizon = predictor.predict(u, pole_half_length=INITIAL_L)[:, :, : len(STATE_INDICES)]
 
     return s_horizon
-
-
-
-def trajectory_rollouts(
-    s: np.ndarray,
-    u: np.ndarray,
-    delta_u: np.ndarray,
-    u_prev: np.ndarray,
-    target_position: np.float32,
-):
-    """Sample thousands of rollouts using system model. Compute cost-weighted control update. Log states and costs if specified.
-
-    :param s: Current state of the system
-    :type s: np.ndarray
-    :param S_tilde_k: Placeholder array to store the cost of each rollout trajectory
-    :type S_tile_k: np.ndarray
-    :param u: Vector of nominal inputs computed in previous iteration
-    :type u: np.ndarray
-    :param delta_u: Array containing all input perturbation samples. Shape (num_rollouts x horizon_steps)
-    :type delta_u: np.ndarray
-    :param u_prev: Array with nominal inputs from previous iteration. Used to compute cost of control change
-    :type u_prev: np.ndarray
-    :param target_position: Target position where the cart should move to
-    :type target_position: np.float32
-
-    :return: S_tilde_k - Array filled with a cost for each rollout trajectory
-    """
-
-    s_horizon = predict_trajectories(s, u+delta_u)
-
-    S_tilde_k = total_cost(s_horizon, u, delta_u, u_prev, target_position, EXPORT=True, LOGGING=LOGGING)
-
-    return S_tilde_k
 
 
 def q(
@@ -314,22 +279,24 @@ def q(
         - cc - Control cost
         - ccrc - Control change rate cost
     """
-    dd = dd_weight * distance_difference_cost(
-        s[:, :, POSITION_IDX], target_position
-    ).astype(np.float32)
-    ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX]).astype(np.float32)
-    ekp = ekp_weight * E_kin_pol(s[:, :, ANGLED_IDX]).astype(np.float32)
-    ekc = ekc_weight * E_kin_cart(s[:, :, POSITIOND_IDX]).astype(np.float32)
+    dd = dd_weight * np.array(distance_difference_cost(
+        s[..., POSITION_IDX], target_position
+    ), dtype=np.float32)
+    ep = ep_weight * np.array(E_pot_cost(s[..., ANGLE_IDX]), dtype=np.float32)
+    ekp = ekp_weight * np.array(E_kin_pol(s[..., ANGLED_IDX]), dtype=np.float32)
+    ekc = ekc_weight * np.array(E_kin_cart(s[..., POSITIOND_IDX]), dtype=np.float32)
     cc = cc_weight * (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
-    ccrc = ccrc_weight * control_change_rate_cost(u + delta_u, u_prev).astype(
-        np.float32
-    )
+    ccrc = ccrc_weight * np.array(control_change_rate_cost(u + delta_u, u_prev), dtype=np.float32)
     # rterm = 1.0e4 * np.sum((delta_u[:,1:] - delta_u[:,:-1]) ** 2, axis=1, keepdims=True)
 
     # Penalize if control deviation is outside constraint set.
-    cc[np.abs(u + delta_u) > 1.0] = 1.0e5
+    if u.ndim == 0:
+        if np.abs(u + delta_u) > 1.0:
+            cc = np.array(1.0e5, dtype=np.float32)
+    else:
+        cc[np.abs(u + delta_u) > 1.0] = 1.0e5  # The cost of optimal trajectories seems to go altogether up to 1.0e7, Frederik had 1.0e5
 
     q = dd + ep + ekp + ekc + cc + ccrc
 
@@ -410,21 +377,46 @@ class controller_mppi(template_controller):
 
     def __init__(self):
 
-        self.controller_data_for_csv = {'adapt_mode':[], 'retraining_now':[],}
+        """Random number generator"""
+        SEED = config["controller"]["mppi"]["SEED"]
+        if SEED == "None":
+            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
+        self.rng_mppi = Generator(SFC64(SEED))
+
+        global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
+        dd_weight = dd_weight * (1 + dd_noise * self.rng_mppi.uniform(-1.0, 1.0))
+        ep_weight = ep_weight * (1 + ep_noise * self.rng_mppi.uniform(-1.0, 1.0))
+        ekp_weight = ekp_weight * (1 + ekp_noise * self.rng_mppi.uniform(-1.0, 1.0))
+        ekc_weight = ekc_weight * (1 + ekc_noise * self.rng_mppi.uniform(-1.0, 1.0))
+        cc_weight = cc_weight * (1 + cc_noise * self.rng_mppi.uniform(-1.0, 1.0))
+
+        print('ADAPT: {}'.format(ADAPT))
+
+        self.controller_data_for_csv = {'stage_cost_realized_trajectory': [],
+                                        'adapt_mode':[],
+                                        'retraining_now':[],
+                                        'cost_trajectory_from_u_predicted': [],
+                                        'cost_trajectory_from_u_true_equations': [],
+                                        'relative_cost_difference': [],
+                                        'training_count': [],
+                                        'phase_count_for_average': [],
+                                        }
 
         self.current_system_state = None  # MT TODO: Replace with self.s
         self.predicted_system_state = None  # MT Currently unused
         self.prev_control_input = None  # Control input given to the system at the end of the last step
         self.prev_system_state = None  # The previous measured system state
-        self.adapt_idle_counter_pre_change_max = 250  # time between retraining and subsequent change of parameters
+        self.adapt_idle_counter_pre_change_max = 2000  # time between retraining and subsequent change of parameters
         self.adapt_idle_counter_post_change_max = 1  # time between change of parameters and starting filling the buffer (make it bigger if you buffer is small so that you can observe effect of parameters change). Should be at least 1 so that the "previous" value is already with a new parameter
-        self.shift_reg_len = 500  # How many samples to store before training
+        self.shift_reg_len = 2000  # How many samples to store before training
         self.shift_reg_index = 0  # Index to keep track of index in the buffer
         self.training_count = 0  # Debug info: How many online training cycle have completed?
         self.adapt_mode = 'idle_pre'  # Possible 'idle_pre', 'idle_post', 'filling buffer'
         self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
         self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
         self.retraining_now = False
+        self.phase_count_for_average = 0
+        self.adapt_mode_save = 'after_training'
         if ADAPT and predictor_type == 'NeuralNet':
             # Buffers to store input and output
             self.training_shift_reg_input = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.inputs)))
@@ -433,7 +425,7 @@ class controller_mppi(template_controller):
             # TODO: Try replacing MSE with percent error does running .evaluate still give reasonable results?
             predictor.net.compile(
                 loss=keras.losses.MeanSquaredError(),
-                optimizer=keras.optimizers.Adam(5.0e-4)
+                optimizer=keras.optimizers.Adam(1.0e-6)
             )
         # State of the cart
         self.s = create_cartpole_state()
@@ -454,6 +446,8 @@ class controller_mppi(template_controller):
         self.cost_trajectory_from_u_predicted = 0.0
         self.cost_trajectory_from_u_true_equations = 0.0
         self.relative_cost_difference = 0.0
+
+        self.stage_cost_realized_trajectory = 0.0
 
         self.warm_up_len = 100
         self.warm_up_countdown = self.warm_up_len
@@ -490,22 +484,22 @@ class controller_mppi(template_controller):
         """
         if sampling_type == "random_walk":
             delta_u = np.empty((num_rollouts, mpc_samples), dtype=np.float32)
-            delta_u[:, 0] = stdev * rng.standard_normal(
+            delta_u[:, 0] = stdev * self.rng_mppi.standard_normal(
                 size=(num_rollouts,), dtype=np.float32
             )
             for i in range(1, mpc_samples):
-                delta_u[:, i] = delta_u[:, i - 1] + stdev * rng.standard_normal(
+                delta_u[:, i] = delta_u[:, i - 1] + stdev * self.rng_mppi.standard_normal(
                     size=(num_rollouts,), dtype=np.float32
                 )
         elif sampling_type == "uniform":
             delta_u = np.empty((num_rollouts, mpc_samples), dtype=np.float32)
             for i in range(0, mpc_samples):
-                delta_u[:, i] = rng.uniform(
+                delta_u[:, i] = self.rng_mppi.uniform(
                     low=-1.0, high=1.0, size=(num_rollouts,)
                 ).astype(np.float32)
         elif sampling_type == "repeated":
             delta_u = np.tile(
-                stdev * rng.standard_normal(size=(num_rollouts, 1), dtype=np.float32),
+                stdev * self.rng_mppi.standard_normal(size=(num_rollouts, 1), dtype=np.float32),
                 (1, mpc_samples),
             )
         elif sampling_type == "interpolated":
@@ -515,14 +509,14 @@ class controller_mppi(template_controller):
             t_interp = np.arange(start=0, stop=range_stop, step=1)
             t_interp = np.delete(t_interp, t)
             delta_u = np.zeros(shape=(num_rollouts, range_stop), dtype=np.float32)
-            delta_u[:, t] = stdev * rng.standard_normal(
+            delta_u[:, t] = stdev * self.rng_mppi.standard_normal(
                 size=(num_rollouts, t.size), dtype=np.float32
             )
             f = interp1d(t, delta_u[:, t])
             delta_u[:, t_interp] = f(t_interp)
             delta_u = delta_u[:, :mpc_samples]
         else:
-            delta_u = stdev * rng.standard_normal(
+            delta_u = stdev * self.rng_mppi.standard_normal(
                 size=(num_rollouts, mpc_samples), dtype=np.float32
             )
 
@@ -546,15 +540,16 @@ class controller_mppi(template_controller):
         if self.adapt_mode == 'idle_pre':
             if self.adapt_idle_counter_pre == 0:
                 global L
-                L[...] = L*0.75
-                print('Entered idle_post')
+                L[...] = L*0.85
+                print(L)
+                # print('Entered idle_post')
                 self.adapt_mode = 'idle_post'
                 self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
             else:
                 self.adapt_idle_counter_pre -= 1
         elif self.adapt_mode == 'idle_post':
             if self.adapt_idle_counter_post == 0:
-                print('Entered filling_buffer')
+                # print('Entered filling_buffer')
                 self.adapt_mode = 'filling_buffer'
                 self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
             else:
@@ -562,7 +557,7 @@ class controller_mppi(template_controller):
         elif self.adapt_mode == 'filling_buffer':
             if self.shift_reg_index == 0:
                 self.retraining_now = False
-                print('Entered idle_pre')
+                # print('Entered idle_pre')
                 self.adapt_mode = 'idle_pre'
                 # shift_reg_index is set to 0 whereelse
 
@@ -589,18 +584,20 @@ class controller_mppi(template_controller):
                 # Format for training
                 self.training_shift_reg_input[self.shift_reg_index, ...] = model_input_normed
                 self.training_shift_reg_output[self.shift_reg_index, ...] = model_output_normed
-                self.shift_reg_index += 1
 
-                # If the buffer is full, reset and fit the model to stored data
-                if self.shift_reg_index == self.shift_reg_len:
-                    self.shift_reg_index = 0
-                    self.retraining_now = True
-                    print('\nADAPTIVE TRAINING! @ Time = ', time, 'Training Count=', self.training_count)
-                    self.training_count += 1
-                    predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=3,
-                                                                batch_size=32, shuffle=True, verbose=2)
-                    # predictor.net.evaluate(x=self.training_shift_reg_input, y=self.training_shift_reg_output,
-                    #                                                   batch_size=32)
+        self.shift_reg_index += 1
+
+        # If the buffer is full, reset and fit the model to stored data
+        if self.shift_reg_index == self.shift_reg_len:
+            self.shift_reg_index = 0
+            if ADAPT and predictor_type == 'NeuralNet' and (self.adapt_mode == 'filling_buffer'):
+                self.retraining_now = True
+                print('\nADAPTIVE TRAINING! @ Time = ', time, 'Training Count=', self.training_count)
+                self.training_count += 1
+                predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=1,
+                                                            batch_size=64, shuffle=True, verbose=2)
+                # predictor.net.evaluate(x=self.training_shift_reg_input, y=self.training_shift_reg_output,
+                #                                                   batch_size=32)
 
         # Need to find the current measured system state, the predicted system state and the control input
         self.s = s
@@ -625,38 +622,47 @@ class controller_mppi(template_controller):
             self.S_tilde_k = np.zeros_like(self.S_tilde_k, dtype=np.float32)
 
             # Run parallel trajectory rollouts for different input perturbations
-            self.S_tilde_k = trajectory_rollouts(
-                self.s,
-                self.u,
-                self.delta_u,
-                self.u_prev,
-                self.target_position,
-            )
+            # self.S_tilde_k = trajectory_rollouts(
+            #     self.s,
+            #     self.u,
+            #     self.delta_u,
+            #     self.u_prev,
+            #     self.target_position,
+            # )
+
+            s_horizon = predict_trajectories(self.s, self.u + self.delta_u, PREDICTION_MODE='normal-multi')
+            self.S_tilde_k = total_cost(s_horizon, self.u, self.delta_u, self.u_prev, self.target_position, EXPORT=True, LOGGING=LOGGING)
 
             # Update inputs with weighted perturbations
             u_predicted = update_inputs(self.u, self.S_tilde_k, self.delta_u, INPLACE=False)
             delta_u_predicted = u_predicted-self.u
 
             # Get u_predicted_ideal with MPPI based on true equations
-            s_horizon_true_equations = predict_trajectories(self.s, self.u+self.delta_u, IDEAL_PREDICTION=True)
+            s_horizon_true_equations = predict_trajectories(self.s, self.u+self.delta_u, PREDICTION_MODE='ideal-multi')
             S_tilde_k = total_cost(s_horizon_true_equations, self.u, self.delta_u, self.u_prev, self.target_position, EXPORT=False, LOGGING=LOGGING)
-            del s_horizon_true_equations
+            # del s_horizon_true_equations
             u_true_equations = update_inputs(self.u, S_tilde_k, self.delta_u, INPLACE=False)
             delta_u_true_equations = u_true_equations-self.u
 
             # Get the true trajectories resulting from both u_predicted and u_predicted_true_equations
 
-            trajectory_from_u_predicted = predict_trajectories(self.s, u_predicted, IDEAL_PREDICTION=True)
-            trajectory_from_u_true_equations = predict_trajectories(self.s, u_true_equations, IDEAL_PREDICTION=True)
+            trajectory_from_u_predicted = predict_trajectories(self.s, u_predicted, PREDICTION_MODE='ideal-single')
+            trajectory_from_u_true_equations = predict_trajectories(self.s, u_true_equations, PREDICTION_MODE='ideal-single')
 
             # Assign cost to these trajectories
             self.cost_trajectory_from_u_predicted = float(total_cost(trajectory_from_u_predicted, self.u, delta_u_predicted, self.u_prev, self.target_position, EXPORT=False, LOGGING=False))
             self.cost_trajectory_from_u_true_equations = float(total_cost(trajectory_from_u_true_equations, self.u, delta_u_true_equations, self.u_prev, self.target_position, EXPORT=False, LOGGING=False))
 
             # Relative cost difference in % !!!!
-            self.relative_cost_difference = ((self.cost_trajectory_from_u_true_equations-self.cost_trajectory_from_u_predicted)/self.cost_trajectory_from_u_predicted) * 100.0
+            self.relative_cost_difference = ((self.cost_trajectory_from_u_predicted-self.cost_trajectory_from_u_true_equations)/self.cost_trajectory_from_u_true_equations) * 100.0
 
-            self.u = u_predicted
+            self.u = u_true_equations
+            self.delta_u = delta_u_true_equations
+
+            # self.u = u_predicted
+            # self.delta_u = delta_u_predicted
+
+            self.stage_cost_realized_trajectory = q(self.s, self.u[0]-self.delta_u[0], self.delta_u[0], self.u_prev[0], self.target_position)[0]
 
             # based on found
 
@@ -715,7 +721,7 @@ class controller_mppi(template_controller):
         #     Q = np.random.uniform(-1.0, 1.0)
 
         # Add noise on top of the calculated Q value to better explore state space
-        Q = np.float32(Q * (1 + p_Q * np.random.uniform(-1.0, 1.0)))
+        Q = np.float32(Q * (1 + p_Q * self.rng_mppi.uniform(-1.0, 1.0)))
         # Clip inputs to allowed range
         Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
 
@@ -742,16 +748,24 @@ class controller_mppi(template_controller):
             #                         [-1, 1, len(predictor.net_info.inputs)])
             #self.predicted_system_state = np.reshape(predictor.net.predict(model_input), (5,))
             #
-        if self.adapt_mode == 'idle_pre':
-            adapt_mode = 'after_training'
-        elif (self.adapt_mode == 'idle_post') or (self.adapt_mode == 'filling_buffer'):
-            adapt_mode = 'before_training'
 
-        self.controller_data_for_csv = {'adapt_mode': [adapt_mode], 'retraining_now': [self.retraining_now],
+        adapt_mode_save_previous = self.adapt_mode_save
+        if self.adapt_mode == 'idle_pre':
+            self.adapt_mode_save = 'after_training'
+        elif (self.adapt_mode == 'idle_post') or (self.adapt_mode == 'filling_buffer'):
+            self.adapt_mode_save = 'before_training'
+
+        if adapt_mode_save_previous != self.adapt_mode_save:
+            self.phase_count_for_average += 1
+
+        self.controller_data_for_csv = {'stage_cost_realized_trajectory': [self.stage_cost_realized_trajectory],
+                                        'adapt_mode': [self.adapt_mode_save],
+                                        'retraining_now': [self.retraining_now],
                                         'cost_trajectory_from_u_predicted': [self.cost_trajectory_from_u_predicted],
                                         'cost_trajectory_from_u_true_equations': [self.cost_trajectory_from_u_true_equations],
                                         'relative_cost_difference': [self.relative_cost_difference],
-                                        'training_count': [self.training_count]}
+                                        'training_count': [self.training_count],
+                                        'phase_count_for_average': [self.phase_count_for_average]}
         return Q  # normed control input in the range [-1,1]
 
     def update_control_vector(self):
