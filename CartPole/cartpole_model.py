@@ -65,7 +65,7 @@ def _cartpole_ode_adaptive (ca, sa, angleD, positionD, u,
     # g (gravitational acceleration) is positive (absolute value)
     # Checked independently by Marcin and Krishna
 
-    A = (k + 1) * (M + m) - m * (ca ** 2)
+    A = k * (M + m) - m * (ca ** 2)
     F_fric = - M_fric * positionD  # Force resulting from cart friction, notice that the mass of the cart is not explicitly there
     T_fric = - J_fric * angleD  # Torque resulting from pole friction
 
@@ -73,7 +73,7 @@ def _cartpole_ode_adaptive (ca, sa, angleD, positionD, u,
             (
                     + m * g * sa * ca  # Movement of the cart due to gravity
                     + ((T_fric * ca) / L)  # Movement of the cart due to pend' s friction in the joint
-                    + (k + 1) * (
+                    + k * (
                             - (m * L * (
                                         angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
                             + F_fric  # Braking of the cart due its friction
@@ -91,7 +91,7 @@ def _cartpole_ode_adaptive (ca, sa, angleD, positionD, u,
     angleDD = (
             (
                     g * sa + positionDD * ca + T_fric / (m * L)
-            ) / ((k + 1) * L)
+            ) / (k * L)
     )
 
     # making M go to infinity makes angleDD = (g/k*L)sin(angle) - angleD*J_fric/(k*m*L^2)
