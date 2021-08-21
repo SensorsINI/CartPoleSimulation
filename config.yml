@@ -1,19 +1,20 @@
 controller:
   mppi:
-    adapt: False                          # True or False (Currently not working)
+    SEED: 1897                            # Seed for rng, for MPPI only
+    adapt: False                          # True or False
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 2000                    # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_type: "NeuralNet"           # One of ["Euler", "NeuralNet"]
     dd_weight: 120.0
-    ep_weight: 50000.0
+    ep_weight: 250000.0
     ekp_weight: 0.01
     ekc_weight: 5.0
     cc_weight: 1.0
     ccrc_weight: 1.0
     cost_noise: 0.0                       # Noise on stage cost weights by +/- this value
-    control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value
+    control_noise: 0.05                    # Noise on top of the calculated control input by +/- this value
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
     NU: 1000.0                            # Exploration variance
@@ -62,6 +63,7 @@ controller:
     dt_mpc_simulation: 0.2  # s
     mpc_horizon: 10
 cartpole:
+  SEED: 1873  # This is a seed for rng for CartPole instance class only. If None random seed based on datetime is used
   PATH_TO_CONTROLLERS: './Controllers/'  # Path where controllers are stored
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi

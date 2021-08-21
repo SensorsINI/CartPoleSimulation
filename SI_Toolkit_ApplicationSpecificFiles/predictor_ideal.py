@@ -100,7 +100,7 @@ class predictor_ideal:
         self.u = np.zeros(shape=(self.batch_size, self.horizon), dtype=np.float32)
         self.output = np.zeros((self.batch_size, self.horizon+1, len(self.prediction_features_names)+1), dtype=np.float32)
     
-    def next_state(self, k):
+    def next_state(self, k, pole_half_length=L):
         """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
         """
         (
@@ -116,10 +116,11 @@ class predictor_ideal:
             positionDD=self.positionDD,
             u=self.u[:, k],
             t_step=self.t_step,
-            intermediate_steps=self.intermediate_steps
+            intermediate_steps=self.intermediate_steps,
+            L=pole_half_length,
         )
 
-    def predict(self, Q: np.ndarray) -> np.ndarray:
+    def predict(self, Q: np.ndarray, pole_half_length=L) -> np.ndarray:
 
         # Shape of Q: (batch size x horizon length)
         if np.size(Q, -1) != self.horizon:
@@ -137,13 +138,14 @@ class predictor_ideal:
             np.sin(-self.angle),
             self.angleD,
             self.positionD,
-            self.u[:, 0]
+            self.u[:, 0],
+            L=pole_half_length,
         )
         self.write_outputs(0)
 
         for k in range(self.horizon):
             # State update
-            self.next_state(k)
+            self.next_state(k, pole_half_length=pole_half_length)
             self.write_outputs(k+1)
 
         # out_array = np.transpose(self.output, axes=(2,0,1))

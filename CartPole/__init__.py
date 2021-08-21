@@ -6,7 +6,6 @@ You can find here methods with performing experiment, saving data, displaying Ca
 and many more. To run it needs some "environment": we provide you with GUI and data_generator
 @author: Marcin
 """
-
 # region Imported modules
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
@@ -22,6 +21,8 @@ from others.p_globals import (
 
 import numpy as np
 import pandas as pd
+
+from scipy.ndimage import median_filter
 
 import traceback
 
@@ -42,6 +43,8 @@ try:
     from git import Repo
 except:
     pass
+
+from numpy.random import SFC64, Generator
 
 import sys
 
@@ -73,6 +76,12 @@ PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_R
 class CartPole:
 
     def __init__(self, initial_state=s0, path_to_experiment_recordings=None):
+
+        SEED = config["cartpole"]["SEED"]
+        if SEED == "None":
+            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0//2)  # Fully random
+
+        self.rng_CartPole = Generator(SFC64(SEED))
 
         if path_to_experiment_recordings is None:
             self.path_to_experiment_recordings = PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT
@@ -318,7 +327,8 @@ class CartPole:
                 except AttributeError:
                     pass
                 except Exception:
-                    print(traceback.format_exc())
+                    pass
+                    # print(traceback.format_exc())
 
 
             else:
@@ -442,6 +452,7 @@ class CartPole:
                     logpath_new = logpath_new + '-' + str(net_index) + '.csv'
                     net_index += 1
 
+            print('Saving to the file: {}'.format(self.csv_filepath))
             # Write the .csv file
             with open(self.csv_filepath, "a") as outfile:
                 writer = csv.writer(outfile)
@@ -550,8 +561,8 @@ class CartPole:
 
         if adaptive_mode:
             number_of_subplots = 5
-            fontsize_labels = 8
-            fontsize_ticks = 8
+            fontsize_labels = 10
+            fontsize_ticks = 10
         else:
             number_of_subplots = 4
             fontsize_labels = 14
@@ -577,11 +588,13 @@ class CartPole:
             axs[2].plot(self.dict_history['time'], self.dict_history['u'], 'r', markersize=12,
                         label='motor')
             axs[2].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+            axs[2].set_ylim(bottom=-1.05*u_max, top=1.05*u_max)
         except KeyError:
             axs[2].set_ylabel("motor normalized (-)", fontsize=fontsize_labels)
             axs[2].plot(self.dict_history['time'], self.dict_history['Q'], 'r', markersize=12,
                         label='motor')
             axs[2].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+            axs[2].set_ylim(bottom=-1.05, top=1.05)
 
         # Plot target position
         axs[3].set_ylabel("position target (m)", fontsize=fontsize_labels)
@@ -593,25 +606,59 @@ class CartPole:
         if adaptive_mode:
             # Plot parameter change and moments of training
             axs[4].set_ylabel("Pole length [cm]", fontsize=fontsize_labels)
-            axs[4].plot(np.array(self.dict_history['time']), np.array(self.dict_history['L'])*2.0*100.0,
-                        'g', markersize=12, label='Ground Truth')
+            lns_parameter = axs[4].plot(np.array(self.dict_history['time']), np.array(self.dict_history['L'])*2.0*100.0,
+                                'g', markersize=12, label='Pole length')
+            axs[4].set_ylim(bottom=1.1 * min(np.array(self.dict_history['L'])*2.0*100.0), top=1.1 * max(np.array(self.dict_history['L'])*2.0*100.0))
+            axs[4].set_yscale('log')
             axs[4].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+            idx_retraining = np.array([i for i, x in enumerate(np.array(self.dict_history['retraining_now'])) if x], dtype=np.int32)
 
-            idx_retraining = [i for i, x in enumerate(np.array(self.dict_history['retraining_now'])) if x]
 
             retraining_time = np.array(self.dict_history['time'])[idx_retraining]
+            lns_training = []
             for xc in retraining_time:
-                plt.axvline(x=xc, color='k', linestyle='--', clip_on=False,)
+                lns_training = [axs[4].axvline(x=xc, color='k', linestyle='--', clip_on=False, label='Training', marker='|')]
 
-
+            def smooth(y, box_pts):
+                box = np.ones(box_pts) / box_pts
+                y_smooth = np.convolve(y, box, mode='same')
+                return y_smooth
+            # try:
+            df = pd.DataFrame.from_dict(self.dict_history)
+            idx_change = df[df['L'].diff() != 0].index.tolist()
+            idx_time = idx_change+[len(self.dict_history['time'])-1]
+            cost_time = np.array(self.dict_history['time'])[idx_time]
             # Plot the difference in cost of best trajectory vs. predicted one
-            # df = pd.DataFrame.from_dict(self.dict_history)
-            # gb = df.groupby(['training_count', 'adapt_mode'])
-            # data_stat = gb.size().reset_index()
-            # data_stat['relative_cost_difference_mean'] = gb['relative_cost_difference'].mean()['relative_cost_difference'].reset_index()
-            # A = gb['relative_cost_difference'].median()
-            # new_frame = gb.reset_index()
+            df = pd.DataFrame.from_dict(self.dict_history)
+            gb = df.groupby(['L'], sort=False)
+            # cost_difference = gb['cost_trajectory_from_u_true_equations'].mean().values
+            cost_difference = gb['cost_trajectory_from_u_predicted'].mean().values
+            # cost_difference = gb['stage_cost_realized_trajectory'].mean().values
+            # cost_difference = gb['relative_cost_difference'].mean().values
+            cost_difference = np.insert(cost_difference, 0, cost_difference[0])
+            # except:
+            # cost_time = np.array(self.dict_history['time'])
+            # # cost_difference = np.array(self.dict_history['cost_trajectory_from_u_predicted'])-np.array(self.dict_history['cost_trajectory_from_u_true_equations'])
+            # # cost_difference = np.array(self.dict_history['relative_cost_difference'])
+            # cost_difference = np.array(self.dict_history['cost_trajectory_from_u_predicted'])
+            # # cost_difference = np.array(self.dict_history['cost_trajectory_from_u_true_equations'])
+            # # cost_difference = median_filter(cost_difference, size=40)
+            # cost_difference = smooth(cost_difference, 1000)
 
+            ax_cost = axs[4].twinx()
+            ax_cost.set_ylabel('Cost difference (%)', fontsize=fontsize_labels)
+            lns_cost = ax_cost.plot(cost_time, cost_difference, drawstyle='steps', label='Cost difference (%)')
+            # ax_cost.set_ylabel('Cost', fontsize=fontsize_labels)
+            # lns_cost = ax_cost.plot(cost_time, cost_difference, drawstyle='steps', label='Cost')
+            ax_cost.set_ylim(bottom=1.1*min(cost_difference), top=1.1*max(cost_difference))
+            # ax_cost.set_yscale('log')
+            ax_cost.tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+
+            lns = lns_parameter + lns_training + lns_cost
+            labs = [l.get_label() for l in lns]
+            ax_cost.legend(lns, labs, fontsize=fontsize_labels)
+            # except:
+            #     pass
 
 
             axs[4].set_xlabel('Time (s)', fontsize=fontsize_labels)
@@ -635,7 +682,7 @@ class CartPole:
 
             number_of_turning_points = int(np.floor(self.length_of_experiment * self.track_relative_complexity))
 
-            y = np.random.uniform(-1.0, 1.0, number_of_turning_points)
+            y = self.rng_CartPole.uniform(-1.0, 1.0, number_of_turning_points)
             y = y * self.used_track_fraction * TrackHalfLength
 
             if number_of_turning_points == 0:
@@ -671,7 +718,7 @@ class CartPole:
 
         # t_init = linspace(0, self.t_max_pre, num=self.track_relative_complexity, endpoint=True)
         if self.turning_points_period == 'random':
-            t_init = np.sort(np.random.uniform(self.dt_simulation, self.t_max_pre - self.dt_simulation, random_samples))
+            t_init = np.sort(self.rng_CartPole.uniform(self.dt_simulation, self.t_max_pre - self.dt_simulation, random_samples))
             t_init = np.insert(t_init, 0, 0.0)
             t_init = np.append(t_init, self.t_max_pre)
         elif self.turning_points_period == 'regular':
@@ -808,10 +855,15 @@ class CartPole:
                 break
                 print('Cart went out of safety boundaries')
 
-            # if abs(self.s[cartpole_state_varname_to_index('angle')]) > 0.8*np.pi:
+            # if abs(self.s[cartpole_state_varname_to_index('angle')]) > 0.2 * np.pi:
             #     # raise ValueError('Cart went unstable')
-            #     print('Cart went unstable')
+            #     # print('Cart went unstable')
             #     break
+
+            # It seems that if pole is to short angleD overflows quite quickly.
+            # We limit pole to 1 mm
+            if L < 0.005:
+                break
 
             if save_mode == 'online' and self.save_flag:
                 self.save_history_csv(csv_name=csv, mode='save online')
@@ -923,7 +975,7 @@ class CartPole:
             # You can change here with which initial parameters you wish to start the simulation
             self.s[cartpole_state_varname_to_index('position')] = 0.0
             self.s[cartpole_state_varname_to_index('positionD')] = 0.0
-            self.s[cartpole_state_varname_to_index('angle')] = (1.0 * np.random.normal() - 1.0) * np.pi / 180.0  # np.pi/2.0 #
+            self.s[cartpole_state_varname_to_index('angle')] = (1.0 * self.rng_CartPole.normal() - 1.0) * np.pi / 180.0  # np.pi/2.0 #
             self.s[cartpole_state_varname_to_index('angleD')] = 0.0  # 1.0
 
             if self.controller_name == 'manual-stabilization':
