@@ -78,14 +78,6 @@ dd_noise = ep_noise = ekp_noise = ekc_noise = cc_noise = config["controller"]["m
     "cost_noise"
 ]
 
-
-dd_weight = dd_weight * (1 + dd_noise * np.random.uniform(-1.0, 1.0))
-ep_weight = ep_weight * (1 + ep_noise * np.random.uniform(-1.0, 1.0))
-ekp_weight = ekp_weight * (1 + ekp_noise * np.random.uniform(-1.0, 1.0))
-ekc_weight = ekc_weight * (1 + ekc_noise * np.random.uniform(-1.0, 1.0))
-cc_weight = cc_weight * (1 + cc_noise * np.random.uniform(-1.0, 1.0))
-
-
 gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = gui_ccrc = np.zeros(1, dtype=np.float32)
 
 
@@ -96,9 +88,6 @@ NU = config["controller"]["mppi"]["NU"]
 SQRTRHODTINV = config["controller"]["mppi"]["SQRTRHOINV"] * (1 / np.math.sqrt(dt))
 GAMMA = config["controller"]["mppi"]["GAMMA"]
 SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
-
-"""Random number generator"""
-rng = Generator(SFC64(int((datetime.now() - datetime(1970, 1, 1)).total_seconds())))
 
 
 """Init logging variables"""
@@ -361,6 +350,20 @@ class controller_mppi(template_controller):
     """
 
     def __init__(self):
+
+        """Random number generator"""
+        SEED = config["controller"]["mppi"]["SEED"]
+        if SEED == "None":
+            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
+        self.rng_mppi = Generator(SFC64(SEED))
+
+        global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
+        dd_weight = dd_weight * (1 + dd_noise * self.rng_mppi.uniform(-1.0, 1.0))
+        ep_weight = ep_weight * (1 + ep_noise * self.rng_mppi.uniform(-1.0, 1.0))
+        ekp_weight = ekp_weight * (1 + ekp_noise * self.rng_mppi.uniform(-1.0, 1.0))
+        ekc_weight = ekc_weight * (1 + ekc_noise * self.rng_mppi.uniform(-1.0, 1.0))
+        cc_weight = cc_weight * (1 + cc_noise * self.rng_mppi.uniform(-1.0, 1.0))
+
         # State of the cart
         self.s = create_cartpole_state()
 
@@ -412,22 +415,22 @@ class controller_mppi(template_controller):
         """
         if sampling_type == "random_walk":
             delta_u = np.empty((num_rollouts, mpc_samples), dtype=np.float32)
-            delta_u[:, 0] = stdev * rng.standard_normal(
+            delta_u[:, 0] = stdev * self.rng_mppi.standard_normal(
                 size=(num_rollouts,), dtype=np.float32
             )
             for i in range(1, mpc_samples):
-                delta_u[:, i] = delta_u[:, i - 1] + stdev * rng.standard_normal(
+                delta_u[:, i] = delta_u[:, i - 1] + stdev * self.rng_mppi.standard_normal(
                     size=(num_rollouts,), dtype=np.float32
                 )
         elif sampling_type == "uniform":
             delta_u = np.empty((num_rollouts, mpc_samples), dtype=np.float32)
             for i in range(0, mpc_samples):
-                delta_u[:, i] = rng.uniform(
+                delta_u[:, i] = self.rng_mppi.uniform(
                     low=-1.0, high=1.0, size=(num_rollouts,)
                 ).astype(np.float32)
         elif sampling_type == "repeated":
             delta_u = np.tile(
-                stdev * rng.standard_normal(size=(num_rollouts, 1), dtype=np.float32),
+                stdev * self.rng_mppi.standard_normal(size=(num_rollouts, 1), dtype=np.float32),
                 (1, mpc_samples),
             )
         elif sampling_type == "interpolated":
@@ -437,14 +440,14 @@ class controller_mppi(template_controller):
             t_interp = np.arange(start=0, stop=range_stop, step=1)
             t_interp = np.delete(t_interp, t)
             delta_u = np.zeros(shape=(num_rollouts, range_stop), dtype=np.float32)
-            delta_u[:, t] = stdev * rng.standard_normal(
+            delta_u[:, t] = stdev * self.rng_mppi.standard_normal(
                 size=(num_rollouts, t.size), dtype=np.float32
             )
             f = interp1d(t, delta_u[:, t])
             delta_u[:, t_interp] = f(t_interp)
             delta_u = delta_u[:, :mpc_samples]
         else:
-            delta_u = stdev * rng.standard_normal(
+            delta_u = stdev * self.rng_mppi.standard_normal(
                 size=(num_rollouts, mpc_samples), dtype=np.float32
             )
 
@@ -552,7 +555,7 @@ class controller_mppi(template_controller):
         #     Q = np.random.uniform(-1.0, 1.0)
 
         # Add noise on top of the calculated Q value to better explore state space
-        Q = np.float32(Q * (1 + p_Q * np.random.uniform(-1.0, 1.0)))
+        Q = np.float32(Q * (1 + p_Q * self.rng_mppi.uniform(-1.0, 1.0)))
         # Clip inputs to allowed range
         Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
 

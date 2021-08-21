@@ -1,5 +1,6 @@
 controller:
   mppi:
+    SEED: 1897                            # Seed for rng, for MPPI only
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 2000                      # Number of Monte Carlo samples
@@ -61,6 +62,7 @@ controller:
     dt_mpc_simulation: 0.2  # s
     mpc_horizon: 10
 cartpole:
+  SEED: 1873  # This is a seed for rng for CartPole instance class only. If None random seed based on datetime is used
   PATH_TO_CONTROLLERS: './Controllers/'  # Path where controllers are stored
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi

@@ -41,6 +41,10 @@ try:
 except:
     pass
 
+from numpy.random import SFC64, Generator
+
+import sys
+
 # check memory usage of chosen methods. Commented by default
 # from memory_profiler import profile
 
@@ -69,6 +73,12 @@ PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_R
 class CartPole:
 
     def __init__(self, initial_state=s0, path_to_experiment_recordings=None):
+
+        SEED = config["cartpole"]["SEED"]
+        if SEED == "None":
+            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0//2)  # Fully random
+
+        self.rng_CartPole = Generator(SFC64(SEED))
 
         if path_to_experiment_recordings is None:
             self.path_to_experiment_recordings = PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT
@@ -576,7 +586,7 @@ class CartPole:
 
             number_of_turning_points = int(np.floor(self.length_of_experiment * self.track_relative_complexity))
 
-            y = np.random.uniform(-1.0, 1.0, number_of_turning_points)
+            y = self.rng_CartPole.uniform(-1.0, 1.0, number_of_turning_points)
             y = y * self.used_track_fraction * TrackHalfLength
 
             if number_of_turning_points == 0:
@@ -612,7 +622,7 @@ class CartPole:
 
         # t_init = linspace(0, self.t_max_pre, num=self.track_relative_complexity, endpoint=True)
         if self.turning_points_period == 'random':
-            t_init = np.sort(np.random.uniform(self.dt_simulation, self.t_max_pre - self.dt_simulation, random_samples))
+            t_init = np.sort(self.rng_CartPole.uniform(self.dt_simulation, self.t_max_pre - self.dt_simulation, random_samples))
             t_init = np.insert(t_init, 0, 0.0)
             t_init = np.append(t_init, self.t_max_pre)
         elif self.turning_points_period == 'regular':
@@ -864,7 +874,7 @@ class CartPole:
             # You can change here with which initial parameters you wish to start the simulation
             self.s[cartpole_state_varname_to_index('position')] = 0.0
             self.s[cartpole_state_varname_to_index('positionD')] = 0.0
-            self.s[cartpole_state_varname_to_index('angle')] = (1.0 * np.random.normal() - 1.0) * np.pi / 180.0  # np.pi/2.0 #
+            self.s[cartpole_state_varname_to_index('angle')] = (1.0 * self.rng_CartPole.normal() - 1.0) * np.pi / 180.0  # np.pi/2.0 #
             self.s[cartpole_state_varname_to_index('angleD')] = 0.0  # 1.0
 
             if self.controller_name == 'manual-stabilization':
