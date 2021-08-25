@@ -557,7 +557,7 @@ class CartPole:
 
     # Method plotting the dynamic evolution over time of the CartPole
     # It should be called after an experiment and only if experiment data was saved
-    def summary_plots(self, adaptive_mode=True):
+    def summary_plots(self, adaptive_mode=True, title=''):
 
         if adaptive_mode:
             number_of_subplots = 5
@@ -569,6 +569,7 @@ class CartPole:
             fontsize_ticks = 12
 
         fig, axs = plt.subplots(number_of_subplots, 1, figsize=(16, 9), sharex=True)  # share x axis so zoom zooms all plots
+        fig.suptitle(title, fontsize=16)
 
         # Plot angle error
         axs[0].set_ylabel("Angle (deg)", fontsize=fontsize_labels)
@@ -611,6 +612,7 @@ class CartPole:
             axs[4].set_ylim(bottom=1.1 * min(np.array(self.dict_history['L'])*2.0*100.0), top=1.1 * max(np.array(self.dict_history['L'])*2.0*100.0))
             axs[4].set_yscale('log')
             axs[4].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+            axs[4].tick_params(axis='both', which='minor', labelsize=fontsize_ticks)
             idx_retraining = np.array([i for i, x in enumerate(np.array(self.dict_history['retraining_now'])) if x], dtype=np.int32)
 
 
@@ -645,18 +647,19 @@ class CartPole:
             # # cost_difference = median_filter(cost_difference, size=40)
             # cost_difference = smooth(cost_difference, 1000)
 
-            ax_cost = axs[4].twinx()
-            ax_cost.set_ylabel('Cost difference (%)', fontsize=fontsize_labels)
-            lns_cost = ax_cost.plot(cost_time, cost_difference, drawstyle='steps', label='Cost difference (%)')
-            # ax_cost.set_ylabel('Cost', fontsize=fontsize_labels)
-            # lns_cost = ax_cost.plot(cost_time, cost_difference, drawstyle='steps', label='Cost')
-            ax_cost.set_ylim(bottom=1.1*min(cost_difference), top=1.1*max(cost_difference))
+            # ax_cost = axs[4].twinx()
+            # # ax_cost.set_ylabel('Cost difference (%)', fontsize=fontsize_labels)
+            # # lns_cost = ax_cost.plot(cost_time, cost_difference, drawstyle='steps', label='Cost difference (%)')
+            # # ax_cost.set_ylabel('Cost', fontsize=fontsize_labels)
+            # # lns_cost = ax_cost.plot(cost_time, cost_difference, drawstyle='steps', label='Cost')
+            # ax_cost.set_ylim(bottom=1.1*min(cost_difference), top=1.1*max(cost_difference))
             # ax_cost.set_yscale('log')
-            ax_cost.tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+            # ax_cost.tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+            # ax_cost.tick_params(axis='both', which='minor', labelsize=fontsize_ticks)
 
-            lns = lns_parameter + lns_training + lns_cost
+            lns = lns_parameter + lns_training #+ lns_cost
             labs = [l.get_label() for l in lns]
-            ax_cost.legend(lns, labs, fontsize=fontsize_labels)
+            axs[4].legend(lns, labs, fontsize=fontsize_labels)
             # except:
             #     pass
 
