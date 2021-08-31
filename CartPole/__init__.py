@@ -6,6 +6,7 @@ You can find here methods with performing experiment, saving data, displaying Ca
 and many more. To run it needs some "environment": we provide you with GUI and data_generator
 @author: Marcin
 """
+
 # region Imported modules
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
@@ -319,18 +320,6 @@ class CartPole:
                 # If it is not meaningful all values in this column are set to 0
                 self.dict_history['target_position'].append(self.target_position)
 
-                self.dict_history['L'].append(L)
-
-                try:
-                    for key, value in self.controller.controller_data_for_csv.items():
-                        self.dict_history[key].append(value[0])
-                except AttributeError:
-                    pass
-                except Exception:
-                    pass
-                    # print(traceback.format_exc())
-
-
             else:
 
                 self.dict_history = {
@@ -350,8 +339,6 @@ class CartPole:
                                      'u': [self.u],
 
                                      'target_position': [self.target_position],
-
-                                     'L': [L]
 
                                      }
                 try:
@@ -557,7 +544,7 @@ class CartPole:
 
     # Method plotting the dynamic evolution over time of the CartPole
     # It should be called after an experiment and only if experiment data was saved
-    def summary_plots(self, adaptive_mode=True, title=''):
+    def summary_plots(self, adaptive_mode=False, title=''):
 
         if adaptive_mode:
             number_of_subplots = 5
@@ -855,8 +842,8 @@ class CartPole:
 
             # Additional option to stop the experiment
             if abs(self.s[cartpole_state_varname_to_index('position')]) > 45.0:
-                break
                 print('Cart went out of safety boundaries')
+                break
 
             # if abs(self.s[cartpole_state_varname_to_index('angle')]) > 0.2 * np.pi:
             #     # raise ValueError('Cart went unstable')
@@ -866,6 +853,7 @@ class CartPole:
             # It seems that if pole is to short angleD overflows quite quickly.
             # We limit pole to 1 mm
             if L < 0.005:
+                print('Pole is too short! Terminating experiment before numeric errors will occur')
                 break
 
             if save_mode == 'online' and self.save_flag:
@@ -1026,8 +1014,6 @@ class CartPole:
                              'u': [self.u],
 
                              'target_position': [self.target_position],
-
-                             'L': [L]  # Length of the pole
 
                              }
         try:

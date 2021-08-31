@@ -8,6 +8,7 @@ Based on Williams, Aldrich, Theodorou (2015)
 # from matplotlib import use
 # # # use('TkAgg')
 # use('macOSX')
+
 import copy
 
 from others.p_globals import (
@@ -49,11 +50,10 @@ from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
 )
 
 from Controllers.template_controller import template_controller
-from SI_Toolkit.TF.Parameters import args
-import tensorflow as tf
-from SI_Toolkit.TF.TF_Functions.Loss import loss_msr_sequence_customizable
+
+
 from tensorflow import keras
-from SI_Toolkit.load_and_normalize import normalize_numpy_array, denormalize_numpy_array
+from SI_Toolkit.load_and_normalize import normalize_numpy_array
 
 config = yaml.load(
     open(os.path.join("SI_Toolkit_ApplicationSpecificFiles", "config.yml"), "r"), Loader=yaml.FullLoader
@@ -392,7 +392,8 @@ class controller_mppi(template_controller):
 
         print('ADAPT: {}'.format(ADAPT))
 
-        self.controller_data_for_csv = {'stage_cost_realized_trajectory': [],
+        self.controller_data_for_csv = {'L': [],
+                                        'stage_cost_realized_trajectory': [],
                                         'adapt_mode':[],
                                         'retraining_now':[],
                                         'cost_trajectory_from_u_predicted': [],
@@ -758,7 +759,8 @@ class controller_mppi(template_controller):
         if adapt_mode_save_previous != self.adapt_mode_save:
             self.phase_count_for_average += 1
 
-        self.controller_data_for_csv = {'stage_cost_realized_trajectory': [self.stage_cost_realized_trajectory],
+        self.controller_data_for_csv = {'L': [L],
+                                        'stage_cost_realized_trajectory': [self.stage_cost_realized_trajectory],
                                         'adapt_mode': [self.adapt_mode_save],
                                         'retraining_now': [self.retraining_now],
                                         'cost_trajectory_from_u_predicted': [self.cost_trajectory_from_u_predicted],
