@@ -37,7 +37,6 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     # User defined simulation settings
     ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
     # How many experiments will be generated
-    #number_of_experiments = 2000
     number_of_experiments = 1
 
     ###### Train/Val/Test split - only matters if you run it in ML Pipeline mode
@@ -63,7 +62,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     track_relative_complexity_DataGen = 1
 
     ### How to interpolate between turning points of random trace
-    interpolation_type_DataGen = '0-derivative-smooth'
+    interpolation_type_DataGen = 'previous'
     # Possible options: '0-derivative-smooth', 'linear', 'previous'
 
     ### How turning points should be distributed
