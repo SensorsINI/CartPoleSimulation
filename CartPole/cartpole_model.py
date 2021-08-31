@@ -6,8 +6,7 @@ from CartPole.state_utilities import (
 )
 from others.p_globals import (
     k, M, m, g, J_fric, M_fric, L, v_max, u_max,
-    sensorNoise, controlDisturbance, controlBias, TrackHalfLength,
-    CARTPOLE_EQUATIONS
+    sensorNoise, controlDisturbance, controlBias, TrackHalfLength
 )
 
 from numba import float32, jit
@@ -21,17 +20,14 @@ rng = Generator(SFC64(123))
 
 """This script contains equations and parameters used currently in CartPole simulator."""
 
-# You can choose CartPole dynamical equations you want to use in simulation by setting CARTPOLE_EQUATIONS variable
-# The possible choices and their explanation are listed below
 # Notice that any set of equation require setting the convention for the angle
 # to draw a CartPole correctly in the CartPole GUI
 
 """ 
-Possible choices: 'Marcin-Sharpneat', (currently no more choices available)
-'Marcin-Sharpneat' is derived by Marcin, checked by Krishna, coincide with:
+derived by Marcin, checked by Krishna, coincide with:
 https://sharpneat.sourceforge.io/research/cart-pole/cart-pole-equations.html
-(The friction terms not compared attentively but calculated and checked carefully,
-the rest should be the same up to the angle-direction-convention and notation changes.)
+
+Should be the same up to the angle-direction-convention and notation changes.
 
 The convention:
 Pole upright position defines 0 angle
@@ -51,8 +47,9 @@ The 0-angle state is always defined as pole in upright position. This currently 
 s0 = create_cartpole_state()
 
 
-def _cartpole_ode(ca, sa, angleD, positionD, u,
-                            k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+def _cartpole_ode (ca, sa, angleD, positionD, u,
+                      k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+
     """
     Calculates current values of second derivative of angle and position
     from current value of angle and position, and their first derivatives
@@ -62,45 +59,46 @@ def _cartpole_ode(ca, sa, angleD, positionD, u,
 
     :returns: angular acceleration, horizontal acceleration
     """
-    if CARTPOLE_EQUATIONS == 'Marcin-Sharpneat':
-        # Clockwise rotation is defined as negative
-        # force and cart movement to the right are defined as positive
-        # g (gravitational acceleration) is positive (absolute value)
-        # Checked independently by Marcin and Krishna
 
-        A = m * (ca ** 2) - (k + 1) * (M + m)
+    # Clockwise rotation is defined as negative
+    # force and cart movement to the right are defined as positive
+    # g (gravitational acceleration) is positive (absolute value)
+    # Checked independently by Marcin and Krishna
 
-        positionDD = (
+    A = (k + 1) * (M + m) - m * (ca ** 2)
+    F_fric = - M_fric * positionD  # Force resulting from cart friction, notice that the mass of the cart is not explicitly there
+    T_fric = - J_fric * angleD  # Torque resulting from pole friction
+
+    positionDD = (
             (
-                + m * g * sa * ca  # Movement of the cart due to gravity
-                - ((J_fric * (-angleD) * ca) / L)  # Movement of the cart due to pend' s friction in the joint
-                - (k + 1) * (
-                    + (m * L * (angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
-                    - M_fric * positionD  # Braking of the cart due its friction
-                    + u  # Effect of force applied to cart
-                )
+                    + m * g * sa * ca  # Movement of the cart due to gravity
+                    + ((T_fric * ca) / L)  # Movement of the cart due to pend' s friction in the joint
+                    + (k + 1) * (
+                            - (m * L * (
+                                        angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                            + F_fric  # Braking of the cart due its friction
+                            + u  # Effect of force applied to cart
+                    )
             ) / A
-        )
+    )
 
-        # Making m go to 0 and setting J_fric=0 (fine for pole without mass)
-        # positionDD = (u_max/M)*Q-(M_fric/M)*positionD
-        # Compare this with positionDD = a*Q-b*positionD
-        # u_max = M*a = 0.230*19.6 = 4.5, 0.317*19.6 = 6.21, (Second option is if I account for pole mass)
-        # M_fric = M*b = 0.230*20 = 4.6, 0.317*20 = 6.34
-        # From experiment b = 20, a = 28
-        angleDD = (
+    # Making m go to 0 and setting J_fric=0 (fine for pole without mass)
+    # positionDD = (u_max/M)*Q-(M_fric/M)*positionD
+    # Compare this with positionDD = a*Q-b*positionD
+    # u_max = M*a = 0.230*19.6 = 4.5, 0.317*19.6 = 6.21, (Second option is if I account for pole mass)
+    # M_fric = M*b = 0.230*20 = 4.6, 0.317*20 = 6.34
+    # From experiment b = 20, a = 28
+    angleDD = (
             (
-                g * sa - positionDD * ca - (J_fric * (-angleD)) / (m * L) 
+                    g * sa + positionDD * ca + T_fric / (m * L)
             ) / ((k + 1) * L)
-        ) * (-1.0)
+    )
 
-        # making M go to infinity makes angleDD = (g/k*L)sin(angle) - angleD*J_fric/(k*m*L^2)
-        # This is the same as equation derived directly for a pendulum.
-        # k is 4/3! It is the factor for pendulum with length 2L: I = k*m*L^2
-    else:
-        raise ValueError('An undefined name for Cartpole equations')
+    # making M go to infinity makes angleDD = (g/k*L)sin(angle) - angleD*J_fric/(k*m*L^2)
+    # This is the same as equation derived directly for a pendulum.
+    # k is 4/3! It is the factor for pendulum with length 2L: I = k*m*L^2
 
-    return angleDD, positionDD, ca, -sa
+    return angleDD, positionDD, ca, sa
 
 
 _cartpole_ode_numba = jit(_cartpole_ode, nopython=True, cache=True, fastmath=True)
@@ -109,7 +107,7 @@ _cartpole_ode_numba = jit(_cartpole_ode, nopython=True, cache=True, fastmath=Tru
 def cartpole_ode_namespace(s: SimpleNamespace, u: float,
                            k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
     angleDD, positionDD, _, _ = _cartpole_ode(
-        np.cos(-s.angle), np.sin(-s.angle), s.angleD, s.positionD, u,
+        np.cos(s.angle), np.sin(s.angle), s.angleD, s.positionD, u,
         k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L
     )
     return angleDD, positionDD
@@ -117,10 +115,9 @@ def cartpole_ode_namespace(s: SimpleNamespace, u: float,
 
 def cartpole_ode(s: np.ndarray, u: float,
                  k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
-    #print('Mass in Model: ', M)
     angle = s[..., ANGLE_IDX]
     angleDD, positionDD, _, _ = _cartpole_ode_numba(
-        np.cos(-angle), np.sin(-angle), s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u,
+        np.cos(angle), np.sin(angle), s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u,
         k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L
     )
     return angleDD, positionDD
@@ -173,7 +170,7 @@ def next_state_numba(angle, angleD, angleDD, angle_cos, angle_sin, position, pos
 
         angle, angleD, position, positionD = edge_bounce_wrapper(angle, angleD, position, positionD, t_step, L)
 
-        angleDD, positionDD, angle_cos, angle_sin = _cartpole_ode_numba(np.cos(-angle), np.sin(-angle), angleD, positionD, u,
+        angleDD, positionDD, angle_cos, angle_sin = _cartpole_ode_numba(np.cos(angle), np.sin(angle), angleD, positionD, u,
                                                                                  k, M, m, g, J_fric, M_fric, L)
 
     return angle, angleD, angleDD, position, positionD, positionDD, angle_cos, angle_sin
