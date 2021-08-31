@@ -19,7 +19,7 @@ controller:
     NU: 1000.0                            # Exploration variance
     SQRTRHOINV: 0.01                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
-    SAMPLING_TYPE: "interpolated"                  # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
+    SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     LOGGING: False                        # Collect and show detailed insights into the controller's behavior
   custom_mpc_scipy:
     DT: 0.1

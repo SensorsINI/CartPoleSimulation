@@ -9,6 +9,13 @@ Based on Williams, Aldrich, Theodorou (2015)
 # # # use('TkAgg')
 # use('macOSX')
 
+import copy
+
+from others.p_globals import (
+    k, M, m, g, J_fric, M_fric, L, v_max, u_max,
+    sensorNoise, controlDisturbance, controlBias, TrackHalfLength,
+)
+
 import os
 
 import matplotlib.pyplot as plt
@@ -48,6 +55,7 @@ from others.p_globals import L
 config = yaml.load(
     open(os.path.join("SI_Toolkit_ApplicationSpecificFiles", "config.yml"), "r"), Loader=yaml.FullLoader
 )
+
 NET_NAME = config["modeling"]["NET_NAME"]
 try:
     NET_TYPE = NET_NAME.split("-")[0]

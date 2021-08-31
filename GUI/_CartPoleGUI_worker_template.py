@@ -5,6 +5,8 @@
 
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
 
+import traceback
+
 class WorkerSignals(QObject):
     result = pyqtSignal(object)
     finished = pyqtSignal()
@@ -30,8 +32,8 @@ class Worker(QRunnable):
         # Retrieve a/kwargs here; and fire processing using them
         try:
             result = self.fn(*self.args, **self.kwargs)
-        except:
-            pass
+        except Exception:
+            print(traceback.format_exc())
         else:
             self.signals.result.emit(result)  # Return the result of the processing
         finally:

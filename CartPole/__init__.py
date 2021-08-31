@@ -23,6 +23,8 @@ from others.p_globals import (
 import numpy as np
 import pandas as pd
 
+import traceback
+
 # Import module to save history of the simulation as csv file
 import csv
 # To detect the latest csv file
@@ -337,6 +339,12 @@ class CartPole:
                                      'target_position': [self.target_position],
 
                                      }
+                try:
+                    self.dict_history.update(self.controller.controller_data_for_csv)
+                except AttributeError:
+                    pass
+                except Exception:
+                    print(traceback.format_exc())
 
                 self.save_flag = True
 
@@ -429,6 +437,7 @@ class CartPole:
                     logpath_new = logpath_new + '-' + str(net_index) + '.csv'
                     net_index += 1
 
+            print('Saving to the file: {}'.format(self.csv_filepath))
             # Write the .csv file
             with open(self.csv_filepath, "a") as outfile:
                 writer = csv.writer(outfile)
@@ -533,10 +542,19 @@ class CartPole:
 
     # Method plotting the dynamic evolution over time of the CartPole
     # It should be called after an experiment and only if experiment data was saved
-    def summary_plots(self):
-        fontsize_labels = 14
-        fontsize_ticks = 12
-        fig, axs = plt.subplots(4, 1, figsize=(16, 9), sharex=True)  # share x axis so zoom zooms all plots
+    def summary_plots(self, adaptive_mode=False, title=''):
+
+        if adaptive_mode:
+            number_of_subplots = 5
+            fontsize_labels = 10
+            fontsize_ticks = 10
+        else:
+            number_of_subplots = 4
+            fontsize_labels = 14
+            fontsize_ticks = 12
+
+        fig, axs = plt.subplots(number_of_subplots, 1, figsize=(16, 9), sharex=True)  # share x axis so zoom zooms all plots
+        fig.suptitle(title, fontsize=16)
 
         # Plot angle error
         axs[0].set_ylabel("Angle (deg)", fontsize=fontsize_labels)
@@ -556,18 +574,26 @@ class CartPole:
             axs[2].plot(self.dict_history['time'], self.dict_history['u'], 'r', markersize=12,
                         label='motor')
             axs[2].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+            axs[2].set_ylim(bottom=-1.05*u_max, top=1.05*u_max)
         except KeyError:
             axs[2].set_ylabel("motor normalized (-)", fontsize=fontsize_labels)
             axs[2].plot(self.dict_history['time'], self.dict_history['Q'], 'r', markersize=12,
                         label='motor')
             axs[2].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+            axs[2].set_ylim(bottom=-1.05, top=1.05)
 
         # Plot target position
         axs[3].set_ylabel("position target (m)", fontsize=fontsize_labels)
         axs[3].plot(self.dict_history['time'], self.dict_history['target_position'], 'k')
         axs[3].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
 
-        axs[3].set_xlabel('Time (s)', fontsize=fontsize_labels)
+
+
+        if adaptive_mode:
+            ...
+            axs[4].set_xlabel('Time (s)', fontsize=fontsize_labels)
+        else:
+            axs[3].set_xlabel('Time (s)', fontsize=fontsize_labels)
 
         fig.align_ylabels()
 
@@ -756,13 +782,19 @@ class CartPole:
 
             # Additional option to stop the experiment
             if abs(self.s[cartpole_state_varname_to_index('position')]) > 45.0:
-                break
                 print('Cart went out of safety boundaries')
+                break
 
             # if abs(self.s[cartpole_state_varname_to_index('angle')]) > 0.8*np.pi:
             #     # raise ValueError('Cart went unstable')
-            #     print('Cart went unstable')
+            #     # print('Cart went unstable')
             #     break
+
+            # It seems that if pole is to short angleD overflows quite quickly.
+            # We limit pole to 1 mm
+            if L < 0.005:
+                print('Pole is too short! Terminating experiment before numeric errors will occur')
+                break
 
             if save_mode == 'online' and self.save_flag:
                 self.save_history_csv(csv_name=csv, mode='save online')
@@ -924,6 +956,12 @@ class CartPole:
                              'target_position': [self.target_position],
 
                              }
+        try:
+            self.dict_history.update(self.controller.controller_data_for_csv)
+        except AttributeError:
+            pass
+        except Exception:
+            print(traceback.format_exc())
 
     # region Get and set timescales
 
