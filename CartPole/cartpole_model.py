@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from typing import Union
 from CartPole.state_utilities import (
     create_cartpole_state, cartpole_state_varname_to_index,
-    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
+    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 )
 from others.p_globals import (
     k, M, m, g, J_fric, M_fric, L, v_max, u_max,
@@ -115,9 +115,9 @@ def cartpole_ode_namespace(s: SimpleNamespace, u: float,
 
 def cartpole_ode(s: np.ndarray, u: float,
                  k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
-    angle = s[..., ANGLE_IDX]
+
     angleDD, positionDD = _cartpole_ode_numba(
-        np.cos(angle), np.sin(angle), s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u,
+        s[..., ANGLE_COS_IDX], s[..., ANGLE_SIN_IDX], s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u,
         k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L
     )
     return angleDD, positionDD

@@ -909,6 +909,8 @@ class CartPole:
         if reset_mode == 0:  # Don't change it
             self.s[cartpole_state_varname_to_index('position')] = self.s[cartpole_state_varname_to_index('positionD')] = self.positionDD = 0.0
             self.s[cartpole_state_varname_to_index('angle')] = self.s[cartpole_state_varname_to_index('angleD')] = self.angleDD = 0.0
+            self.s[cartpole_state_varname_to_index('angle_cos')] = np.cos(self.s[cartpole_state_varname_to_index('angle')])
+            self.s[cartpole_state_varname_to_index('angle_sin')] = np.sin(self.s[cartpole_state_varname_to_index('angle')])
             self.Q = self.u = 0.0
             self.slider = self.target_position = 0.0
 
@@ -918,6 +920,11 @@ class CartPole:
             self.s[cartpole_state_varname_to_index('positionD')] = 0.0
             self.s[cartpole_state_varname_to_index('angle')] = (1.0 * self.rng_CartPole.normal() - 1.0) * np.pi / 180.0  # np.pi/2.0 #
             self.s[cartpole_state_varname_to_index('angleD')] = 0.0  # 1.0
+
+            self.s[cartpole_state_varname_to_index('angle_cos')] = np.cos(
+                self.s[cartpole_state_varname_to_index('angle')])
+            self.s[cartpole_state_varname_to_index('angle_sin')] = np.sin(
+                self.s[cartpole_state_varname_to_index('angle')])
 
             if self.controller_name == 'manual-stabilization':
                 self.target_position = 0.0
@@ -931,7 +938,7 @@ class CartPole:
                 self.Q = self.controller.step(self.s, self.target_position, self.time)
 
             self.u = Q2u(self.Q)
-            self.angleDD, self.positionDD = cartpole_ode(self.s, self.u)
+            self.angleDD, self.positionDD = cartpole_ode(self.s, self.u, L=L)
 
         elif reset_mode == 2:  # Don't change it
             if (s is not None) and (Q is not None) and (target_position is not None):
@@ -939,8 +946,13 @@ class CartPole:
                 self.Q = Q
                 self.slider = self.target_position = target_position
 
+                self.s[cartpole_state_varname_to_index('angle_cos')] = np.cos(
+                    self.s[cartpole_state_varname_to_index('angle')])
+                self.s[cartpole_state_varname_to_index('angle_sin')] = np.sin(
+                    self.s[cartpole_state_varname_to_index('angle')])
+
                 self.u = Q2u(self.Q)  # Calculate CURRENT control input
-                self.angleDD, self.positionDD = cartpole_ode(self.s, self.u)  # Calculate CURRENT second derivatives
+                self.angleDD, self.positionDD = cartpole_ode(self.s, self.u, L=L)  # Calculate CURRENT second derivatives
             else:
                 raise ValueError('s, Q or target position not provided for initial state')
 
@@ -954,8 +966,8 @@ class CartPole:
                              'angle': [self.s[cartpole_state_varname_to_index('angle')]],
                              'angleD': [self.s[cartpole_state_varname_to_index('angleD')]],
                              'angleDD': [self.angleDD],
-                             'angle_cos': [np.cos(self.s[cartpole_state_varname_to_index('angle')])],
-                             'angle_sin': [np.sin(self.s[cartpole_state_varname_to_index('angle')])],
+                             'angle_cos': [self.s[cartpole_state_varname_to_index('angle_cos')]],
+                             'angle_sin': [self.s[cartpole_state_varname_to_index('angle_sin')]],
                              'position': [self.s[cartpole_state_varname_to_index('position')]],
                              'positionD': [self.s[cartpole_state_varname_to_index('positionD')]],
                              'positionDD': [self.positionDD],
