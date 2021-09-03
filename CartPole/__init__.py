@@ -12,6 +12,7 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
 from CartPole.state_utilities import ANGLED_IDX, ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX, POSITIOND_IDX, POSITION_IDX, cartpole_state_varname_to_index, cartpole_state_index_to_varname, cartpole_state_varnames_to_indices
 from CartPole.cartpole_model import Q2u, cartpole_ode, s0, edge_bounce, cartpole_integration
+from CartPole.load import get_full_paths_to_csvs, load_csv_recording
 from others.p_globals import P_GLOBALS
 
 from others.p_globals import (
@@ -45,8 +46,6 @@ except:
 
 from numpy.random import SFC64, Generator
 
-import sys
-
 # check memory usage of chosen methods. Commented by default
 # from memory_profiler import profile
 
@@ -71,6 +70,7 @@ import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 PATH_TO_CONTROLLERS = config["cartpole"]["PATH_TO_CONTROLLERS"]
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
+
 
 class CartPole:
 
@@ -514,41 +514,9 @@ class CartPole:
 
     # load csv file with experiment recording (e.g. for replay)
     def load_history_csv(self, csv_name=None):
-
-        # Set path where to save the data
-        if csv_name is None or csv_name == '':
-            # get the latest file from the default location
-            try:
-                list_of_files = glob.glob(self.path_to_experiment_recordings + '/*.csv')
-                file_path = max(list_of_files, key=os.path.getctime)
-            except FileNotFoundError:
-                print('Cannot load: No experiment recording found in data folder ' + './data/')
-                return False
-        else:
-            filename = csv_name
-            if csv_name[-4:] != '.csv':
-                filename += '.csv'
-
-            # check if file found in DATA_FOLDER_NAME or at local starting point
-            if not os.path.isfile(filename):
-                file_path = os.path.join(self.path_to_experiment_recordings, filename)
-                if not os.path.isfile(file_path):
-                    print(
-                        'Cannot load: There is no experiment recording file with name {} at local folder or in {}'.format(
-                            filename, self.path_to_experiment_recordings))
-                    return False
-            else:
-                file_path = filename
-
-        # Get race recording
-        print('Loading file {}'.format(file_path))
-        try:
-            data: pd.DataFrame = pd.read_csv(file_path, comment='#')  # skip comment lines starting with #
-        except Exception as e:
-            print('Cannot load: Caught {} trying to read CSV file {}'.format(e, file_path))
-            return False
-
-        return data, file_path
+        file_paths = get_full_paths_to_csvs(default_locations=self.path_to_experiment_recordings, csv_names=csv_name)
+        data = load_csv_recording(file_paths[0])
+        return data, file_paths[0]
 
     # Method plotting the dynamic evolution over time of the CartPole
     # It should be called after an experiment and only if experiment data was saved

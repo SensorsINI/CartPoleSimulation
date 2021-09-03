@@ -4,6 +4,7 @@ from CartPole.state_utilities import (
     create_cartpole_state, cartpole_state_varname_to_index,
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 )
+from CartPole._CartPole_mathematical_helpers import wrap_angle_rad_inplace
 from others.p_globals import (
     k, M, m, g, J_fric, M_fric, L, v_max, u_max,
     sensorNoise, controlDisturbance, controlBias, TrackHalfLength
@@ -184,6 +185,8 @@ def cartpole_fine_integration(angle, angleD, angle_cos, angle_sin, position, pos
         angle, angleD, position, positionD = cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD, t_step,)
 
         angle, angleD, position, positionD = edge_bounce_wrapper(angle, angleD, position, positionD, t_step, L)
+
+        wrap_angle_rad_inplace(angle)
 
         angle_cos = np.cos(angle)
         angle_sin = np.sin(angle)
