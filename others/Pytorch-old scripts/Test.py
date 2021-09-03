@@ -38,7 +38,7 @@ def test_network():
     outputs_list = args.outputs_list
 
     load_rnn = args.load_rnn  # If specified this is the name of pretrained RNN which should be loaded
-    path_save = args.PATH_TO_EXPERIMENT_RECORDINGS
+    path_save = args.PATH_TO_EXPERIMENT_FOLDERS
 
     # Create rnn instance and update lists of input, outputs and its name (if pretraind net loaded)
     net, rnn_name, inputs_list, outputs_list\

@@ -2,8 +2,9 @@ from types import SimpleNamespace
 from typing import Union
 from CartPole.state_utilities import (
     create_cartpole_state, cartpole_state_varname_to_index,
-    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
+    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 )
+from CartPole._CartPole_mathematical_helpers import wrap_angle_rad_inplace
 from others.p_globals import (
     k, M, m, g, J_fric, M_fric, L, v_max, u_max,
     sensorNoise, controlDisturbance, controlBias, TrackHalfLength
@@ -98,7 +99,7 @@ def _cartpole_ode (ca, sa, angleD, positionD, u,
     # This is the same as equation derived directly for a pendulum.
     # k is 4/3! It is the factor for pendulum with length 2L: I = k*m*L^2
 
-    return angleDD, positionDD, ca, sa
+    return angleDD, positionDD
 
 
 _cartpole_ode_numba = jit(_cartpole_ode, nopython=True, cache=True, fastmath=True)
@@ -107,6 +108,9 @@ _cartpole_ode_numba = jit(_cartpole_ode, nopython=True, cache=True, fastmath=Tru
 def cartpole_ode_namespace(s: SimpleNamespace, u: float,
                            k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
     angleDD, positionDD, _, _ = _cartpole_ode(
+def cartpole_ode_namespace(s: SimpleNamespace, u: float,
+                           k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+    angleDD, positionDD = _cartpole_ode(
         np.cos(s.angle), np.sin(s.angle), s.angleD, s.positionD, u,
         k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L
     )
@@ -115,9 +119,9 @@ def cartpole_ode_namespace(s: SimpleNamespace, u: float,
 
 def cartpole_ode(s: np.ndarray, u: float,
                  k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
-    angle = s[..., ANGLE_IDX]
-    angleDD, positionDD, _, _ = _cartpole_ode_numba(
-        np.cos(angle), np.sin(angle), s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u,
+
+    angleDD, positionDD = _cartpole_ode_numba(
+        s[..., ANGLE_COS_IDX], s[..., ANGLE_SIN_IDX], s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u,
         k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L
     )
     return angleDD, positionDD
@@ -160,20 +164,37 @@ def euler_step(state, stateD, t_step):
 
 
 @jit(nopython=True, cache=True, fastmath=True)
-def next_state_numba(angle, angleD, angleDD, angle_cos, angle_sin, position, positionD, positionDD, u, t_step, intermediate_steps,
+def cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD, t_step,):
+    angle = euler_step(angle, angleD, t_step)
+    angleD = euler_step(angleD, angleDD, t_step)
+    position = euler_step(position, positionD, t_step)
+    positionD = euler_step(positionD, positionDD, t_step)
+
+    return angle, angleD, position, positionD
+
+
+@jit(nopython=True, cache=True, fastmath=True)
+def cartpole_fine_integration(angle, angleD, angle_cos, angle_sin, position, positionD, u, t_step, intermediate_steps,
                               k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+
     for _ in range(intermediate_steps):
-        angle = euler_step(angle, angleD, t_step)
-        angleD = euler_step(angleD, angleDD, t_step)
-        position = euler_step(position, positionD, t_step)
-        positionD = euler_step(positionD, positionDD, t_step)
+
+        # Find second derivative for CURRENT "k" step (same as in input).
+        # State and u in input are from the same timestep, output is belongs also to THE same timestep ("k")
+        angleDD, positionDD = _cartpole_ode_numba(angle_cos, angle_sin, angleD, positionD, u,
+                                                  k, M, m, g, J_fric, M_fric, L)
+
+        # Find NEXT "k+1" state [angle, angleD, position, positionD]
+        angle, angleD, position, positionD = cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD, t_step,)
 
         angle, angleD, position, positionD = edge_bounce_wrapper(angle, angleD, position, positionD, t_step, L)
 
-        angleDD, positionDD, angle_cos, angle_sin = _cartpole_ode_numba(np.cos(angle), np.sin(angle), angleD, positionD, u,
-                                                                                 k, M, m, g, J_fric, M_fric, L)
+        wrap_angle_rad_inplace(angle)
 
-    return angle, angleD, angleDD, position, positionD, positionDD, angle_cos, angle_sin
+        angle_cos = np.cos(angle)
+        angle_sin = np.sin(angle)
+
+    return angle, angleD, position, positionD, angle_cos, angle_sin
 
 
 if __name__ == '__main__':

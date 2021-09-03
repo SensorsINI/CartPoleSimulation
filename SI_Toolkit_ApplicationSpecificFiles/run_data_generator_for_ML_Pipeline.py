@@ -10,13 +10,13 @@ def get_record_path():
     experiment_index = 1
     while True:
         record_path = "Experiment-" + str(experiment_index)
-        if os.path.exists(config_SI['paths']['PATH_TO_EXPERIMENT_RECORDINGS'] + record_path):
+        if os.path.exists(config_SI['paths']['PATH_TO_EXPERIMENT_FOLDERS'] + record_path):
             experiment_index += 1
         else:
             record_path += "/Recordings"
             break
 
-    record_path = config_SI['paths']['PATH_TO_EXPERIMENT_RECORDINGS'] + record_path
+    record_path = config_SI['paths']['PATH_TO_EXPERIMENT_FOLDERS'] + record_path
     return record_path
 
 if __name__ == '__main__':

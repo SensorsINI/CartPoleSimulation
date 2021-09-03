@@ -396,7 +396,7 @@ import pandas as pd
 #
 # # This way of doing normalization is fine for long data sets and (relatively) short sequence lengths
 # # The points from the edges of the datasets count too little
-# def calculate_normalization_info(df, PATH_TO_EXPERIMENT_RECORDINGS, rnn_full_name):
+# def calculate_normalization_info(df, PATH_TO_EXPERIMENT_FOLDERS, rnn_full_name):
 #     if type(df) is list:
 #         df_total = pd.concat(df)
 #     else:
@@ -413,7 +413,7 @@ import pandas as pd
 #     frame = {'mean': df_mean, 'std': df_std, 'max': df_max, 'min': df_min}
 #     df_norm_info = pd.DataFrame(frame).transpose()
 #
-#     df_norm_info.to_csv(PATH_TO_EXPERIMENT_RECORDINGS + rnn_full_name + '-norm' + '.csv')
+#     df_norm_info.to_csv(PATH_TO_EXPERIMENT_FOLDERS + rnn_full_name + '-norm' + '.csv')
 #
 #     # Plot historgrams to make the firs check about gaussian assumption
 #     # for feature in df_total.columns:
@@ -424,8 +424,8 @@ import pandas as pd
 #     return df_norm_info
 #
 #
-# def load_normalization_info(PATH_TO_EXPERIMENT_RECORDINGS, rnn_full_name):
-#     return pd.read_csv(PATH_TO_EXPERIMENT_RECORDINGS + rnn_full_name + '-norm' + '.csv', index_col=0)
+# def load_normalization_info(PATH_TO_EXPERIMENT_FOLDERS, rnn_full_name):
+#     return pd.read_csv(PATH_TO_EXPERIMENT_FOLDERS + rnn_full_name + '-norm' + '.csv', index_col=0)
 #
 #
 # def normalize_df(dfs, normalization_info, normalization_type='minmax_sym'):
@@ -637,7 +637,7 @@ def plot_results(net,
     device = get_device()
 
     if normalization_info is None:
-        normalization_info = load_normalization_info(args.PATH_TO_EXPERIMENT_RECORDINGS, rnn_full_name)
+        normalization_info = load_normalization_info(args.PATH_TO_EXPERIMENT_FOLDERS, rnn_full_name)
 
     if dataset is None or time_axes is None:
         test_dfs, time_axes = load_data(args, filepath)

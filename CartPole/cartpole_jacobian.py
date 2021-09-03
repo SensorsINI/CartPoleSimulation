@@ -28,7 +28,7 @@ k, M, m, L, J_fric, M_fric, g = sym.symbols("k,M,m,L,J_fric,M_fric,g")
 
 xD = v
 tD = o
-oD, vD, _, _ = _cartpole_ode(sym.cos(t), sym.sin(t), o, v, u)
+oD, vD = _cartpole_ode(sym.cos(t), sym.sin(t), o, v, u)
 
 
 xx = sym.diff(xD, x, 1)
