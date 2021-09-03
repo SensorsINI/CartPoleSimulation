@@ -624,7 +624,10 @@ class MainWindow(QMainWindow):
 
         # Set user-provided initial values for state (or its part) of the CartPole
         # Search implementation for more detail
-        self.reset_variables(2, s=np.copy(self.initial_state), Q=self.CartPoleInstance.Q, target_position=self.CartPoleInstance.target_position)
+        # The following line is important as it let the user to set with the slider the starting target position
+        # After the slider was reset at the end of last experiment
+        # With the small sliders he can also adjust starting initial_state
+        self.reset_variables(2, s=np.copy(self.initial_state), target_position=self.CartPoleInstance.target_position)
 
         if self.simulator_mode == 'Random Experiment':
 
@@ -680,14 +683,6 @@ class MainWindow(QMainWindow):
         if self.show_experiment_summary:
             self.w_summary = SummaryWindow(summary_plots=self.CartPoleInstance.summary_plots)
 
-        # Some controllers may need reset before being reused in the next experiment without reloading
-        if self.simulator_mode != 'Replay':
-            try:
-                self.CartPoleInstance.controller.controller_reset()
-            except:
-                pass
-
-
         # Reset variables and redraw the figures
         self.reset_variables(0)
 
@@ -720,8 +715,8 @@ class MainWindow(QMainWindow):
         self.CartPoleInstance.turning_points = turning_points_init
 
     # Method resetting variables which change during experimental run
-    def reset_variables(self, reset_mode=1, s=None, Q=None, target_position=None):
-        self.CartPoleInstance.set_cartpole_state_at_t0(reset_mode, s=s, Q=Q, target_position=target_position)
+    def reset_variables(self, reset_mode=1, s=None, target_position=None):
+        self.CartPoleInstance.set_cartpole_state_at_t0(reset_mode, s=s, target_position=target_position)
         self.user_time_counter = 0
         # "Try" because this function is called for the first time during initialisation of the Window
         # when the timer label instance is not yer there.

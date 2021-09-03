@@ -11,7 +11,8 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
 from CartPole.state_utilities import ANGLED_IDX, ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX, POSITIOND_IDX, POSITION_IDX, cartpole_state_varname_to_index, cartpole_state_index_to_varname, cartpole_state_varnames_to_indices
-from CartPole.cartpole_model import Q2u, cartpole_ode, s0, edge_bounce, euler_step
+from CartPole.cartpole_model import Q2u, cartpole_ode, s0, edge_bounce, cartpole_integration
+from CartPole.load import get_full_paths_to_csvs, load_csv_recording
 from others.p_globals import P_GLOBALS
 
 from others.p_globals import (
@@ -47,8 +48,6 @@ except:
 
 from numpy.random import SFC64, Generator
 
-import sys
-
 # check memory usage of chosen methods. Commented by default
 # from memory_profiler import profile
 
@@ -73,6 +72,7 @@ import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 PATH_TO_CONTROLLERS = config["cartpole"]["PATH_TO_CONTROLLERS"]
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
+
 
 class CartPole:
 
@@ -240,37 +240,16 @@ class CartPole:
         self.time = self.time + self.dt_simulation
 
         # Update target position depending on the mode of operation
-        if self.use_pregenerated_target_position:
-
-            # If time exceeds the max time for which target position was defined
-            if self.time >= self.t_max_pre:
-                return
-
-            self.target_position = self.random_track_f(self.time)
-            self.slider_value = self.target_position/TrackHalfLength  # Assign target position to slider to display it
-        else:
-            if self.controller_name == 'manual-stabilization':
-                self.target_position = 0.0  # In this case target position is not used.
-                # This just fill the corresponding column in history with zeros
-            else:
-                self.target_position = self.slider_value * TrackHalfLength  # Get target position from slider
+        self.update_target_position()
 
         # Calculate the next state
         self.cartpole_integration()
 
-        # Snippet to stop pole at +/- 90 deg if enabled
-        zero_DD = None
-        if self.stop_at_90:
-            if self.s[cartpole_state_varname_to_index('angle')] >= np.pi / 2:
-                self.s[cartpole_state_varname_to_index('angle')] = np.pi / 2
-                self.s[cartpole_state_varname_to_index('angleD')] = 0.0
-                zero_DD = True  # Make also second derivatives 0 after they are calculated
-            elif self.s[cartpole_state_varname_to_index('angle')] <= -np.pi / 2:
-                self.s[cartpole_state_varname_to_index('angle')] = -np.pi / 2
-                self.s[cartpole_state_varname_to_index('angleD')] = 0.0
-                zero_DD = True  # Make also second derivatives 0 after they are calculated
-            else:
-                zero_DD = False
+        # Calculate the correction to the state due to the bounce at the edge if applies
+        self.edge_bounce()
+
+        # stop pole at +/- 90 deg if enabled
+        block_pole_at_90 = self.block_pole_at_90_deg()
 
         # Wrap angle to +/-π
         self.s[cartpole_state_varname_to_index('angle')] = wrap_angle_rad(self.s[cartpole_state_varname_to_index('angle')])
@@ -288,9 +267,43 @@ class CartPole:
         # Update second derivatives
         self.angleDD, self.positionDD = cartpole_ode(self.s, self.u)
 
-        if zero_DD:
+        if block_pole_at_90:
             self.angleDD = 0.0
 
+        self.save_csv_routine()
+
+    def update_target_position(self):
+        if self.use_pregenerated_target_position:
+
+            # If time exceeds the max time for which target position was defined
+            if self.time >= self.t_max_pre:
+                return
+
+            self.target_position = self.random_track_f(self.time)
+            self.slider_value = self.target_position/TrackHalfLength  # Assign target position to slider to display it
+        else:
+            if self.controller_name == 'manual-stabilization':
+                self.target_position = 0.0  # In this case target position is not used.
+                # This just fill the corresponding column in history with zeros
+            else:
+                self.target_position = self.slider_value * TrackHalfLength  # Get target position from slider
+
+    def block_pole_at_90_deg(self):
+        if self.stop_at_90:
+            if self.s[cartpole_state_varname_to_index('angle')] >= np.pi / 2:
+                self.s[cartpole_state_varname_to_index('angle')] = np.pi / 2
+                self.s[cartpole_state_varname_to_index('angleD')] = 0.0
+                return True  # Make also second derivatives 0 after they are calculated
+            elif self.s[cartpole_state_varname_to_index('angle')] <= -np.pi / 2:
+                self.s[cartpole_state_varname_to_index('angle')] = -np.pi / 2
+                self.s[cartpole_state_varname_to_index('angleD')] = 0.0
+                return True  # Make also second derivatives 0 after they are calculated
+            else:
+                return False
+        else:
+            return False
+
+    def save_csv_routine(self):
         # Calculate time steps from last saving
         # The counter should be initialized at max-1 to start with a control input update
         self.dt_save_steps_counter += 1
@@ -320,6 +333,14 @@ class CartPole:
                 # If it is not meaningful all values in this column are set to 0
                 self.dict_history['target_position'].append(self.target_position)
 
+                try:
+                    for key, value in self.controller.controller_data_for_csv.items():
+                        self.dict_history[key].append(value[0])
+                except AttributeError:
+                    pass
+                except Exception:
+                    print(traceback.format_exc())
+
             else:
 
                 self.dict_history = {
@@ -341,6 +362,7 @@ class CartPole:
                                      'target_position': [self.target_position],
 
                                      }
+
                 try:
                     self.dict_history.update(self.controller.controller_data_for_csv)
                 except AttributeError:
@@ -357,24 +379,21 @@ class CartPole:
     def cartpole_integration(self):
         """
         Simple single step integration of CartPole state by dt
-
-        Takes state as numpy array.
-
-        :param s: state of the CartPole (position, positionD, angle, angleD must be set). Array order follows global definition.
-        :param dt: time step by which the CartPole state should be integrated
         """
-        self.s[POSITION_IDX] = euler_step(self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.dt_simulation)
-        self.s[POSITIOND_IDX] = euler_step(self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation)
-        self.s[ANGLE_IDX] = euler_step(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.dt_simulation)
-        self.s[ANGLED_IDX] = euler_step(self.s[ANGLED_IDX], self.angleDD, self.dt_simulation)
 
+        self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = \
+            cartpole_integration(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD, self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation,)
+
+
+    def edge_bounce(self):
         # Elastic collision at edges
         self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = edge_bounce(
             self.s[ANGLE_IDX],
             self.s[ANGLED_IDX],
             self.s[POSITION_IDX],
             self.s[POSITIOND_IDX],
-            self.dt_simulation
+            self.dt_simulation,
+            L=L,
         )
 
     # Determine the dimensionless [-1,1] value of the motor power Q
@@ -506,41 +525,9 @@ class CartPole:
 
     # load csv file with experiment recording (e.g. for replay)
     def load_history_csv(self, csv_name=None):
-
-        # Set path where to save the data
-        if csv_name is None or csv_name == '':
-            # get the latest file from the default location
-            try:
-                list_of_files = glob.glob(self.path_to_experiment_recordings + '/*.csv')
-                file_path = max(list_of_files, key=os.path.getctime)
-            except FileNotFoundError:
-                print('Cannot load: No experiment recording found in data folder ' + './data/')
-                return False
-        else:
-            filename = csv_name
-            if csv_name[-4:] != '.csv':
-                filename += '.csv'
-
-            # check if file found in DATA_FOLDER_NAME or at local starting point
-            if not os.path.isfile(filename):
-                file_path = os.path.join(self.path_to_experiment_recordings, filename)
-                if not os.path.isfile(file_path):
-                    print(
-                        'Cannot load: There is no experiment recording file with name {} at local folder or in {}'.format(
-                            filename, self.path_to_experiment_recordings))
-                    return False
-            else:
-                file_path = filename
-
-        # Get race recording
-        print('Loading file {}'.format(file_path))
-        try:
-            data: pd.DataFrame = pd.read_csv(file_path, comment='#')  # skip comment lines starting with #
-        except Exception as e:
-            print('Cannot load: Caught {} trying to read CSV file {}'.format(e, file_path))
-            return False
-
-        return data, file_path
+        file_paths = get_full_paths_to_csvs(default_locations=self.path_to_experiment_recordings, csv_names=csv_name)
+        data = load_csv_recording(file_paths[0])
+        return data, file_paths[0]
 
     # Method plotting the dynamic evolution over time of the CartPole
     # It should be called after an experiment and only if experiment data was saved
@@ -794,15 +781,8 @@ class CartPole:
         # Target position at time 0
         self.target_position = self.random_track_f(self.time)
 
-        # Make already in the first timestep Q appropriate to the initial state, target position and controller
-
-        if self.controller_name == 'manual-stabilization':
-            # in this case slider corresponds already to the power of the motor
-            self.Q = self.slider_value
-        else:  # in this case slider gives a target position, lqr regulator
-            self.Q = self.controller.step(self.s, self.target_position, self.time)
-
-        self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, Q=self.Q, target_position=self.target_position)
+        # Reset variables
+        self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, target_position=self.target_position)
 
     # Runs a random experiment with parameters set with setup_cartpole_random_experiment
     # And saves the experiment recording to csv file
@@ -948,6 +928,11 @@ class CartPole:
         else:
             self.Slider_Bar.set_width(0.0)
 
+        # TODO: optimally reset_dict_history would be False and the controller could be switched during experiment
+        #   The False option is not implemented yet. So it is possible to switch controller only when the experiment is not running.
+        #   Check also how it covers the case when controller is switched (possibly multiple times) when experiment is not running
+        self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, target_position=self.target_position, reset_dict_history=True)
+
         return True
 
     # This method resets the internal state of the CartPole instance
@@ -955,7 +940,15 @@ class CartPole:
     # all zeros (reset_mode = 0)
     # set in this function (reset_mode = 1)
     # provide by user (reset_mode = 1), by giving s, Q and target_position
-    def set_cartpole_state_at_t0(self, reset_mode=1, s=None, Q=None, target_position=None):
+    def set_cartpole_state_at_t0(self, reset_mode=1, s=None, target_position=None, reset_dict_history=True):
+
+        # Some controllers may need reset before being reused in the next experiment without reloading
+        try:
+            self.controller.controller_reset()
+        except AttributeError:
+            pass
+        except NotImplementedError:
+            pass
 
         # reset global variables
         global k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, controlBias, TrackHalfLength
@@ -963,22 +956,42 @@ class CartPole:
 
         self.time = 0.0
         if reset_mode == 0:  # Don't change it
-            self.s[cartpole_state_varname_to_index('position')] = self.s[cartpole_state_varname_to_index('positionD')] = self.positionDD = 0.0
-            self.s[cartpole_state_varname_to_index('angle')] = self.s[cartpole_state_varname_to_index('angleD')] = self.angleDD = 0.0
-            self.Q = self.u = 0.0
-            self.slider = self.target_position = 0.0
+            self.s[cartpole_state_varname_to_index('position')] = self.s[cartpole_state_varname_to_index('positionD')] = 0.0
+            self.s[cartpole_state_varname_to_index('angle')] = self.s[cartpole_state_varname_to_index('angleD')] = 0.0
+            self.s[cartpole_state_varname_to_index('angle_cos')] = np.cos(self.s[cartpole_state_varname_to_index('angle')])
+            self.s[cartpole_state_varname_to_index('angle_sin')] = np.sin(self.s[cartpole_state_varname_to_index('angle')])
 
-        elif reset_mode == 1:  # You may change this but be carefull with other user. Better use 3
+            self.target_position = 0.0
+            self.slider_value = 0.0
+
+        elif reset_mode == 1:  # You may change this but be careful with other user. Better use 3
             # You can change here with which initial parameters you wish to start the simulation
             self.s[cartpole_state_varname_to_index('position')] = 0.0
             self.s[cartpole_state_varname_to_index('positionD')] = 0.0
             self.s[cartpole_state_varname_to_index('angle')] = (1.0 * self.rng_CartPole.normal() - 1.0) * np.pi / 180.0  # np.pi/2.0 #
             self.s[cartpole_state_varname_to_index('angleD')] = 0.0  # 1.0
 
-            if self.controller_name == 'manual-stabilization':
-                self.target_position = 0.0
+            self.s[cartpole_state_varname_to_index('angle_cos')] = np.cos(
+                self.s[cartpole_state_varname_to_index('angle')])
+            self.s[cartpole_state_varname_to_index('angle_sin')] = np.sin(
+                self.s[cartpole_state_varname_to_index('angle')])
+
+            self.target_position = 0.0
+            self.slider_value = 0.0
+
+        elif reset_mode == 2:  # Don't change it
+            if (s is not None) and (target_position is not None):
+
+                self.s = s
+                self.s[cartpole_state_varname_to_index('angle_cos')] = np.cos(
+                    self.s[cartpole_state_varname_to_index('angle')])
+                self.s[cartpole_state_varname_to_index('angle_sin')] = np.sin(
+                    self.s[cartpole_state_varname_to_index('angle')])
+
+                self.slider = self.target_position = target_position
+
             else:
-                self.target_position = self.slider_value * TrackHalfLength
+                raise ValueError('s, Q or target position not provided for initial state')
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
@@ -986,48 +999,43 @@ class CartPole:
             else:  # in this case slider gives a target position, lqr regulator
                 self.Q = self.controller.step(self.s, self.target_position, self.time)
 
-            self.u = Q2u(self.Q)
-            self.angleDD, self.positionDD = cartpole_ode(self.s, self.u)
-
-        elif reset_mode == 2:  # Don't change it
-            if (s is not None) and (Q is not None) and (target_position is not None):
-                self.s = s
-                self.Q = Q
-                self.slider = self.target_position = target_position
-
-                self.u = Q2u(self.Q)  # Calculate CURRENT control input
-                self.angleDD, self.positionDD = cartpole_ode(self.s, self.u)  # Calculate CURRENT second derivatives
-            else:
-                raise ValueError('s, Q or target position not provided for initial state')
+            self.u = Q2u(self.Q)  # Calculate CURRENT control input
+            self.angleDD, self.positionDD = cartpole_ode(self.s, self.u, L=L)  # Calculate CURRENT second derivatives
 
         # Reset the dict keeping the experiment history and save the state for t = 0
         self.dt_save_steps_counter = 0
         self.dt_controller_steps_counter = 0
-        self.dict_history = {
 
-                             'time': [self.time],
+        if reset_dict_history:
+            self.dict_history = {
 
-                             'angle': [self.s[cartpole_state_varname_to_index('angle')]],
-                             'angleD': [self.s[cartpole_state_varname_to_index('angleD')]],
-                             'angleDD': [self.angleDD],
-                             'angle_cos': [np.cos(self.s[cartpole_state_varname_to_index('angle')])],
-                             'angle_sin': [np.sin(self.s[cartpole_state_varname_to_index('angle')])],
-                             'position': [self.s[cartpole_state_varname_to_index('position')]],
-                             'positionD': [self.s[cartpole_state_varname_to_index('positionD')]],
-                             'positionDD': [self.positionDD],
+                                 'time': [self.time],
 
-                             'Q': [self.Q],
-                             'u': [self.u],
+                                 'angle': [self.s[cartpole_state_varname_to_index('angle')]],
+                                 'angleD': [self.s[cartpole_state_varname_to_index('angleD')]],
+                                 'angleDD': [self.angleDD],
+                                 'angle_cos': [self.s[cartpole_state_varname_to_index('angle_cos')]],
+                                 'angle_sin': [self.s[cartpole_state_varname_to_index('angle_sin')]],
+                                 'position': [self.s[cartpole_state_varname_to_index('position')]],
+                                 'positionD': [self.s[cartpole_state_varname_to_index('positionD')]],
+                                 'positionDD': [self.positionDD],
 
-                             'target_position': [self.target_position],
+                                 'Q': [self.Q],
+                                 'u': [self.u],
 
-                             }
-        try:
-            self.dict_history.update(self.controller.controller_data_for_csv)
-        except AttributeError:
-            pass
-        except Exception:
-            print(traceback.format_exc())
+                                 'target_position': [self.target_position],
+
+                                 }
+            try:
+                self.dict_history.update(self.controller.controller_data_for_csv)
+            except AttributeError:
+                pass
+            except Exception:
+                print(traceback.format_exc())
+
+        else:  # If you don't want to reset dict_history you still need to add to the dictionary additional keys from controller.controller_data_for_csv
+            ...
+            # TODO: Implement this part when you want to switch controllers during experiment
 
     # region Get and set timescales
 
