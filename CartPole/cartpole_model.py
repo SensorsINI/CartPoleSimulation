@@ -107,9 +107,6 @@ _cartpole_ode_numba = jit(_cartpole_ode, nopython=True, cache=True, fastmath=Tru
 
 def cartpole_ode_namespace(s: SimpleNamespace, u: float,
                            k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
-    angleDD, positionDD, _, _ = _cartpole_ode(
-def cartpole_ode_namespace(s: SimpleNamespace, u: float,
-                           k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
     angleDD, positionDD = _cartpole_ode(
         np.cos(s.angle), np.sin(s.angle), s.angleD, s.positionD, u,
         k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L
