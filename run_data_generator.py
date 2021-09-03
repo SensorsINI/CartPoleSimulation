@@ -114,7 +114,6 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
             csv += "/Experiment"
 
-        start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0, 1.0)
         #initial_state = [start_random_target_position_at_DataGen, None, 0.0, None]
         #initial_state = [start_random_target_position_at_DataGen, None, None, None]
         initial_state = [0.0, None, 0.0, None]
