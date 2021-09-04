@@ -37,7 +37,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     # User defined simulation settings
     ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
     # How many experiments will be generated
-    number_of_experiments = 500
+    number_of_experiments = 1
 
     ###### Train/Val/Test split - only matters if you run it in ML Pipeline mode
     frac_train = 0.8
@@ -55,14 +55,14 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     length_of_experiment_DataGen = 12
 
     ### Controller which should be used in generated experiment:
-    controller_DataGen = 'mppi'
+    controller_DataGen = 'lqr-observer'
     # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
 
     ### Randomly placed target points/s
     track_relative_complexity_DataGen = 1
 
     ### How to interpolate between turning points of random trace
-    interpolation_type_DataGen = 'previous'
+    interpolation_type_DataGen = '0-derivative-smooth'
     # Possible options: '0-derivative-smooth', 'linear', 'previous'
 
     ### How turning points should be distributed
