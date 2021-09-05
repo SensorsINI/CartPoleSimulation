@@ -5,6 +5,7 @@ It assumes that the input relation is u = Q*u_max (no fancy motor model) !
 
 import scipy
 import numpy as np
+from scipy import signal
 
 from datetime import datetime
 from numpy.random import SFC64, Generator
@@ -81,12 +82,29 @@ class controller_lqr_observer(template_controller):
             Ri = np.linalg.inv(self.R)
 
         self.K = np.dot(Ri, (np.dot(self.B.T, X)))
-        self.Kf = None  # This should be the gain of luenberger observer
 
-        eigVals = np.linalg.eigvals(self.A - np.dot(self.B, self.K))
+        poles_system = np.linalg.eigvals(self.A - np.dot(self.B, self.K))
+        slowest_pole_ct = poles_system[np.argmax(poles_system)]
+        pole1_ct = slowest_pole_ct * 10
+        pole2_ct = np.conj(pole1_ct)
+        poles_obs_ct = np.array([pole1_ct, pole1_ct-1, pole2_ct, pole2_ct-1])
+        print('poles obs ct', poles_obs_ct)
 
-        self.X = X
-        self.eigVals = eigVals
+        # Discretize continuous time system
+        Ts = 0.02 # sampling frequency in sec
+        # print(np.exp(Ts*poles_system))
+        poles_obs = np.exp(Ts*poles_obs_ct)
+        print('poles obs dt',poles_obs)
+        Ad = np.eye(4) + Ts * self.A
+        Bd = Ts * self.B
+        Cd = self.C
+        # poles_system = np.linalg.eigvals(Ad - np.dot(Bd, self.K))
+        # print(poles_system)
+
+        # Luenberger observer gain
+        obs = signal.place_poles(Ad.T, Cd.T, poles_obs.T)
+        self.Kf = obs.gain_matrix.T
+
 
         self.state_estimate = np.array(
             [
@@ -157,3 +175,16 @@ class controller_lqr_observer(template_controller):
                                         }
 
         return Q
+
+if __name__ == "__main__":
+
+    cont = controller_lqr_observer()
+
+    # Set non-zero input
+    s = s0
+    s[cartpole_state_varname_to_index('position')-2] = -30.2
+    s[cartpole_state_varname_to_index('positionD')-2] = 2.87
+    s[cartpole_state_varname_to_index('angle')] = -0.32
+    s[cartpole_state_varname_to_index('angleD')] = 0.237
+
+    u = -0.24
