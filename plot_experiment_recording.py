@@ -11,7 +11,7 @@ from CartPole import CartPole
 import matplotlib.pyplot as plt
 
 # csv_name = ['Experiment-GT-Smooth.csv', 'Experiment-8-Eq-Frozen-Smooth.csv', 'Experiment-9-Dense-Smooth.csv']
-csv_name = ['Experiment.csv']
+csv_name = ['']
 final_index = -1
 dict_datasets = {}
 

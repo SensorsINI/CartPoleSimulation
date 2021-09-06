@@ -115,14 +115,17 @@ class controller_lqr_observer(template_controller):
             ]
         )
 
-        self.next_state_estimate = self.state_estimate
+        self.next_state_estimate = np.copy(self.state_estimate)
+
+        # For filter as it is now in physical cartpole
+        self.previous_state_estimate = np.copy(self.state_estimate)
 
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
 
         # True state - you are not allowed to use it!
         state_true = np.array(
             [
-                [s[cartpole_state_varname_to_index('position')] - target_position],
+                [s[cartpole_state_varname_to_index('position')]],
                 [s[cartpole_state_varname_to_index('positionD')]],
                 [s[cartpole_state_varname_to_index('angle')]],
                 [s[cartpole_state_varname_to_index('angleD')]]
@@ -132,30 +135,49 @@ class controller_lqr_observer(template_controller):
         # Output_measurement is what you receive at every step
         output_measurement = np.array(
             [
-                [(s[cartpole_state_varname_to_index('position')] - target_position)*(1+0.05*self.rng_lqr_observer.standard_normal())],
+                [(s[cartpole_state_varname_to_index('position')])*(1+0.05*self.rng_lqr_observer.standard_normal())],
                 [s[cartpole_state_varname_to_index('angle')]*(1+0.05*self.rng_lqr_observer.standard_normal())],
             ]
         )
 
 
-        # Here comes your implementation of observer
-        self.state_estimate = self.next_state_estimate
-        output_estimate = self.state_estimate[(0, 2), :]  # y^ = C*x^
+        # Estimation of the state by euler integration and filtering
+        deltaTime = 0.02
+        angle_smoothing = 0.6
+        position_smoothing = 0.6
+        angleD_smoothing = 0.8
+        positionD_smoothing = 0.8
 
-        # TODO: IMPLEMENT THE LUENBERGER OBSERVER
-        # Here comes your implementation of observer - dont' trust anything here
-        self.state_estimate = self.next_state_estimate
-        output_estimate = self.state_estimate[(0, 2), :]  # y^ = C*x^
-        # self.next_state_estimate = np.dot((self.A - self.B * self.K), self.state_estimate) + np.dot(self.Kf, (
-        #             output_measurement - output_estimate))
+        self.state_estimate[2, 0] = output_measurement[1, 0] * (angle_smoothing) + (1 - angle_smoothing) * self.previous_state_estimate[2, 0]  # filter angle
+        self.state_estimate[0, 0] = output_measurement[0, 0] * (position_smoothing) + (1 - position_smoothing) * self.previous_state_estimate[0, 0]  #filter position
 
-        # Not having the observer let me just mix the initial state with true state to have something to plot
-        self.next_state_estimate = 0.9*self.state_estimate+0.1*state_true
+        self.state_estimate[3, 0] = (self.state_estimate[2, 0] - self.previous_state_estimate[2, 0]) / deltaTime  # angleD
+        self.state_estimate[1, 0] = (self.state_estimate[0, 0] - self.previous_state_estimate[0, 0]) / deltaTime  # positionD
+
+        self.state_estimate[3] = self.state_estimate[3] * (angleD_smoothing) + (1 - angleD_smoothing) * self.previous_state_estimate[3]  # Filter angleD
+        self.state_estimate[1] = self.state_estimate[1] * (positionD_smoothing) + (1 - positionD_smoothing) * self.previous_state_estimate[1]  # Filter positionD
+
+        self.previous_state_estimate[...] = self.state_estimate[...]
+
+        # # Here comes your implementation of observer
+        # self.state_estimate = self.next_state_estimate
+        # output_estimate = self.state_estimate[(0, 2), :]  # y^ = C*x^
+        #
+        # # TODO: IMPLEMENT THE LUENBERGER OBSERVER
+        # # Here comes your implementation of observer - dont' trust anything here
+        # self.state_estimate = self.next_state_estimate
+        # output_estimate = self.state_estimate[(0, 2), :]  # y^ = C*x^
+        # # self.next_state_estimate = np.dot((self.A - self.B * self.K), self.state_estimate) + np.dot(self.Kf, (
+        # #             output_measurement - output_estimate))
+
+
 
         # Q should be calculated based on just the state_estimate
         # You can use state_true for reference solution
-        Q = np.asscalar(np.dot(-self.K, state_true))
-        # Q = np.asscalar(np.dot(-self.K, self.state_estimate))
+        # Q = np.asscalar(np.dot(-self.K, state_true))
+        state_estimate_centered = np.copy(self.state_estimate)
+        state_estimate_centered[3] -= target_position
+        Q = np.asscalar(np.dot(-self.K, state_estimate_centered))
 
         # Clip Q
         if Q > 1.0:
@@ -166,11 +188,11 @@ class controller_lqr_observer(template_controller):
             pass
 
         self.controller_data_for_csv = {
-                                        'position_estimate': [target_position + self.state_estimate[0, 0]],
+                                        'position_estimate': [self.state_estimate[0, 0]],
                                         'positionD_estimate': [self.state_estimate[1, 0]],
                                         'angle_estimate': [self.state_estimate[2, 0]],
                                         'angleD_estimate': [self.state_estimate[3, 0]],
-                                        'position_measurement': [target_position + output_measurement[0, 0]],
+                                        'position_measurement': [output_measurement[0, 0]],
                                         'angle_measurement': [output_measurement[1, 0]],
                                         }
 
