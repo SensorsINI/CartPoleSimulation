@@ -22,8 +22,8 @@ R = config["controller"]["lqr"]["R"]
 
 Ts = 0.02  # sampling frequency in sec
 
-# MODE = 'Continuous'
-MODE = 'Discrete'
+MODE = 'Continuous'
+# MODE = 'Discrete'
 
 # DISCRETISATION = 'Euler'
 DISCRETISATION = 'Exact'
@@ -31,11 +31,53 @@ DISCRETISATION = 'Exact'
 OBSERVER = 'Luenberger'
 # OBSERVER = 'Euler + IIR Filter'
 
+pole_multiplier = 8.0
+
+#  Noise:
+sigma_position = 0.005
+sigma_angle = 0.003
+
 # Variables for 'Euler + IIR Filter'
 angle_smoothing = 0.6
 position_smoothing = 0.6
 angleD_smoothing = 0.8
 positionD_smoothing = 0.8
+
+def calculate_minimal_robust_invariant_set (A_closed, Kf, C, w_max, tol):
+
+    i = 1
+
+    e_max = np.array([
+        [0.0],  # position error
+        [0.0],
+        [0.0],
+        [0.0]# angle error
+    ])
+
+    v_max = abs(Kf @ w_max)
+
+    A_closed_f = A_closed - Kf @ C
+    A_closed_f_n = np.copy(A_closed_f)
+
+
+    e_max_next = v_max
+
+    while np.any(abs(e_max_next - e_max)) > tol:
+        i += 1
+        e_max = e_max_next
+        A_closed_f_n = A_closed_f_n @ A_closed_f
+        e_max_next = abs(e_max)+abs(A_closed_f_n @ v_max)
+
+
+    e_relative = np.array([
+        [abs(e_max_next[0,0]/w_max[0,0])],
+        [abs(e_max_next[0, 0] / w_max[0, 0])],
+        [abs(e_max_next[0, 0] / w_max[1, 0])],
+        [abs(e_max_next[0, 0] / w_max[1, 0])]
+    ])
+
+    return e_max_next, e_relative, i
+
 
 class controller_lqr_observer(template_controller):
     def __init__(self):
@@ -117,31 +159,51 @@ class controller_lqr_observer(template_controller):
 
         self.K = np.dot(Ri, (np.dot(self.B.T, P)))
 
+        # It is not necessary to solve are separately for discrete case
+        # K=Kd and poles_system_d = exp(Ts*poles_system)
         Pd = scipy.linalg.solve_discrete_are(self.Ad, self.Bd, self.Q, self.R)
         self.Kd = np.linalg.inv(self.R+self.Bd.T@Pd@self.Bd)@self.Bd.T@Pd@self.Ad
 
-        poles_system = np.linalg.eigvals(self.A - np.dot(self.B, self.K))
-        poles_system_d = np.linalg.eigvals(self.Ad-self.Bd@self.Kd)
+        self.A_closed = self.A-self.B@self.K # State matrix for closed loop system under controller K
+        self.Ad_closed = self.Ad-self.Bd@self.Kd
 
-        # It is not necessary to solve are separately for discrete case
-        # K=Kd and poles_system_d = exp(Ts*poles_system)
+        poles_system = np.linalg.eigvals(self.A_closed)
 
-        slowest_pole_ct = poles_system[np.argmax(poles_system.real)]
-        pole1_ct = slowest_pole_ct * 10
-        pole2_ct = np.conj(pole1_ct)
-        poles_obs_ct = np.array([pole1_ct, pole1_ct-1, pole2_ct, pole2_ct-1])
-        print('poles obs ct', poles_obs_ct)
+        # Poles for filter
+        poles_filter = poles_system*pole_multiplier
+        poles_filter_d = np.exp(poles_filter*Ts)
+        # # Alternative way of setting poles
+        # slowest_pole_ct = poles_system[np.argmax(poles_system.real)]
+        # pole1_ct = slowest_pole_ct * 10
+        # pole2_ct = np.conj(pole1_ct)
+        # poles_obs_ct = np.array([pole1_ct, pole1_ct-1, pole2_ct, pole2_ct-1])
+        # print('poles obs ct', poles_obs_ct)
 
-        # Luenberger observer gain
-        # obs = signal.place_poles(Ad.T, Cd.T, poles_obs.T)
-        # self.Kf = obs.gain_matrix.T
+        # Calculate filter matrix
+        obs = signal.place_poles(self.A_closed.T, self.C.T, poles_filter)
+        self.Kf = obs.gain_matrix.T
 
-        # Marcin's implementation
-        # poles_system = np.linalg.eigvals(self.A - np.dot(self.B, self.K))
-        # poles_obs_ct = poles_system*10.0
-        # obs = signal.place_poles(self.A.T, self.C.T, poles_obs_ct)
-        # self.Kf = obs.gain_matrix.T
+        obs_d = signal.place_poles(self.Ad_closed.T, self.Cd.T, poles_filter_d, rtol=1.0e-7, maxiter=100)
+        self.Kfd = obs_d.gain_matrix.T
 
+
+        # Calculate noise boundary Ε (as in tube MPC)
+        tol = 1.0e-7
+        w_max = np.array([
+            [3.0 * sigma_position],  # position error
+            [3.0 * sigma_angle],  # angle error
+        ])
+
+        # The method from MPC lecture for mRIS does work only for discrete system!
+        # E, E_relative, i = calculate_minimal_robust_invariant_set(self.A_closed, self.Kf, self.C, w_max, tol)
+        Ed, Ed_relative, i_d = calculate_minimal_robust_invariant_set(A_closed=self.Ad_closed, Kf=self.Kfd, C=self.Cd, w_max=w_max, tol=tol)
+
+        print('----------------------------------')
+        print('Discrete:')
+        print("Ed: {}".format(Ed))
+        print("Ed_rel: {}".format(Ed_relative))
+        print("i_d: {}".format(i_d))
+        print('----------------------------------')
 
         self.state_estimate = np.array(
             [
@@ -152,7 +214,9 @@ class controller_lqr_observer(template_controller):
             ]
         )
 
-        self.next_state_estimate = np.copy(self.state_estimate)
+        self.initialize_estimator = True
+
+        self.next_state_estimate_centered = np.copy(self.state_estimate)
         self.state_derivative = np.copy(self.state_estimate)
 
         # For filter as it is now in physical cartpole
@@ -173,8 +237,8 @@ class controller_lqr_observer(template_controller):
         # Output_measurement is what you receive at every step
         output_measurement = np.array(
             [
-                [(s[cartpole_state_varname_to_index('position')])*(1+0.00*self.rng_lqr_observer.standard_normal())],
-                [s[cartpole_state_varname_to_index('angle')]*(1+0.00*self.rng_lqr_observer.standard_normal())],
+                [(s[cartpole_state_varname_to_index('position')]) + sigma_position*self.rng_lqr_observer.standard_normal()],
+                [s[cartpole_state_varname_to_index('angle')] + sigma_angle*self.rng_lqr_observer.standard_normal()],
             ]
         )
 
@@ -187,33 +251,41 @@ class controller_lqr_observer(template_controller):
             self.state_estimate[3, 0] = (self.state_estimate[2, 0] - self.previous_state_estimate[2, 0]) / Ts  # angleD
             self.state_estimate[1, 0] = (self.state_estimate[0, 0] - self.previous_state_estimate[0, 0]) / Ts  # positionD
 
-            self.state_estimate[3] = self.state_estimate[3] * (angleD_smoothing) + (1 - angleD_smoothing) * self.previous_state_estimate[3]  # Filter angleD
-            self.state_estimate[1] = self.state_estimate[1] * (positionD_smoothing) + (1 - positionD_smoothing) * self.previous_state_estimate[1]  # Filter positionD
+            self.state_estimate[3, 0] = self.state_estimate[3, 0] * (angleD_smoothing) + (1 - angleD_smoothing) * self.previous_state_estimate[3, 0]  # Filter angleD
+            self.state_estimate[1, 0] = self.state_estimate[1, 0] * (positionD_smoothing) + (1 - positionD_smoothing) * self.previous_state_estimate[1, 0]  # Filter positionD
 
             self.previous_state_estimate[...] = self.state_estimate[...]
 
             state_estimate_centered = np.copy(self.state_estimate)
-            state_estimate_centered[0] -= target_position
+            state_estimate_centered[0, 0] -= target_position
 
 
         elif OBSERVER == 'Luenberger':
             # self.state_estimate = state_true
-            self.state_estimate = self.next_state_estimate
+
+            if self.initialize_estimator is True:
+                self.initialize_estimator = False
+                self.state_estimate[0, 0] = output_measurement[0, 0]
+                self.state_estimate[2, 0] = output_measurement[1, 0]
+                self.next_state_estimate_centered[...] = self.state_estimate[...]
+                self.next_state_estimate_centered[0] -= target_position
+            else:
+                self.state_estimate[...] = self.next_state_estimate_centered[...]
+                self.state_estimate[0] += target_position
             state_true_centered = np.copy(state_true)
-            state_true_centered[0] -= target_position
-            state_estimate_centered = np.copy(self.state_estimate)
-            state_estimate_centered[0] -= target_position
-            output_estimate = self.state_estimate[(0, 2), :]  # y = C*x
+            state_true_centered[0, 0] -= target_position
+            state_estimate_centered = np.copy(self.next_state_estimate_centered)
+
+            output_estimate = np.copy(self.state_estimate[(0, 2), :])  # y = C*x
 
             if MODE == 'Continuous':
-                self.state_estimate = self.next_state_estimate
-                self.state_derivative = (self.A - self.B @ self.K) @ state_estimate_centered  # observer: + self.Kf@(output_measurement - output_estimate)  right?
-                self.next_state_estimate = self.state_estimate + Ts*self.state_derivative
+                # Notice that state_estimate_centered is a good choice because v is not calculated as an approximate derivative, rather it is a mapping state->derivative
+                self.state_derivative = self.A_closed @ state_estimate_centered + self.Kf @ (output_measurement - output_estimate)
+                self.next_state_estimate_centered = self.state_estimate + Ts*self.state_derivative
+                self.next_state_estimate_centered[0, 0] -= target_position  # Notice that you cannot reduce it with + target position above, as target position changes at every time step
 
             elif MODE == 'Discrete':
-                self.state_estimate = self.next_state_estimate
-                self.next_state_estimate = (self.Ad-self.Bd@self.Kd)@state_estimate_centered  # + observer, not implemented
-                self.next_state_estimate[0] += target_position
+                self.next_state_estimate_centered = self.Ad_closed @ state_estimate_centered  + self.Kfd @ (output_measurement - output_estimate)
 
 
 
@@ -241,6 +313,23 @@ class controller_lqr_observer(template_controller):
                                         }
 
         return Q
+
+    def controller_reset(self):
+        self.initialize_estimator = True
+
+        self.state_estimate = np.array(
+            [
+                [0.0],
+                [0.0],
+                [0.0],
+                [0.0]
+            ]
+        )
+
+        self.next_state_estimate_centered = np.copy(self.state_estimate)
+        self.state_derivative = np.copy(self.state_estimate)
+        self.previous_state_estimate = np.copy(self.state_estimate)
+
 
 if __name__ == "__main__":
 
