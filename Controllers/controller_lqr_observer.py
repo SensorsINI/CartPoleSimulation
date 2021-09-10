@@ -22,8 +22,8 @@ R = config["controller"]["lqr"]["R"]
 
 Ts = 0.02  # sampling frequency in sec
 
-MODE = 'Continuous'
-# MODE = 'Discrete'
+# MODE = 'Continuous'
+MODE = 'Discrete'
 
 # DISCRETISATION = 'Euler'
 DISCRETISATION = 'Exact'
@@ -271,7 +271,7 @@ class controller_lqr_observer(template_controller):
                 self.next_state_estimate_centered[0] -= target_position
             else:
                 self.state_estimate[...] = self.next_state_estimate_centered[...]
-                self.state_estimate[0] += target_position
+                self.state_estimate[0, 0] += target_position
             state_true_centered = np.copy(state_true)
             state_true_centered[0, 0] -= target_position
             state_estimate_centered = np.copy(self.next_state_estimate_centered)
@@ -281,8 +281,7 @@ class controller_lqr_observer(template_controller):
             if MODE == 'Continuous':
                 # Notice that state_estimate_centered is a good choice because v is not calculated as an approximate derivative, rather it is a mapping state->derivative
                 self.state_derivative = self.A_closed @ state_estimate_centered + self.Kf @ (output_measurement - output_estimate)
-                self.next_state_estimate_centered = self.state_estimate + Ts*self.state_derivative
-                self.next_state_estimate_centered[0, 0] -= target_position  # Notice that you cannot reduce it with + target position above, as target position changes at every time step
+                self.next_state_estimate_centered = state_estimate_centered + Ts*self.state_derivative
 
             elif MODE == 'Discrete':
                 self.next_state_estimate_centered = self.Ad_closed @ state_estimate_centered  + self.Kfd @ (output_measurement - output_estimate)
