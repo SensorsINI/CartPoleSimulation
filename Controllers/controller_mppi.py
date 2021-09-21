@@ -3,6 +3,11 @@ Model Predictive Path Integral Controller
 Based on Williams, Aldrich, Theodorou (2015)
 """
 
+EXPERIMENT = ['up-down-stabilization', 'mppi-comparison']
+
+# Options for EXPERIMENT variable:
+# 'up-down-stabilization'/'up-stabilization'; 'mppi-comparison', 'online-learning',
+
 # Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
 # On other OS you have to chose a different interactive backend.
 # from matplotlib import use
@@ -26,6 +31,7 @@ from datetime import datetime
 from CartPole._CartPole_mathematical_helpers import (
     conditional_decorator,
     wrap_angle_rad_inplace,
+    wrap_angle_rad,
 )
 from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import (
@@ -65,6 +71,8 @@ try:
 except AttributeError:  # Should get Attribute Error if NET_NAME is None
     NET_TYPE = None
 
+from Controllers.CheckStabilized import CheckStabilized
+
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 """Timestep and sampling settings"""
 ADAPT = config["controller"]["mppi"]["adapt"]
@@ -77,6 +85,7 @@ predictor_type = config["controller"]["mppi"]["predictor_type"]
 
 INITIAL_L = copy.deepcopy(L)
 
+WASH_OUT_LEN = config["controller"]["mppi"]["WASH_OUT_LEN"]
 
 """Parameters weighting the different cost components"""
 dd_weight = config["controller"]["mppi"]["dd_weight"]
@@ -382,6 +391,9 @@ class controller_mppi(template_controller):
         if SEED == "None":
             SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
         self.rng_mppi = Generator(SFC64(SEED))
+        self.rng_mppi_rnn = Generator(SFC64(SEED*2)) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
+
+        self.check_stabilized = CheckStabilized(dt=dt)
 
         global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
         dd_weight = dd_weight * (1 + dd_noise * self.rng_mppi.uniform(-1.0, 1.0))
@@ -392,24 +404,38 @@ class controller_mppi(template_controller):
 
         print('ADAPT: {}'.format(ADAPT))
 
-        self.controller_data_for_csv = {'L': [],
-                                        'stage_cost_realized_trajectory': [],
-                                        'adapt_mode':[],
-                                        'retraining_now':[],
-                                        'cost_trajectory_from_u_predicted': [],
-                                        'cost_trajectory_from_u_true_equations': [],
-                                        'relative_cost_difference': [],
-                                        'training_count': [],
-                                        'phase_count_for_average': [],
-                                        }
+        if 'mppi-comparison' in EXPERIMENT:
+            self.controller_data_for_csv = {'L': [],
+                                            'stage_cost_realized_trajectory': [],
+                                            'adapt_mode':[],
+                                            'retraining_now':[],
+                                            'cost_trajectory_from_u_predicted': [],
+                                            'cost_trajectory_from_u_true_equations': [],
+                                            'relative_cost_difference': [],
+                                            'training_count': [],
+                                            'phase_count_for_average': [],
+                                            }
+        else:
+            self.controller_data_for_csv = {
+                                            }
 
         self.current_system_state = None  # MT TODO: Replace with self.s
         self.predicted_system_state = None  # MT Currently unused
         self.prev_control_input = None  # Control input given to the system at the end of the last step
         self.prev_system_state = None  # The previous measured system state
-        self.adapt_idle_counter_pre_change_max = 2000  # time between retraining and subsequent change of parameters
-        self.adapt_idle_counter_post_change_max = 1  # time between change of parameters and starting filling the buffer (make it bigger if you buffer is small so that you can observe effect of parameters change). Should be at least 1 so that the "previous" value is already with a new parameter
-        self.shift_reg_len = 2000  # How many samples to store before training
+        if 'online-learning' in EXPERIMENT:
+            self.adapt_idle_counter_pre_change_max = 2000  # time between retraining and subsequent change of parameters
+            self.adapt_idle_counter_post_change_max = 1  # time between change of parameters and starting filling the buffer (make it bigger if you buffer is small so that you can observe effect of parameters change). Should be at least 1 so that the "previous" value is already with a new parameter
+            self.shift_reg_len = 2000  # How many samples to store before training
+        else:
+            # Now the same variables has a different meaning
+            # Only first two are used
+            # Only their sum has an effect on the experiment
+            # However different phases get different labels
+            # hence it is easier to average them separatelly (e.g wash-out of rnn and post-wash-out period)
+            self.adapt_idle_counter_pre_change_max = 50  # time between retraining and subsequent change of parameters
+            self.adapt_idle_counter_post_change_max = 4950  # time between change of parameters and starting filling the buffer (make it bigger if you buffer is small so that you can observe effect of parameters change). Should be at least 1 so that the "previous" value is already with a new parameter
+            self.shift_reg_len = 1  # How many samples to store before training
         self.shift_reg_index = 0  # Index to keep track of index in the buffer
         self.training_count = 0  # Debug info: How many online training cycle have completed?
         self.adapt_mode = 'idle_pre'  # Possible 'idle_pre', 'idle_post', 'filling buffer'
@@ -450,8 +476,11 @@ class controller_mppi(template_controller):
 
         self.stage_cost_realized_trajectory = 0.0
 
-        self.warm_up_len = 100
-        self.warm_up_countdown = self.warm_up_len
+        if 'mppi-comparison' in EXPERIMENT:
+            self.wash_out_len = 0
+        else:
+            self.wash_out_len = WASH_OUT_LEN
+        self.warm_up_countdown = self.wash_out_len
         try:
             from Controllers.controller_lqr import controller_lqr
 
@@ -536,31 +565,60 @@ class controller_mppi(template_controller):
         :rtype: np.float32
         """
 
+        self.s = np.copy(s)
+        global L
+
+        stabilized = self.check_stabilized.check(s)
+
+        if stabilized is True and not EXPERIMENT:
+            self.s[ANGLE_IDX] += np.pi
+            self.s[ANGLE_IDX] = wrap_angle_rad(self.s[ANGLE_IDX])
 
 
-        if self.adapt_mode == 'idle_pre':
-            if self.adapt_idle_counter_pre == 0:
-                global L
-                L[...] = L*0.85
-                print(L)
-                # print('Entered idle_post')
-                self.adapt_mode = 'idle_post'
-                self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
-            else:
-                self.adapt_idle_counter_pre -= 1
-        elif self.adapt_mode == 'idle_post':
-            if self.adapt_idle_counter_post == 0:
-                # print('Entered filling_buffer')
-                self.adapt_mode = 'filling_buffer'
-                self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
-            else:
-                self.adapt_idle_counter_post -= 1
-        elif self.adapt_mode == 'filling_buffer':
-            if self.shift_reg_index == 0:
-                self.retraining_now = False
-                # print('Entered idle_pre')
-                self.adapt_mode = 'idle_pre'
-                # shift_reg_index is set to 0 whereelse
+        if 'online-learning' in EXPERIMENT:
+
+            if self.adapt_mode == 'idle_pre':
+                if self.adapt_idle_counter_pre == 0:
+
+                    L[...] = L*0.8
+                    print(L)
+                    # print('Entered idle_post')
+                    self.adapt_mode = 'idle_post'
+                    self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
+                else:
+                    self.adapt_idle_counter_pre -= 1
+            elif self.adapt_mode == 'idle_post':
+                if self.adapt_idle_counter_post == 0:
+                    # print('Entered filling_buffer')
+                    self.adapt_mode = 'filling_buffer'
+                    self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
+                else:
+                    self.adapt_idle_counter_post -= 1
+            elif self.adapt_mode == 'filling_buffer':
+                if self.shift_reg_index == 0:
+                    self.retraining_now = False
+                    # print('Entered idle_pre')
+                    self.adapt_mode = 'idle_pre'
+                    # shift_reg_index is set to 0 whereelse
+        else:
+            # For testing GRU adapted code from adaptive mode
+            # Names of variables in this case are missleading
+            if self.adapt_mode == 'idle_pre':
+                if self.adapt_idle_counter_pre == 0:
+                    self.adapt_mode = 'idle_post'
+                    self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
+                else:
+                    self.adapt_idle_counter_pre -= 1
+            elif self.adapt_mode == 'idle_post':
+                if self.adapt_idle_counter_post == 0:
+
+                    L[...] = L*0.8
+                    print(L)
+                    self.adapt_mode = 'idle_pre'
+                    self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
+                else:
+                    self.adapt_idle_counter_post -= 1
+
 
             # Change parameter
             # Start filling the buffer
@@ -601,9 +659,8 @@ class controller_mppi(template_controller):
                 #                                                   batch_size=32)
 
         # Need to find the current measured system state, the predicted system state and the control input
-        self.s = s
-        self.target_position = np.float32(target_position)
 
+        self.target_position = np.float32(target_position)
         self.iteration += 1
 
         # Adjust horizon if changed in GUI while running
@@ -638,30 +695,32 @@ class controller_mppi(template_controller):
             u_predicted = update_inputs(self.u, self.S_tilde_k, self.delta_u, INPLACE=False)
             delta_u_predicted = u_predicted-self.u
 
-            # Get u_predicted_ideal with MPPI based on true equations
-            s_horizon_true_equations = predict_trajectories(self.s, self.u+self.delta_u, PREDICTION_MODE='ideal-multi')
-            S_tilde_k = total_cost(s_horizon_true_equations, self.u, self.delta_u, self.u_prev, self.target_position, EXPORT=False, LOGGING=LOGGING)
-            # del s_horizon_true_equations
-            u_true_equations = update_inputs(self.u, S_tilde_k, self.delta_u, INPLACE=False)
-            delta_u_true_equations = u_true_equations-self.u
+            if 'mppi-comparison' in EXPERIMENT:
+                # Get u_predicted_ideal with MPPI based on true equations
+                s_horizon_true_equations = predict_trajectories(self.s, self.u+self.delta_u, PREDICTION_MODE='ideal-multi')
+                S_tilde_k = total_cost(s_horizon_true_equations, self.u, self.delta_u, self.u_prev, self.target_position, EXPORT=False, LOGGING=LOGGING)
 
-            # Get the true trajectories resulting from both u_predicted and u_predicted_true_equations
+                u_true_equations = update_inputs(self.u, S_tilde_k, self.delta_u, INPLACE=False)
+                delta_u_true_equations = u_true_equations-self.u
 
-            trajectory_from_u_predicted = predict_trajectories(self.s, u_predicted, PREDICTION_MODE='ideal-single')
-            trajectory_from_u_true_equations = predict_trajectories(self.s, u_true_equations, PREDICTION_MODE='ideal-single')
+                # Get the true trajectories resulting from both u_predicted and u_predicted_true_equations
 
-            # Assign cost to these trajectories
-            self.cost_trajectory_from_u_predicted = float(total_cost(trajectory_from_u_predicted, self.u, delta_u_predicted, self.u_prev, self.target_position, EXPORT=False, LOGGING=False))
-            self.cost_trajectory_from_u_true_equations = float(total_cost(trajectory_from_u_true_equations, self.u, delta_u_true_equations, self.u_prev, self.target_position, EXPORT=False, LOGGING=False))
+                trajectory_from_u_predicted = predict_trajectories(self.s, u_predicted, PREDICTION_MODE='ideal-single')
+                trajectory_from_u_true_equations = predict_trajectories(self.s, u_true_equations, PREDICTION_MODE='ideal-single')
 
-            # Relative cost difference in % !!!!
-            self.relative_cost_difference = ((self.cost_trajectory_from_u_predicted-self.cost_trajectory_from_u_true_equations)/self.cost_trajectory_from_u_true_equations) * 100.0
+                # Assign cost to these trajectories
+                self.cost_trajectory_from_u_predicted = float(total_cost(trajectory_from_u_predicted, self.u, delta_u_predicted, self.u_prev, self.target_position, EXPORT=False, LOGGING=False))
+                self.cost_trajectory_from_u_true_equations = float(total_cost(trajectory_from_u_true_equations, self.u, delta_u_true_equations, self.u_prev, self.target_position, EXPORT=False, LOGGING=False))
 
-            self.u = u_true_equations
-            self.delta_u = delta_u_true_equations
+                # Relative cost difference in % !!!!
+                self.relative_cost_difference = ((self.cost_trajectory_from_u_predicted-self.cost_trajectory_from_u_true_equations)/self.cost_trajectory_from_u_true_equations) * 100.0
 
-            # self.u = u_predicted
-            # self.delta_u = delta_u_predicted
+                self.u = u_true_equations
+                self.delta_u = delta_u_true_equations
+
+            else:
+                self.u = u_predicted
+                self.delta_u = delta_u_predicted
 
             self.stage_cost_realized_trajectory = q(self.s, self.u[0]-self.delta_u[0], self.delta_u[0], self.u_prev[0], self.target_position)[0]
 
@@ -701,7 +760,10 @@ class controller_mppi(template_controller):
             and predictor_type == "NeuralNet"
         ):
             self.warm_up_countdown -= 1
-            Q = self.auxiliary_controller.step(s, target_position)
+            if abs(s[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small
+                Q = self.auxiliary_controller.step(s, target_position)
+            else:
+                Q = self.rng_mppi_rnn.uniform(-1, 1)  # Apply random input to let RNN "feel" the system behaviour
         else:
             Q = self.u[0]
 
@@ -759,15 +821,16 @@ class controller_mppi(template_controller):
         if adapt_mode_save_previous != self.adapt_mode_save:
             self.phase_count_for_average += 1
 
-        self.controller_data_for_csv = {'L': [L],
-                                        'stage_cost_realized_trajectory': [self.stage_cost_realized_trajectory],
-                                        'adapt_mode': [self.adapt_mode_save],
-                                        'retraining_now': [self.retraining_now],
-                                        'cost_trajectory_from_u_predicted': [self.cost_trajectory_from_u_predicted],
-                                        'cost_trajectory_from_u_true_equations': [self.cost_trajectory_from_u_true_equations],
-                                        'relative_cost_difference': [self.relative_cost_difference],
-                                        'training_count': [self.training_count],
-                                        'phase_count_for_average': [self.phase_count_for_average]}
+        if 'mppi-comparison' in EXPERIMENT:
+            self.controller_data_for_csv = {'L': [L],
+                                            'stage_cost_realized_trajectory': [self.stage_cost_realized_trajectory],
+                                            'adapt_mode': [self.adapt_mode_save],
+                                            'retraining_now': [self.retraining_now],
+                                            'cost_trajectory_from_u_predicted': [self.cost_trajectory_from_u_predicted],
+                                            'cost_trajectory_from_u_true_equations': [self.cost_trajectory_from_u_true_equations],
+                                            'relative_cost_difference': [self.relative_cost_difference],
+                                            'training_count': [self.training_count],
+                                            'phase_count_for_average': [self.phase_count_for_average]}
         return Q  # normed control input in the range [-1,1]
 
     def update_control_vector(self):
@@ -1063,7 +1126,7 @@ class controller_mppi(template_controller):
     # but only if the controller is supposed to be reused without reloading (e.g. in GUI)
     def controller_reset(self):
         try:
-            self.warm_up_countdown = self.warm_up_len
+            self.warm_up_countdown = self.wash_out_len
             # TODO: Not sure if this works for predictor autoregressive tf
             predictor.net.reset_states()
         except:
