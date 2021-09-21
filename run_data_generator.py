@@ -23,9 +23,11 @@ config_CartPole = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
-    seed = 1873  # Repeatable
-    # seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
-    reset_seed_for_each_experiment = True
+    seed = config_CartPole["data_generator"]["SEED"]
+    if seed == "None":
+        seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0*7.0)  # Fully random
+
+    reset_seed_for_each_experiment = False
 
     rng_data_generator = Generator(SFC64(seed))
 
