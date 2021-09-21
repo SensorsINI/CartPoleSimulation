@@ -100,7 +100,7 @@ for key, dataset in dict_datasets.items():
 
     gb = dataset.groupby(['L'], sort=False)
     # cost = gb['cost_trajectory_from_u_true_equations'].mean().values
-    cost = gb[feature].mean().values
+    cost = gb[feature].median().values
 
     cost = np.insert(cost, 0, cost[0])
     # except:
