@@ -11,7 +11,13 @@ from CartPole import CartPole
 import matplotlib.pyplot as plt
 
 # csv_name = ['Experiment-GT-Smooth.csv', 'Experiment-8-Eq-Frozen-Smooth.csv', 'Experiment-9-Dense-Smooth.csv']
-csv_name = ['Experiment-GT-Smooth.csv', 'Experiment-1-Eq-Frozen-Smooth.csv', 'Experiment-2-Dense-Smooth.csv']
+
+
+# feature = 'stage_cost_realized_trajectory'
+# feature = 'cost_trajectory_from_u_true_equations'
+feature = 'cost_trajectory_from_u_predicted'
+# feature = 'relative_cost_difference'
+
 final_index = -1
 dict_datasets = {}
 
@@ -39,12 +45,6 @@ for experiment_name in csv_name:
     dict_datasets[experiment_name[:-4]] = history_pd
 
 
-
-# feature = 'cost_trajectory_from_u_predicted'
-# feature = 'cost_trajectory_from_u_true_equations'
-feature = 'stage_cost_realized_trajectory'
-# feature = 'relative_cost'
-
 fontsize_labels = 10
 fontsize_ticks = 10
 
@@ -52,7 +52,7 @@ fontsize_ticks = 10
 fig, axs = plt.subplots(1, 1, figsize=(16, 9), sharex=True)  # share x axis so zoom zooms all plots
 fig.suptitle(feature, fontsize=20)
 
-my_cycler = cycler(color=['g', 'b', 'orange', 'r'])
+my_cycler = cycler(color=['g', 'b', 'orange', 'r', 'yellow', 'magenta', 'brown'])
 plt.rc('axes', prop_cycle=my_cycler)
 axs.set_prop_cycle(my_cycler)
 
