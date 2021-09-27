@@ -20,7 +20,7 @@ config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 Q = np.diag(config["controller"]["lqr"]["Q"])
 R = config["controller"]["lqr"]["R"]
 
-Ts = 0.02  # sampling frequency in sec
+Ts = 0.02  # sampling frequency in sec, you have to manually check it is the same as for control update rate of Simulator
 
 # MODE = 'Continuous'
 MODE = 'Discrete'
@@ -28,8 +28,8 @@ MODE = 'Discrete'
 # DISCRETISATION = 'Euler'
 DISCRETISATION = 'Exact'
 
-OBSERVER = 'Luenberger'
-# OBSERVER = 'Euler + IIR Filter'
+# OBSERVER = 'Luenberger'
+OBSERVER = 'Euler + IIR Filter'
 
 pole_multiplier = 8.0
 
@@ -258,6 +258,8 @@ class controller_lqr_observer(template_controller):
 
             state_estimate_centered = np.copy(self.state_estimate)
             state_estimate_centered[0, 0] -= target_position
+            state_true_centered = np.copy(state_true)
+            state_true_centered[0, 0] -= target_position
 
 
         elif OBSERVER == 'Luenberger':
