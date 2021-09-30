@@ -10,7 +10,7 @@ from SI_Toolkit.load_and_normalize import normalize_df
 from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
     predictor_autoregressive_tf,
 )
-from Predictores.predictor_ideal import predictor_ideal
+from Predictores.predictor_ODE import predictor_ODE
 from tqdm import tqdm
 
 import matplotlib.pyplot as plt
@@ -27,7 +27,7 @@ N_predictions = 10
 prediction_denorm=False
 
 tested_predictor_1 = predictor_autoregressive_tf(horizon=horizon, dt=DT)
-tested_predictor_2 = predictor_ideal(horizon=horizon, dt=DT)
+tested_predictor_2 = predictor_ODE(horizon=horizon, dt=DT)
 
 try:
     normalization_info = tested_predictor_1.normalization_info
