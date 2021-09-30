@@ -1138,6 +1138,15 @@ class CartPole:
                                      ec='w')
 
         AxCart.add_patch(InvisiblePointUp)
+
+        # InvisiblePointDown = Rectangle((0, -self.MastHight - 2.0),
+        #                              self.MastThickness,
+        #                              0.0001,
+        #                              fc='w',
+        #                              ec='w')
+        #
+        # AxCart.add_patch(InvisiblePointDown)
+
         # Apply scaling
         AxCart.axis('scaled')
 
