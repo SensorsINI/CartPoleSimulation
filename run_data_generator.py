@@ -42,9 +42,9 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     number_of_experiments = 1
 
     ###### Train/Val/Test split - only matters if you run it in ML Pipeline mode
-    frac_train = 0.9
-    #frac_val = 0.2 - (5/number_of_experiments)  # 0.18
-    frac_val = 0.08
+    frac_train = 0.8
+    frac_val = 0.19
+
     save_mode = 'online'  # It was intended to save memory usage, but it doesn't seems to help
 
     ###### Timescales
