@@ -50,7 +50,7 @@ PATH_TO_NORMALIZATION_INFO = config['paths']['PATH_TO_EXPERIMENT_FOLDERS'] + con
 PATH_TO_NORMALIZATION_INFO += os.listdir(PATH_TO_NORMALIZATION_INFO)[0]
 
 
-class predictor_ideal:
+class predictor_ODE:
     def __init__(self, horizon, dt, intermediate_steps=1):
         try:
             self.normalization_info = load_normalization_info(PATH_TO_NORMALIZATION_INFO)

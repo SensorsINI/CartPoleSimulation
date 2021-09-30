@@ -5,7 +5,7 @@ import numpy as np
 
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index, \
     cartpole_state_indices_to_varnames
-from Predictores.predictor_ideal import predictor_ideal
+from Predictores.predictor_ODE import predictor_ODE
 
 from Controllers.controller_lqr import controller_lqr
 
@@ -15,7 +15,7 @@ import numpy as np
 import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-predictor = predictor_ideal
+predictor = predictor_ODE
 # WARNING: if using RNN to provide CartPole model to MPC
 # make sure that it is trained to predict future states with this timestep
 DT = config['controller']['custom_mpc_scipy']['DT']
