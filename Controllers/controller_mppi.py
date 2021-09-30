@@ -244,13 +244,13 @@ def predict_trajectories(s, u, PREDICTION_MODE='normal-multi'):
     :param u: array of control inputs scenarios"""
     if PREDICTION_MODE=='ideal-single':
         initial_state = np.tile(s, (1, 1))
-        predictor_true_equations.setup(initial_state=initial_state, prediction_denorm=True)
-        s_horizon = predictor_true_equations.predict(u, pole_half_length=L)
+        predictor_ground_truth.setup(initial_state=initial_state, prediction_denorm=True)
+        s_horizon = predictor_ground_truth.predict(u, pole_half_length=L)
         s_horizon = np.expand_dims(s_horizon, axis=0)
     elif PREDICTION_MODE=='ideal-multi':
         initial_state = np.tile(s, (num_rollouts, 1))
-        predictor_true_equations.setup(initial_state=initial_state, prediction_denorm=True)
-        s_horizon = predictor_true_equations.predict(u, pole_half_length=L)[:, :, : len(STATE_INDICES)]
+        predictor_ground_truth.setup(initial_state=initial_state, prediction_denorm=True)
+        s_horizon = predictor_ground_truth.predict(u, pole_half_length=L)[:, :, : len(STATE_INDICES)]
     elif PREDICTION_MODE=='normal-multi':
         initial_state = np.tile(s, (num_rollouts, 1))
         predictor.setup(initial_state=initial_state, prediction_denorm=True)
