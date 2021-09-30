@@ -36,7 +36,7 @@ import numpy as np
 
 from SI_Toolkit.load_and_normalize import load_normalization_info, normalize_numpy_array
 from CartPole.cartpole_model import (
-    L, Q2u, _cartpole_ode_numba, TrackHalfLength, next_state_numba
+    L, Q2u, cartpole_fine_integration
 )
 
 from CartPole.state_utilities import (
@@ -46,7 +46,7 @@ from CartPole.state_utilities import (
 import yaml, os
 config = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'config.yml'), 'r'), Loader=yaml.FullLoader)
 
-PATH_TO_NORMALIZATION_INFO = config['paths']['PATH_TO_EXPERIMENT_RECORDINGS'] + config['paths']['path_to_experiment'] + "NormalizationInfo/"
+PATH_TO_NORMALIZATION_INFO = config['paths']['PATH_TO_EXPERIMENT_FOLDERS'] + config['paths']['path_to_experiment'] + "NormalizationInfo/"
 PATH_TO_NORMALIZATION_INFO += os.listdir(PATH_TO_NORMALIZATION_INFO)[0]
 
 
@@ -73,6 +73,16 @@ class predictor_ideal:
         self.batch_mode = False
 
         self.output = None
+
+        self.angle = None
+        self.angleD = None
+        self.angle_sin = None
+        self.angle_cos = None
+        self.angleDD = None
+
+        self.position = None
+        self.positionD = None
+        self.positionDD = None
 
     def setup(self, initial_state: np.ndarray, prediction_denorm=False):
 
@@ -104,16 +114,14 @@ class predictor_ideal:
         """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
         """
         (
-            self.angle, self.angleD, self.angleDD, self.position, self.positionD, self.positionDD, self.angle_cos, self.angle_sin
-        ) = next_state_numba(
+            self.angle, self.angleD, self.position, self.positionD, self.angle_cos, self.angle_sin
+        ) = cartpole_fine_integration(
             angle=self.angle,
             angleD=self.angleD,
-            angleDD=self.angleDD,
             angle_cos=self.angle_cos,
             angle_sin=self.angle_sin,
             position=self.position,
             positionD=self.positionD,
-            positionDD=self.positionDD,
             u=self.u[:, k],
             t_step=self.t_step,
             intermediate_steps=self.intermediate_steps,
@@ -132,15 +140,9 @@ class predictor_ideal:
         self.u = Q2u(Q_hat)
         if self.u.ndim == 1: self.u = np.expand_dims(self.u, 0)
 
-        # Calculate second derivatives of initial state
-        self.angleDD, self.positionDD, self.angle_cos, self.angle_sin = _cartpole_ode_numba(
-            np.cos(-self.angle),
-            np.sin(-self.angle),
-            self.angleD,
-            self.positionD,
-            self.u[:, 0],
-            L=pole_half_length,
-        )
+        self.angle_cos = np.cos(self.angle)
+        self.angle_sin = np.sin(self.angle)
+
         self.write_outputs(0)
 
         for k in range(self.horizon):

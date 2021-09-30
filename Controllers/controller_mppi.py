@@ -61,6 +61,8 @@ from Controllers.template_controller import template_controller
 from tensorflow import keras
 from SI_Toolkit.load_and_normalize import normalize_numpy_array
 
+from others.p_globals import L
+
 config = yaml.load(
     open(os.path.join("SI_Toolkit_ApplicationSpecificFiles", "config.yml"), "r"), Loader=yaml.FullLoader
 )
