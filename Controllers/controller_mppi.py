@@ -71,6 +71,7 @@ num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 update_every = config["controller"]["mppi"]["update_every"]
 predictor_type = config["controller"]["mppi"]["predictor_type"]
 
+WASH_OUT_LEN = config["controller"]["mppi"]["WASH_OUT_LEN"]
 
 """Parameters weighting the different cost components"""
 dd_weight = config["controller"]["mppi"]["dd_weight"]
@@ -169,12 +170,15 @@ def penalize_deviation(cc, u):
 
 """Define Predictor"""
 if predictor_type == "Euler":
-    predictor = predictor_ideal(horizon=mpc_samples, dt=dt, intermediate_steps=1)
+    predictor = predictor_ideal(horizon=mpc_samples, dt=dt, intermediate_steps=10)
 elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
         horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
 
+predictor_true_equations = predictor_ideal(
+    horizon=mpc_samples, dt=dt, intermediate_steps=10
+)
 
 def trajectory_rollouts(
     s: np.ndarray,
@@ -364,6 +368,8 @@ class controller_mppi(template_controller):
         if SEED == "None":
             SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
         self.rng_mppi = Generator(SFC64(SEED))
+        self.rng_mppi_rnn = Generator(SFC64(SEED*2)) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
+
 
         global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
         dd_weight = dd_weight * (1 + dd_noise * self.rng_mppi.uniform(-1.0, 1.0))
@@ -388,8 +394,8 @@ class controller_mppi(template_controller):
         self.delta_u = np.zeros((num_rollouts, mpc_samples), dtype=np.float32)
         self.S_tilde_k = np.zeros((num_rollouts), dtype=np.float32)
 
-        self.warm_up_len = 100
-        self.warm_up_countdown = self.warm_up_len
+        self.wash_out_len = WASH_OUT_LEN
+        self.warm_up_countdown = self.wash_out_len
         try:
             from Controllers.controller_lqr import controller_lqr
 
@@ -542,7 +548,10 @@ class controller_mppi(template_controller):
             and predictor_type == "NeuralNet"
         ):
             self.warm_up_countdown -= 1
-            Q = self.auxiliary_controller.step(s, target_position)
+            if abs(s[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small
+                Q = self.auxiliary_controller.step(s, target_position)
+            else:
+                Q = self.rng_mppi_rnn.uniform(-1, 1)  # Apply random input to let RNN "feel" the system behaviour
         else:
             Q = self.u[0]
 
@@ -722,9 +731,6 @@ class controller_mppi(template_controller):
             # For each rollout, calculate what the nominal trajectory would be using the known true model
             # This can uncover if the model used makes inaccurate predictions
             # shape(true_nominal_rollouts) = ITERATIONS x mpc_horizon x [position, positionD, angle, angleD]
-            predictor_true_equations = predictor_ideal(
-                horizon=mpc_samples, dt=dt, intermediate_steps=10
-            )
             predictor_true_equations.setup(
                 np.copy(nrlgs[:, 0, :]), prediction_denorm=True
             )
@@ -877,7 +883,7 @@ class controller_mppi(template_controller):
     # but only if the controller is supposed to be reused without reloading (e.g. in GUI)
     def controller_reset(self):
         try:
-            self.warm_up_countdown = self.warm_up_len
+            self.warm_up_countdown = self.wash_out_len
             # TODO: Not sure if this works for predictor autoregressive tf
             predictor.net.reset_states()
         except:
