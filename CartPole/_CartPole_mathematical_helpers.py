@@ -6,6 +6,8 @@ This file was necessary to make CartPole module self-contained.
 from math import fmod
 import numpy as np
 
+from numba import jit
+
 
 # Wraps the angle into range [-π, π]
 def wrap_angle_rad(angle: float) -> float:
@@ -19,6 +21,7 @@ def wrap_angle_rad(angle: float) -> float:
     return angle
 
 
+@jit(nopython=True, cache=True, fastmath=True)
 def wrap_angle_rad_inplace(angle: np.ndarray) -> None:
     Modulo = np.fmod(angle, 2 * np.pi)  # positive modulo
     neg_wrap, pos_wrap = Modulo < -np.pi, Modulo > np.pi
