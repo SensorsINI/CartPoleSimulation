@@ -42,9 +42,9 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     number_of_experiments = 1
 
     ###### Train/Val/Test split - only matters if you run it in ML Pipeline mode
-    frac_train = 0.5
+    frac_train = 0.9
     #frac_val = 0.2 - (5/number_of_experiments)  # 0.18
-    frac_val = 0.25
+    frac_val = 0.08
     save_mode = 'online'  # It was intended to save memory usage, but it doesn't seems to help
 
     ###### Timescales
@@ -54,7 +54,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     ###### CartPole settings
     ### Length of each experiment in s:
-    length_of_experiment_DataGen = 16000
+    length_of_experiment_DataGen = 1200  # s
 
     ### Controller which should be used in generated experiment:
     controller_DataGen = 'mppi'
@@ -64,7 +64,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     track_relative_complexity_DataGen = 1
 
     ### How to interpolate between turning points of random trace
-    interpolation_type_DataGen = 'previous'
+    interpolation_type_DataGen = '0-derivative-smooth'
     # Possible options: '0-derivative-smooth', 'linear', 'previous'
 
     ### How turning points should be distributed
@@ -93,8 +93,6 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
             rng_data_generator = Generator(SFC64(seed))
 
         ### Where the target positions of the random experiment start and end
-        start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(
-            -1.0, 1.0)
         end_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0,
                                                                                                                    1.0)
         ### Initial state
@@ -117,9 +115,9 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
             csv += "/Experiment"
 
         start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0, 1.0)
-        #initial_state = [start_random_target_position_at_DataGen, None, 0.0, None]
-        #initial_state = [start_random_target_position_at_DataGen, None, None, None]
-        initial_state = [0.0, None, 0.0, None]
+        initial_state = [start_random_target_position_at_DataGen, 0.0, 0.0, 0.0]
+        # initial_state = [start_random_target_position_at_DataGen, None, None, None]
+        # initial_state = [0.0, None, 0.0, None]
         if initial_state[0] is None:
             initial_state_DataGen[cartpole_state_varname_to_index('position')] = rng_data_generator.uniform(
                 low=-TrackHalfLength / 2.0,
