@@ -42,7 +42,7 @@ from CartPole.state_utilities import (
 from matplotlib.widgets import Slider
 from numba import jit
 from numpy.random import SFC64, Generator
-from SI_Toolkit_ApplicationSpecificFiles.predictor_ideal import predictor_ideal
+from SI_Toolkit_ApplicationSpecificFiles.predictor_ODE import predictor_ODE
 from scipy.interpolate import interp1d
 from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
     predictor_autoregressive_tf,
@@ -170,13 +170,13 @@ def penalize_deviation(cc, u):
 
 """Define Predictor"""
 if predictor_type == "Euler":
-    predictor = predictor_ideal(horizon=mpc_samples, dt=dt, intermediate_steps=10)
+    predictor = predictor_ODE(horizon=mpc_samples, dt=dt, intermediate_steps=10)
 elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
         horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
 
-predictor_true_equations = predictor_ideal(
+predictor_true_equations = predictor_ODE(
     horizon=mpc_samples, dt=dt, intermediate_steps=10
 )
 

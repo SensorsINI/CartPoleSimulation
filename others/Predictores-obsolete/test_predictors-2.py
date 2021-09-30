@@ -8,7 +8,7 @@ from Predictores.predictor_tests_plotting_helpers import pd_plotter_simple, pd_p
 from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
     predictor_autoregressive_tf,
 )
-from Predictores.predictor_ideal import predictor_ideal
+from Predictores.predictor_ODE import predictor_ODE
 
 
 DT = 0.1 # This is DT fed into predictor at initialization - meaning may differ between predictors
@@ -18,7 +18,7 @@ start_at = 20+320
 autoregres_at_after_start = 50
 
 tested_predictor_1 = predictor_autoregressive_tf(horizon=horizon, dt=DT)
-tested_predictor_2 = predictor_ideal(horizon=horizon, dt=DT)
+tested_predictor_2 = predictor_ODE(horizon=horizon, dt=DT)
 
 # datafile = glob.glob('./data/validate/' + '*.csv')[0]
 datafile = glob.glob('./Experiment_Recordings/Test/' + '*.csv')[0]
