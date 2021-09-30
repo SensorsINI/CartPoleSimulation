@@ -23,9 +23,11 @@ config_CartPole = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
-    seed = 1873  # Repeatable
-    # seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
-    reset_seed_for_each_experiment = True
+    seed = config_CartPole["data_generator"]["SEED"]
+    if seed == "None":
+        seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0*7.0)  # Fully random
+
+    reset_seed_for_each_experiment = False
 
     rng_data_generator = Generator(SFC64(seed))
 
@@ -52,10 +54,10 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     ###### CartPole settings
     ### Length of each experiment in s:
-    length_of_experiment_DataGen = 12
+    length_of_experiment_DataGen = 100
 
     ### Controller which should be used in generated experiment:
-    controller_DataGen = 'lqr-observer'
+    controller_DataGen = 'lqr'
     # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
 
     ### Randomly placed target points/s
@@ -91,8 +93,6 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
             rng_data_generator = Generator(SFC64(seed))
 
         ### Where the target positions of the random experiment start and end
-        start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(
-            -1.0, 1.0)
         end_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0,
                                                                                                                    1.0)
         ### Initial state
@@ -114,9 +114,10 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
             csv += "/Experiment"
 
-        #initial_state = [start_random_target_position_at_DataGen, None, 0.0, None]
-        #initial_state = [start_random_target_position_at_DataGen, None, None, None]
-        initial_state = [0.0, None, 0.0, None]
+        start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0, 1.0)
+        initial_state = [start_random_target_position_at_DataGen, 0.0, 0.0, 0.0]
+        # initial_state = [start_random_target_position_at_DataGen, None, None, None]
+        # initial_state = [0.0, None, 0.0, None]
         if initial_state[0] is None:
             initial_state_DataGen[cartpole_state_varname_to_index('position')] = rng_data_generator.uniform(
                 low=-TrackHalfLength / 2.0,

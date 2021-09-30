@@ -1,6 +1,6 @@
 controller:
   mppi:
-    SEED: 1897                            # Seed for rng, for MPPI only
+    SEED: 1897                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 2000                      # Number of Monte Carlo samples
@@ -12,8 +12,8 @@ controller:
     ekc_weight: 5.0
     cc_weight: 1.0
     ccrc_weight: 1.0
-    cost_noise: 0.0                       # Noise on stage cost weights by +/- this value
-    control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value
+    cost_noise: 0.0                       # Noise on stage cost weights by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0 othewise
+    control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
     NU: 1000.0                            # Exploration variance
@@ -21,6 +21,7 @@ controller:
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     LOGGING: False                        # Collect and show detailed insights into the controller's behavior
+    WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
   custom_mpc_scipy:
     DT: 0.1
     # method: 'L-BFGS-B'
@@ -62,7 +63,7 @@ controller:
     dt_mpc_simulation: 0.2  # s
     mpc_horizon: 10
 cartpole:
-  SEED: 1873  # This is a seed for rng for CartPole instance class only. If None random seed based on datetime is used
+  SEED: 1873  # This is a seed for rng for CartPole instance class only. If "None" random seed based on datetime is used
   PATH_TO_CONTROLLERS: './Controllers/'  # Path where controllers are stored
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
@@ -79,3 +80,6 @@ cartpole:
   sensorNoise: 0.0  # sensor noise added to output of the system TODO: not implemented yet
   g: 9.81  # absolute value of gravity acceleration, m/s^2
   k: "4.0/3.0"  # Dimensionless factor of moment of inertia of the pole with length 2L: I: (1/3)*m*(2L)^2 = (4/3)*m*(L)^2
+
+data_generator:
+  SEED: 1  # If "None" random seed based on datetime is used
