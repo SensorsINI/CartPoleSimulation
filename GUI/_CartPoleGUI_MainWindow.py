@@ -545,6 +545,7 @@ class MainWindow(QMainWindow):
             else:
                 self.CartPoleInstance.slider_value = self.CartPoleInstance.target_position/TrackHalfLength
 
+            # TODO: Make it more general for all possible parameters
             try:
                 L[...] = row['L']
             except KeyError:
