@@ -11,3 +11,6 @@
 /Modeling/SI_Toolkit/TF/NNI/NNI_Results
 
 /SI_Toolkit_ApplicationSpecificFiles/Experiments/*
+/.idea/*
+
+!/.idea/runConfigurations/
