@@ -176,7 +176,7 @@ elif predictor_type == "NeuralNet":
         horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
 
-predictor_true_equations = predictor_ODE(
+predictor_ground_truth = predictor_ODE(
     horizon=mpc_samples, dt=dt, intermediate_steps=10
 )
 
@@ -731,10 +731,10 @@ class controller_mppi(template_controller):
             # For each rollout, calculate what the nominal trajectory would be using the known true model
             # This can uncover if the model used makes inaccurate predictions
             # shape(true_nominal_rollouts) = ITERATIONS x mpc_horizon x [position, positionD, angle, angleD]
-            predictor_true_equations.setup(
+            predictor_ground_truth.setup(
                 np.copy(nrlgs[:, 0, :]), prediction_denorm=True
             )
-            true_nominal_rollouts = predictor_true_equations.predict(iplgs)[:, :-1, :]
+            true_nominal_rollouts = predictor_ground_truth.predict(iplgs)[:, :-1, :]
             wrap_angle_rad_inplace(true_nominal_rollouts[:, :, ANGLE_IDX])
 
             # Create figure
