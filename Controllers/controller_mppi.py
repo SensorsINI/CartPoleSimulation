@@ -4,6 +4,7 @@ Based on Williams, Aldrich, Theodorou (2015)
 """
 
 EXPERIMENT = ['up-down-stabilization', 'mppi-comparison']
+# EXPERIMENT = []
 
 # Options for EXPERIMENT variable:
 # 'up-down-stabilization'/'up-stabilization'; 'mppi-comparison', 'online-learning',
@@ -392,6 +393,7 @@ class controller_mppi(template_controller):
         SEED = config["controller"]["mppi"]["SEED"]
         if SEED == "None":
             SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
+
         self.rng_mppi = Generator(SFC64(SEED))
         self.rng_mppi_rnn = Generator(SFC64(SEED*2)) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
 
@@ -425,19 +427,10 @@ class controller_mppi(template_controller):
         self.predicted_system_state = None  # MT Currently unused
         self.prev_control_input = None  # Control input given to the system at the end of the last step
         self.prev_system_state = None  # The previous measured system state
-        if 'online-learning' in EXPERIMENT:
-            self.adapt_idle_counter_pre_change_max = 2000  # time between retraining and subsequent change of parameters
-            self.adapt_idle_counter_post_change_max = 1  # time between change of parameters and starting filling the buffer (make it bigger if you buffer is small so that you can observe effect of parameters change). Should be at least 1 so that the "previous" value is already with a new parameter
-            self.shift_reg_len = 2000  # How many samples to store before training
-        else:
-            # Now the same variables has a different meaning
-            # Only first two are used
-            # Only their sum has an effect on the experiment
-            # However different phases get different labels
-            # hence it is easier to average them separatelly (e.g wash-out of rnn and post-wash-out period)
-            self.adapt_idle_counter_pre_change_max = 50  # time between retraining and subsequent change of parameters
-            self.adapt_idle_counter_post_change_max = 4950  # time between change of parameters and starting filling the buffer (make it bigger if you buffer is small so that you can observe effect of parameters change). Should be at least 1 so that the "previous" value is already with a new parameter
-            self.shift_reg_len = 1  # How many samples to store before training
+
+        self.adapt_idle_counter_pre_change_max = 200  # time between retraining and subsequent change of parameters
+        self.adapt_idle_counter_post_change_max = 1  # time between change of parameters and starting filling the buffer (make it bigger if you buffer is small so that you can observe effect of parameters change). Should be at least 1 so that the "previous" value is already with a new parameter
+        self.shift_reg_len = 200  # How many samples to store before training
         self.shift_reg_index = 0  # Index to keep track of index in the buffer
         self.training_count = 0  # Debug info: How many online training cycle have completed?
         self.adapt_mode = 'idle_pre'  # Possible 'idle_pre', 'idle_post', 'filling buffer'
@@ -446,6 +439,7 @@ class controller_mppi(template_controller):
         self.retraining_now = False
         self.phase_count_for_average = 0
         self.adapt_mode_save = 'after_training'
+
         if ADAPT and predictor_type == 'NeuralNet':
             # Buffers to store input and output
             self.training_shift_reg_input = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.inputs)))
@@ -456,6 +450,7 @@ class controller_mppi(template_controller):
                 loss=keras.losses.MeanSquaredError(),
                 optimizer=keras.optimizers.Adam(1.0e-6)
             )
+
         # State of the cart
         self.s = create_cartpole_state()
 
@@ -572,60 +567,35 @@ class controller_mppi(template_controller):
 
         stabilized = self.check_stabilized.check(s)
 
-        if stabilized is True and not EXPERIMENT:
+        if stabilized is True and 'up-down-stabilization' in EXPERIMENT:
             self.s[ANGLE_IDX] += np.pi
             self.s[ANGLE_IDX] = wrap_angle_rad(self.s[ANGLE_IDX])
 
+        if self.adapt_mode == 'idle_pre':
+            if self.adapt_idle_counter_pre == 0:
 
-        if 'online-learning' in EXPERIMENT:
+                L[...] = L*0.8
+                print(L)
+                # print('Entered idle_post')
+                self.adapt_mode = 'idle_post'
+                self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
+            else:
+                self.adapt_idle_counter_pre -= 1
+        elif self.adapt_mode == 'idle_post':
+            if self.adapt_idle_counter_post == 0:
+                # print('Entered filling_buffer')
+                self.adapt_mode = 'filling_buffer'
+                self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
+            else:
+                self.adapt_idle_counter_post -= 1
+        elif self.adapt_mode == 'filling_buffer':
+            if self.shift_reg_index == 0:
+                self.retraining_now = False
+                # print('Entered idle_pre')
+                self.adapt_mode = 'idle_pre'
+                # shift_reg_index is set to 0 whereelse
 
-            if self.adapt_mode == 'idle_pre':
-                if self.adapt_idle_counter_pre == 0:
-
-                    L[...] = L*0.8
-                    print(L)
-                    # print('Entered idle_post')
-                    self.adapt_mode = 'idle_post'
-                    self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
-                else:
-                    self.adapt_idle_counter_pre -= 1
-            elif self.adapt_mode == 'idle_post':
-                if self.adapt_idle_counter_post == 0:
-                    # print('Entered filling_buffer')
-                    self.adapt_mode = 'filling_buffer'
-                    self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
-                else:
-                    self.adapt_idle_counter_post -= 1
-            elif self.adapt_mode == 'filling_buffer':
-                if self.shift_reg_index == 0:
-                    self.retraining_now = False
-                    # print('Entered idle_pre')
-                    self.adapt_mode = 'idle_pre'
-                    # shift_reg_index is set to 0 whereelse
-        else:
-            # For testing GRU adapted code from adaptive mode
-            # Names of variables in this case are missleading
-            if self.adapt_mode == 'idle_pre':
-                if self.adapt_idle_counter_pre == 0:
-                    self.adapt_mode = 'idle_post'
-                    self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
-                else:
-                    self.adapt_idle_counter_pre -= 1
-            elif self.adapt_mode == 'idle_post':
-                if self.adapt_idle_counter_post == 0:
-
-                    L[...] = L*0.8
-                    print(L)
-                    self.adapt_mode = 'idle_pre'
-                    self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
-                else:
-                    self.adapt_idle_counter_post -= 1
-
-
-            # Change parameter
-            # Start filling the buffer
-
-        if ADAPT and predictor_type == 'NeuralNet':
+        if ADAPT:
             self.current_system_state = s.copy()
 
         if ADAPT and predictor_type == 'NeuralNet' and (self.adapt_mode == 'filling_buffer'):
@@ -655,8 +625,8 @@ class controller_mppi(template_controller):
                 self.retraining_now = True
                 print('\nADAPTIVE TRAINING! @ Time = ', time, 'Training Count=', self.training_count)
                 self.training_count += 1
-                predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=1,
-                                                            batch_size=64, shuffle=True, verbose=2)
+                # predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=1,
+                #                                             batch_size=64, shuffle=True, verbose=2)
                 # predictor.net.evaluate(x=self.training_shift_reg_input, y=self.training_shift_reg_output,
                 #                                                   batch_size=32)
 
@@ -673,22 +643,13 @@ class controller_mppi(template_controller):
             self.update_control_vector()
 
         if self.iteration % update_every == 0:
+
             # Initialize perturbations and cost arrays
             self.delta_u = self.initialize_perturbations(
                 # stdev=0.1 * (1 + 1 / (self.iteration + 1)),
                 stdev=SQRTRHODTINV,
                 sampling_type=SAMPLING_TYPE,
             )  # du ~ N(mean=0, var=1/(rho*dt))
-            self.S_tilde_k = np.zeros_like(self.S_tilde_k, dtype=np.float32)
-
-            # Run parallel trajectory rollouts for different input perturbations
-            # self.S_tilde_k = trajectory_rollouts(
-            #     self.s,
-            #     self.u,
-            #     self.delta_u,
-            #     self.u_prev,
-            #     self.target_position,
-            # )
 
             s_horizon = predict_trajectories(self.s, self.u + self.delta_u, PREDICTION_MODE='normal-multi')
             self.S_tilde_k = total_cost(s_horizon, self.u, self.delta_u, self.u_prev, self.target_position, EXPORT=True, LOGGING=LOGGING)

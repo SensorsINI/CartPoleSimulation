@@ -54,7 +54,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     ###### CartPole settings
     ### Length of each experiment in s:
-    length_of_experiment_DataGen = 1200  # s
+    length_of_experiment_DataGen = 1000  # s
 
     ### Controller which should be used in generated experiment:
     controller_DataGen = 'mppi'

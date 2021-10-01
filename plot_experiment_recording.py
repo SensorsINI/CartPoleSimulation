@@ -10,8 +10,9 @@ from CartPole import CartPole
 
 import matplotlib.pyplot as plt
 
-csv_name = ['Experiment-GT-Smooth.csv', 'Experiment-8-Eq-Frozen-Smooth.csv', 'Experiment-9-Dense-Smooth.csv']
+# csv_name = ['Experiment-GT-Smooth.csv', 'Experiment-8-Eq-Frozen-Smooth.csv', 'Experiment-9-Dense-Smooth.csv']
 
+csv_name = ['/Users/marcinpaluch/PycharmProjects/CartPoleSimulation/Experiment_Recordings/Experiment.csv']
 
 # feature = 'stage_cost_realized_trajectory'
 # feature = 'cost_trajectory_from_u_true_equations'
@@ -40,7 +41,7 @@ for experiment_name in csv_name:
 
     CartPoleInstance.dict_history = history_pd.to_dict(orient='list')
 
-    # CartPoleInstance.summary_plots(title=experiment_name[:-4])
+    CartPoleInstance.summary_plots(adaptive_mode=True, title=experiment_name[:-4])
 
     dict_datasets[experiment_name[:-4]] = history_pd
 
