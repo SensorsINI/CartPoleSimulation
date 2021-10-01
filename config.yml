@@ -1,7 +1,6 @@
 controller:
   mppi:
     SEED: 1897                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
-    adapt: False                          # True or False
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 500                     # Number of Monte Carlo samples

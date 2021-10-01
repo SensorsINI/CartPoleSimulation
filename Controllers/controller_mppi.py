@@ -77,7 +77,7 @@ from Controllers.CheckStabilized import CheckStabilized
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 """Timestep and sampling settings"""
-ADAPT = config["controller"]["mppi"]["adapt"]
+
 dt = config["controller"]["mppi"]["dt"]
 mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
@@ -404,58 +404,34 @@ class controller_mppi(template_controller):
         ekc_weight = ekc_weight * (1 + ekc_noise * self.rng_mppi.uniform(-1.0, 1.0))
         cc_weight = cc_weight * (1 + cc_noise * self.rng_mppi.uniform(-1.0, 1.0))
 
-        print('ADAPT: {}'.format(ADAPT))
-
         if 'mppi-comparison' in EXPERIMENT:
             self.controller_data_for_csv = {'L': [],
                                             'stage_cost_realized_trajectory': [],
-                                            'adapt_mode':[],
-                                            'retraining_now':[],
+                                            'current_period':[],
+                                            'wash_out_finished_now':[],
                                             'cost_trajectory_from_u_predicted': [],
                                             'cost_trajectory_from_u_true_equations': [],
                                             'relative_cost_difference': [],
-                                            'training_count': [],
                                             'phase_count_for_average': [],
                                             }
         else:
             self.controller_data_for_csv = {
                                             }
 
-        self.current_system_state = None  # MT TODO: Replace with self.s
-        self.predicted_system_state = None  # MT Currently unused
-        self.prev_control_input = None  # Control input given to the system at the end of the last step
-        self.prev_system_state = None  # The previous measured system state
-        if 'online-learning' in EXPERIMENT:
-            self.adapt_idle_counter_pre_change_max = 2000  # time between retraining and subsequent change of parameters
-            self.adapt_idle_counter_post_change_max = 1  # time between change of parameters and starting filling the buffer (make it bigger if you buffer is small so that you can observe effect of parameters change). Should be at least 1 so that the "previous" value is already with a new parameter
-            self.shift_reg_len = 2000  # How many samples to store before training
-        else:
-            # Now the same variables has a different meaning
-            # Only first two are used
-            # Only their sum has an effect on the experiment
-            # However different phases get different labels
-            # hence it is easier to average them separatelly (e.g wash-out of rnn and post-wash-out period)
-            self.adapt_idle_counter_pre_change_max = 50  # time between retraining and subsequent change of parameters
-            self.adapt_idle_counter_post_change_max = 4950  # time between change of parameters and starting filling the buffer (make it bigger if you buffer is small so that you can observe effect of parameters change). Should be at least 1 so that the "previous" value is already with a new parameter
-            self.shift_reg_len = 1  # How many samples to store before training
-        self.shift_reg_index = 0  # Index to keep track of index in the buffer
-        self.training_count = 0  # Debug info: How many online training cycle have completed?
-        self.adapt_mode = 'idle_pre'  # Possible 'idle_pre', 'idle_post', 'filling buffer'
-        self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
-        self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
-        self.retraining_now = False
+
+        # Only their sum has an effect on the experiment
+        # However different phases get different labels
+        # hence it is easier to average them separatelly (e.g wash-out of rnn and post-wash-out period)
+        self.wash_out_period = 5  #
+        self.post_wash_out_period = 495  #
+
+        self.current_period = 'wash_out'  # Possible 'wash_out', 'post_wash_out', 'filling buffer'
+        self.wash_out_period_counter = self.wash_out_period
+        self.post_wash_out_period_counter = self.post_wash_out_period
+        self.wash_out_finished_now = False
         self.phase_count_for_average = 0
-        self.adapt_mode_save = 'after_training'
-        if ADAPT and predictor_type == 'NeuralNet':
-            # Buffers to store input and output
-            self.training_shift_reg_input = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.inputs)))
-            self.training_shift_reg_output = np.zeros((self.shift_reg_len, 1, len(predictor.net_info.outputs)))
-            # Compiling the network for training
-            # TODO: Try replacing MSE with percent error does running .evaluate still give reasonable results?
-            predictor.net.compile(
-                loss=keras.losses.MeanSquaredError(),
-                optimizer=keras.optimizers.Adam(1.0e-6)
-            )
+        self.current_period_save = 'wash_out'
+
         # State of the cart
         self.s = create_cartpole_state()
 
@@ -577,91 +553,23 @@ class controller_mppi(template_controller):
             self.s[ANGLE_IDX] = wrap_angle_rad(self.s[ANGLE_IDX])
 
 
-        if 'online-learning' in EXPERIMENT:
+        if self.current_period == 'wash_out':
+            if self.wash_out_period_counter == 0:
+                self.current_period = 'post_wash_out'
+                self.wash_out_period_counter = self.wash_out_period
+            else:
+                self.wash_out_period_counter -= 1
+        elif self.current_period == 'post_wash_out':
+            if self.post_wash_out_period_counter == 0:
 
-            if self.adapt_mode == 'idle_pre':
-                if self.adapt_idle_counter_pre == 0:
-
-                    L[...] = L*0.8
-                    print(L)
-                    # print('Entered idle_post')
-                    self.adapt_mode = 'idle_post'
-                    self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
-                else:
-                    self.adapt_idle_counter_pre -= 1
-            elif self.adapt_mode == 'idle_post':
-                if self.adapt_idle_counter_post == 0:
-                    # print('Entered filling_buffer')
-                    self.adapt_mode = 'filling_buffer'
-                    self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
-                else:
-                    self.adapt_idle_counter_post -= 1
-            elif self.adapt_mode == 'filling_buffer':
-                if self.shift_reg_index == 0:
-                    self.retraining_now = False
-                    # print('Entered idle_pre')
-                    self.adapt_mode = 'idle_pre'
-                    # shift_reg_index is set to 0 whereelse
-        else:
-            # For testing GRU adapted code from adaptive mode
-            # Names of variables in this case are missleading
-            if self.adapt_mode == 'idle_pre':
-                if self.adapt_idle_counter_pre == 0:
-                    self.adapt_mode = 'idle_post'
-                    self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max
-                else:
-                    self.adapt_idle_counter_pre -= 1
-            elif self.adapt_mode == 'idle_post':
-                if self.adapt_idle_counter_post == 0:
-
-                    L[...] = L*0.8
-                    print(L)
-                    self.adapt_mode = 'idle_pre'
-                    self.adapt_idle_counter_post = self.adapt_idle_counter_post_change_max
-                else:
-                    self.adapt_idle_counter_post -= 1
-
-
-            # Change parameter
-            # Start filling the buffer
-
-        if ADAPT and predictor_type == 'NeuralNet':
-            self.current_system_state = s.copy()
-
-        if ADAPT and predictor_type == 'NeuralNet' and (self.adapt_mode == 'filling_buffer'):
-            if self.prev_control_input is not None:  # Skips the first step where previous state is unknown
-
-                model_input_net_without_Q = self.prev_system_state[
-                    ..., [STATE_INDICES.get(key) for key in predictor.net_info.inputs[len(CONTROL_INPUTS):]]]
-
-                model_input = np.concatenate((self.prev_control_input, model_input_net_without_Q), axis=0)
-                model_input_normed = normalize_numpy_array(model_input,
-                                                                    predictor.net_info.inputs, predictor.normalization_info)
-
-                model_output = self.current_system_state[
-                    ..., [STATE_INDICES.get(key) for key in predictor.net_info.outputs]]
-                model_output_normed = normalize_numpy_array(model_output, predictor.net_info.outputs, predictor.normalization_info)
-
-                # Format for training
-                self.training_shift_reg_input[self.shift_reg_index, ...] = model_input_normed
-                self.training_shift_reg_output[self.shift_reg_index, ...] = model_output_normed
-
-        self.shift_reg_index += 1
-
-        # If the buffer is full, reset and fit the model to stored data
-        if self.shift_reg_index == self.shift_reg_len:
-            self.shift_reg_index = 0
-            if ADAPT and predictor_type == 'NeuralNet' and (self.adapt_mode == 'filling_buffer'):
-                self.retraining_now = True
-                print('\nADAPTIVE TRAINING! @ Time = ', time, 'Training Count=', self.training_count)
-                self.training_count += 1
-                predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=1,
-                                                            batch_size=64, shuffle=True, verbose=2)
-                # predictor.net.evaluate(x=self.training_shift_reg_input, y=self.training_shift_reg_output,
-                #                                                   batch_size=32)
+                L[...] = L*0.8
+                print(L)
+                self.current_period = 'wash_out'
+                self.post_wash_out_period_counter = self.post_wash_out_period
+            else:
+                self.post_wash_out_period_counter -= 1
 
         # Need to find the current measured system state, the predicted system state and the control input
-
         self.target_position = np.float32(target_position)
         self.iteration += 1
 
@@ -680,15 +588,6 @@ class controller_mppi(template_controller):
                 sampling_type=SAMPLING_TYPE,
             )  # du ~ N(mean=0, var=1/(rho*dt))
             self.S_tilde_k = np.zeros_like(self.S_tilde_k, dtype=np.float32)
-
-            # Run parallel trajectory rollouts for different input perturbations
-            # self.S_tilde_k = trajectory_rollouts(
-            #     self.s,
-            #     self.u,
-            #     self.delta_u,
-            #     self.u_prev,
-            #     self.target_position,
-            # )
 
             s_horizon = predict_trajectories(self.s, self.u + self.delta_u, PREDICTION_MODE='normal-multi')
             self.S_tilde_k = total_cost(s_horizon, self.u, self.delta_u, self.u_prev, self.target_position, EXPORT=True, LOGGING=LOGGING)
@@ -769,22 +668,6 @@ class controller_mppi(template_controller):
         else:
             Q = self.u[0]
 
-        # A snippet of code to switch on and off the controller to cover better the statespace with experimental data
-        # It stops controller when Pole is well stabilized (starting inputing random input)
-        # And re-enables it when angle exceedes 90 deg.
-        # if (abs(self.s[[ANGLE_IDX]]) < 0.01
-        #     and abs(self.s[[POSITION_IDX]]-self.target_position < 0.02)
-        #         and abs(self.s[[ANGLED_IDX]]) < 0.1
-        #             and abs(self.s[[POSITIOND_IDX]]) < 0.05):
-        #     self.control_enabled = False
-        # elif abs(self.s[[ANGLE_IDX]]) > np.pi/2:
-        #     self.control_enabled = True
-        #
-        # if self.control_enabled is True:
-        #     Q = self.u[0]
-        # else:
-        #     Q = np.random.uniform(-1.0, 1.0)
-
         # Add noise on top of the calculated Q value to better explore state space
         Q = np.float32(Q * (1 + p_Q * self.rng_mppi.uniform(-1.0, 1.0)))
         # Clip inputs to allowed range
@@ -802,37 +685,25 @@ class controller_mppi(template_controller):
         Q_update = np.tile(Q, (num_rollouts, 1))
         predictor.update_internal_state(Q_update)
 
-        # MT
-        if ADAPT:
-            self.prev_control_input = np.array(Q.copy(), ndmin=1)                          # Store control input for next step
-            self.prev_system_state = self.current_system_state.copy()  # Store measured state as previous state
+        current_period_save_previous = self.current_period_save
+        if self.current_period == 'wash_out':
+            self.current_period_save = 'wash_out'
+        elif self.current_period == 'post_wash_out':
+            self.current_period_save = 'post_wash_out'
 
-            # Code to calculate predicted state if you want to compare measurements to predictions
-            #x = np.insert(self.current_system_state[1:], 0, Q)
-            #model_input = tf.reshape(x,
-            #                         [-1, 1, len(predictor.net_info.inputs)])
-            #self.predicted_system_state = np.reshape(predictor.net.predict(model_input), (5,))
-            #
-
-        adapt_mode_save_previous = self.adapt_mode_save
-        if self.adapt_mode == 'idle_pre':
-            self.adapt_mode_save = 'after_training'
-        elif (self.adapt_mode == 'idle_post') or (self.adapt_mode == 'filling_buffer'):
-            self.adapt_mode_save = 'before_training'
-
-        if adapt_mode_save_previous != self.adapt_mode_save:
+        if current_period_save_previous != self.current_period_save:
             self.phase_count_for_average += 1
 
         if 'mppi-comparison' in EXPERIMENT:
             self.controller_data_for_csv = {'L': [L],
                                             'stage_cost_realized_trajectory': [self.stage_cost_realized_trajectory],
-                                            'adapt_mode': [self.adapt_mode_save],
-                                            'retraining_now': [self.retraining_now],
+                                            'current_period': [self.current_period_save],
+                                            'wash_out_finished_now': [self.wash_out_finished_now],
                                             'cost_trajectory_from_u_predicted': [self.cost_trajectory_from_u_predicted],
                                             'cost_trajectory_from_u_true_equations': [self.cost_trajectory_from_u_true_equations],
                                             'relative_cost_difference': [self.relative_cost_difference],
-                                            'training_count': [self.training_count],
-                                            'phase_count_for_average': [self.phase_count_for_average]}
+                                            'phase_count_for_average': [self.phase_count_for_average],
+                                            }
         return Q  # normed control input in the range [-1,1]
 
     def update_control_vector(self):
