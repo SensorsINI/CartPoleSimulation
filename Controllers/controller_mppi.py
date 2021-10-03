@@ -3,8 +3,8 @@ Model Predictive Path Integral Controller
 Based on Williams, Aldrich, Theodorou (2015)
 """
 
-EXPERIMENT = ['up-down-stabilization', 'mppi-comparison']
-# EXPERIMENT = []
+# EXPERIMENT = ['up-down-stabilization', 'mppi-comparison']
+EXPERIMENT = []
 
 # Options for EXPERIMENT variable:
 # 'up-down-stabilization'/'up-stabilization'; 'mppi-comparison', 'online-learning',
@@ -187,7 +187,7 @@ def penalize_deviation(cc, u):
 
 """Define Predictor"""
 if predictor_type == "Euler":
-    predictor = predictor_ODE(horizon=mpc_samples, dt=dt, intermediate_steps=10)
+    predictor = predictor_ODE(horizon=mpc_samples, dt=dt, intermediate_steps=1)
 elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
         horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
@@ -625,8 +625,8 @@ class controller_mppi(template_controller):
                 self.retraining_now = True
                 print('\nADAPTIVE TRAINING! @ Time = ', time, 'Training Count=', self.training_count)
                 self.training_count += 1
-                # predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=1,
-                #                                             batch_size=64, shuffle=True, verbose=2)
+                predictor.net.fit(x=self.training_shift_reg_input, y=self.training_shift_reg_output, epochs=1,
+                                                            batch_size=64, shuffle=True, verbose=2)
                 # predictor.net.evaluate(x=self.training_shift_reg_input, y=self.training_shift_reg_output,
                 #                                                   batch_size=32)
 
