@@ -3,7 +3,8 @@
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import TrackHalfLength, s0, Q2u, cartpole_ode
 from others.p_globals import v_max
-from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
+from CartPole.state_utilities import create_cartpole_state, \
+    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -48,11 +49,11 @@ def cartpole_integration(s, angleDD, positionDD, dt):
     """
     s_next = create_cartpole_state()
 
-    s_next[cartpole_state_varname_to_index('position')] = s[cartpole_state_varname_to_index('position')] + s[cartpole_state_varname_to_index('positionD')] * dt
-    s_next[cartpole_state_varname_to_index('positionD')] = s[cartpole_state_varname_to_index('positionD')] + positionDD * dt
+    s_next[POSITION_IDX] = s[POSITION_IDX] + s[POSITIOND_IDX] * dt
+    s_next[POSITIOND_IDX] = s[POSITIOND_IDX] + positionDD * dt
 
-    s_next[cartpole_state_varname_to_index('angle')] = s[cartpole_state_varname_to_index('angle')] + s[cartpole_state_varname_to_index('angleD')] * dt
-    s_next[cartpole_state_varname_to_index('angleD')] = s[cartpole_state_varname_to_index('angleD')] + angleDD * dt
+    s_next[ANGLE_IDX] = s[ANGLE_IDX] + s[ANGLED_IDX] * dt
+    s_next[ANGLED_IDX] = s[ANGLED_IDX] + angleDD * dt
 
     return s_next
 
@@ -77,10 +78,10 @@ class controller_mpc_opti(template_controller):
         self.Q_hat0 = np.zeros(self.mpc_horizon)  # initial guess for future control inputs to be predicted
         self.Q_previous = 0.0
 
-        self.E_kin_cart = lambda s: (s[cartpole_state_varname_to_index('positionD')] / v_max) ** 2
-        self.E_kin_pol = lambda s: (s[cartpole_state_varname_to_index('angleD')] / (2 * np.pi)) ** 2
-        self.E_pot_cost = lambda s: 1-np.cos(s[cartpole_state_varname_to_index('angle')])
-        self.distance_difference = lambda s: (((s[cartpole_state_varname_to_index('position')] - self.target_position) / TrackHalfLength)) ** 2
+        self.E_kin_cart = lambda s: (s[POSITIOND_IDX] / v_max) ** 2
+        self.E_kin_pol = lambda s: (s[ANGLED_IDX] / (2 * np.pi)) ** 2
+        self.E_pot_cost = lambda s: 1-np.cos(s[ANGLE_IDX])
+        self.distance_difference = lambda s: (((s[POSITION_IDX] - self.target_position) / TrackHalfLength)) ** 2
 
         self.Q_bounds = [(-1, 1)] * self.mpc_horizon
 
@@ -163,10 +164,10 @@ class controller_mpc_opti(template_controller):
         position = []
         positionD = []
         for s in self.yp_hat:
-            angle.append(s[cartpole_state_varname_to_index('angle')])
-            angleD.append(s[cartpole_state_varname_to_index('angleD')])
-            position.append(s[cartpole_state_varname_to_index('position')])
-            positionD.append(s[cartpole_state_varname_to_index('positionD')])
+            angle.append(s[ANGLE_IDX])
+            angleD.append(s[ANGLED_IDX])
+            position.append(s[POSITION_IDX])
+            positionD.append(s[POSITIOND_IDX])
 
         # Plot angle
         self.axs[0].set_ylabel("Angle (deg)", fontsize=18)

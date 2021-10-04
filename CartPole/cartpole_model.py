@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 from typing import Union
 from CartPole.state_utilities import (
-    create_cartpole_state, cartpole_state_varname_to_index,
+    create_cartpole_state,
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 )
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad_inplace
@@ -202,10 +202,10 @@ if __name__ == '__main__':
 
     # Set non-zero input
     s = s0
-    s[cartpole_state_varname_to_index('position')] = -30.2
-    s[cartpole_state_varname_to_index('positionD')] = 2.87
-    s[cartpole_state_varname_to_index('angle')] = -0.32
-    s[cartpole_state_varname_to_index('angleD')] = 0.237
+    s[POSITION_IDX] = -30.2
+    s[POSITIOND_IDX] = 2.87
+    s[ANGLE_IDX] = -0.32
+    s[ANGLED_IDX] = 0.237
     u = -0.24
 
 
