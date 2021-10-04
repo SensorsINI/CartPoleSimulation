@@ -3,8 +3,9 @@
 import scipy.optimize
 import numpy as np
 
-from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index, \
-    cartpole_state_indices_to_varnames
+from CartPole.state_utilities import create_cartpole_state, \
+    cartpole_state_indices_to_varnames, \
+    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX
 from Predictores.predictor_ODE import predictor_ODE
 
 from Controllers.controller_lqr import controller_lqr
@@ -109,15 +110,15 @@ class controller_custom_mpc_scipy:
         self.predictions = self.Predictor.predict(Q_hat)
 
         self.cost_array[:, self.costs_names.index('angle_cost')] = \
-            self.angle_cost(self.predictions[:, cartpole_state_varname_to_index('angle')])
+            self.angle_cost(self.predictions[:, ANGLE_IDX])
         self.cost_array[:, self.costs_names.index('angle_sin_cost')] = \
-            self.angle_sin_cost(self.predictions[:, cartpole_state_varname_to_index('angle_sin')])
+            self.angle_sin_cost(self.predictions[:, ANGLE_SIN_IDX])
         self.cost_array[:, self.costs_names.index('angleD_cost')] = \
-            self.angleD_cost(self.predictions[:, cartpole_state_varname_to_index('angleD')])
+            self.angleD_cost(self.predictions[:, ANGLED_IDX])
         self.cost_array[:, self.costs_names.index('position_cost')] = \
-            self.position_cost(self.predictions[:, cartpole_state_varname_to_index('position')])
+            self.position_cost(self.predictions[:, POSITION_IDX])
         self.cost_array[:, self.costs_names.index('positionD_cost')] = \
-            self.positionD_cost(self.predictions[:, cartpole_state_varname_to_index('positionD')])
+            self.positionD_cost(self.predictions[:, POSITIOND_IDX])
 
         # Calculate l-cost for every timestep
         self.cost_array[:, -1] = (

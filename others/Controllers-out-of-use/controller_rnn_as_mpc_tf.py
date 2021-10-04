@@ -1,5 +1,5 @@
 from Controllers.template_controller import template_controller
-from CartPole.state_utilities import cartpole_state_varname_to_index
+from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
 from SI_Toolkit.TF.TF_Functions.Network import create_rnn_instance
 from SI_Toolkit.load_and_normalize import load_normalization_info, normalize_df, denormalize_df
 
@@ -35,13 +35,13 @@ class controller_rnn_as_mpc_tf(template_controller):
         # Copy state and target_position into rnn_input
 
         if 'position' in self.rnn_input:
-            self.rnn_input['position'] = [s[cartpole_state_varname_to_index('position')]]
+            self.rnn_input['position'] = [s[POSITION_IDX]]
         if 'angle' in self.rnn_input:
-            self.rnn_input['angle'] = [s[cartpole_state_varname_to_index('angle')]]
+            self.rnn_input['angle'] = [s[ANGLE_IDX]]
         if 'positionD' in self.rnn_input:
-            self.rnn_input['positionD'] = [s[cartpole_state_varname_to_index('positionD')]]
+            self.rnn_input['positionD'] = [s[POSITIOND_IDX]]
         if 'angleD' in self.rnn_input:
-            self.rnn_input['angleD'] = [s[cartpole_state_varname_to_index('angleD')]]
+            self.rnn_input['angleD'] = [s[ANGLED_IDX]]
         if 'target_position' in self.rnn_input:
             self.rnn_input['target_position'] = [target_position]
 

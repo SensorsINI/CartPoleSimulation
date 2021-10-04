@@ -44,7 +44,7 @@ import csv
 # Import Cart class - the class keeping all the parameters and methods
 # related to CartPole which are not related to PyQt5 GUI
 from CartPole import CartPole
-from CartPole.state_utilities import ANGLED_IDX, ANGLE_IDX, POSITION_IDX, cartpole_state_varname_to_index, create_cartpole_state
+from CartPole.state_utilities import ANGLED_IDX, ANGLE_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
 
 from GUI.gui_default_params import *
 from GUI.loop_timer import loop_timer
@@ -529,9 +529,9 @@ class MainWindow(QMainWindow):
         replay_looper.start_loop()
         global L
         for index, row in history_pd.iterrows():
-            self.CartPoleInstance.s[cartpole_state_varname_to_index('position')] = row['position']
-            self.CartPoleInstance.s[cartpole_state_varname_to_index('positionD')] = row['positionD']
-            self.CartPoleInstance.s[cartpole_state_varname_to_index('angle')] = row['angle']
+            self.CartPoleInstance.s[POSITION_IDX] = row['position']
+            self.CartPoleInstance.s[POSITIOND_IDX] = row['positionD']
+            self.CartPoleInstance.s[ANGLE_IDX] = row['angle']
             self.CartPoleInstance.time = row['time']
             self.CartPoleInstance.dt = row['dt']
             try:
@@ -739,9 +739,9 @@ class MainWindow(QMainWindow):
     # A thread redrawing labels (except for timer, which has its own function) of GUI every 0.1 s
     def set_labels_thread(self):
         while (self.run_set_labels_thread):
-            self.labSpeed.setText("Speed (m/s): " + str(np.around(self.CartPoleInstance.s[cartpole_state_varname_to_index('positionD')], 2)))
+            self.labSpeed.setText("Speed (m/s): " + str(np.around(self.CartPoleInstance.s[POSITIOND_IDX], 2)))
             self.labAngle.setText(
-                "Angle (deg): " + str(np.around(self.CartPoleInstance.s[cartpole_state_varname_to_index('angle')] * 360 / (2 * np.pi), 2)))
+                "Angle (deg): " + str(np.around(self.CartPoleInstance.s[ANGLE_IDX] * 360 / (2 * np.pi), 2)))
             self.labMotor.setText("Motor power (Q): {:.3f}".format(np.around(self.CartPoleInstance.Q, 2)))
             if self.CartPoleInstance.controller_name == 'manual-stabilization':
                 self.labTargetPosition.setText("")

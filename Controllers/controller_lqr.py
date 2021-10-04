@@ -7,7 +7,7 @@ import scipy
 import numpy as np
 
 from Controllers.template_controller import template_controller
-from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
+from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
 from CartPole.cartpole_model import u_max, s0
 from CartPole.cartpole_jacobian import cartpole_jacobian
 
@@ -40,10 +40,10 @@ class controller_lqr(template_controller):
         # Set point around which the Jacobian should be linearized
         # It can be here either pole up (all zeros) or pole down
         s = s0
-        s[cartpole_state_varname_to_index('position')] = 0.0
-        s[cartpole_state_varname_to_index('positionD')] = 0.0
-        s[cartpole_state_varname_to_index('angle')] = 0.0
-        s[cartpole_state_varname_to_index('angleD')] = 0.0
+        s[POSITION_IDX] = 0.0
+        s[POSITIOND_IDX] = 0.0
+        s[ANGLE_IDX] = 0.0
+        s[ANGLED_IDX] = 0.0
         u = 0.0
 
         jacobian = cartpole_jacobian(s, u)
@@ -74,7 +74,7 @@ class controller_lqr(template_controller):
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
 
         state = np.array(
-            [[s[cartpole_state_varname_to_index('position')] - target_position], [s[cartpole_state_varname_to_index('positionD')]], [s[cartpole_state_varname_to_index('angle')]], [s[cartpole_state_varname_to_index('angleD')]]])
+            [[s[POSITION_IDX] - target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
 
         Q = np.asscalar(np.dot(-self.K, state))
 
