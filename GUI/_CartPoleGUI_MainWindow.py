@@ -23,7 +23,7 @@ from others.p_globals import (
 # Import functions from PyQt5 module (creating GUI)
 from PyQt5.QtWidgets import QMainWindow, QRadioButton, QApplication, QSlider, QVBoxLayout, \
     QHBoxLayout, QLabel, QPushButton, QWidget, QCheckBox, \
-    QLineEdit, QMessageBox, QComboBox, QButtonGroup
+    QLineEdit, QMessageBox, QComboBox, QButtonGroup, QFrame
 from PyQt5.QtCore import QThreadPool, QTimer, Qt
 # The main drawing functionalities are implemented in CartPole Class
 # Some more functions needed for interaction of matplotlib with PyQt5
@@ -50,6 +50,9 @@ from GUI.gui_default_params import *
 from GUI.loop_timer import loop_timer
 from GUI._CartPoleGUI_worker_template import Worker
 from GUI._CartPoleGUI_summary_window import SummaryWindow
+
+from GUI._ControllerGUI_MPPIOptionsWindow import MPPIOptionsWindow
+from GUI._ControllerGUI_NoiseOptionsWindow import NoiseOptionsWindow
 
 
 # Class implementing the main window of CartPole GUI
@@ -124,6 +127,8 @@ class MainWindow(QMainWindow):
         # Slider instant value (which is draw in GUI) differs from value saved in CartPole instance
         # if the option updating slider "on-click" is enabled.
         self.slider_instant_value = self.CartPoleInstance.slider_value
+
+        self.noise = 'OFF'
 
         # endregion
 
@@ -228,6 +233,11 @@ class MainWindow(QMainWindow):
         lspb.addWidget(self.bss)
         lspb.addWidget(self.bp)
 
+        # endregion
+
+        # region - Sliders setting initial state and buttons for kicking the pole
+
+        # Sliders setting initial position and angle
         lb = QVBoxLayout()  # Layout for buttons
         lb.addLayout(lspb)
         lb.addWidget(bq)
@@ -246,7 +256,42 @@ class MainWindow(QMainWindow):
         ip.addWidget(self.initial_position_slider)
         ip.addWidget(QLabel("Initial angle:"))
         ip.addWidget(self.initial_angle_slider)
+        ip.addStretch(0.01)
 
+        # Slider setting latency
+        self.latency_slider = QSlider(orientation=Qt.Horizontal)
+        self.latency_slider.setRange(0, 1000)
+        self.latency_slider.setValue(0)
+        self.latency_slider.setSingleStep(1)
+        self.latency_slider.valueChanged.connect(self.update_latency)
+        ip.addWidget(QLabel("Latency:"))
+        ip.addWidget(self.latency_slider)
+        self.labLatency = QLabel('Latency (ms):')
+        ip.addWidget(self.labLatency)
+
+        # Buttons activating noise
+        self.rbs_noise = []
+        for mode_name in ['ON', 'OFF']:
+            self.rbs_noise.append(QRadioButton(mode_name))
+
+        # Ensures that radio buttons are exclusive
+        self.noise_buttons_group = QButtonGroup()
+        for button in self.rbs_noise:
+            self.noise_buttons_group.addButton(button)
+
+        lr_n = QHBoxLayout()
+        lr_n.addWidget(QLabel('Noise:'))
+        for rb in self.rbs_noise:
+            rb.clicked.connect(self.RadioButtons_noise_on_off)
+            lr_n.addWidget(rb)
+
+        self.rbs_noise[1].setChecked(True)
+
+        ip.addStretch(0.01)
+        ip.addLayout(lr_n)
+        ip.addStretch(0.01)
+
+        # Buttons giving kick to the pole
         kick_label = QLabel("Kick pole:")
         kick_left_button = QPushButton()
         kick_left_button.setText("Left")
@@ -395,7 +440,7 @@ class MainWindow(QMainWindow):
         # endregion
 
         # region Open controller-specific popup windows
-        self.open_additional_widgets()
+        self.open_additional_controller_widget()
         # endregion
 
         # region Activate functions capturing mouse movements and clicks over the slider
@@ -425,18 +470,6 @@ class MainWindow(QMainWindow):
         # The buttons of GUI only decide if new parameters are calculated or not
         self.anim = self.CartPoleInstance.run_animation(self.fig)
         # endregion
-
-    def update_initial_position(self, value: str):
-        self.initial_state[POSITION_IDX] = float(value) / 1000.0
-
-    def update_initial_angle(self, value: str):
-        self.initial_state[ANGLE_IDX] = float(value) / 100.0
-    
-    def kick_pole(self):
-        if self.sender().text() == "Left":
-            self.CartPoleInstance.s[ANGLED_IDX] += .6
-        elif self.sender().text() == "Right":
-            self.CartPoleInstance.s[ANGLED_IDX] -= .6
 
 
     # region Thread performing CartPole experiment, slider-controlled or random
@@ -852,7 +885,7 @@ class MainWindow(QMainWindow):
         self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
         self.canvas.draw()
 
-        self.open_additional_widgets()
+        self.open_additional_controller_widget()
 
     # Chose the simulator mode - effect of start/stop button
     def RadioButtons_simulator_mode(self):
@@ -867,6 +900,19 @@ class MainWindow(QMainWindow):
         self.reset_variables(0)
         self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
         self.canvas.draw()
+
+    # Chose the noise mode - effect of start/stop button
+    def RadioButtons_noise_on_off(self):
+        # Change the mode variable depending on the Radiobutton state
+        if self.rbs_noise[0].isChecked():
+            self.noise = 'ON'
+        elif self.rbs_noise[1].isChecked():
+            self.noise = 'OFF'
+        else:
+            raise Exception('Something wrong with ON/OFF button for noise')
+
+        self.open_additional_noise_widget()
+
 
     # endregion
 
@@ -961,15 +1007,52 @@ class MainWindow(QMainWindow):
 
     # region - Additional GUI Popups
 
-    def open_additional_widgets(self):
+    def open_additional_controller_widget(self):
         # Open up additional options widgets depending on the controller type
         if self.CartPoleInstance.controller_name == 'mppi':
-            from GUI._ControllerGUI_MPPIOptionsWindow import MPPIOptionsWindow
-            self.optionsWidget = MPPIOptionsWindow()
+            self.optionsControllerWidget = MPPIOptionsWindow()
         else:
-            try: self.optionsWidget.close()
+            try: self.optionsControllerWidget.close()
             except: pass
-            self.optionsWidget = None
+            self.optionsControllerWidget = None
+            
+    def open_additional_noise_widget(self):
+        # Open up additional options widgets depending on the controller type
+        if self.noise == 'ON':
+            self.optionsNoiseWidget = NoiseOptionsWindow()
+        else:
+            try: self.optionsNoiseWidget.close()
+            except: pass
+            self.optionsNoiseWidget = None
+
+    # endregion
+
+    # region - Sliders setting initial position and angle of the CartPole
+
+    def update_initial_position(self, value: str):
+        self.initial_state[POSITION_IDX] = float(value) / 1000.0
+
+    def update_initial_angle(self, value: str):
+        self.initial_state[ANGLE_IDX] = float(value) / 100.0
+
+    # endregion
+
+    # region - Slider setting latency of the controller
+
+    def update_latency(self, value: str):
+        latency = float(value)
+        self.CartPoleInstance.LatencyAdderInstance.set_latency(latency / 10000.0)  # latency in seconds
+        self.labLatency.setText('{} ms'.format(str(latency/10.0)))  # latency in ms
+
+    # endregion
+
+    # region Buttons for providing a kick to the pole
+
+    def kick_pole(self):
+        if self.sender().text() == "Left":
+            self.CartPoleInstance.s[ANGLED_IDX] += .6
+        elif self.sender().text() == "Right":
+            self.CartPoleInstance.s[ANGLED_IDX] -= .6
 
     # endregion
 

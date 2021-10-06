@@ -13,6 +13,8 @@ from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
 from CartPole.state_utilities import ANGLED_IDX, ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX, POSITIOND_IDX, POSITION_IDX
 from CartPole.cartpole_model import Q2u, cartpole_ode, s0, edge_bounce, cartpole_integration
 from CartPole.load import get_full_paths_to_csvs, load_csv_recording
+from CartPole.latency_adder import LatencyAdder
+from CartPole.noise_adder import NoiseAdder
 from others.p_globals import P_GLOBALS
 
 from others.p_globals import (
@@ -100,6 +102,11 @@ class CartPole:
         self.u = 0.0  # Physical force acting on the cart
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
         self.target_position = 0.0
+
+        self.latency = 0.0
+        self.LatencyAdderInstance = LatencyAdder(latency=self.latency)
+        self.NoiseAdderInstance = NoiseAdder()
+        self.s_with_noise_and_latency = np.copy(self.s)
 
         # region Time scales for simulation step, controller update and saving data
         # See last paragraph of "Time scales" section for explanations
@@ -249,12 +256,16 @@ class CartPole:
         # stop pole at +/- 90 deg if enabled
         block_pole_at_90 = self.block_pole_at_90_deg()
 
-        # Wrap angle to +/-π
-        self.s[ANGLE_IDX] = wrap_angle_rad(self.s[ANGLE_IDX])
-
         # Calculate cosine and sine
         self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
         self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
+
+        # Wrap angle to +/-π
+        self.s[ANGLE_IDX] = wrap_angle_rad(self.s[ANGLE_IDX])
+
+        self.LatencyAdderInstance.add_current_state_to_latency_buffer(self.s)
+        s_delayed = self.LatencyAdderInstance.get_interpolated_delayed_state()
+        self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
 
         # Determine the dimensionless [-1,1] value of the motor power Q
         self.Update_Q()
@@ -409,7 +420,7 @@ class CartPole:
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s, self.target_position, self.time)
+                self.Q = self.controller.step(self.s_with_noise_and_latency, self.target_position, self.time)
 
             self.dt_controller_steps_counter = 0
 
@@ -978,6 +989,10 @@ class CartPole:
     @dt_simulation.setter
     def dt_simulation(self, value):
         self._dt_simulation = value
+        if self._dt_simulation is not None:
+            # Set latency
+            self.LatencyAdderInstance.dt_simulation = self._dt_simulation
+            self.LatencyAdderInstance.set_latency(self.latency)
         if self._dt_controller is not None:
             self.dt_controller_number_of_steps = np.rint(self._dt_controller / value).astype(np.int32)
             if self.dt_controller_number_of_steps == 0:
