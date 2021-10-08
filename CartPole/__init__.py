@@ -102,7 +102,7 @@ class CartPole:
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
         self.target_position = 0.0
 
-        self.latency = 0.0
+        self.latency = config["cartpole"]["latency"]
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency)
         self.NoiseAdderInstance = NoiseAdder()
         self.s_with_noise_and_latency = np.copy(self.s)

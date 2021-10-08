@@ -8,7 +8,7 @@ from CartPole.state_utilities import STATE_VARIABLES, \
 
 from tqdm import trange
 
-MAX_LATENCY_LEN = 500  # Total size of latency buffer.
+MAX_LATENCY_LEN = 50  # Total size of latency buffer.
 
 class LatencyAdder():
     def __init__(self,
@@ -22,6 +22,7 @@ class LatencyAdder():
         self.latency_len = None
         self.latency_len_int = None
         self.latency_len_fraction = None
+        self.max_latency = None
         self.set_latency(latency)
         self.latency_buffer_len = MAX_LATENCY_LEN+2
         self.latency_buffer = np.zeros((self.latency_buffer_len, len(STATE_VARIABLES)))
@@ -78,6 +79,7 @@ class LatencyAdder():
         self.latency_len = latency/self.dt_simulation
         self.latency_len_int = int(self.latency_len)
         self.latency_len_fraction = self.latency_len-self.latency_len_int
+        self.max_latency = MAX_LATENCY_LEN*self.dt_simulation
 
 if __name__ == '__main__':
     from CartPole.state_utilities import create_cartpole_state

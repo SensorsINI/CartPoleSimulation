@@ -262,14 +262,15 @@ class MainWindow(QMainWindow):
         ip.addStretch(0.01)
 
         # Slider setting latency
+        self.LATENCY_SLIDER_RANGE_INT = 1000
         self.latency_slider = QSlider(orientation=Qt.Horizontal)
-        self.latency_slider.setRange(0, 1000)
-        self.latency_slider.setValue(0)
+        self.latency_slider.setRange(0, self.LATENCY_SLIDER_RANGE_INT)
+        self.latency_slider.setValue(int(self.CartPoleInstance.LatencyAdderInstance.latency*self.LATENCY_SLIDER_RANGE_INT/self.CartPoleInstance.LatencyAdderInstance.max_latency))
         self.latency_slider.setSingleStep(1)
         self.latency_slider.valueChanged.connect(self.update_latency)
         ip.addWidget(QLabel("Latency:"))
         ip.addWidget(self.latency_slider)
-        self.labLatency = QLabel('Latency (ms):')
+        self.labLatency = QLabel('Latency (ms): {:.1f}'.format(self.CartPoleInstance.LatencyAdderInstance.latency*1000))
         ip.addWidget(self.labLatency)
 
         # Buttons activating noise
@@ -1045,9 +1046,10 @@ class MainWindow(QMainWindow):
     # region - Slider setting latency of the controller
 
     def update_latency(self, value: str):
-        latency = float(value)
-        self.CartPoleInstance.LatencyAdderInstance.set_latency(latency / 10000.0)  # latency in seconds
-        self.labLatency.setText('{} ms'.format(str(latency/10.0)))  # latency in ms
+        latency_slider = float(value)
+        latency = latency_slider * self.CartPoleInstance.LatencyAdderInstance.max_latency / self.LATENCY_SLIDER_RANGE_INT # latency in seconds
+        self.CartPoleInstance.LatencyAdderInstance.set_latency(latency)
+        self.labLatency.setText('{:.1f} ms'.format(latency*1000.0))  # latency in ms
 
     # endregion
 

@@ -10,6 +10,8 @@ from tqdm import trange
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
 
+import yaml
+
 
 def _noise_iir_factor(smoothing_factor):
     return smoothing_factor / np.sqrt(1 - ((1 - smoothing_factor) ** 2))
@@ -26,6 +28,7 @@ def _noise_derivative(dt):
 
 sigma_Q = 0.1
 
+# Trial to calculate the std from physical cartpole
 # ANGLE_ADC_RANGE = 4095  # Range of angle values #
 # ANGLE_NORMALIZATION_FACTOR = 2 * np.pi / ANGLE_ADC_RANGE
 #
@@ -41,13 +44,15 @@ sigma_Q = 0.1
 # sigma_angleD = _noise_derivative(dt_derivative)*sigma_angle
 # sigma_positionD = _noise_derivative(dt_derivative)*sigma_position
 
-sigma_angle = 0.022  # As measured by Asude
-sigma_position = 0.001
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-sigma_angleD = 0.09  # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
-sigma_positionD = 0.01
+sigma_angle = config["cartpole"]["noise"]["sigma_angle"]
+sigma_position = config["cartpole"]["noise"]["sigma_position"]
 
-NOISE_MODE = 'OFF'
+sigma_angleD = config["cartpole"]["noise"]["sigma_angleD"]
+sigma_positionD = config["cartpole"]["noise"]["sigma_positionD"]
+
+NOISE_MODE = config["cartpole"]["noise"]["noise_mode"]
 
 class NoiseAdder:
     def __init__(self):
