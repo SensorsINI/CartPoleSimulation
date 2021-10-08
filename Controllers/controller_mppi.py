@@ -548,7 +548,7 @@ class controller_mppi(template_controller):
 
         stabilized = self.check_stabilized.check(s)
 
-        if stabilized is True and not EXPERIMENT:
+        if stabilized is True and 'up-down-stabilization' in EXPERIMENT:
             self.s[ANGLE_IDX] += np.pi
             self.s[ANGLE_IDX] = wrap_angle_rad(self.s[ANGLE_IDX])
 
