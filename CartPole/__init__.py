@@ -18,8 +18,7 @@ from CartPole.noise_adder import NoiseAdder
 from others.p_globals import P_GLOBALS
 
 from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max,
-    sensorNoise, controlDisturbance, controlBias, TrackHalfLength,
+    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength,
     export_globals
 )
 
@@ -896,8 +895,8 @@ class CartPole:
             pass
 
         # reset global variables
-        global k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, controlBias, TrackHalfLength
-        k[...], M[...], m[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], sensorNoise[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
+        global k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
+        k[...], M[...], m[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
 
         self.time = 0.0
         if reset_mode == 0:  # Don't change it

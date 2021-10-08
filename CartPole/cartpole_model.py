@@ -6,8 +6,7 @@ from CartPole.state_utilities import (
 )
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad_inplace
 from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max,
-    sensorNoise, controlDisturbance, controlBias, TrackHalfLength
+    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
 )
 
 from numba import float32, jit

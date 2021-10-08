@@ -14,8 +14,7 @@ import time
 import sys
 
 from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max,
-    sensorNoise, controlDisturbance, controlBias, TrackHalfLength,
+    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength,
 )
 
 # region Imports needed to create layout of the window in __init__ method
@@ -51,7 +50,10 @@ from GUI.loop_timer import loop_timer
 from GUI._CartPoleGUI_worker_template import Worker
 from GUI._CartPoleGUI_summary_window import SummaryWindow
 
-from GUI._ControllerGUI_MPPIOptionsWindow import MPPIOptionsWindow
+try:
+    from GUI._ControllerGUI_MPPIOptionsWindow import MPPIOptionsWindow
+except:
+    pass
 from GUI._ControllerGUI_NoiseOptionsWindow import NoiseOptionsWindow
 
 
@@ -129,6 +131,7 @@ class MainWindow(QMainWindow):
         self.slider_instant_value = self.CartPoleInstance.slider_value
 
         self.noise = 'OFF'
+        self.CartPoleInstance.NoiseAdderInstance.noise_mode = self.noise
 
         # endregion
 
@@ -906,8 +909,10 @@ class MainWindow(QMainWindow):
         # Change the mode variable depending on the Radiobutton state
         if self.rbs_noise[0].isChecked():
             self.noise = 'ON'
+            self.CartPoleInstance.NoiseAdderInstance.noise_mode = self.noise
         elif self.rbs_noise[1].isChecked():
             self.noise = 'OFF'
+            self.CartPoleInstance.NoiseAdderInstance.noise_mode = self.noise
         else:
             raise Exception('Something wrong with ON/OFF button for noise')
 

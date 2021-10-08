@@ -20,7 +20,6 @@ P_GLOBALS.TrackHalfLength = (usable_track_length-cart_length)/2.0  # m, effectiv
 
 P_GLOBALS.controlDisturbance = config["cartpole"]["controlDisturbance"]
 P_GLOBALS.controlBias = config["cartpole"]["controlBias"]
-P_GLOBALS.sensorNoise = config["cartpole"]["sensorNoise"]
 
 P_GLOBALS.g = config["cartpole"]["g"]
 P_GLOBALS.k = float(config["cartpole"]["k"].split("/")[0])/float(config["cartpole"]["k"].split("/")[1])
@@ -38,10 +37,9 @@ def export_globals():
     np.array(P_GLOBALS.L, dtype=np.float32),
     np.array(P_GLOBALS.v_max, dtype=np.float32),
     np.array(P_GLOBALS.u_max, dtype=np.float32),
-    np.array(P_GLOBALS.sensorNoise, dtype=np.float32),
     np.array(P_GLOBALS.controlDisturbance, dtype=np.float32),
     np.array(P_GLOBALS.controlBias, dtype=np.float32),
     np.array(P_GLOBALS.TrackHalfLength, dtype=np.float32)
 )
 
-k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, controlBias, TrackHalfLength = export_globals()
+k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength = export_globals()
