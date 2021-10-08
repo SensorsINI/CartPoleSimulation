@@ -5,7 +5,7 @@ import numpy as np
 
 from CartPole.cartpole_model import _cartpole_ode
 from CartPole.state_utilities import (
-    create_cartpole_state, cartpole_state_varname_to_index,
+    create_cartpole_state,
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
 )
 from others.p_globals import (
@@ -74,10 +74,10 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
     :returns: A 4x5 numpy.ndarray with all partial derivatives
     """
     if isinstance(s, np.ndarray):
-        angle = s[cartpole_state_varname_to_index('angle')]
-        angleD = s[cartpole_state_varname_to_index('angleD')]
-        position = s[cartpole_state_varname_to_index('position')]
-        positionD = s[cartpole_state_varname_to_index('positionD')]
+        angle = s[ANGLE_IDX]
+        angleD = s[ANGLED_IDX]
+        position = s[POSITION_IDX]
+        positionD = s[POSITIOND_IDX]
     elif isinstance(s, SimpleNamespace):
         angle = s.angle
         angleD = s.angleD
@@ -142,10 +142,10 @@ if __name__ == '__main__':
     """
     # Set non-zero input
     s = s0
-    s[cartpole_state_varname_to_index('position')] = -30.2
-    s[cartpole_state_varname_to_index('positionD')] = 2.87
-    s[cartpole_state_varname_to_index('angle')] = -0.32
-    s[cartpole_state_varname_to_index('angleD')] = 0.237
+    s[POSITION_IDX] = -30.2
+    s[POSITIOND_IDX] = 2.87
+    s[ANGLE_IDX] = -0.32
+    s[ANGLED_IDX] = 0.237
     u = -0.24
 
     # Calculate time necessary for evaluation of a Jacobian:

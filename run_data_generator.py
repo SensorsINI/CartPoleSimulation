@@ -1,7 +1,7 @@
 from CartPole import CartPole
 from CartPole.cartpole_model import create_cartpole_state, TrackHalfLength
 from others.p_globals import TrackHalfLength
-from CartPole.state_utilities import cartpole_state_varname_to_index, cartpole_state_varnames_to_indices
+from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
 import os
 from time import sleep
@@ -119,39 +119,37 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
         # initial_state = [start_random_target_position_at_DataGen, None, None, None]
         # initial_state = [0.0, None, 0.0, None]
         if initial_state[0] is None:
-            initial_state_DataGen[cartpole_state_varname_to_index('position')] = rng_data_generator.uniform(
+            initial_state_DataGen[POSITION_IDX] = rng_data_generator.uniform(
                 low=-TrackHalfLength / 2.0,
                 high=TrackHalfLength / 2.0)
         else:
-            initial_state_DataGen[cartpole_state_varname_to_index('position')] = initial_state[0]
+            initial_state_DataGen[POSITION_IDX] = initial_state[0]
 
         if initial_state[1] is None:
-            initial_state_DataGen[cartpole_state_varname_to_index('positionD')] = rng_data_generator.uniform(low=-1.0,
+            initial_state_DataGen[POSITIOND_IDX] = rng_data_generator.uniform(low=-1.0,
                                                                                                     high=1.0) * TrackHalfLength *0.01
         else:
-            initial_state_DataGen[cartpole_state_varname_to_index('positionD')] = initial_state[1]
+            initial_state_DataGen[POSITIOND_IDX] = initial_state[1]
 
         if initial_state[2] is None:
             if rng_data_generator.uniform()>0.5:
-                initial_state_DataGen[cartpole_state_varname_to_index('angle')] = rng_data_generator.uniform(low=0 * (np.pi / 180.0),
+                initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=0 * (np.pi / 180.0),
                                                                                                     high=180 * (np.pi / 180.0))
             else:
-                initial_state_DataGen[cartpole_state_varname_to_index('angle')] = rng_data_generator.uniform(low=-180 * (np.pi / 180.0),
+                initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=-180 * (np.pi / 180.0),
                                                                                                     high=-0 * (np.pi / 180.0))
         else:
-            initial_state_DataGen[cartpole_state_varname_to_index('angle')] = initial_state[2]
+            initial_state_DataGen[ANGLE_IDX] = initial_state[2]
 
         if initial_state[3] is None:
-            initial_state_DataGen[cartpole_state_varname_to_index('angleD')] = rng_data_generator.uniform(low=-10.0 * (np.pi / 180.0),
+            initial_state_DataGen[ANGLED_IDX] = rng_data_generator.uniform(low=-10.0 * (np.pi / 180.0),
                                                                                                  high=10.0 * (np.pi / 180.0))
         else:
-            initial_state_DataGen[cartpole_state_varname_to_index('angleD')] = initial_state[3]
+            initial_state_DataGen[ANGLED_IDX] = initial_state[3]
 
         # Add cos/sin values to state
-        initial_state_DataGen[cartpole_state_varnames_to_indices(['angle_cos', 'angle_sin'])] = [
-            np.cos(initial_state_DataGen[cartpole_state_varname_to_index('angle')]),
-            np.sin(initial_state_DataGen[cartpole_state_varname_to_index('angle')])
-        ]
+        initial_state_DataGen[ANGLE_COS_IDX] = np.cos(initial_state_DataGen[ANGLE_IDX])
+        initial_state_DataGen[ANGLE_SIN_IDX] = np.sin(initial_state_DataGen[ANGLE_IDX])
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
         # You may also specify some of the variables from above here, to make them change at each iteration.#
