@@ -59,6 +59,13 @@ controller:
   lqr:
     Q: [10.0, 1.0, 1.0, 1.0]
     R: 10.0
+  pid:
+    P_angle: 9.0
+    I_angle: 0.0
+    D_angle: 0.0
+    P_position: 0.1
+    I_position: 0.0
+    D_position: 0.1
   mpc_opti:
     dt_mpc_simulation: 0.2  # s
     mpc_horizon: 10
