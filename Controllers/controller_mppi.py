@@ -12,8 +12,7 @@ Based on Williams, Aldrich, Theodorou (2015)
 import copy
 
 from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max,
-    sensorNoise, controlDisturbance, controlBias, TrackHalfLength,
+    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength,
 )
 
 import os

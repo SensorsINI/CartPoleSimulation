@@ -4,7 +4,8 @@ import numpy as np
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
 from CartPole.state_utilities import create_cartpole_state, \
-    cartpole_state_varnames_to_indices, cartpole_state_varname_to_index
+    cartpole_state_varnames_to_indices, \
+    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
 from CartPole.cartpole_model import Q2u, cartpole_ode
 
@@ -21,11 +22,13 @@ def get_prediction_for_testing_gui_from_euler(a, dataset, dt_sampling, dt_sampli
     output_array[:-1, :, -1] = Q_array
     print('Calculating predictions...')
 
+    FEATURES_INDICES = cartpole_state_varnames_to_indices(a.features)
+
     for timestep in trange(a.test_len):
 
         state_dict = dataset.loc[dataset.index[[timestep]], :].to_dict('records')[0]
         s = create_cartpole_state(state_dict)
-        output_array[0, timestep, :-1] = s[cartpole_state_varnames_to_indices(a.features)]
+        output_array[0, timestep, :-1] = s[FEATURES_INDICES]
         # Progress max_horison steps
         # save the data for every step in a third dimension of an array
         for i in range(0, a.test_max_horizon):
@@ -38,19 +41,19 @@ def get_prediction_for_testing_gui_from_euler(a, dataset, dt_sampling, dt_sampli
 
                 t_step = (dt_sampling/float(dt_sampling_by_dt_fine))
                 # Calculate next state
-                s[cartpole_state_varname_to_index("position")] += s[cartpole_state_varname_to_index("positionD")] * t_step
-                s[cartpole_state_varname_to_index("positionD")] += positionDD * t_step
-                s[cartpole_state_varname_to_index("angle")] += s[cartpole_state_varname_to_index("angleD")] * t_step
-                s[cartpole_state_varname_to_index("angleD")] += angleDD * t_step
+                s[POSITION_IDX] += s[POSITIOND_IDX] * t_step
+                s[POSITIOND_IDX] += positionDD * t_step
+                s[ANGLE_IDX] += s[ANGLED_IDX] * t_step
+                s[ANGLED_IDX] += angleDD * t_step
 
-                s[cartpole_state_varname_to_index('angle')] = \
-                    wrap_angle_rad(s[cartpole_state_varname_to_index('angle')])
+                s[ANGLE_IDX] = \
+                    wrap_angle_rad(s[ANGLE_IDX])
 
             # Append s to outputs matrix
-            s[cartpole_state_varnames_to_indices(['angle_cos', 'angle_sin'])] = \
-                [np.cos(s[cartpole_state_varname_to_index('angle')]),
-                 np.sin(s[cartpole_state_varname_to_index('angle')])]
-            output_array[i+1, timestep, :-1] = s[cartpole_state_varnames_to_indices(a.features)]
+            s[ANGLE_COS_IDX] = np.cos(s[ANGLE_IDX])
+            s[ANGLE_SIN_IDX] = np.sin(s[ANGLE_IDX])
+
+            output_array[i+1, timestep, :-1] = s[FEATURES_INDICES]
 
     output_array = np.swapaxes(output_array, 0, 1)
     # time_axis is a time axis for ground truth

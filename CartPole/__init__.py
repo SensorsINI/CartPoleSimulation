@@ -10,14 +10,15 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 # region Imported modules
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
-from CartPole.state_utilities import ANGLED_IDX, ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX, POSITIOND_IDX, POSITION_IDX, cartpole_state_varname_to_index, cartpole_state_index_to_varname, cartpole_state_varnames_to_indices
+from CartPole.state_utilities import ANGLED_IDX, ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX, POSITIOND_IDX, POSITION_IDX
 from CartPole.cartpole_model import Q2u, cartpole_ode, s0, edge_bounce, cartpole_integration
 from CartPole.load import get_full_paths_to_csvs, load_csv_recording
+from CartPole.latency_adder import LatencyAdder
+from CartPole.noise_adder import NoiseAdder
 from others.p_globals import P_GLOBALS
 
 from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max,
-    sensorNoise, controlDisturbance, controlBias, TrackHalfLength,
+    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength,
     export_globals
 )
 
@@ -100,6 +101,11 @@ class CartPole:
         self.u = 0.0  # Physical force acting on the cart
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
         self.target_position = 0.0
+
+        self.latency = config["cartpole"]["latency"]
+        self.LatencyAdderInstance = LatencyAdder(latency=self.latency)
+        self.NoiseAdderInstance = NoiseAdder()
+        self.s_with_noise_and_latency = np.copy(self.s)
 
         # region Time scales for simulation step, controller update and saving data
         # See last paragraph of "Time scales" section for explanations
@@ -249,12 +255,16 @@ class CartPole:
         # stop pole at +/- 90 deg if enabled
         block_pole_at_90 = self.block_pole_at_90_deg()
 
-        # Wrap angle to +/-π
-        self.s[cartpole_state_varname_to_index('angle')] = wrap_angle_rad(self.s[cartpole_state_varname_to_index('angle')])
-
         # Calculate cosine and sine
-        self.s[cartpole_state_varname_to_index('angle_cos')] = np.cos(self.s[cartpole_state_varname_to_index('angle')])
-        self.s[cartpole_state_varname_to_index('angle_sin')] = np.sin(self.s[cartpole_state_varname_to_index('angle')])
+        self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
+        self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
+
+        # Wrap angle to +/-π
+        self.s[ANGLE_IDX] = wrap_angle_rad(self.s[ANGLE_IDX])
+
+        self.LatencyAdderInstance.add_current_state_to_latency_buffer(self.s)
+        s_delayed = self.LatencyAdderInstance.get_interpolated_delayed_state()
+        self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
 
         # Determine the dimensionless [-1,1] value of the motor power Q
         self.Update_Q()
@@ -288,13 +298,13 @@ class CartPole:
 
     def block_pole_at_90_deg(self):
         if self.stop_at_90:
-            if self.s[cartpole_state_varname_to_index('angle')] >= np.pi / 2:
-                self.s[cartpole_state_varname_to_index('angle')] = np.pi / 2
-                self.s[cartpole_state_varname_to_index('angleD')] = 0.0
+            if self.s[ANGLE_IDX] >= np.pi / 2:
+                self.s[ANGLE_IDX] = np.pi / 2
+                self.s[ANGLED_IDX] = 0.0
                 return True  # Make also second derivatives 0 after they are calculated
-            elif self.s[cartpole_state_varname_to_index('angle')] <= -np.pi / 2:
-                self.s[cartpole_state_varname_to_index('angle')] = -np.pi / 2
-                self.s[cartpole_state_varname_to_index('angleD')] = 0.0
+            elif self.s[ANGLE_IDX] <= -np.pi / 2:
+                self.s[ANGLE_IDX] = -np.pi / 2
+                self.s[ANGLED_IDX] = 0.0
                 return True  # Make also second derivatives 0 after they are calculated
             else:
                 return False
@@ -315,13 +325,13 @@ class CartPole:
                 # Saving simulation data
                 self.dict_history['time'].append(self.time)
 
-                self.dict_history['angle'].append(self.s[cartpole_state_varname_to_index('angle')])
-                self.dict_history['angleD'].append(self.s[cartpole_state_varname_to_index('angleD')])
+                self.dict_history['angle'].append(self.s[ANGLE_IDX])
+                self.dict_history['angleD'].append(self.s[ANGLED_IDX])
                 self.dict_history['angleDD'].append(self.angleDD)
-                self.dict_history['angle_cos'].append(self.s[cartpole_state_varname_to_index('angle_cos')])
-                self.dict_history['angle_sin'].append(self.s[cartpole_state_varname_to_index('angle_sin')])
-                self.dict_history['position'].append(self.s[cartpole_state_varname_to_index('position')])
-                self.dict_history['positionD'].append(self.s[cartpole_state_varname_to_index('positionD')])
+                self.dict_history['angle_cos'].append(self.s[ANGLE_COS_IDX])
+                self.dict_history['angle_sin'].append(self.s[ANGLE_SIN_IDX])
+                self.dict_history['position'].append(self.s[POSITION_IDX])
+                self.dict_history['positionD'].append(self.s[POSITIOND_IDX])
                 self.dict_history['positionDD'].append(self.positionDD)
 
                 self.dict_history['Q'].append(self.Q)
@@ -344,13 +354,13 @@ class CartPole:
                 self.dict_history = {
                                      'time': [self.time],
 
-                                     'angle': [self.s[cartpole_state_varname_to_index('angle')]],
-                                     'angleD': [self.s[cartpole_state_varname_to_index('angleD')]],
+                                     'angle': [self.s[ANGLE_IDX]],
+                                     'angleD': [self.s[ANGLED_IDX]],
                                      'angleDD': [self.angleDD],
-                                     'angle_cos': [self.s[cartpole_state_varname_to_index('angle_cos')]],
-                                     'angle_sin': [self.s[cartpole_state_varname_to_index('angle_sin')]],
-                                     'position': [self.s[cartpole_state_varname_to_index('position')]],
-                                     'positionD': [self.s[cartpole_state_varname_to_index('positionD')]],
+                                     'angle_cos': [self.s[ANGLE_COS_IDX]],
+                                     'angle_sin': [self.s[ANGLE_SIN_IDX]],
+                                     'position': [self.s[POSITION_IDX]],
+                                     'positionD': [self.s[POSITIOND_IDX]],
                                      'positionDD': [self.positionDD],
 
 
@@ -409,7 +419,7 @@ class CartPole:
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s, self.target_position, self.time)
+                self.Q = self.controller.step(self.s_with_noise_and_latency, self.target_position, self.time)
 
             self.dt_controller_steps_counter = 0
 
@@ -761,11 +771,11 @@ class CartPole:
             self.update_state()
 
             # Additional option to stop the experiment
-            if abs(self.s[cartpole_state_varname_to_index('position')]) > 45.0:
+            if abs(self.s[POSITION_IDX]) > 45.0:  # FIXME: THIS LIMIT CURRENTLY MAKES NO SENSE... (MP)
                 print('Cart went out of safety boundaries')
                 break
 
-            # if abs(self.s[cartpole_state_varname_to_index('angle')]) > 0.8*np.pi:
+            # if abs(self.s[ANGLE_IDX]) > 0.8*np.pi:
             #     # raise ValueError('Cart went unstable')
             #     # print('Cart went unstable')
             #     break
@@ -885,30 +895,28 @@ class CartPole:
             pass
 
         # reset global variables
-        global k, M, m, g, J_fric, M_fric, L, v_max, u_max, sensorNoise, controlDisturbance, controlBias, TrackHalfLength
-        k[...], M[...], m[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], sensorNoise[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
+        global k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
+        k[...], M[...], m[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
 
         self.time = 0.0
         if reset_mode == 0:  # Don't change it
-            self.s[cartpole_state_varname_to_index('position')] = self.s[cartpole_state_varname_to_index('positionD')] = 0.0
-            self.s[cartpole_state_varname_to_index('angle')] = self.s[cartpole_state_varname_to_index('angleD')] = 0.0
-            self.s[cartpole_state_varname_to_index('angle_cos')] = np.cos(self.s[cartpole_state_varname_to_index('angle')])
-            self.s[cartpole_state_varname_to_index('angle_sin')] = np.sin(self.s[cartpole_state_varname_to_index('angle')])
+            self.s[POSITION_IDX] = self.s[POSITIOND_IDX] = 0.0
+            self.s[ANGLE_IDX] = self.s[ANGLED_IDX] = 0.0
+            self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
+            self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
             self.target_position = 0.0
             self.slider_value = 0.0
 
         elif reset_mode == 1:  # You may change this but be careful with other user. Better use 3
             # You can change here with which initial parameters you wish to start the simulation
-            self.s[cartpole_state_varname_to_index('position')] = 0.0
-            self.s[cartpole_state_varname_to_index('positionD')] = 0.0
-            self.s[cartpole_state_varname_to_index('angle')] = (1.0 * self.rng_CartPole.normal() - 1.0) * np.pi / 180.0  # np.pi/2.0 #
-            self.s[cartpole_state_varname_to_index('angleD')] = 0.0  # 1.0
+            self.s[POSITION_IDX] = 0.0
+            self.s[POSITIOND_IDX] = 0.0
+            self.s[ANGLE_IDX] = (1.0 * self.rng_CartPole.normal() - 1.0) * np.pi / 180.0  # np.pi/2.0 #
+            self.s[ANGLED_IDX] = 0.0  # 1.0
 
-            self.s[cartpole_state_varname_to_index('angle_cos')] = np.cos(
-                self.s[cartpole_state_varname_to_index('angle')])
-            self.s[cartpole_state_varname_to_index('angle_sin')] = np.sin(
-                self.s[cartpole_state_varname_to_index('angle')])
+            self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
+            self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
             self.target_position = 0.0
             self.slider_value = 0.0
@@ -917,10 +925,8 @@ class CartPole:
             if (s is not None) and (target_position is not None):
 
                 self.s = s
-                self.s[cartpole_state_varname_to_index('angle_cos')] = np.cos(
-                    self.s[cartpole_state_varname_to_index('angle')])
-                self.s[cartpole_state_varname_to_index('angle_sin')] = np.sin(
-                    self.s[cartpole_state_varname_to_index('angle')])
+                self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
+                self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
                 self.slider = self.target_position = target_position
 
@@ -945,13 +951,13 @@ class CartPole:
 
                                  'time': [self.time],
 
-                                 'angle': [self.s[cartpole_state_varname_to_index('angle')]],
-                                 'angleD': [self.s[cartpole_state_varname_to_index('angleD')]],
+                                 'angle': [self.s[ANGLE_IDX]],
+                                 'angleD': [self.s[ANGLED_IDX]],
                                  'angleDD': [self.angleDD],
-                                 'angle_cos': [self.s[cartpole_state_varname_to_index('angle_cos')]],
-                                 'angle_sin': [self.s[cartpole_state_varname_to_index('angle_sin')]],
-                                 'position': [self.s[cartpole_state_varname_to_index('position')]],
-                                 'positionD': [self.s[cartpole_state_varname_to_index('positionD')]],
+                                 'angle_cos': [self.s[ANGLE_COS_IDX]],
+                                 'angle_sin': [self.s[ANGLE_SIN_IDX]],
+                                 'position': [self.s[POSITION_IDX]],
+                                 'positionD': [self.s[POSITIOND_IDX]],
                                  'positionDD': [self.positionDD],
 
                                  'Q': [self.Q],
@@ -982,6 +988,10 @@ class CartPole:
     @dt_simulation.setter
     def dt_simulation(self, value):
         self._dt_simulation = value
+        if self._dt_simulation is not None:
+            # Set latency
+            self.LatencyAdderInstance.dt_simulation = self._dt_simulation
+            self.LatencyAdderInstance.set_latency(self.latency)
         if self._dt_controller is not None:
             self.dt_controller_number_of_steps = np.rint(self._dt_controller / value).astype(np.int32)
             if self.dt_controller_number_of_steps == 0:
@@ -1053,35 +1063,35 @@ class CartPole:
         self.y_acceleration_arrow = 1.5 * self.WheelRadius
         self.scaling_dx_acceleration_arrow = 20.0
         self.x_acceleration_arrow = (
-                                   self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics +
+                                   self.s[POSITION_IDX]*self.physical_to_graphics +
                                    # np.sign(self.Q) * (self.CartLength / 2.0) +
                                    self.scaling_dx_acceleration_arrow * self.Q
         )
 
         # Initialize elements of the drawing
-        self.Mast = FancyBboxPatch(xy=(self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics - (self.MastThickness / 2.0), 1.25 * self.WheelRadius),
+        self.Mast = FancyBboxPatch(xy=(self.s[POSITION_IDX]*self.physical_to_graphics - (self.MastThickness / 2.0), 1.25 * self.WheelRadius),
                                    width=self.MastThickness,
                                    height=self.MastHight,
                                    fc='g')
 
-        self.Chassis = FancyBboxPatch((self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics - (self.CartLength / 2.0), self.WheelRadius),
+        self.Chassis = FancyBboxPatch((self.s[POSITION_IDX]*self.physical_to_graphics - (self.CartLength / 2.0), self.WheelRadius),
                                       self.CartLength,
                                       1 * self.WheelRadius,
                                       fc='r')
 
-        self.WheelLeft = Circle((self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics - self.WheelToMiddle, self.y_wheel),
+        self.WheelLeft = Circle((self.s[POSITION_IDX]*self.physical_to_graphics - self.WheelToMiddle, self.y_wheel),
                                 radius=self.WheelRadius,
                                 fc='y',
                                 ec='k',
                                 lw=5)
 
-        self.WheelRight = Circle((self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics + self.WheelToMiddle, self.y_wheel),
+        self.WheelRight = Circle((self.s[POSITION_IDX]*self.physical_to_graphics + self.WheelToMiddle, self.y_wheel),
                                  radius=self.WheelRadius,
                                  fc='y',
                                  ec='k',
                                  lw=5)
 
-        self.Acceleration_Arrow = FancyArrowPatch((self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics, self.y_acceleration_arrow),
+        self.Acceleration_Arrow = FancyArrowPatch((self.s[POSITION_IDX]*self.physical_to_graphics, self.y_acceleration_arrow),
                                                   (self.x_acceleration_arrow, self.y_acceleration_arrow),
                                                   arrowstyle='simple', mutation_scale=10,
                                                   facecolor='gold', edgecolor='orange')
@@ -1176,33 +1186,33 @@ class CartPole:
     def update_drawing(self):
 
         self.x_acceleration_arrow = (
-                                   self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics +
+                                   self.s[POSITION_IDX]*self.physical_to_graphics +
                                    # np.sign(self.Q) * (self.CartLength / 2.0) +
                                    self.scaling_dx_acceleration_arrow * self.Q
         )
 
-        self.Acceleration_Arrow.set_positions((self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics, self.y_acceleration_arrow),
+        self.Acceleration_Arrow.set_positions((self.s[POSITION_IDX]*self.physical_to_graphics, self.y_acceleration_arrow),
                                              (self.x_acceleration_arrow, self.y_acceleration_arrow))
 
         # Draw mast
-        mast_position = (self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics - (self.MastThickness / 2.0))
+        mast_position = (self.s[POSITION_IDX]*self.physical_to_graphics - (self.MastThickness / 2.0))
         self.Mast.set_x(mast_position)
         self.Mast.set_height(self.MastHight*(float(L)/self.PoleInitialPhysicalHight))
         # Draw rotated mast
         t21 = transforms.Affine2D().translate(-mast_position, -1.25 * self.WheelRadius)
         if ANGLE_CONVENTION == 'CLOCK-NEG':
-            t22 = transforms.Affine2D().rotate(self.s[cartpole_state_varname_to_index('angle')])
+            t22 = transforms.Affine2D().rotate(self.s[ANGLE_IDX])
         elif ANGLE_CONVENTION == 'CLOCK-POS':
-            t22 = transforms.Affine2D().rotate(-self.s[cartpole_state_varname_to_index('angle')])
+            t22 = transforms.Affine2D().rotate(-self.s[ANGLE_IDX])
         else:
             raise ValueError('Unknown angle convention')
         t23 = transforms.Affine2D().translate(mast_position, 1.25 * self.WheelRadius)
         self.t2 = t21 + t22 + t23
         # Draw Chassis
-        self.Chassis.set_x(self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics - (self.CartLength / 2.0))
+        self.Chassis.set_x(self.s[POSITION_IDX]*self.physical_to_graphics - (self.CartLength / 2.0))
         # Draw Wheels
-        self.WheelLeft.center = (self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics - self.WheelToMiddle, self.y_wheel)
-        self.WheelRight.center = (self.s[cartpole_state_varname_to_index('position')]*self.physical_to_graphics + self.WheelToMiddle, self.y_wheel)
+        self.WheelLeft.center = (self.s[POSITION_IDX]*self.physical_to_graphics - self.WheelToMiddle, self.y_wheel)
+        self.WheelRight.center = (self.s[POSITION_IDX]*self.physical_to_graphics + self.WheelToMiddle, self.y_wheel)
         # Draw SLider
         if self.controller_name == 'manual-stabilization':
             self.Slider_Bar.set_width(self.slider_value)
