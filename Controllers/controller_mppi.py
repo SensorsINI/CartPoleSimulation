@@ -428,9 +428,9 @@ class controller_mppi(template_controller):
         self.prev_control_input = None  # Control input given to the system at the end of the last step
         self.prev_system_state = None  # The previous measured system state
 
-        self.adapt_idle_counter_pre_change_max = 200  # time between retraining and subsequent change of parameters
+        self.adapt_idle_counter_pre_change_max = 50  # time between retraining and subsequent change of parameters
         self.adapt_idle_counter_post_change_max = 1  # time between change of parameters and starting filling the buffer (make it bigger if you buffer is small so that you can observe effect of parameters change). Should be at least 1 so that the "previous" value is already with a new parameter
-        self.shift_reg_len = 200  # How many samples to store before training
+        self.shift_reg_len = 3000  # How many samples to store before training
         self.shift_reg_index = 0  # Index to keep track of index in the buffer
         self.training_count = 0  # Debug info: How many online training cycle have completed?
         self.adapt_mode = 'idle_pre'  # Possible 'idle_pre', 'idle_post', 'filling buffer'
@@ -575,7 +575,7 @@ class controller_mppi(template_controller):
             if self.adapt_idle_counter_pre == 0:
 
                 L[...] = L*0.8
-                print(L)
+                print('Updated Pole length: ', L)
                 # print('Entered idle_post')
                 self.adapt_mode = 'idle_post'
                 self.adapt_idle_counter_pre = self.adapt_idle_counter_pre_change_max

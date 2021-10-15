@@ -1,12 +1,12 @@
 controller:
   mppi:
-    SEED: 1897                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
+    SEED: "None"                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     adapt: True                          # True or False
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 500                     # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "Euler"           # One of ["Euler", "NeuralNet"]
+    predictor_type: "NeuralNet"           # One of ["Euler", "NeuralNet"]
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01
