@@ -419,7 +419,11 @@ class controller_mppi(template_controller):
                                             'phase_count_for_average': [],
                                             }
         else:
-            self.controller_data_for_csv = {
+            self.controller_data_for_csv = { 'L': [],
+                                             'adapt_mode': [],
+                                             'retraining_now': [],
+                                             'training_count': [],
+                                             'phase_count_for_average': [],
                                             }
 
         self.current_system_state = None  # MT TODO: Replace with self.s
@@ -429,7 +433,7 @@ class controller_mppi(template_controller):
 
         self.adapt_idle_counter_pre_change_max = 50  # time between retraining and subsequent change of parameters
         self.adapt_idle_counter_post_change_max = 1  # time between change of parameters and starting filling the buffer (make it bigger if you buffer is small so that you can observe effect of parameters change). Should be at least 1 so that the "previous" value is already with a new parameter
-        self.shift_reg_len = 3000  # How many samples to store before training
+        self.shift_reg_len = 100  # How many samples to store before training
         self.shift_reg_index = 0  # Index to keep track of index in the buffer
         self.training_count = 0  # Debug info: How many online training cycle have completed?
         self.adapt_mode = 'idle_pre'  # Possible 'idle_pre', 'idle_post', 'filling buffer'
@@ -793,6 +797,13 @@ class controller_mppi(template_controller):
                                             'relative_cost_difference': [self.relative_cost_difference],
                                             'training_count': [self.training_count],
                                             'phase_count_for_average': [self.phase_count_for_average]}
+        else:
+            self.controller_data_for_csv = {'L': [L],
+                                            'adapt_mode': [self.adapt_mode_save],
+                                            'retraining_now': [self.retraining_now],
+                                            'training_count': [self.training_count],
+                                            'phase_count_for_average': [self.phase_count_for_average]}
+
         return Q  # normed control input in the range [-1,1]
 
     def update_control_vector(self):

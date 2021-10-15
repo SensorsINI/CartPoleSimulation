@@ -616,10 +616,10 @@ class CartPole:
             df = pd.DataFrame.from_dict(self.dict_history)
             gb = df.groupby(['L'], sort=False)
             # cost_difference = gb['cost_trajectory_from_u_true_equations'].mean().values
-            cost_difference = gb['cost_trajectory_from_u_predicted'].median().values
+            #cost_difference = gb['cost_trajectory_from_u_predicted'].median().values
             # cost_difference = gb['stage_cost_realized_trajectory'].mean().values
             # cost_difference = gb['relative_cost_difference'].mean().values
-            cost_difference = np.insert(cost_difference, 0, cost_difference[0])
+            #cost_difference = np.insert(cost_difference, 0, cost_difference[0])
             # except:
             # cost_time = np.array(self.dict_history['time'])
             # # cost_difference = np.array(self.dict_history['cost_trajectory_from_u_predicted'])-np.array(self.dict_history['cost_trajectory_from_u_true_equations'])
