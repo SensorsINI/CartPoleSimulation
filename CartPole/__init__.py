@@ -587,7 +587,65 @@ class CartPole:
 
 
         if adaptive_mode:
-            ...
+            # Plot parameter change and moments of training
+            axs[4].set_ylabel("Pole length [cm]", fontsize=fontsize_labels)
+            lns_parameter = axs[4].plot(np.array(self.dict_history['time']), np.array(self.dict_history['L'])*2.0*100.0,
+                                'g', markersize=12, label='Pole length')
+            axs[4].set_ylim(bottom=1.1 * min(np.array(self.dict_history['L'])*2.0*100.0), top=1.1 * max(np.array(self.dict_history['L'])*2.0*100.0))
+            axs[4].set_yscale('log')
+            axs[4].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+            axs[4].tick_params(axis='both', which='minor', labelsize=fontsize_ticks)
+            idx_retraining = np.array([i for i, x in enumerate(np.array(self.dict_history['retraining_now'])) if x], dtype=np.int32)
+
+
+            retraining_time = np.array(self.dict_history['time'])[idx_retraining]
+            lns_training = []
+            for xc in retraining_time:
+                lns_training = [axs[4].axvline(x=xc, color='k', linestyle='--', clip_on=False, label='Training', marker='|')]
+
+            def smooth(y, box_pts):
+                box = np.ones(box_pts) / box_pts
+                y_smooth = np.convolve(y, box, mode='same')
+                return y_smooth
+            # try:
+            df = pd.DataFrame.from_dict(self.dict_history)
+            idx_change = df[df['L'].diff() != 0].index.tolist()
+            idx_time = idx_change+[len(self.dict_history['time'])-1]
+            cost_time = np.array(self.dict_history['time'])[idx_time]
+            # Plot the difference in cost of best trajectory vs. predicted one
+            df = pd.DataFrame.from_dict(self.dict_history)
+            gb = df.groupby(['L'], sort=False)
+            # cost_difference = gb['cost_trajectory_from_u_true_equations'].mean().values
+            cost_difference = gb['cost_trajectory_from_u_predicted'].median().values
+            # cost_difference = gb['stage_cost_realized_trajectory'].mean().values
+            # cost_difference = gb['relative_cost_difference'].mean().values
+            cost_difference = np.insert(cost_difference, 0, cost_difference[0])
+            # except:
+            # cost_time = np.array(self.dict_history['time'])
+            # # cost_difference = np.array(self.dict_history['cost_trajectory_from_u_predicted'])-np.array(self.dict_history['cost_trajectory_from_u_true_equations'])
+            # # cost_difference = np.array(self.dict_history['relative_cost_difference'])
+            # cost_difference = np.array(self.dict_history['cost_trajectory_from_u_predicted'])
+            # # cost_difference = np.array(self.dict_history['cost_trajectory_from_u_true_equations'])
+            # # cost_difference = median_filter(cost_difference, size=40)
+            # cost_difference = smooth(cost_difference, 1000)
+
+            # ax_cost = axs[4].twinx()
+            # # ax_cost.set_ylabel('Cost difference (%)', fontsize=fontsize_labels)
+            # # lns_cost = ax_cost.plot(cost_time, cost_difference, drawstyle='steps', label='Cost difference (%)')
+            # # ax_cost.set_ylabel('Cost', fontsize=fontsize_labels)
+            # # lns_cost = ax_cost.plot(cost_time, cost_difference, drawstyle='steps', label='Cost')
+            # ax_cost.set_ylim(bottom=1.1*min(cost_difference), top=1.1*max(cost_difference))
+            # ax_cost.set_yscale('log')
+            # ax_cost.tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+            # ax_cost.tick_params(axis='both', which='minor', labelsize=fontsize_ticks)
+
+            lns = lns_parameter + lns_training #+ lns_cost
+            labs = [l.get_label() for l in lns]
+            axs[4].legend(lns, labs, fontsize=fontsize_labels)
+            # except:
+            #     pass
+
+
             axs[4].set_xlabel('Time (s)', fontsize=fontsize_labels)
         else:
             axs[3].set_xlabel('Time (s)', fontsize=fontsize_labels)
