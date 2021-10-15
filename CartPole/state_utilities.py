@@ -51,6 +51,7 @@ def create_cartpole_state(state: dict = {}, dtype=None) -> np.ndarray:
     return s
 
 
+# THE FUNCTIONS BELOW ARE POTENTIALLY SLOW!
 def cartpole_state_varname_to_index(variable_name: str) -> int:
     return STATE_INDICES[variable_name]
 
@@ -91,7 +92,7 @@ def cartpole_state_vector_to_namespace(s_vector: np.ndarray) -> SimpleNamespace:
 
 # # Test functions
 # s = create_cartpole_state(dict(angleD=12.1, angleDD=-33.5, position=2.3, positionD=-19.77, positionDD=3.42))
-# s[cartpole_state_varname_to_index('positionD')] = -14.9
+# s[POSITIOND_IDX] = -14.9
 # cartpole_state_index_to_varname(4)
 
 # sn = SimpleNamespace()

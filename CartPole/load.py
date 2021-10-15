@@ -150,10 +150,6 @@ def load_cartpole_parameters(dataset_path):
                 p.controlDisturbance = float(line[len('# controlDisturbance: '):].rstrip("\n"))
                 updated_features += 1
                 continue
-            if line[:len('# sensorNoise: ')] == '# sensorNoise: ':
-                p.sensorNoise = float(line[len('# sensorNoise: '):].rstrip("\n"))
-                updated_features += 1
-                continue
             if line[:len('# g: ')] == '# g: ':
                 p.g = float(line[len('# g: '):].rstrip("\n"))
                 updated_features += 1
