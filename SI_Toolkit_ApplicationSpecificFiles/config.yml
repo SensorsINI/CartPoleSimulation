@@ -9,6 +9,7 @@ paths:
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ApplicationSpecificFiles/Experiments/'  # Path where the experiments data is stored
 
 training_default:
+  #  setpoint_inputs: ['target_position']
   # For training closed loop dynamics model:
   control_inputs: ['Q']
   state_inputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
