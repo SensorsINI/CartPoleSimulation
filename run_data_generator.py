@@ -39,22 +39,22 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     # User defined simulation settings
     ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
     # How many experiments will be generated
-    number_of_experiments = 50
+    number_of_experiments = 1
 
     ###### Train/Val/Test split - only matters if you run it in ML Pipeline mode
     frac_train = 0.8
-    frac_val = 0.18
+    frac_val = 0.19
 
     save_mode = 'online'  # It was intended to save memory usage, but it doesn't seems to help
 
     ###### Timescales
     dt_simulation_DataGen = 0.002  # simulation timestep
-    dt_controller_update_DataGen = 0.01  # control rate
-    dt_save_DataGen = 0.01  # save datapoints in csv in this interval
+    dt_controller_update_DataGen = 0.02  # control rate
+    dt_save_DataGen = 0.02  # save datapoints in csv in this interval
 
     ###### CartPole settings
     ### Length of each experiment in s:
-    length_of_experiment_DataGen = 200
+    length_of_experiment_DataGen = 100
 
     ### Controller which should be used in generated experiment:
     controller_DataGen = 'lqr'
@@ -64,7 +64,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     track_relative_complexity_DataGen = 1
 
     ### How to interpolate between turning points of random trace
-    interpolation_type_DataGen = 'previous'
+    interpolation_type_DataGen = '0-derivative-smooth'
     # Possible options: '0-derivative-smooth', 'linear', 'previous'
 
     ### How turning points should be distributed
