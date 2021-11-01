@@ -69,6 +69,9 @@ controller:
   mpc_opti:
     dt_mpc_simulation: 0.2  # s
     mpc_horizon: 10
+  nn_as_mpc_tf:
+    net_name: 'GRU-6IN-128H1-128H2-1OUT-0'
+    PATH_TO_MODELS: './Controllers/models_for_nn_as_mpc_tf/'
 cartpole:
   SEED: 'None' #1873  # This is a seed for rng for CartPole instance class only. If "None" random seed based on datetime is used
   PATH_TO_CONTROLLERS: './Controllers/'  # Path where controllers are stored
