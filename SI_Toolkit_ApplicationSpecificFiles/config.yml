@@ -1,7 +1,7 @@
 modeling:
   NET_NAME: 'Dense-32H1-32H2'
   RNN_PATH: './save_tf/'
-  PREDICTION_FEATURES_NAMES: ['angle_cos', 'angle_sin', 'angleD', 'position', 'positionD']
+  PREDICTION_FEATURES_NAMES: ['angle_cos', 'angle_sin', 'angleD', 'position', 'positionD'] #FIXME: This is not used much, could be removed after some corrections in master
 
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
