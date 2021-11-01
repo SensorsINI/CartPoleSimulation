@@ -155,7 +155,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
         # You may also specify some of the variables from above here, to make them change at each iteration.#
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-        print(i)
+        print('{}/{}'.format(i, number_of_experiments))
         sleep(0.1)
         CartPoleInstance = CartPole()
         CartPoleInstance.setup_cartpole_random_experiment(
