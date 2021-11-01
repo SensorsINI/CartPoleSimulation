@@ -775,10 +775,10 @@ class CartPole:
                 print('Cart went out of safety boundaries')
                 break
 
-            if abs(self.s[ANGLE_IDX]) > 0.8*np.pi:
-                # raise ValueError('Cart went unstable')
-                # print('Cart went unstable')
-                break
+            # if abs(self.s[ANGLE_IDX]) > 0.8*np.pi:
+            #     # raise ValueError('Cart went unstable')
+            #     # print('Cart went unstable')
+            #     break
 
             # It seems that if pole is to short angleD overflows quite quickly.
             # We limit pole to 1 mm
