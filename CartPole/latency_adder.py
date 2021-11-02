@@ -13,10 +13,10 @@ MAX_LATENCY_LEN = 50  # Total size of latency buffer.
 class LatencyAdder():
     def __init__(self,
                  latency=0.0,
-                 dt_simulation=0.002,
+                 dt_sampling=0.002,
                  ):
 
-        self.dt_simulation = dt_simulation
+        self.dt_sampling = dt_sampling
         self.latency = latency
 
         self.latency_len = None
@@ -76,10 +76,10 @@ class LatencyAdder():
             
     def set_latency(self, latency):
         self.latency = latency
-        self.latency_len = latency/self.dt_simulation
+        self.latency_len = latency/self.dt_sampling
         self.latency_len_int = int(self.latency_len)
         self.latency_len_fraction = self.latency_len-self.latency_len_int
-        self.max_latency = MAX_LATENCY_LEN*self.dt_simulation
+        self.max_latency = MAX_LATENCY_LEN*self.dt_sampling
 
 if __name__ == '__main__':
     from CartPole.state_utilities import create_cartpole_state

@@ -990,7 +990,7 @@ class CartPole:
         self._dt_simulation = value
         if self._dt_simulation is not None:
             # Set latency
-            self.LatencyAdderInstance.dt_simulation = self._dt_simulation
+            self.LatencyAdderInstance.dt_sampling = self._dt_simulation
             self.LatencyAdderInstance.set_latency(self.latency)
         if self._dt_controller is not None:
             self.dt_controller_number_of_steps = np.rint(self._dt_controller / value).astype(np.int32)
