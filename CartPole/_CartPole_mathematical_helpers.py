@@ -21,6 +21,13 @@ def wrap_angle_rad(angle: float) -> float:
     return angle
 
 
+def wrap_angle_rad_inplace_no_numba(angle: np.ndarray) -> None:
+    Modulo = np.fmod(angle, 2 * np.pi)  # positive modulo
+    neg_wrap, pos_wrap = Modulo < -np.pi, Modulo > np.pi
+    angle[neg_wrap] = Modulo[neg_wrap] + 2 * np.pi
+    angle[pos_wrap] = Modulo[pos_wrap] - 2 * np.pi
+    angle[~(neg_wrap | pos_wrap)] = Modulo[~(neg_wrap | pos_wrap)]
+
 @jit(nopython=True, cache=True, fastmath=True)
 def wrap_angle_rad_inplace(angle: np.ndarray) -> None:
     Modulo = np.fmod(angle, 2 * np.pi)  # positive modulo

@@ -255,8 +255,6 @@ class MPPIOptionsWindow(QWidget):
         self.timer.timeout.connect(self.update_labels)
         self.timer.start(100)
 
-        controller_mppi.LOGGING = False
-
     def horizon_length_changed(self, val: int):
         self.horizon_steps = val
         # TODO: Replace by setter method
