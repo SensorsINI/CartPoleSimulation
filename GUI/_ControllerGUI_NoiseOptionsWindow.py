@@ -27,7 +27,7 @@ from PyQt5.QtCore import QThreadPool, QTimer, Qt
 
 import CartPole.noise_adder as noise_settings
 
-NOISE_STD_MAX_RANGE = 0.1
+NOISE_STD_MAX_RANGE = 1
 SLIDER_MAX_RANGE_INT = 1000
 
 class NoiseOptionsWindow(QWidget):
