@@ -22,27 +22,43 @@ def get_feature_label(feature):
 
 def convert_units_inplace(ground_truth, predictions_list, features):
 
+    # Convert ground truth
+    for feature in features:
+        feature_idx = features.index(feature)
+
+        if feature == 'angle':
+            ground_truth[:, feature_idx] *= 180.0 / np.pi
+        elif feature == 'angleD':
+            ground_truth[:, feature_idx] *= 180.0 / np.pi
+        elif feature == 'angle_cos':
+            pass
+        elif feature == 'angle_sin':
+            pass
+        elif feature == 'position':
+            ground_truth[:, feature_idx] *= 100.0
+        elif feature == 'positionD':
+            ground_truth[:, feature_idx] *= 100.0
+        else:
+            pass
+
+    # Convert predictions
     for i in range(len(predictions_list)):
         for feature in features:
             feature_idx = features.index(feature)
 
-            predictions_array = predictions_array[:, :, feature_idx]
+            predictions_array = predictions_list[i]
 
             if feature == 'angle':
-                ground_truth[:, feature_idx] *= 180.0/np.pi
                 predictions_array[:, :, feature_idx] *= 180.0/np.pi
             elif feature == 'angleD':
-                ground_truth[:, feature_idx] *= 180.0 / np.pi
                 predictions_array[:, :, feature_idx] *= 180.0 / np.pi
             elif feature == 'angle_cos':
                 pass
             elif feature == 'angle_sin':
                 pass
             elif feature == 'position':
-                ground_truth[:, feature_idx] *= 100.0
                 predictions_array[:, :, feature_idx] *= 100.0
             elif feature == 'positionD':
-                ground_truth[:, feature_idx] *= 100.0
                 predictions_array[:, :, feature_idx] *= 100.0
             else:
                 pass
