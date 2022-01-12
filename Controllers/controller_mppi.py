@@ -686,8 +686,12 @@ class controller_mppi(template_controller):
             ):
                 mc_rollouts = np.shape(angles)[0]
                 horizon_length = np.shape(angles)[1]
+
+                rollouts_to_draw = 400
+                idx_interval = max(1, int(mc_rollouts/rollouts_to_draw))
+
                 # Loop over all MC rollouts
-                for i in range(0, 2000, 5):
+                for i in range(0, mc_rollouts, idx_interval):
                     ax_position.plot(
                         (update_every * iteration + np.arange(0, horizon_length)) * dt,
                         positions[i, :],
@@ -758,6 +762,7 @@ class controller_mppi(template_controller):
 
             # This function updates the plot when a new iteration is selected
             def update_plot(i):
+                i = int(i)
                 # Clear previous iteration plot
                 ax1.clear()
                 ax2.clear()
@@ -852,18 +857,25 @@ class controller_mppi(template_controller):
                 ax1.set_ylim(-TrackHalfLength * 1.05, TrackHalfLength * 1.05)
                 ax2.set_ylim(-180.0, 180.0)
 
+                fontsize_ticks = 10
+                ax1.tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+                ax2.tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+
                 # Set axis labels
-                ax1.set_ylabel("position (m)")
-                ax2.set_ylabel("angle (deg)")
-                ax2.set_xlabel("time (s)", loc="right")
-                ax1.set_title("Monte Carlo Rollouts")
+                fontsize_legend = 12
+                fontsize_labels = 14
+                fontsize_title = 15
+                ax1.set_ylabel("position (m)", fontsize=fontsize_labels)
+                ax2.set_ylabel("angle (deg)", fontsize=fontsize_labels)
+                ax2.set_xlabel("time (s)", loc="right", fontsize=fontsize_labels)
+                ax1.set_title("Monte Carlo Rollouts", fontsize=fontsize_title, pad=15)
 
                 # Set axis legends
                 ax1.legend(
-                    loc="upper left", fontsize=12, bbox_to_anchor=(1, 0, 0.16, 1)
+                    loc="upper left", fontsize=fontsize_legend, bbox_to_anchor=(1, 0, 0.16, 1)
                 )
                 ax2.legend(
-                    loc="upper left", fontsize=12, bbox_to_anchor=(1, 0, 0.16, 1)
+                    loc="upper left", fontsize=fontsize_legend, bbox_to_anchor=(1, 0, 0.16, 1)
                 )
 
             # Draw first iteration
@@ -881,6 +893,23 @@ class controller_mppi(template_controller):
     # It is called after an experiment,
     # but only if the controller is supposed to be reused without reloading (e.g. in GUI)
     def controller_reset(self):
+        global LOGS
+        LOGS = {
+            "cost_to_go": [],
+            "cost_breakdown": {
+                "cost_dd": [],
+                "cost_ep": [],
+                "cost_ekp": [],
+                "cost_ekc": [],
+                "cost_cc": [],
+                "cost_ccrc": [],
+            },
+            "states": [],
+            "trajectory": [],
+            "target_trajectory": [],
+            "inputs": [],
+            "nominal_rollouts": [],
+        }
         try:
             self.warm_up_countdown = self.wash_out_len
             # TODO: Not sure if this works for predictor autoregressive tf
