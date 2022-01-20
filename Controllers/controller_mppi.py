@@ -404,6 +404,8 @@ class controller_mppi(template_controller):
             self.auxiliary_controller_available = False
             self.auxiliary_controller = None
 
+        self.auxiliary_controller_available = False
+
     def initialize_perturbations(
         self, stdev: float = 1.0, sampling_type: str = None
     ) -> np.ndarray:
