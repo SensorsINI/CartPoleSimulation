@@ -59,6 +59,8 @@ controller:
   lqr:
     Q: [10.0, 1.0, 1.0, 1.0]
     R: 10.0
+    SEED: 'None'                            # Seed for rng, for lqr only, put "None" to set random seed (do it when you generate data for training!)
+    control_noise: 1.0
   pid:
     P_angle: 9.0
     I_angle: 0.0
