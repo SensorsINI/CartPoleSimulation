@@ -22,5 +22,5 @@ training_default:
   # outputs = ['Q']
 
 testing:
-  tests: ['Euler']  # May be 'Euler', name of network or None
-  TEST_FILE: './Experiment_Recordings/leftstep_startwpoleupright_cartpole-2021-10-11-11-15-58.csv'
+  tests: ['Euler','GRU-6IN-32H1-32H2-5OUT-0']  # May be 'Euler', Euler-predictor, name of network or None = 'Dense-16H1-16H2'
+  TEST_FILE: 'Experiment-1.csv'
