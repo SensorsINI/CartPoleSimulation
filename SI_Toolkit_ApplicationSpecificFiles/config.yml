@@ -1,11 +1,10 @@
 modeling:
-  NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'
-  RNN_PATH: './save_tf/'
+  NET_NAME: 'GRU-64H1-64H2'
   PREDICTION_FEATURES_NAMES: ['angle_cos', 'angle_sin', 'angleD', 'position', 'positionD'] #FIXME: This is not used much, could be removed after some corrections in master
 
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Pretrained-RNN-1/'
+  path_to_experiment: 'Jerome-Test/'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ApplicationSpecificFiles/Experiments/'  # Path where the experiments data is stored
 
 training_default:
