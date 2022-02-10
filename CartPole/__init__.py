@@ -70,8 +70,10 @@ rc('font', **font)
 import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 PATH_TO_CONTROLLERS = config["cartpole"]["PATH_TO_CONTROLLERS"]
+PATH_TO_ESTIMATORS = config["cartpole"]["PATH_TO_ESTIMATORS"]
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
+estimator = config["estimator"]["estimator"]
 
 class CartPole:
 
@@ -106,6 +108,7 @@ class CartPole:
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency)
         self.NoiseAdderInstance = NoiseAdder()
         self.s_with_noise_and_latency = np.copy(self.s)
+        self.s_estimated = np.copy(self.s)
 
         # region Time scales for simulation step, controller update and saving data
         # See last paragraph of "Time scales" section for explanations
@@ -142,6 +145,11 @@ class CartPole:
         self.controller_name = ''  # Placeholder for the currently used controller name
         self.controller_idx = None  # Placeholder for the currently used controller index
         self.controller_names = self.get_available_controller_names()  # list of controllers available in controllers folder
+
+        self.estimator = None  # Placeholder for the currently used controller function
+        self.estimator_name = ''  # Placeholder for the currently used controller name
+        self.estimator_idx = None  # Placeholder for the currently used controller index
+        self.estimator_names = self.get_available_estimator_names()  # list of controllers available in controllers folder
         # endregion
 
         # region Variables for generating experiments with random target trace
@@ -227,6 +235,7 @@ class CartPole:
         # endregion
 
         # region Initialize CartPole in manual-stabilization mode
+        self.set_estimator(estimator)
         self.set_controller('manual-stabilization')
         # endregion
 
@@ -404,6 +413,9 @@ class CartPole:
             L=L,
         )
 
+    def estimate_state(self):
+        pass
+
     # Determine the dimensionless [-1,1] value of the motor power Q
     # This function should be called for the first time to calculate 0th time step
     # Otherwise it goes out of sync with saving
@@ -415,11 +427,16 @@ class CartPole:
         # If update time interval elapsed update control input and zero the counter
         if self.dt_controller_steps_counter == self.dt_controller_number_of_steps:
 
+            if self.estimator_name == 'None':
+                self.s_estimated = self.s_with_noise_and_latency
+            else:
+                self.s_estimated = self.estimator.step(self.s_with_noise_and_latency)
+
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s_with_noise_and_latency, self.target_position, self.time)
+                self.Q = self.controller.step(self.s_estimated, self.target_position, self.time)
 
             self.dt_controller_steps_counter = 0
 
@@ -811,6 +828,19 @@ class CartPole:
 
     # region 4. Methods "Get, set, reset"
 
+    # Method returns the list of estimators available in the PATH_TO_ESTIMATORS folder
+    def get_available_estimator_names(self):
+        """
+        Method returns the list of controllers available in the PATH_TO_ESTIMATORS folder
+        """
+        estimator_files = glob.glob(PATH_TO_ESTIMATORS + 'controller_' + '*.py')
+        estimator_names = ['None']
+        estimator_names.extend(np.sort(
+            [os.path.basename(item)[len('estimator_'):-len('.py')].replace('_', '-') for item in estimator_files]
+        ))
+
+        return estimator_names
+
     # Method returns the list of controllers available in the PATH_TO_CONTROLLERS folder
     def get_available_controller_names(self):
         """
@@ -823,6 +853,57 @@ class CartPole:
         ))
 
         return controller_names
+
+    # Set the estimator of CartPole
+    def set_estimator(self, estimator_name=None, estimator_idx=None):
+        """
+        The method sets a new estimator as the current estimator of the CartPole instance.
+        The estimator may be indicated either by its name
+        or by the index on the estimators list (see get_available_estimator_names method).
+        Derived by modifying set_controller method
+        """
+
+        # Check if the proper information was provided: either controller_name or controller_idx
+        if (estimator_name is None) and (estimator_idx is None):
+            raise ValueError('You have to specify either estimator_name or estimator_idx to set a new estimator.'
+                             'You have specified none of the two.')
+        elif (estimator_name is not None) and (estimator_idx is not None):
+            raise ValueError('You have to specify either estimator_name or estimator_idx to set a new controller.'
+                             'You have specified both.')
+        else:
+            pass
+
+        # If controller name provided get controller index and vice versa
+        if (estimator_name is not None):
+            try:
+                estimator_idx = self.estimator_names.index(estimator_name)
+            except ValueError:
+                print('{} is not in list. \n In list are: {}'.format(estimator_name, self.estimator_names))
+                return False
+        else:
+            estimator_name = self.controller_names[estimator_idx]
+
+        # save estimator name and index to variables in the CartPole namespace
+        self.estimator_name = estimator_name
+        self.estimator_idx = estimator_idx
+
+        # Load controller
+        if self.estimator_name == 'None':
+            self.estimator = None
+        else:
+            estimator_full_name = 'controller_' + self.estimator_name.replace('-', '_')
+            path_import = PATH_TO_ESTIMATORS[2:].replace('/', '.').replace(r'\\', '.')
+            import_str = 'from ' + path_import + estimator_full_name + ' import ' + estimator_full_name
+            exec(import_str)
+            self.estimator = eval(estimator_full_name + '()')
+
+        # TODO: See below
+        #       The note was copied from set_controller from which this function was derived and never checked
+        #       optimally reset_dict_history would be False and the controller could be switched during experiment
+        #       The False option is not implemented yet. So it is possible to switch controller only when the experiment is not running.
+        #        Check also how it covers the case when controller is switched (possibly multiple times) when experiment is not running
+
+        return True
 
     # Set the controller of CartPole
     def set_controller(self, controller_name=None, controller_idx=None):
@@ -889,6 +970,13 @@ class CartPole:
         # Some controllers may need reset before being reused in the next experiment without reloading
         try:
             self.controller.controller_reset()
+        except AttributeError:
+            pass
+        except NotImplementedError:
+            pass
+
+        try:
+            self.estimator.estimator_reset()
         except AttributeError:
             pass
         except NotImplementedError:

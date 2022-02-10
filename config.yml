@@ -74,9 +74,19 @@ controller:
   nn_as_mpc_tf:
     net_name: 'Dense-6IN-32H1-32H2-1OUT-0'
     PATH_TO_MODELS: './Controllers/models_for_nn_as_mpc_tf/'
+estimator:
+  estimator: 'None'
+  kalman_filter:
+    Q: [1.0, 2.0, 0.0, 4.0,
+        2.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 10.0, 0.0,
+        4.0, 0.0, 0.0, 1.0]   # ??? What would be a reasonable estimation of model mismatch? derivative should be correlated only with antiderivative due to integration error. However relation between other variables is more complicated...
+    R: [1.0, 1.0] # Only position and angle is measurable. They are measurable independently, so we assume no correlation -> diagonal matrix
+
 cartpole:
   SEED: 1873  # This is a seed for rng for CartPole instance class only. If "None" random seed based on datetime is used
   PATH_TO_CONTROLLERS: './Controllers/'  # Path where controllers are stored
+  PATH_TO_ESTIMATORS: './Estimators/'  # Path where estimators are stored
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   M: 0.230  # mass of cart, kg # Checked by Antonio
