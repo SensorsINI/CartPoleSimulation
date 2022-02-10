@@ -40,7 +40,7 @@ class controller_lqr(template_controller):
         """
         # ref Bertsekas, p.151
 
-        SEED = config["controller"]["mppi"]["SEED"]
+        SEED = config["controller"]["lqr"]["SEED"]
         if SEED == "None":
             SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
         self.rng_lqr = Generator(SFC64(SEED))
