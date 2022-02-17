@@ -61,3 +61,23 @@ class predictor_ODE:
 
     def update_internal_state(self, Q0):
         pass
+
+
+if __name__ == '__main__':
+    import timeit
+    initialisation = '''
+from SI_Toolkit_ApplicationSpecificFiles.predictor_ODE import predictor_ODE
+import numpy as np
+batch_size = 2000
+horizon = 50
+predictor = predictor_ODE(horizon, 0.02, 10)
+initial_state = np.random.random(size=(batch_size, 6))
+Q = np.random.random(size=(batch_size, horizon))
+'''
+
+
+    code = '''\
+predictor.setup(initial_state)
+predictor.predict(Q)'''
+
+    print(timeit.timeit(code, number=1000, setup=initialisation)/1000.0)
