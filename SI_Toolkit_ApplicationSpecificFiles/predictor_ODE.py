@@ -37,7 +37,6 @@ class predictor_ODE:
 
         self.initial_state = initial_state
 
-        self.u = np.zeros(shape=(self.batch_size, self.horizon), dtype=np.float32)
         self.output = np.zeros((self.batch_size, self.horizon + 1, len(STATE_VARIABLES.tolist())), dtype=np.float32)
 
     def predict(self, Q: np.ndarray, params=None) -> np.ndarray:
@@ -56,7 +55,7 @@ class predictor_ODE:
         self.output[:, 0, :] = self.initial_state
 
         for k in range(self.horizon):
-            self.output[..., k + 1, :] = self.next_step_predictor.step(Q_hat[:, k], params)
+            self.output[..., k + 1, :] = self.next_step_predictor.step(self.output[..., k, :], Q_hat[:, k], params)
 
         return self.output if (self.batch_size > 1) else np.squeeze(self.output)
 
