@@ -206,7 +206,7 @@ def trajectory_rollouts(
     """
     initial_state = np.tile(s, (num_rollouts, 1))
 
-    predictor.setup(initial_state=initial_state, prediction_denorm=True)
+    predictor.setup(initial_state=initial_state)
     s_horizon = predictor.predict(u + delta_u)[:, :, : len(STATE_INDICES)]
 
     # Compute stage costs
@@ -524,7 +524,7 @@ class controller_mppi(template_controller):
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
                 if predictor_type == "Euler":
                     predictor.setup(
-                        initial_state=np.copy(self.s), prediction_denorm=True
+                        initial_state=np.copy(self.s)
                     )
                     rollout_trajectory = predictor.predict(self.u)
                 elif predictor_type == "NeuralNet":

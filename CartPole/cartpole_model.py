@@ -155,18 +155,17 @@ def Q2u(Q):
 
 @jit(nopython=True, cache=True, fastmath=True)
 def euler_step(state, stateD, t_step):
-    state += stateD * t_step
-    return state
+    return state + stateD * t_step
 
 
 @jit(nopython=True, cache=True, fastmath=True)
 def cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD, t_step,):
-    angle = euler_step(angle, angleD, t_step)
-    angleD = euler_step(angleD, angleDD, t_step)
-    position = euler_step(position, positionD, t_step)
-    positionD = euler_step(positionD, positionDD, t_step)
+    angle_next = euler_step(angle, angleD, t_step)
+    angleD_next = euler_step(angleD, angleDD, t_step)
+    position_next = euler_step(position, positionD, t_step)
+    positionD_next = euler_step(positionD, positionDD, t_step)
 
-    return angle, angleD, position, positionD
+    return angle_next, angleD_next, position_next, positionD_next
 
 
 def cartpole_fine_integration(angle, angleD, angle_cos, angle_sin, position, positionD, u, t_step, intermediate_steps,

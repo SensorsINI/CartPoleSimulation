@@ -45,17 +45,17 @@ class predictor_ODE:
         if np.size(Q, -1) != self.horizon:
             raise IndexError('Number of provided control inputs does not match the horizon')
         else:
-            Q_hat = np.atleast_1d(np.asarray(Q).squeeze())
+            Q = np.atleast_1d(np.asarray(Q).squeeze())
 
-        if Q_hat.ndim == 1:
-            Q_hat = np.expand_dims(Q_hat, 0)
+        if Q.ndim == 1:
+            Q = np.expand_dims(Q, 0)
 
-        assert Q_hat.shape[0] == self.initial_state.shape[0]  # Checks ilkf batch size is same for control input and initial_state
+        assert Q.shape[0] == self.initial_state.shape[0]  # Checks ilkf batch size is same for control input and initial_state
 
         self.output[:, 0, :] = self.initial_state
 
         for k in range(self.horizon):
-            self.output[..., k + 1, :] = self.next_step_predictor.step(self.output[..., k, :], Q_hat[:, k], params)
+            self.output[..., k + 1, :] = self.next_step_predictor.step(self.output[..., k, :], Q[:, k], params)
 
         return self.output if (self.batch_size > 1) else np.squeeze(self.output)
 
