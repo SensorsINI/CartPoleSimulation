@@ -1,6 +1,7 @@
 from CartPole import CartPole
 from CartPole.cartpole_model import create_cartpole_state, TrackHalfLength
 from others.p_globals import TrackHalfLength
+from CartPole.state_utilities import generate_random_initial_state
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
 import os
@@ -20,6 +21,51 @@ from numpy.random import SFC64, Generator
 
 import yaml, os
 config_CartPole = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
+
+
+# angle_init_limits = config_CartPole["random_initial_state"]["init_limits"]["angle"]
+# angleD_init_limits = config_CartPole["random_initial_state"]["init_limits"]["angleD"]
+# position_init_limits = config_CartPole["random_initial_state"]["init_limits"]["position"]
+# positionD_init_limits = config_CartPole["random_initial_state"]["init_limits"]["positionD"]
+
+def generate_random_initial_state(init_state_stub, rng=None):
+
+    initial_state_post = create_cartpole_state()
+
+    if init_state_stub[POSITION_IDX] is None:
+        initial_state_post[POSITION_IDX] = rng.uniform(
+            low=-TrackHalfLength / 2.0,
+            high=TrackHalfLength / 2.0)
+    else:
+        initial_state_post[POSITION_IDX] = init_state_stub[POSITION_IDX]
+
+    if init_state_stub[1] is None:
+        initial_state_post[POSITIOND_IDX] = rng.uniform(low=-1.0,
+                                                                          high=1.0) * TrackHalfLength * 0.01
+    else:
+        initial_state_post[POSITIOND_IDX] = init_state_stub[POSITIOND_IDX]
+
+    if init_state_stub[ANGLE_IDX] is None:
+        if rng.uniform() > 0.5:
+            initial_state_post[ANGLE_IDX] = rng.uniform(low=0 * (np.pi / 180.0),
+                                                                          high=180 * (np.pi / 180.0))
+        else:
+            initial_state_post[ANGLE_IDX] = rng.uniform(low=-180 * (np.pi / 180.0),
+                                                                          high=-0 * (np.pi / 180.0))
+    else:
+        initial_state_post[ANGLE_IDX] = init_state_stub[ANGLE_IDX]
+
+    if init_state_stub[ANGLED_IDX] is None:
+        initial_state_post[ANGLED_IDX] = rng.uniform(low=-10.0 * (np.pi / 180.0),
+                                                                       high=10.0 * (np.pi / 180.0))
+    else:
+        initial_state_post[ANGLED_IDX] = init_state_stub[ANGLED_IDX]
+
+    # Add cos/sin values to state
+    initial_state_post[ANGLE_COS_IDX] = np.cos(initial_state_post[ANGLE_IDX])
+    initial_state_post[ANGLE_SIN_IDX] = np.sin(initial_state_post[ANGLE_IDX])
+
+    return initial_state_post
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
@@ -84,8 +130,6 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     ############ END OF PARAMETERS SECTION ############
 
-    initial_state_DataGen = create_cartpole_state()
-
     for i in range(number_of_experiments):
 
         # Take care - the seed will be the same as every experiment!
@@ -115,41 +159,15 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
             csv += "/Experiment"
 
         start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0, 1.0)
-        initial_state = [start_random_target_position_at_DataGen, 0.0, 0.0, 0.0]
+        initial_state = create_cartpole_state()
+        initial_state[POSITION_IDX] = start_random_target_position_at_DataGen
+        initial_state[POSITIOND_IDX] = 0.0
+        initial_state[ANGLE_IDX] = 0.0
+        initial_state[ANGLED_IDX] = 0.0
         # initial_state = [start_random_target_position_at_DataGen, None, None, None]
         # initial_state = [0.0, None, 0.0, None]
-        if initial_state[0] is None:
-            initial_state_DataGen[POSITION_IDX] = rng_data_generator.uniform(
-                low=-TrackHalfLength / 2.0,
-                high=TrackHalfLength / 2.0)
-        else:
-            initial_state_DataGen[POSITION_IDX] = initial_state[0]
 
-        if initial_state[1] is None:
-            initial_state_DataGen[POSITIOND_IDX] = rng_data_generator.uniform(low=-1.0,
-                                                                                                    high=1.0) * TrackHalfLength *0.01
-        else:
-            initial_state_DataGen[POSITIOND_IDX] = initial_state[1]
-
-        if initial_state[2] is None:
-            if rng_data_generator.uniform()>0.5:
-                initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=0 * (np.pi / 180.0),
-                                                                                                    high=180 * (np.pi / 180.0))
-            else:
-                initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=-180 * (np.pi / 180.0),
-                                                                                                    high=-0 * (np.pi / 180.0))
-        else:
-            initial_state_DataGen[ANGLE_IDX] = initial_state[2]
-
-        if initial_state[3] is None:
-            initial_state_DataGen[ANGLED_IDX] = rng_data_generator.uniform(low=-10.0 * (np.pi / 180.0),
-                                                                                                 high=10.0 * (np.pi / 180.0))
-        else:
-            initial_state_DataGen[ANGLED_IDX] = initial_state[3]
-
-        # Add cos/sin values to state
-        initial_state_DataGen[ANGLE_COS_IDX] = np.cos(initial_state_DataGen[ANGLE_IDX])
-        initial_state_DataGen[ANGLE_SIN_IDX] = np.sin(initial_state_DataGen[ANGLE_IDX])
+        initial_state_DataGen = generate_random_initial_state(initial_state, rng=rng_data_generator)
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
         # You may also specify some of the variables from above here, to make them change at each iteration.#
