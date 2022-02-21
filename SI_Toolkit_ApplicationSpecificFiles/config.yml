@@ -4,7 +4,7 @@ modeling:
 
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Jerome-Test/'
+  path_to_experiment: 'Pretrained-RNN-1/'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ApplicationSpecificFiles/Experiments/'  # Path where the experiments data is stored
 
 training_default:
@@ -22,4 +22,4 @@ training_default:
 
 testing:
   tests: ['Euler','GRU-6IN-32H1-32H2-5OUT-0']  # May be 'Euler', Euler-predictor, name of network or None = 'Dense-16H1-16H2'
-  TEST_FILE: 'Experiment-1.csv'
+  TEST_FILE: 'Experiment.csv'
