@@ -1,0 +1,3 @@
+dt_control: 0.002
+intermediate_steps: 10
+length_of_episode: 10  # seconds
