@@ -117,7 +117,7 @@ def cartpole_ode(s: np.ndarray, u: float,
                  k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
 
     angleDD, positionDD = _cartpole_ode_numba(
-        s[..., ANGLE_COS_IDX], s[..., ANGLE_SIN_IDX], s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u,
+        np.atleast_1d(s[..., ANGLE_COS_IDX]), np.atleast_1d(s[..., ANGLE_SIN_IDX]), np.atleast_1d(s[..., ANGLED_IDX]), np.atleast_1d(s[..., POSITIOND_IDX]), np.atleast_1d(u),
         k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L
     )
     return angleDD, positionDD
