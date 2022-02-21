@@ -1,7 +1,7 @@
 from CartPole import CartPole
 from CartPole.cartpole_model import create_cartpole_state, TrackHalfLength
 from others.p_globals import TrackHalfLength
-from CartPole.state_utilities import generate_random_initial_state
+
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
 import os
@@ -29,6 +29,10 @@ config_CartPole = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
 # positionD_init_limits = config_CartPole["random_initial_state"]["init_limits"]["positionD"]
 
 def generate_random_initial_state(init_state_stub, rng=None):
+
+    # If rng is None, create new, unpredictable random number generator
+    if rng is None:
+        rng = Generator(SFC64())
 
     initial_state_post = create_cartpole_state()
 
