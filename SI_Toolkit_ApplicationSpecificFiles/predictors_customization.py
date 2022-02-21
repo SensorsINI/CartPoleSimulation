@@ -12,7 +12,7 @@ class next_state_predictor_ODE():
         self.s = create_cartpole_state()
 
         self.intermediate_steps = intermediate_steps
-        self.t_step = dt / float(self.intermediate_steps)
+        self.t_step = np.asarray(dt / self.intermediate_steps).astype(np.float32)
 
     def step(self, s, Q, params):
 
@@ -27,7 +27,7 @@ class next_state_predictor_ODE():
 
         u = Q2u(Q)
 
-        s_next = cartpole_fine_integration_s(s, u,
+        s_next = cartpole_fine_integration_s(s.astype(np.float32), u.astype(np.float32),
                                              t_step=self.t_step,
                                              intermediate_steps=self.intermediate_steps,
                                              L=pole_half_length,

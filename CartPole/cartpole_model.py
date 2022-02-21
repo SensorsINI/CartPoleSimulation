@@ -167,7 +167,7 @@ def cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD
 
     return angle_next, angleD_next, position_next, positionD_next
 
-
+@jit(nopython=True, cache=True, fastmath=True)
 def cartpole_fine_integration(angle, angleD, angle_cos, angle_sin, position, positionD, u, t_step, intermediate_steps,
                               k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
 
