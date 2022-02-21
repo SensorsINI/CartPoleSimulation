@@ -191,6 +191,35 @@ def cartpole_fine_integration(angle, angleD, angle_cos, angle_sin, position, pos
     return angle, angleD, position, positionD, angle_cos, angle_sin
 
 
+def cartpole_fine_integration_s(s, u, t_step, intermediate_steps,
+                              k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+
+    s_next = np.zeros_like(s)
+
+    (
+        s_next[..., ANGLE_IDX], s_next[..., ANGLED_IDX], s_next[..., POSITION_IDX], s_next[..., POSITIOND_IDX],
+        s_next[..., ANGLE_COS_IDX], s_next[..., ANGLE_SIN_IDX]
+    ) = cartpole_fine_integration(
+        angle=np.atleast_1d(s[..., ANGLE_IDX]),
+        angleD=np.atleast_1d(s[..., ANGLED_IDX]),
+        angle_cos=np.atleast_1d(s[..., ANGLE_COS_IDX]),
+        angle_sin=np.atleast_1d(s[..., ANGLE_SIN_IDX]),
+        position=np.atleast_1d(s[..., POSITION_IDX]),
+        positionD=np.atleast_1d(s[..., POSITIOND_IDX]),
+        u=np.atleast_1d(u),
+        t_step=t_step,
+        intermediate_steps=intermediate_steps,
+        k=k,
+        M=M,
+        m=m,
+        g=g,
+        J_fric=J_fric,
+        M_fric=M_fric,
+        L=L,
+    )
+
+    return s_next
+
 if __name__ == '__main__':
     import timeit
     """

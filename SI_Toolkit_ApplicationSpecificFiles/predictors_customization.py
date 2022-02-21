@@ -3,23 +3,22 @@ import numpy as np
 from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, create_cartpole_state
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
-from CartPole.cartpole_model import Q2u, cartpole_fine_integration, L
+from CartPole.cartpole_model import Q2u, cartpole_fine_integration_s, L
+
 
 class next_state_predictor_ODE():
-    
+
     def __init__(self, dt, intermediate_steps):
         self.s = create_cartpole_state()
 
         self.intermediate_steps = intermediate_steps
         self.t_step = dt / float(self.intermediate_steps)
-        
+
     def step(self, s, Q, params):
 
         # Checks if batch size is same for control input and initial_state
         if s.ndim > 1:
             assert Q.shape[0] == s.shape[0]
-
-        s_next = np.zeros_like(s)
 
         if params is None:
             pole_half_length = L
@@ -27,21 +26,12 @@ class next_state_predictor_ODE():
             pole_half_length = params
 
         u = Q2u(Q)
-    
-        (
-            s_next[..., ANGLE_IDX], s_next[..., ANGLED_IDX], s_next[..., POSITION_IDX], s_next[..., POSITIOND_IDX], s_next[..., ANGLE_COS_IDX], s_next[..., ANGLE_SIN_IDX]
-        ) = cartpole_fine_integration(
-            angle=s[..., ANGLE_IDX],
-            angleD=s[..., ANGLED_IDX],
-            angle_cos=s[..., ANGLE_COS_IDX],
-            angle_sin=s[..., ANGLE_SIN_IDX],
-            position=s[..., POSITION_IDX],
-            positionD=s[..., POSITIOND_IDX],
-            u=u,
-            t_step=self.t_step,
-            intermediate_steps=self.intermediate_steps,
-            L=pole_half_length,
-        )
+
+        s_next = cartpole_fine_integration_s(s, u,
+                                             t_step=self.t_step,
+                                             intermediate_steps=self.intermediate_steps,
+                                             L=pole_half_length,
+                                             )
 
         return s_next
 
