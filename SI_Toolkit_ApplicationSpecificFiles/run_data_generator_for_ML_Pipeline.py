@@ -3,7 +3,7 @@ from run_data_generator import run_data_generator
 # Automatically create new path to save everything in
 
 import yaml, os
-config_SI = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'config.yml')), Loader=yaml.FullLoader)
+config_SI = yaml.load(open(os.path.join('SI_Toolkit_ApplicationSpecificFiles', 'config_training.yml')), Loader=yaml.FullLoader)
 config_cartpole = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
 
 def get_record_path():
