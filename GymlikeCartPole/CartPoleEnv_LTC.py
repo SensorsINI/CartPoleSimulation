@@ -37,7 +37,7 @@ class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.mode = mode
 
         self.intermediate_steps = intermediate_steps
-        self.t_step_fine = dt_control / float(self.intermediate_steps)
+        self.t_step_fine = np.float32(dt_control / float(self.intermediate_steps))
         self.CartPoleInstance.dt_simulation = dt_control  # This is because fine stepping is not done with CartPoleInstance method
 
         self.CartPoleInstance.length_of_experiment = length_of_episode
