@@ -48,14 +48,14 @@ class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
 
         observation_space_boundary = np.array([
-            TrackHalfLength,
+            np.float32(TrackHalfLength),
             np.finfo(np.float32).max,
-            np.pi,
+            np.float32(np.pi),
             np.finfo(np.float32).max])
 
         self.action_space = gym.spaces.Box(
-            low=self.min_action,
-            high=self.max_action,
+            low=np.float32(self.min_action),
+            high=np.float32(self.max_action),
             shape=(1,)
         )
 
