@@ -20,6 +20,3 @@ training_default:
   # inputs = ['position', 'positionD', 'angle', 'angleD', 'target_position']
   # outputs = ['Q']
 
-testing:
-  tests: ['EulerTF','GRU-6IN-32H1-32H2-5OUT-0']  # May be 'Euler', Euler-predictor, name of network or None = 'Dense-16H1-16H2'
-  TEST_FILE: 'Experiment-1.csv'
