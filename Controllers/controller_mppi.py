@@ -206,7 +206,7 @@ def trajectory_rollouts(
     """
     initial_state = np.tile(s, (num_rollouts, 1))
 
-    predictor.setup(initial_state=initial_state, prediction_denorm=True)
+    predictor.setup(initial_state=initial_state)
     s_horizon = predictor.predict(u + delta_u)[:, :, : len(STATE_INDICES)]
 
     # Compute stage costs
