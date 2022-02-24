@@ -10,7 +10,8 @@ state = env.state
 target = env.target
 while not done:
     env.render()
-    sleep(0.01)
+    # sleep(0.01)
     action = controller.step(state, target)
+    # action = env.action_space.sample()
     state, target, reward, done, _ = env.step(action)  # take a random action
 env.close()

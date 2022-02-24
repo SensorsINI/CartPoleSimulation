@@ -19,12 +19,14 @@ from pygame import gfxdraw
 # FIXME: Check saving of first step
 # TODO: Version for swing-up not stabilisation
 # TODO: saving the episode after finished
+# TODO: Make rendering with GUI/matplotlib animation, including also target position
 
 
 config = yaml.load(open("GymlikeCartPole/config_gym.yml", "r"), Loader=yaml.FullLoader)
 intermediate_steps = config["intermediate_steps"]
 dt_control = config["dt_control"]
 length_of_episode = config["length_of_episode"]
+mode = config["mode"]
 
 class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 50}
@@ -32,6 +34,7 @@ class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     def __init__(self):
 
         self.CartPoleInstance = CartPole()
+        self.mode = mode
 
         self.intermediate_steps = intermediate_steps
         self.t_step_fine = dt_control / float(self.intermediate_steps)
@@ -66,6 +69,8 @@ class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.isopen = False
 
         self.state = None
+        self.action = None
+        self.reward = None
         self.target = None
         self.done = False
 
@@ -74,16 +79,28 @@ class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.reset()
 
     def step(self, action):
-        action = np.atleast_1d(action).astype(np.float32)
-        assert self.action_space.contains(action), \
-            "%r (%s) invalid" % (action, type(action))
+
+        self.action = np.atleast_1d(action).astype(np.float32)
+
+        assert self.action_space.contains(self.action), \
+            "%r (%s) invalid" % (self.action, type(self.action))
+
+        self.step_physics()
+
+        self.step_termination_and_reward()
+
+        return self.state, self.CartPoleInstance.target_position, self.reward, self.done, {}
+
+    def step_physics(self):
+
         # Cast action to float to strip np trappings
-        self.CartPoleInstance.Q = action
+        self.CartPoleInstance.Q = self.action
 
         # Convert dimensionless motor power to a physical force acting on the Cart
         self.CartPoleInstance.Q2u()
 
-        self.CartPoleInstance.s = cartpole_fine_integration_s(self.CartPoleInstance.s, self.CartPoleInstance.u, self.t_step_fine, self.intermediate_steps)
+        self.CartPoleInstance.s = cartpole_fine_integration_s(self.CartPoleInstance.s, self.CartPoleInstance.u,
+                                                              self.t_step_fine, self.intermediate_steps)
 
         self.CartPoleInstance.add_noise_and_latency()
 
@@ -99,37 +116,43 @@ class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         self.state = self.CartPoleInstance.s_with_noise_and_latency
 
-        if not self.done:
-            self.done = self.state[POSITION_IDX] < -self.x_threshold \
-                   or self.state[POSITION_IDX] > self.x_threshold \
-                   or self.state[ANGLE_IDX] < -self.theta_threshold_stabilization_radians \
-                   or self.state[ANGLE_IDX] > self.theta_threshold_stabilization_radians
-            self.done = bool(self.done)
+    def step_termination_and_reward(self):
+        if self.mode ==  'stabilization':
+            if not self.done:
+                self.done = self.state[POSITION_IDX] < -self.x_threshold \
+                            or self.state[POSITION_IDX] > self.x_threshold \
+                            or self.state[ANGLE_IDX] < -self.theta_threshold_stabilization_radians \
+                            or self.state[ANGLE_IDX] > self.theta_threshold_stabilization_radians
+                self.done = bool(self.done)
 
-        reached_final = bool(self.CartPoleInstance.time >= self.CartPoleInstance.length_of_experiment)
+            reached_final_time = bool(self.CartPoleInstance.time >= self.CartPoleInstance.length_of_experiment)
 
-        if not self.done:
-            if reached_final:
-                self.done = True
-                reward = 10.0
+            if not self.done:
+                if reached_final_time:
+                    self.done = True
+                    self.reward = 10.0
+                else:
+                    self.reward = 1.0
+            elif self.steps_beyond_done is None:
+                # Pole just fell!
+                self.steps_beyond_done = 0
+                self.reward = 1.0
             else:
-                reward = 1.0
-        elif self.steps_beyond_done is None:
-            # Pole just fell!
-            self.steps_beyond_done = 0
-            reward = 1.0
+                if self.steps_beyond_done == 0:
+                    gym.logger.warn("""
+            You are calling 'step()' even though this environment has already returned
+            done = True. You should always call 'reset()' once you receive 'done = True'
+            Any further steps are undefined behavior.
+                            """)
+                self.steps_beyond_done += 1
+                self.reward = 0.0
+
+        elif self.mode == 'follow target position':
+            raise NotImplementedError  # TODO What is a suitable reward&termination condition for following target position?
+        elif self.mode == 'swing-up':
+            raise NotImplementedError  # TODO What is a suitable reward&termination condition for swing-up task?
         else:
-            if self.steps_beyond_done == 0:
-                gym.logger.warn("""
-You are calling 'step()' even though this environment has already returned
-done = True. You should always call 'reset()' once you receive 'done = True'
-Any further steps are undefined behavior.
-                """)
-            self.steps_beyond_done += 1
-            reward = 0.0
-
-        return self.state, self.CartPoleInstance.target_position, reward, self.done, {}
-
+            raise ValueError('Unknown mode (definition of the task)')
 
     def reset(self):
         # TODO: Generate random target positions

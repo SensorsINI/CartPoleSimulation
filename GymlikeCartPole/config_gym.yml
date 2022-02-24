@@ -1,3 +1,6 @@
-dt_control: 0.002
+mode: 'stabilization'
+#mode: 'swing-up'
+#mode: 'follow target position'
+dt_control: 0.02
 intermediate_steps: 10
 length_of_episode: 10  # seconds
