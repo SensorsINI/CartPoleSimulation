@@ -52,7 +52,7 @@ from Controllers.template_controller import template_controller
 from others.p_globals import L
 
 config = yaml.load(
-    open(os.path.join("SI_Toolkit_ApplicationSpecificFiles", "config.yml"), "r"), Loader=yaml.FullLoader
+    open(os.path.join("SI_Toolkit_ApplicationSpecificFiles", "config_training.yml"), "r"), Loader=yaml.FullLoader
 )
 
 NET_NAME = config["modeling"]["NET_NAME"]
