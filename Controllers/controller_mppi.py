@@ -24,7 +24,7 @@ from datetime import datetime
 
 from CartPole._CartPole_mathematical_helpers import (
     conditional_decorator,
-    wrap_angle_rad_inplace_no_numba,
+    wrap_angle_rad_inplace,
 )
 from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import (
@@ -722,15 +722,15 @@ class controller_mppi(template_controller):
             # Prepare data
             # shape(slgs) = ITERATIONS x num_rollouts x mpc_samples x STATE_VARIABLES
             slgs = np.stack(LOGS.get("states"), axis=0)
-            wrap_angle_rad_inplace_no_numba(slgs[:, :, :, ANGLE_IDX])
+            wrap_angle_rad_inplace(slgs[:, :, :, ANGLE_IDX])
             # shape(iplgs) = ITERATIONS x mpc_horizon
             iplgs = np.stack(LOGS.get("inputs"), axis=0)
             # shape(nrlgs) = ITERATIONS x mpc_horizon x STATE_VARIABLES
             nrlgs = np.stack(LOGS.get("nominal_rollouts"), axis=0)
-            wrap_angle_rad_inplace_no_numba(nrlgs[:, :, ANGLE_IDX])
+            wrap_angle_rad_inplace(nrlgs[:, :, ANGLE_IDX])
             # shape(trjctlgs) = (update_every * ITERATIONS) x STATE_VARIABLES
             trjctlgs = np.stack(LOGS.get("trajectory")[:-1], axis=0)
-            wrap_angle_rad_inplace_no_numba(trjctlgs[:, ANGLE_IDX])
+            wrap_angle_rad_inplace(trjctlgs[:, ANGLE_IDX])
             # shape(trgtlgs) = ITERATIONS x [position]
             trgtlgs = np.stack(LOGS.get("target_trajectory")[:-1], axis=0)
             # For each rollout, calculate what the nominal trajectory would be using the known true model
@@ -740,7 +740,7 @@ class controller_mppi(template_controller):
                 np.copy(nrlgs[:, 0, :]), prediction_denorm=True
             )
             true_nominal_rollouts = predictor_ground_truth.predict(iplgs)[:, :-1, :]
-            wrap_angle_rad_inplace_no_numba(true_nominal_rollouts[:, :, ANGLE_IDX])
+            wrap_angle_rad_inplace(true_nominal_rollouts[:, :, ANGLE_IDX])
 
             # Create figure
             fig, (ax1, ax2) = plt.subplots(

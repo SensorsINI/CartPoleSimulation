@@ -17,7 +17,7 @@ VAL_file_name = glob.glob('./data/validate/' + '*.csv')
 
 '''
 FIXME: To tailor input list, output list and closed loop list according to cartpole
-angleD_next, positionD_next = cartpole_ode(s, Q2u(Q))
+angleD_next, positionD_next = cartpole_ode_numba(s, Q2u(Q))
 '''
 RNN_name = 'GRU-32H1-32H2'
 # inputs_list = ['position', 'positionD', 'angle', 'angleD', 'u']

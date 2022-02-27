@@ -7,7 +7,8 @@ from CartPole.state_utilities import create_cartpole_state, \
     cartpole_state_varnames_to_indices, \
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
-from CartPole.cartpole_model import Q2u, cartpole_ode
+from CartPole.cartpole_model import Q2u
+from CartPole.cartpole_numba import cartpole_ode_numba
 
 
 DEFAULT_SAMPLING_INTERVAL = 0.02  # s, Corresponds to our lab cartpole
@@ -37,7 +38,7 @@ def get_prediction_for_testing_gui_from_euler(a, dataset, dt_sampling, dt_sampli
 
             for _ in range(dt_sampling_by_dt_fine):
 
-                angleDD, positionDD = cartpole_ode(s, u)
+                angleDD, positionDD = cartpole_ode_numba(s, u)
 
                 t_step = (dt_sampling/float(dt_sampling_by_dt_fine))
                 # Calculate next state

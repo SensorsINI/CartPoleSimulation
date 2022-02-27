@@ -3,7 +3,8 @@ import numpy as np
 from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, CONTROL_INDICES, create_cartpole_state
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
-from CartPole.cartpole_model import Q2u, cartpole_fine_integration, L
+from CartPole.cartpole_model import Q2u, L
+from CartPole.cartpole_numba import cartpole_fine_integration_numba
 
 class next_state_predictor_ODE():
     
@@ -11,7 +12,7 @@ class next_state_predictor_ODE():
         self.s = create_cartpole_state()
 
         self.intermediate_steps = intermediate_steps
-        self.t_step = dt / float(self.intermediate_steps)
+        self.t_step = np.float32(dt / float(self.intermediate_steps))
         
     def step(self, s, Q, params):
 
@@ -30,7 +31,7 @@ class next_state_predictor_ODE():
     
         (
             s_next[..., ANGLE_IDX], s_next[..., ANGLED_IDX], s_next[..., POSITION_IDX], s_next[..., POSITIOND_IDX], s_next[..., ANGLE_COS_IDX], s_next[..., ANGLE_SIN_IDX]
-        ) = cartpole_fine_integration(
+        ) = cartpole_fine_integration_numba(
             angle=s[..., ANGLE_IDX],
             angleD=s[..., ANGLED_IDX],
             angle_cos=s[..., ANGLE_COS_IDX],
