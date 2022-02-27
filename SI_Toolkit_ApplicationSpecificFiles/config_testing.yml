@@ -1,5 +1,6 @@
 testing:
   tests: ['Euler','GRU-6IN-32H1-32H2-5OUT-0']  # May be 'Euler', Euler-predictor, name of network or None = 'Dense-16H1-16H2'
   TEST_FILE: 'Experiment.csv'
+  TEST_LEN: 'max'
   MAX_HORIZON: 50  # Indicates prediction horizon for testing
   START_IDX: 0  # Indicates from which point data from test file should be taken
