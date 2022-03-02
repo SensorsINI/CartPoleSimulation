@@ -29,9 +29,9 @@ def cartpole_ode_numba(s: np.ndarray, u: float,
     return angleDD, positionDD
 
 @jit(nopython=True, cache=True, fastmath=True)
-def edge_bounce_wrapper_numba(angle, angleD, position, positionD, t_step, L=L):
+def edge_bounce_wrapper_numba(angle, angle_cos, angleD, position, positionD, t_step, L=L):
     for i in range(position.size):
-        angle[i], angleD[i], position[i], positionD[i] = edge_bounce_numba(angle[i], angleD[i], position[i], positionD[i],
+        angle[i], angleD[i], position[i], positionD[i] = edge_bounce_numba(angle[i], angle_cos[i], angleD[i], position[i], positionD[i],
                                                                      t_step, L)
     return angle, angleD, position, positionD
 
@@ -57,7 +57,8 @@ def cartpole_fine_integration_numba(angle, angleD, angle_cos, angle_sin, positio
         angle, angleD, position, positionD = cartpole_integration_numba(angle, angleD, angleDD, position, positionD,
                                                                   positionDD, t_step, )
 
-        angle, angleD, position, positionD = edge_bounce_wrapper_numba(angle, angleD, position, positionD, t_step, L)
+        angle_cos = np.cos(angle)
+        angle, angleD, position, positionD = edge_bounce_wrapper_numba(angle, angle_cos, angleD, position, positionD, t_step, L)
 
         wrap_angle_rad_inplace_numba(angle)
 

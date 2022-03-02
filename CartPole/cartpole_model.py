@@ -12,8 +12,6 @@ from others.p_globals import (
 import numpy as np
 from numpy.random import SFC64, Generator
 
-rng = Generator(SFC64(123))
-
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
 # INVOLVED IN THE PROJECT KNOW WHAT CHANGES YOU DID.
@@ -71,7 +69,7 @@ def _cartpole_ode (ca, sa, angleD, positionD, u,
 
     positionDD = (
             (
-                    + m * g * sa * ca  # Movement of the cart due to gravity
+                    m * g * sa * ca  # Movement of the cart due to gravity
                     + ((T_fric * ca) / L)  # Movement of the cart due to pend' s friction in the joint
                     + (k + 1) * (
                             - (m * L * (
@@ -110,22 +108,30 @@ def cartpole_ode_namespace(s: SimpleNamespace, u: float,
     return angleDD, positionDD
 
 
-def edge_bounce(angle, angleD, position, positionD, t_step, L=L):
-    if abs(position) >= TrackHalfLength:
-        angleD -= 2 * (positionD * np.cos(angle)) / L
+def cartpole_ode(s: np.ndarray, u: float,
+                 k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+    angleDD, positionDD = _cartpole_ode(
+        s[..., ANGLE_COS_IDX], s[..., ANGLE_SIN_IDX], s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u,
+        k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L
+    )
+    return angleDD, positionDD
+
+def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L=L):
+    if position >= TrackHalfLength or -position >= TrackHalfLength:  # Without abs to compile with tensorflow
+        angleD -= 2 * (positionD * angle_cos) / L
         angle += angleD * t_step
         positionD = -positionD
         position += positionD * t_step
     return angle, angleD, position, positionD
 
 
-def edge_bounce_wrapper(angle, angleD, position, positionD, t_step, L=L):
+def edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L=L):
     for i in range(position.size):
-        angle[i], angleD[i], position[i], positionD[i] = edge_bounce(angle[i], angleD[i], position[i], positionD[i],
+        angle[i], angleD[i], position[i], positionD[i] = edge_bounce(angle[i], angle_cos[i], angleD[i], position[i], positionD[i],
                                                                      t_step, L)
     return angle, angleD, position, positionD
 
-
+rng = Generator(SFC64(123))
 def Q2u(Q):
     """
     Converts dimensionless motor power [-1,1] to a physical force acting on a cart.

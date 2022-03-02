@@ -16,9 +16,9 @@ class next_state_predictor_ODE():
         
     def step(self, s, Q, params):
 
-        # Checks if batch size is same for control input and initial_state
-        if s.ndim > 1:
-            assert Q.shape[0] == s.shape[0]
+        assert Q.shape[0] == s.shape[0]
+        assert Q.ndim == 2
+        assert s.ndim == 2
 
         s_next = np.zeros_like(s)
 
@@ -26,6 +26,8 @@ class next_state_predictor_ODE():
             pole_half_length = L
         else:
             pole_half_length = params
+
+        Q = np.squeeze(Q, axis=1)  # Removes features dimension, specific for cartpole as it has only one control input
 
         u = Q2u(Q)
     

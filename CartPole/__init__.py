@@ -398,6 +398,7 @@ class CartPole:
         # Elastic collision at edges
         self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = edge_bounce_numba(
             self.s[ANGLE_IDX],
+            np.cos(self.s[ANGLE_IDX]),
             self.s[ANGLED_IDX],
             self.s[POSITION_IDX],
             self.s[POSITIOND_IDX],

@@ -206,8 +206,7 @@ def trajectory_rollouts(
     """
     initial_state = np.tile(s, (num_rollouts, 1))
 
-    predictor.setup(initial_state=initial_state)
-    s_horizon = predictor.predict(u + delta_u)[:, :, : len(STATE_INDICES)]
+    s_horizon = predictor.predict(initial_state, u + delta_u)[:, :, : len(STATE_INDICES)]
 
     # Compute stage costs
     cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
@@ -523,17 +522,10 @@ class controller_mppi(template_controller):
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
                 if predictor_type == "Euler":
-                    predictor.setup(
-                        initial_state=np.copy(self.s), prediction_denorm=True
-                    )
-                    rollout_trajectory = predictor.predict(self.u)
+                    rollout_trajectory = predictor.predict(np.copy(self.s), self.u)
                 elif predictor_type == "NeuralNet":
-                    predictor.setup(
-                        initial_state=np.tile(self.s, (num_rollouts, 1)),
-                        prediction_denorm=True,
-                    )
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
-                    rollout_trajectory = predictor.predict(
+                    rollout_trajectory = predictor.predict(np.tile(self.s, (num_rollouts, 1)),
                         np.tile(self.u, (num_rollouts, 1))
                     )[0, ...]
                 LOGS.get("nominal_rollouts").append(np.copy(rollout_trajectory[:-1, :]))
@@ -587,7 +579,7 @@ class controller_mppi(template_controller):
 
         # Prepare predictor for next timestep
         Q_update = np.tile(Q, (num_rollouts, 1))
-        predictor.update_internal_state(Q_update)
+        predictor.update_internal_state(self.s, Q_update)
 
         return Q  # normed control input in the range [-1,1]
 
