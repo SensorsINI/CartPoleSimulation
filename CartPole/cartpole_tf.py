@@ -31,12 +31,25 @@ edge_bounce_wrapper_tf = tf.function(edge_bounce_wrapper, experimental_compile=T
 
 # @tf.function(experimental_compile=True)
 def edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L=L):
-    # angle_bounced = tf.TensorArray(tf.float32, size=, dynamic_size=False)
+    angle_bounced = tf.TensorArray(tf.float32, size=tf.size(angle), dynamic_size=False)
+    angleD_bounced = tf.TensorArray(tf.float32, size=tf.size(angleD), dynamic_size=False)
+    position_bounced = tf.TensorArray(tf.float32, size=tf.size(position), dynamic_size=False)
+    positionD_bounced = tf.TensorArray(tf.float32, size=tf.size(positionD), dynamic_size=False)
+
     for i in tf.range(tf.size(position)):
-        pass
-        # angle[i], angleD[i], position[i], positionD[i] = edge_bounce(angle[i], angle_cos[i], angleD[i], position[i], positionD[i],
-        #                                                              t_step, L)
-    return angle, angleD, position, positionD
+        angle_i, angleD_i, position_i, positionD_i = edge_bounce(angle[i], angle_cos[i], angleD[i], position[i], positionD[i],
+                                                                     t_step, L)
+        angle_bounced = angle_bounced.write(i, angle_i)
+        angleD_bounced = angleD_bounced.write(i, angleD_i)
+        position_bounced = position_bounced.write(i, position_i)
+        positionD_bounced = positionD_bounced.write(i, positionD_i)
+
+    angle_bounced_tensor = angle_bounced.stack()
+    angleD_bounced_tensor = angleD_bounced.stack()
+    position_bounced_tensor = position_bounced.stack()
+    positionD_bounced_tensor = positionD_bounced.stack()
+
+    return angle_bounced_tensor, angleD_bounced_tensor, position_bounced_tensor, positionD_bounced_tensor
 
 
 @tf.function(experimental_compile=True)
@@ -70,8 +83,8 @@ def _cartpole_fine_integration_tf(angle, angleD, angle_cos, angle_sin, position,
         angle, angleD, position, positionD = cartpole_integration(angle, angleD, angleDD, position, positionD,
                                                                   positionDD, t_step, )
 
-        # angle_cos = tf.cos(angle)
-        # angle, angleD, position, positionD = edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L)
+        angle_cos = tf.cos(angle)
+        angle, angleD, position, positionD = edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L)
 
         angle_cos = tf.cos(angle)
         angle_sin = tf.sin(angle)
