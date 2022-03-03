@@ -1,7 +1,5 @@
 modeling:
   NET_NAME: 'GRU-32H1-32H2'
-  PREDICTION_FEATURES_NAMES: ['angle_cos', 'angle_sin', 'angleD', 'position', 'positionD'] #FIXME: This is not used much, could be removed after some corrections in master
-
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
   path_to_experiment: 'Pretrained-RNN-1/'

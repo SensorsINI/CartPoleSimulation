@@ -42,10 +42,10 @@ from matplotlib.widgets import Slider
 from numba import jit
 from numpy.random import SFC64, Generator
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
+from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 from scipy.interpolate import interp1d
-from SI_Toolkit.Predictors.predictor_autoregressive_tf import (
-    predictor_autoregressive_tf,
-)
+from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
+# from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
 
 from Controllers.template_controller import template_controller
 
@@ -165,7 +165,9 @@ def penalize_deviation(cc, u):
 
 
 """Define Predictor"""
-if predictor_type == "Euler":
+if predictor_type == "EulerTF":
+    predictor = predictor_ODE_tf(horizon=mpc_samples, dt=dt, intermediate_steps=10)
+elif predictor_type == "Euler":
     predictor = predictor_ODE(horizon=mpc_samples, dt=dt, intermediate_steps=10)
 elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
@@ -520,8 +522,9 @@ class controller_mppi(template_controller):
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
                 if predictor_type == "Euler":
                     rollout_trajectory = predictor.predict(np.copy(self.s), self.u[:, np.newaxis])
-                elif predictor_type == "NeuralNet":
+                elif predictor_type == "NeuralNet" or predictor_type == 'EulerTF':
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
+                    # FIXME: Problaby you can reduce it!
                     rollout_trajectory = predictor.predict(np.tile(self.s, (num_rollouts, 1)),
                         np.tile(self.u, (num_rollouts, 1))
                     )[0, ...]
