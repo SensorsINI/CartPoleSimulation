@@ -51,17 +51,14 @@ from Controllers.template_controller import template_controller
 
 from others.p_globals import L
 
-config = yaml.load(
-    open(os.path.join("SI_Toolkit_ApplicationSpecificFiles", "config_training.yml"), "r"), Loader=yaml.FullLoader
-)
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-NET_NAME = config["modeling"]["NET_NAME"]
+NET_NAME = config["controller"]["mppi"]["NET_NAME"]
 try:
     NET_TYPE = NET_NAME.split("-")[0]
 except AttributeError:  # Should get Attribute Error if NET_NAME is None
     NET_TYPE = None
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 """Timestep and sampling settings"""
 dt = config["controller"]["mppi"]["dt"]
 mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]

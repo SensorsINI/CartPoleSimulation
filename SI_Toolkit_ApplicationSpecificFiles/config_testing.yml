@@ -8,5 +8,6 @@ testing:
      'positionD',
      ]
   TEST_FILE: 'Experiment-1.csv'
+  TEST_LEN: 'max'
   MAX_HORIZON: 50  # Indicates prediction horizon for testing
   START_IDX: 0  # Indicates from which point data from test file should be taken

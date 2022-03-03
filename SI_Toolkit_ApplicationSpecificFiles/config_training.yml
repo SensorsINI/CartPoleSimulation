@@ -1,5 +1,5 @@
 modeling:
-  NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'
+  NET_NAME: 'GRU-32H1-32H2'
   PREDICTION_FEATURES_NAMES: ['angle_cos', 'angle_sin', 'angleD', 'position', 'positionD'] #FIXME: This is not used much, could be removed after some corrections in master
 
 paths:
@@ -19,4 +19,12 @@ training_default:
   # For training of RNN imitating MPC:
   # inputs = ['position', 'positionD', 'angle', 'angleD', 'target_position']
   # outputs = ['Q']
+  EPOCHS: 5
+  BATCH_SIZE: 16
+  SEED: 1873
+  LR: 1.0e-2
+  WASH_OUT_LEN: 10
+  POST_WASH_OUT_LEN: 20
+  ON_FLY_DATA_GENERATION: False
+  NORMALIZE: True
 
