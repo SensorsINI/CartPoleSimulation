@@ -525,8 +525,9 @@ class controller_mppi(template_controller):
                 elif predictor_type == "NeuralNet" or predictor_type == 'EulerTF':
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     # FIXME: Problaby you can reduce it!
+
                     rollout_trajectory = predictor.predict(np.tile(self.s, (num_rollouts, 1)),
-                        np.tile(self.u, (num_rollouts, 1))
+                        np.tile(self.u[np.newaxis, :, np.newaxis], (num_rollouts, 1, 1))
                     )[0, ...]
                 LOGS.get("nominal_rollouts").append(np.copy(rollout_trajectory[:-1, :]))
 
@@ -578,7 +579,7 @@ class controller_mppi(template_controller):
         # self.u = zeros_like(self.u)
 
         # Prepare predictor for next timestep
-        Q_update = np.tile(Q, (num_rollouts, 1))
+        Q_update = np.tile(Q, (num_rollouts, 1, 1))
         predictor.update_internal_state(self.s, Q_update)
 
         return Q  # normed control input in the range [-1,1]
