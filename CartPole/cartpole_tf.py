@@ -83,8 +83,9 @@ def _cartpole_fine_integration_tf(angle, angleD, angle_cos, angle_sin, position,
         angle, angleD, position, positionD = cartpole_integration(angle, angleD, angleDD, position, positionD,
                                                                   positionDD, t_step, )
 
-        angle_cos = tf.cos(angle)
-        angle, angleD, position, positionD = edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L)
+        # The edge bounce calculation seems to be too much for a GPU to tackle
+        # angle_cos = tf.cos(angle)
+        # angle, angleD, position, positionD = edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L)
 
         angle_cos = tf.cos(angle)
         angle_sin = tf.sin(angle)
