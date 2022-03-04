@@ -39,7 +39,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     # User defined simulation settings
     ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
     # How many experiments will be generated
-    number_of_experiments = 1
+    number_of_experiments = 500
 
     ###### Train/Val/Test split - only matters if you run it in ML Pipeline mode
     frac_train = 0.8
@@ -54,10 +54,10 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     ###### CartPole settings
     ### Length of each experiment in s:
-    length_of_experiment_DataGen = 100
+    length_of_experiment_DataGen = 5
 
     ### Controller which should be used in generated experiment:
-    controller_DataGen = 'lqr'
+    controller_DataGen = 'mppi'
     # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
 
     ### Randomly placed target points/s
@@ -115,8 +115,8 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
             csv += "/Experiment"
 
         start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0, 1.0)
-        initial_state = [start_random_target_position_at_DataGen, 0.0, 0.0, 0.0]
-        # initial_state = [start_random_target_position_at_DataGen, None, None, None]
+        # initial_state = [start_random_target_position_at_DataGen, 0.0, 0.0, 0.0]
+        initial_state = [start_random_target_position_at_DataGen, None, None, None]
         # initial_state = [0.0, None, 0.0, None]
         if initial_state[0] is None:
             initial_state_DataGen[POSITION_IDX] = rng_data_generator.uniform(
@@ -133,11 +133,11 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
         if initial_state[2] is None:
             if rng_data_generator.uniform()>0.5:
-                initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=0 * (np.pi / 180.0),
+                initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=90 * (np.pi / 180.0),
                                                                                                     high=180 * (np.pi / 180.0))
             else:
                 initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=-180 * (np.pi / 180.0),
-                                                                                                    high=-0 * (np.pi / 180.0))
+                                                                                                    high=-90 * (np.pi / 180.0))
         else:
             initial_state_DataGen[ANGLE_IDX] = initial_state[2]
 
