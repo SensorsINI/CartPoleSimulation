@@ -1,0 +1,16 @@
+testing:
+  tests: [ 'Euler', 'EulerTF','GRU-6IN-32H1-32H2-5OUT-0' ]  # May be 'Euler', Euler-predictor, name of network or None = 'Dense-16H1-16H2'
+  TEST_FILE: 'Experiment-1.csv'
+  features: ['angle',
+     'angleD',
+     'angle_cos',
+     'angle_sin',
+     'position',
+     'positionD',
+     ]
+  control_inputs: ['Q']   # Indicates which inputs to network are control_input, TODO: Not sure how it would work with multiple inputs
+  PATH_TO_NN: './SI_Toolkit_ApplicationSpecificFiles/Experiments/Pretrained-RNN-1/Models/'  # Path where the neural network models are stored
+  PATH_TO_TEST_FILE: './SI_Toolkit_ApplicationSpecificFiles/Experiments/Pretrained-RNN-1/Recordings/Test/'
+  TEST_LEN: 'max'
+  MAX_HORIZON: 50  # Indicates prediction horizon for testing
+  START_IDX: 0  # Indicates from which point data from test file should be taken

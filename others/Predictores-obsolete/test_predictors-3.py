@@ -7,10 +7,10 @@ from Predictores.predictor_tests_plotting_helpers import pd_plotter_simple, pd_p
 
 from SI_Toolkit.load_and_normalize import normalize_df
 
-from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
+from SI_Toolkit.Predictors.predictor_autoregressive_tf import (
     predictor_autoregressive_tf,
 )
-from Predictores.predictor_ODE import predictor_ODE
+from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from tqdm import tqdm
 
 import matplotlib.pyplot as plt

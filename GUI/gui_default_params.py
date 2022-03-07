@@ -34,7 +34,7 @@ Possible choices for CartPole controller:
 save_history_init = True  # Save experiment history as CSV (after experiment finished, online saving for Data Generator only)
 show_experiment_summary_init = True  # If true a window plotting the experiment history will be displayed after experiment ended
 stop_at_90_init = False  # Block the pole if it reaches +/-90 deg (horizontal position)
-slider_on_click_init = False  # True: update slider only on click, False: update slider while hoovering over it
+slider_on_click_init = True  # True: update slider only on click, False: update slider while hoovering over it
 simulator_mode_init = 'Slider-Controlled Experiment'  # Effects Start/Stop button:
 # 'Slider-Controlled Experiment': Run experiment controlled by user (through slider)
 # 'Random Experiment': Run experiment with random target position

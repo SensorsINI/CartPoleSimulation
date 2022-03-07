@@ -120,21 +120,19 @@ def get_predictions(predictor, df, autoregres_at_after_start, N_predictions, hor
     for row_number in range(autoregres_at_after_start):
         initial_state = df.iloc[[row_number], :]
         Q = np.atleast_1d(df.loc[df.index[row_number], 'Q'])
-        predictor.setup(initial_state)
-        predictor.update_internal_state(Q)
+        predictor.update_internal_state(initial_state, Q)
 
     predictions = []
     for i in tqdm(range(N_predictions)):
         # Prepare initial state for predictions
         initial_state = df.iloc[[autoregres_at_after_start+i], :]
-        predictor.setup(initial_state, prediction_denorm=prediction_denorm)
 
         Q = np.atleast_1d(df.loc[df.index[autoregres_at_after_start+i: autoregres_at_after_start+i + horizon], 'Q'] \
                           .to_numpy(copy=True, dtype=np.float32).squeeze())
 
-        prediction = predictor.predict(Q)
+        prediction = predictor.predict(initial_state, Q)
         predictions.append(prediction)
-        predictor.update_internal_state(Q[0])
+        predictor.update_internal_state(initial_state, Q[0])
 
 
     return predictions

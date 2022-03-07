@@ -11,7 +11,8 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
 from CartPole.state_utilities import ANGLED_IDX, ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX, POSITIOND_IDX, POSITION_IDX
-from CartPole.cartpole_model import Q2u, cartpole_ode, s0, edge_bounce, cartpole_integration
+from CartPole.cartpole_model import Q2u, s0
+from CartPole.cartpole_numba import cartpole_ode_numba, edge_bounce_numba, cartpole_integration_numba
 from CartPole.load import get_full_paths_to_csvs, load_csv_recording
 from CartPole.latency_adder import LatencyAdder
 from CartPole.noise_adder import NoiseAdder
@@ -273,7 +274,7 @@ class CartPole:
         self.u = Q2u(self.Q)
 
         # Update second derivatives
-        self.angleDD, self.positionDD = cartpole_ode(self.s, self.u)
+        self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u)
 
         if block_pole_at_90:
             self.angleDD = 0.0
@@ -390,13 +391,14 @@ class CartPole:
         """
 
         self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = \
-            cartpole_integration(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD, self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation,)
+            cartpole_integration_numba(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD, self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation,)
 
 
     def edge_bounce(self):
         # Elastic collision at edges
-        self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = edge_bounce(
+        self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = edge_bounce_numba(
             self.s[ANGLE_IDX],
+            np.cos(self.s[ANGLE_IDX]),
             self.s[ANGLED_IDX],
             self.s[POSITION_IDX],
             self.s[POSITIOND_IDX],
@@ -940,7 +942,7 @@ class CartPole:
                 self.Q = self.controller.step(self.s, self.target_position, self.time)
 
             self.u = Q2u(self.Q)  # Calculate CURRENT control input
-            self.angleDD, self.positionDD = cartpole_ode(self.s, self.u, L=L)  # Calculate CURRENT second derivatives
+            self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)  # Calculate CURRENT second derivatives
 
         # Reset the dict keeping the experiment history and save the state for t = 0
         self.dt_save_steps_counter = 0

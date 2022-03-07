@@ -7,7 +7,7 @@ import numpy as np
 
 from Predictores.predictor_tests_plotting_helpers import pd_plotter_simple
 
-from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
+from SI_Toolkit.Predictors.predictor_autoregressive_tf import (
     predictor_autoregressive_tf,
 )
 
@@ -43,13 +43,11 @@ t0 = timeit.default_timer()
 for row_number in range(autoregres_at_after_start):
     initial_state = df.iloc[[row_number], :]
     Q = np.atleast_1d(df.loc[df.index[row_number], 'Q'])
-    predictor.setup(initial_state)
-    predictor.update_internal_state(Q)
+    predictor.update_internal_state(initial_state, Q)
 t1 = timeit.default_timer()
 
 # Prepare initial state for predictions
 initial_state = df.iloc[[autoregres_at_after_start], :]
-predictor.setup(initial_state, prediction_denorm=True)
 # Prepare control inputs for future predictions
 Q = np.atleast_1d(df.loc[df.index[autoregres_at_after_start: autoregres_at_after_start + horizon], 'Q'] \
                   .to_numpy(copy=True, dtype=np.float32).squeeze())
@@ -60,7 +58,7 @@ t2 = timeit.default_timer()
 number_of_repetitions = 1
 # Q = np.repeat(Q, 5) # To get ground truth
 for i in range(number_of_repetitions):
-    prediction = predictor.predict(Q)
+    prediction = predictor.predict(initial_state, Q)
 t3 = timeit.default_timer()
 
 fig1 = pd_plotter_simple(df, y_name=feature_to_plot,

@@ -24,7 +24,7 @@ from datetime import datetime
 
 from CartPole._CartPole_mathematical_helpers import (
     conditional_decorator,
-    wrap_angle_rad_inplace_no_numba,
+    wrap_angle_rad_inplace,
 )
 from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import (
@@ -41,27 +41,24 @@ from CartPole.state_utilities import (
 from matplotlib.widgets import Slider
 from numba import jit
 from numpy.random import SFC64, Generator
-from SI_Toolkit_ApplicationSpecificFiles.predictor_ODE import predictor_ODE
+from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
+from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 from scipy.interpolate import interp1d
-from SI_Toolkit.TF.TF_Functions.predictor_autoregressive_tf import (
-    predictor_autoregressive_tf,
-)
+from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
+# from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
 
 from Controllers.template_controller import template_controller
 
 from others.p_globals import L
 
-config = yaml.load(
-    open(os.path.join("SI_Toolkit_ApplicationSpecificFiles", "config.yml"), "r"), Loader=yaml.FullLoader
-)
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-NET_NAME = config["modeling"]["NET_NAME"]
+NET_NAME = config["controller"]["mppi"]["NET_NAME"]
 try:
     NET_TYPE = NET_NAME.split("-")[0]
 except AttributeError:  # Should get Attribute Error if NET_NAME is None
     NET_TYPE = None
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 """Timestep and sampling settings"""
 dt = config["controller"]["mppi"]["dt"]
 mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
@@ -168,7 +165,9 @@ def penalize_deviation(cc, u):
 
 
 """Define Predictor"""
-if predictor_type == "Euler":
+if predictor_type == "EulerTF":
+    predictor = predictor_ODE_tf(horizon=mpc_samples, dt=dt, intermediate_steps=10)
+elif predictor_type == "Euler":
     predictor = predictor_ODE(horizon=mpc_samples, dt=dt, intermediate_steps=10)
 elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
@@ -206,8 +205,7 @@ def trajectory_rollouts(
     """
     initial_state = np.tile(s, (num_rollouts, 1))
 
-    predictor.setup(initial_state=initial_state, prediction_denorm=True)
-    s_horizon = predictor.predict(u + delta_u)[:, :, : len(STATE_INDICES)]
+    s_horizon = predictor.predict(initial_state, (u + delta_u)[..., np.newaxis])[:, :, : len(STATE_INDICES)]
 
     # Compute stage costs
     cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
@@ -404,6 +402,8 @@ class controller_mppi(template_controller):
             self.auxiliary_controller_available = False
             self.auxiliary_controller = None
 
+        self.auxiliary_controller_available = False
+
     def initialize_perturbations(
         self, stdev: float = 1.0, sampling_type: str = None
     ) -> np.ndarray:
@@ -521,18 +521,13 @@ class controller_mppi(template_controller):
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
                 if predictor_type == "Euler":
-                    predictor.setup(
-                        initial_state=np.copy(self.s), prediction_denorm=True
-                    )
-                    rollout_trajectory = predictor.predict(self.u)
-                elif predictor_type == "NeuralNet":
-                    predictor.setup(
-                        initial_state=np.tile(self.s, (num_rollouts, 1)),
-                        prediction_denorm=True,
-                    )
+                    rollout_trajectory = predictor.predict(np.copy(self.s), self.u[:, np.newaxis])
+                elif predictor_type == "NeuralNet" or predictor_type == 'EulerTF':
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
-                    rollout_trajectory = predictor.predict(
-                        np.tile(self.u, (num_rollouts, 1))
+                    # FIXME: Problaby you can reduce it!
+
+                    rollout_trajectory = predictor.predict(np.tile(self.s, (num_rollouts, 1)),
+                        np.tile(self.u[np.newaxis, :, np.newaxis], (num_rollouts, 1, 1))
                     )[0, ...]
                 LOGS.get("nominal_rollouts").append(np.copy(rollout_trajectory[:-1, :]))
 
@@ -584,8 +579,8 @@ class controller_mppi(template_controller):
         # self.u = zeros_like(self.u)
 
         # Prepare predictor for next timestep
-        Q_update = np.tile(Q, (num_rollouts, 1))
-        predictor.update_internal_state(Q_update)
+        Q_update = np.tile(Q, (num_rollouts, 1, 1))
+        predictor.update_internal_state(self.s, Q_update)
 
         return Q  # normed control input in the range [-1,1]
 
@@ -686,8 +681,12 @@ class controller_mppi(template_controller):
             ):
                 mc_rollouts = np.shape(angles)[0]
                 horizon_length = np.shape(angles)[1]
+
+                rollouts_to_draw = 400
+                idx_interval = max(1, int(mc_rollouts/rollouts_to_draw))
+
                 # Loop over all MC rollouts
-                for i in range(0, 2000, 5):
+                for i in range(0, mc_rollouts, idx_interval):
                     ax_position.plot(
                         (update_every * iteration + np.arange(0, horizon_length)) * dt,
                         positions[i, :],
@@ -716,15 +715,15 @@ class controller_mppi(template_controller):
             # Prepare data
             # shape(slgs) = ITERATIONS x num_rollouts x mpc_samples x STATE_VARIABLES
             slgs = np.stack(LOGS.get("states"), axis=0)
-            wrap_angle_rad_inplace_no_numba(slgs[:, :, :, ANGLE_IDX])
+            wrap_angle_rad_inplace(slgs[:, :, :, ANGLE_IDX])
             # shape(iplgs) = ITERATIONS x mpc_horizon
             iplgs = np.stack(LOGS.get("inputs"), axis=0)
             # shape(nrlgs) = ITERATIONS x mpc_horizon x STATE_VARIABLES
             nrlgs = np.stack(LOGS.get("nominal_rollouts"), axis=0)
-            wrap_angle_rad_inplace_no_numba(nrlgs[:, :, ANGLE_IDX])
+            wrap_angle_rad_inplace(nrlgs[:, :, ANGLE_IDX])
             # shape(trjctlgs) = (update_every * ITERATIONS) x STATE_VARIABLES
             trjctlgs = np.stack(LOGS.get("trajectory")[:-1], axis=0)
-            wrap_angle_rad_inplace_no_numba(trjctlgs[:, ANGLE_IDX])
+            wrap_angle_rad_inplace(trjctlgs[:, ANGLE_IDX])
             # shape(trgtlgs) = ITERATIONS x [position]
             trgtlgs = np.stack(LOGS.get("target_trajectory")[:-1], axis=0)
             # For each rollout, calculate what the nominal trajectory would be using the known true model
@@ -734,7 +733,7 @@ class controller_mppi(template_controller):
                 np.copy(nrlgs[:, 0, :]), prediction_denorm=True
             )
             true_nominal_rollouts = predictor_ground_truth.predict(iplgs)[:, :-1, :]
-            wrap_angle_rad_inplace_no_numba(true_nominal_rollouts[:, :, ANGLE_IDX])
+            wrap_angle_rad_inplace(true_nominal_rollouts[:, :, ANGLE_IDX])
 
             # Create figure
             fig, (ax1, ax2) = plt.subplots(
@@ -758,6 +757,7 @@ class controller_mppi(template_controller):
 
             # This function updates the plot when a new iteration is selected
             def update_plot(i):
+                i = int(i)
                 # Clear previous iteration plot
                 ax1.clear()
                 ax2.clear()
@@ -852,18 +852,25 @@ class controller_mppi(template_controller):
                 ax1.set_ylim(-TrackHalfLength * 1.05, TrackHalfLength * 1.05)
                 ax2.set_ylim(-180.0, 180.0)
 
+                fontsize_ticks = 10
+                ax1.tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+                ax2.tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+
                 # Set axis labels
-                ax1.set_ylabel("position (m)")
-                ax2.set_ylabel("angle (deg)")
-                ax2.set_xlabel("time (s)", loc="right")
-                ax1.set_title("Monte Carlo Rollouts")
+                fontsize_legend = 12
+                fontsize_labels = 14
+                fontsize_title = 15
+                ax1.set_ylabel("position (m)", fontsize=fontsize_labels)
+                ax2.set_ylabel("angle (deg)", fontsize=fontsize_labels)
+                ax2.set_xlabel("time (s)", loc="right", fontsize=fontsize_labels)
+                ax1.set_title("Monte Carlo Rollouts", fontsize=fontsize_title, pad=15)
 
                 # Set axis legends
                 ax1.legend(
-                    loc="upper left", fontsize=12, bbox_to_anchor=(1, 0, 0.16, 1)
+                    loc="upper left", fontsize=fontsize_legend, bbox_to_anchor=(1, 0, 0.16, 1)
                 )
                 ax2.legend(
-                    loc="upper left", fontsize=12, bbox_to_anchor=(1, 0, 0.16, 1)
+                    loc="upper left", fontsize=fontsize_legend, bbox_to_anchor=(1, 0, 0.16, 1)
                 )
 
             # Draw first iteration
@@ -881,6 +888,23 @@ class controller_mppi(template_controller):
     # It is called after an experiment,
     # but only if the controller is supposed to be reused without reloading (e.g. in GUI)
     def controller_reset(self):
+        global LOGS
+        LOGS = {
+            "cost_to_go": [],
+            "cost_breakdown": {
+                "cost_dd": [],
+                "cost_ep": [],
+                "cost_ekp": [],
+                "cost_ekc": [],
+                "cost_cc": [],
+                "cost_ccrc": [],
+            },
+            "states": [],
+            "trajectory": [],
+            "target_trajectory": [],
+            "inputs": [],
+            "nominal_rollouts": [],
+        }
         try:
             self.warm_up_countdown = self.wash_out_len
             # TODO: Not sure if this works for predictor autoregressive tf

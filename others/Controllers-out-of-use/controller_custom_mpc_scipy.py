@@ -6,7 +6,7 @@ import numpy as np
 from CartPole.state_utilities import create_cartpole_state, \
     cartpole_state_indices_to_varnames, \
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX
-from Predictores.predictor_ODE import predictor_ODE
+from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 
 from Controllers.controller_lqr import controller_lqr
 

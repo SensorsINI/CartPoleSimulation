@@ -127,7 +127,8 @@ class DataSelector:
                                     inputs=None,
                                     outputs=None,
                                     batch_size=None,
-                                    shuffle=True
+                                    shuffle=True,
+                                    raw=False
                                     ):
 
         if batch_size is None and self.args.batch_size is not None:
@@ -154,10 +155,13 @@ class DataSelector:
         data_x = np.stack(data_x)
         data_y = np.stack(data_y)
 
-        return Dataset_Selector(data_x, data_y, batch_size, shuffle)
+        if raw:
+            return data_x, data_y
+        else:
+            return Dataset_Selector(data_x, data_y, batch_size, shuffle)
 
 
-import tensorflow.keras as keras
+from tensorflow import keras
 
 class Dataset_Selector(keras.utils.Sequence):
     def __init__(self,

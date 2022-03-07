@@ -5,6 +5,8 @@ It assumes that the input relation is u = Q*u_max (no fancy motor model) !
 
 import scipy
 import numpy as np
+from numpy.random import SFC64, Generator
+from datetime import datetime
 
 from Controllers.template_controller import template_controller
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
@@ -15,6 +17,8 @@ import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 Q = np.diag(config["controller"]["lqr"]["Q"])
 R = config["controller"]["lqr"]["R"]
+
+p_Q = config["controller"]["lqr"]["control_noise"]
 
 class controller_lqr(template_controller):
     def __init__(self):
@@ -35,6 +39,12 @@ class controller_lqr(template_controller):
          input: u = -K*x
         """
         # ref Bertsekas, p.151
+
+        SEED = config["controller"]["lqr"]["SEED"]
+        if SEED == "None":
+            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
+        self.rng_lqr = Generator(SFC64(SEED))
+        self.rng_lqr = Generator(SFC64(SEED*2))
 
         # Calculate Jacobian around equilibrium
         # Set point around which the Jacobian should be linearized
@@ -77,6 +87,9 @@ class controller_lqr(template_controller):
             [[s[POSITION_IDX] - target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
 
         Q = np.asscalar(np.dot(-self.K, state))
+
+        Q = np.float32(Q * (1 + p_Q * self.rng_lqr.uniform(-1.0, 1.0)))
+        # Q = self.rng_lqr.uniform(-1.0, 1.0)
 
         # Clip Q
         if Q > 1.0:
