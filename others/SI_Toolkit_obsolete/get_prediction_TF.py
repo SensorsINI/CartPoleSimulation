@@ -8,7 +8,7 @@ import copy
 
 
 from SI_Toolkit.load_and_normalize import denormalize_numpy_array, normalize_numpy_array
-from SI_Toolkit.TF.TF_Functions.Network import load_internal_states, get_internal_states
+from SI_Toolkit.TF.TF_Functions.Network import load_internal_states, get_internal_states # Removed 10.03.2020
 
 from CartPole.state_utilities import STATE_INDICES
 
