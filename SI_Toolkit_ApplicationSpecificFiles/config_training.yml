@@ -2,7 +2,7 @@ modeling:
   NET_NAME: 'GRU-32H1-32H2'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Pretrained-RNN-1/'
+  path_to_experiment: 'Experiment-Tutorial/'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ApplicationSpecificFiles/Experiments/'  # Path where the experiments data is stored
 
 training_default:
@@ -18,7 +18,7 @@ training_default:
   # inputs = ['position', 'positionD', 'angle', 'angleD', 'target_position']
   # outputs = ['Q']
   EPOCHS: 5
-  BATCH_SIZE: 16
+  BATCH_SIZE: 100
   SEED: 1873
   LR: 1.0e-2
   WASH_OUT_LEN: 10
