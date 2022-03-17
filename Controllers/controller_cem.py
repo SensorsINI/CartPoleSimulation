@@ -15,20 +15,34 @@ import yaml
 
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
+from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 dt = config["controller"]["mppi"]["dt"]
 cem_horizon = config["controller"]["mppi"]["mpc_horizon"]
-num_rollouts = config["controller"]["mppi"]["num_rollouts"]
+num_rollouts = config["controller"]["cem"]["cem_rollouts"]
 dd_weight = config["controller"]["mppi"]["dd_weight"]
 cc_weight = config["controller"]["mppi"]["cc_weight"]
 ep_weight = config["controller"]["mppi"]["ep_weight"]
-R = config["controller"]["mppi"]["R"]
+R = config["controller"]["cem"]["cem_R"]
+cem_outer_it = config["controller"]["cem"]["cem_outer_it"]
+NET_NAME = config["controller"]["cem"]["CEM_NET_NAME"]
+predictor_type = config["controller"]["cem"]["cem_predictor_type"]
+cem_stdev_min = config["controller"]["cem"]["cem_stdev_min"]
 cem_samples = int(cem_horizon / dt)  # Number of steps in MPC horizon
 
 predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
 
+"""Define Predictor"""
+if predictor_type == "EulerTF":
+    predictor = predictor_ODE_tf(horizon=cem_samples, dt=dt, intermediate_steps=10)
+elif predictor_type == "Euler":
+    predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
+elif predictor_type == "NeuralNet":
+    predictor = predictor_autoregressive_tf(
+        horizon=cem_samples, batch_size=num_rollouts, net_name=NET_NAME
+    )
 
 
 @jit(nopython=True, cache=True, fastmath=True)
@@ -74,6 +88,10 @@ def phi(s: np.ndarray, target_position: np.float32) -> np.ndarray:
     )
     return terminal_cost
 
+@jit(nopython=True, cache=True, fastmath=True)
+def control_change_rate_cost(u, u_prev):
+    """Compute penalty of control jerk, i.e. difference to previous control input"""
+    return (u - u_prev) ** 2
 
 def q(s :np.ndarray,u:np.ndarray,target_position: np.float32):
     dd = dd_weight * distance_difference_cost(
@@ -85,7 +103,7 @@ def q(s :np.ndarray,u:np.ndarray,target_position: np.float32):
     stage_cost = dd+ep+cc
     return stage_cost
 
-def cost(s_hor :np.ndarray,u:np.ndarray,target_position: np.float32):
+def cost(s_hor :np.ndarray,u:np.ndarray,target_position: np.float32,u_prev: np.float32):
     stage_cost = q(s_hor[:,1:,:],u,target_position)
     total_cost = np.sum(stage_cost,axis=1)
     total_cost+= phi(s_hor,target_position)
@@ -101,23 +119,32 @@ class controller_cem(template_controller):
         self.dist_mue = np.zeros([1,cem_samples])
         self.dist_var = 0.5*np.ones([1,cem_samples])
         self.stdev = np.sqrt(self.dist_var)
+        self.u = 0
 
 
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
-        Q = np.tile(self.dist_mue,(num_rollouts,1))+ np.multiply(self.rng_cem.standard_normal(
-            size=(num_rollouts, cem_samples), dtype=np.float32),self.stdev)
-        Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
-        rollout_trajectory = predictor.predict(np.copy(s), Q[:,:, np.newaxis])
-        traj_cost = cost(rollout_trajectory, Q, target_position)
-        sorted_cost = np.argsort(traj_cost)
-        best_idx = sorted_cost[0:20]
-        elite_Q = Q[best_idx,:]
-        self.dist_mue = np.mean(elite_Q,axis = 0)
-        self.stdev = np.std(elite_Q,axis=0)[np.newaxis,:]
+        for _ in range(0,cem_outer_it):
+            Q = np.tile(self.dist_mue,(num_rollouts,1))+ np.multiply(self.rng_cem.standard_normal(
+                size=(num_rollouts, cem_samples), dtype=np.float32),self.stdev)
+            Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
+            rollout_trajectory = predictor.predict(np.copy(s), Q[:,:, np.newaxis])
+            traj_cost = cost(rollout_trajectory, Q, target_position,self.u)
+            sorted_cost = np.argsort(traj_cost)
+            best_idx = sorted_cost[0:20]
+            elite_Q = Q[best_idx,:]
+            self.dist_mue = np.mean(elite_Q,axis = 0)
+            self.stdev = np.std(elite_Q,axis=0)[np.newaxis,:]
+            self.stdev = np.clip(self.stdev,cem_stdev_min,None)
+
         self.stdev = np.append(self.stdev[1:], 0.4).astype(np.float32)
         self.dist_mue = np.append(self.dist_mue[1:], 0).astype(np.float32)
-        u = self.dist_mue[0]
-        return u
+        self.u = self.dist_mue[0]
+        return self.u
+
+    def controller_reset(self):
+        self.dist_mue = np.zeros([1, cem_samples])
+        self.dist_var = 0.5 * np.ones([1, cem_samples])
+        self.stdev = np.sqrt(self.dist_var)
 
 
 
@@ -140,7 +167,7 @@ if __name__ == '__main__':
     ctrl.step(s0, 0)
     f_to_measure = 'ctrl.step(s0,0)'
     number = 1  # Gives the number of times each timeit call executes the function which we want to measure
-    repeat_timeit = 100  # Gives how many times timeit should be repeated
+    repeat_timeit = 1000  # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)
     min_time = min(timings) / float(number)
     max_time = max(timings) / float(number)
