@@ -99,19 +99,26 @@ class controller_cem(template_controller):
         self.rng_cem = Generator(SFC64(SEED))
 
         self.dist_mue = np.zeros([1,cem_samples])
-        self.dist_var = 0.5
+        self.dist_var = 0.5*np.ones([1,cem_samples])
         self.stdev = np.sqrt(self.dist_var)
 
 
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
-        Q = np.tile(self.dist_mue,(num_rollouts,1))+ self.stdev * self.rng_cem.standard_normal(
-            size=(num_rollouts, cem_samples), dtype=np.float32)
+        Q = np.tile(self.dist_mue,(num_rollouts,1))+ np.multiply(self.rng_cem.standard_normal(
+            size=(num_rollouts, cem_samples), dtype=np.float32),self.stdev)
         Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
         rollout_trajectory = predictor.predict(np.copy(s), Q[:,:, np.newaxis])
         traj_cost = cost(rollout_trajectory, Q, target_position)
         sorted_cost = np.argsort(traj_cost)
+        best_idx = sorted_cost[0:20]
+        elite_Q = Q[best_idx,:]
+        self.dist_mue = np.mean(elite_Q,axis = 0)
+        self.stdev = np.std(elite_Q,axis=0)[np.newaxis,:]
+        self.stdev = np.append(self.stdev[1:], 0.4).astype(np.float32)
+        self.dist_mue = np.append(self.dist_mue[1:], 0).astype(np.float32)
+        u = self.dist_mue[0]
+        return u
 
-        return Q[sorted_cost[0],0]
 
 
 
