@@ -112,7 +112,7 @@ def cost(s_hor :np.ndarray,u:np.ndarray,target_position: np.float32,u_prev: np.f
     total_cost+= phi(s_hor,target_position)
     return total_cost
 
-class controller_cem(template_controller):
+class controller_cem_multivar(template_controller):
     def __init__(self):
         SEED = config["controller"]["mppi"]["SEED"]
         if SEED == "None":
@@ -120,15 +120,15 @@ class controller_cem(template_controller):
         self.rng_cem = Generator(SFC64(SEED))
 
         self.dist_mue = np.zeros([1,cem_samples])
-        self.dist_var = 0.5*np.ones([1,cem_samples])
-        self.stdev = np.sqrt(self.dist_var)
+        self.stdev = np.sqrt(0.5)*np.identity(cem_samples)
+        self.covo = 0
         self.u = 0
 
 
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
         for _ in range(0,cem_outer_it):
-            Q = np.tile(self.dist_mue,(num_rollouts,1))+ np.multiply(self.rng_cem.standard_normal(
-                size=(num_rollouts, cem_samples), dtype=np.float32),self.stdev)
+            Q = np.tile(self.dist_mue,(num_rollouts,1))+ self.rng_cem.standard_normal(
+                size=(num_rollouts, cem_samples), dtype=np.float32)@self.stdev
             Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
             rollout_trajectory = predictor.predict(np.copy(s), Q[:,:, np.newaxis])
             traj_cost = cost(rollout_trajectory, Q, target_position,self.u)
@@ -136,24 +136,27 @@ class controller_cem(template_controller):
             best_idx = sorted_cost[0:cem_best_k]
             elite_Q = Q[best_idx,:]
             self.dist_mue = np.mean(elite_Q,axis = 0)
-            self.stdev = np.std(elite_Q,axis=0)
-            self.stdev = np.clip(self.stdev,cem_stdev_min,None)
+            self.covo = np.std(elite_Q,axis=0)
+            self.covo = np.clip(self.covo,cem_stdev_min,None)
+            self.stdev = np.diag(self.covo)
+            #self.stdev = np.clip(self.stdev,cem_stdev_min,None)
 
-        self.stdev = np.append(self.stdev[1:], np.sqrt(0.5)).astype(np.float32)
+        stdev_temp = np.sqrt(0.5) * np.identity(cem_samples)
+        stdev_temp[0:-1,0:-1]=self.stdev[1:,1:]
+        self.stdev = stdev_temp
         self.dist_mue = np.append(self.dist_mue[1:], 0).astype(np.float32)
         self.u = self.dist_mue[0]
         return self.u
 
     def controller_reset(self):
         self.dist_mue = np.zeros([1, cem_samples])
-        self.dist_var = 0.5 * np.ones([1, cem_samples])
-        self.stdev = np.sqrt(self.dist_var)
+        self.stdev = np.sqrt(0.5)*np.identity(cem_samples)
 
 
 
 
 if __name__ == '__main__':
-    ctrl = controller_cem()
+    ctrl = controller_cem_multivar()
 
 
     import timeit
