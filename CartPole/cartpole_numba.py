@@ -67,6 +67,7 @@ def cartpole_fine_integration_numba(angle, angleD, angle_cos, angle_sin, positio
 
     return angle, angleD, position, positionD, angle_cos, angle_sin
 
+print("File __name__ is set to: {}" .format(__name__))
 if __name__ == '__main__':
     import timeit
 
@@ -84,7 +85,7 @@ if __name__ == '__main__':
 
     f_to_measure = 'angleDD, positionDD = cartpole_ode_numba(s, u)'
     number = 1  # Gives the number of times each timeit call executes the function which we want to measure
-    repeat_timeit = 100000  # Gives how many times timeit should be repeated
+    repeat_timeit = 100  # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)
     min_time = min(timings) / float(number)
     max_time = max(timings) / float(number)

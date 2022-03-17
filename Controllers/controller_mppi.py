@@ -495,7 +495,7 @@ class controller_mppi(template_controller):
             # Initialize perturbations and cost arrays
             self.delta_u = self.initialize_perturbations(
                 # stdev=0.1 * (1 + 1 / (self.iteration + 1)),
-                stdev=SQRTRHODTINV,
+                stdev=SQRTRHODTINV*np.math.sqrt(NU),
                 sampling_type=SAMPLING_TYPE,
             )  # du ~ N(mean=0, var=1/(rho*dt))
             self.S_tilde_k = np.zeros_like(self.S_tilde_k, dtype=np.float32)
@@ -911,3 +911,36 @@ class controller_mppi(template_controller):
             predictor.net.reset_states()
         except:
             pass
+
+
+if __name__ == '__main__':
+    ctrl = controller_mppi()
+
+
+    import timeit
+
+    s0 = create_cartpole_state()
+    # Set non-zero input
+    s = s0
+    s[POSITION_IDX] = -30.2
+    s[POSITIOND_IDX] = 2.87
+    s[ANGLE_IDX] = -0.32
+    s[ANGLED_IDX] = 0.237
+    u = -0.24
+
+    ctrl.step(s0, 0)
+    f_to_measure = 'ctrl.step(s0,0)'
+    number = 1  # Gives the number of times each timeit call executes the function which we want to measure
+    repeat_timeit = 100  # Gives how many times timeit should be repeated
+    timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)
+    min_time = min(timings) / float(number)
+    max_time = max(timings) / float(number)
+    average_time = np.mean(timings) / float(number)
+    print()
+    print('----------------------------------------------------------------------------------')
+    print('Min time to evaluate is {} ms'.format(min_time * 1.0e3))  # ca. 5 us
+    print('Average time to evaluate is {} ms'.format(average_time * 1.0e3))  # ca 5 us
+    # The max is of little relevance as it is heavily influenced by other processes running on the computer at the same time
+    print('Max time to evaluate is {} ms'.format(max_time * 1.0e3))  # ca. 100 us
+    print('----------------------------------------------------------------------------------')
+    print()

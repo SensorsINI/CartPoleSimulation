@@ -5,7 +5,7 @@ controller:
     mpc_horizon: 1.0                      # sec
     num_rollouts: 2000                     # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "NeuralNet"               # One of ["Euler", "NeuralNet"]
+    predictor_type: "Euler"               # One of ["Euler", "NeuralNet"]
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-2'  # Applies only if predictor_type is NeuralNet
     dd_weight: 120.0
     ep_weight: 50000.0
@@ -20,7 +20,7 @@ controller:
     NU: 1000.0                            # Exploration variance
     SQRTRHOINV: 0.01                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
-    SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
+    SAMPLING_TYPE: "iid"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     LOGGING: True                        # Collect and show detailed insights into the controller's behavior
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
   custom_mpc_scipy:
