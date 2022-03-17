@@ -96,6 +96,7 @@ def control_change_rate_cost(u, u_prev,nrol):
     u_prev_vec = np.concatenate((np.ones((nrol,1))*u_prev,u[:,:-1]),axis=-1)
     return (u - u_prev_vec) ** 2
 
+@jit(nopython=True, cache=True, fastmath=True)
 def q(s :np.ndarray,u:np.ndarray,target_position: np.float32, u_prev: np.float32):
     dd = dd_weight * distance_difference_cost(
         s[:, :, POSITION_IDX], target_position
@@ -106,11 +107,24 @@ def q(s :np.ndarray,u:np.ndarray,target_position: np.float32, u_prev: np.float32
     stage_cost = dd+ep+cc+ccrc
     return stage_cost
 
+@jit(nopython=True, cache=True, fastmath=True)
 def cost(s_hor :np.ndarray,u:np.ndarray,target_position: np.float32,u_prev: np.float32):
     stage_cost = q(s_hor[:,1:,:],u,target_position,u_prev)
     total_cost = np.sum(stage_cost,axis=1)
     total_cost+= phi(s_hor,target_position)
     return total_cost
+
+# @jit(nopython=True, cache=True, fastmath=True)
+# def update_dist(Q,trajectories,target_pos,prev_u,sample_count):
+#     traj_cost = cost(trajectories, Q, target_pos, prev_u)
+#     sorted_cost = np.argsort(traj_cost)
+#     best_idx = sorted_cost[0:cem_best_k]
+#     elite_Q = Q[best_idx,:]
+#     dist_mue = np.mean(elite_Q,axis = 0)
+#     covo = np.cov(elite_Q,rowvar = False)+0.001*np.identity(sample_count)
+#     stdev = np.transpose(np.linalg.cholesky(covo))
+#     return dist_mue,covo,stdev
+
 
 class controller_cem_multivar(template_controller):
     def __init__(self):
@@ -136,9 +150,13 @@ class controller_cem_multivar(template_controller):
             best_idx = sorted_cost[0:cem_best_k]
             elite_Q = Q[best_idx,:]
             self.dist_mue = np.mean(elite_Q,axis = 0)
-            self.covo = np.std(elite_Q,axis=0)
-            self.covo = np.clip(self.covo,cem_stdev_min,None)
-            self.stdev = np.diag(self.covo)
+            self.covo = np.cov(elite_Q,rowvar = False)+0.001*np.identity(cem_samples)
+            self.stdev = np.transpose(np.linalg.cholesky(self.covo))
+            np.fill_diagonal(self.stdev, np.clip(self.stdev.diagonal(), 0.1, None))
+            # self.dist_mue,self.covo,self.stdev = update_dist(Q,rollout_trajectory,target_position,self.u,cem_samples)
+
+            #self.covo = np.clip(self.covo,cem_stdev_min,None)
+            #self.stdev = np.diag(self.covo)
             #self.stdev = np.clip(self.stdev,cem_stdev_min,None)
 
         stdev_temp = np.sqrt(0.5) * np.identity(cem_samples)

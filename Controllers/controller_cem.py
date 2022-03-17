@@ -2,7 +2,7 @@ import scipy
 import numpy as np
 from numpy.random import SFC64, Generator
 from datetime import datetime
-from numba import jit
+from numba import jit, prange
 
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import TrackHalfLength
@@ -89,6 +89,15 @@ def phi(s: np.ndarray, target_position: np.float32) -> np.ndarray:
         )
     )
     return terminal_cost
+
+@jit(parallel=True)
+def mean_numba(a):
+
+    res = []
+    for i in prange(a.shape[0]):
+        res.append(a[i, :].mean())
+
+    return np.array(res)
 
 @jit(nopython=True, cache=True, fastmath=True)
 def control_change_rate_cost(u, u_prev,nrol):

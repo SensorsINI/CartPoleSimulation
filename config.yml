@@ -4,7 +4,7 @@ controller:
     cem_rollouts: 2000                   #how many rollouts per outer cem iteration
     cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-2' # Applies only if predictor_type is NeuralNet
-    cem_stdev_min: 0.1
+    cem_stdev_min: 0.05
     cem_R: 1
     cem_ccrc_weight: 1
     cem_best_k: 5
