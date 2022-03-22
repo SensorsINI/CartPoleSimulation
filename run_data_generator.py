@@ -42,7 +42,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     # User defined simulation settings
     ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
     # How many experiments will be generated
-    number_of_experiments = 1
+    number_of_experiments = 500
 
     # Train/Val/Test split - only matters if you run it in ML Pipeline mode
     frac_train = 0.8
@@ -121,7 +121,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
         start_random_target_position_at_DataGen = used_track_fraction * \
             TrackHalfLength * rng_data_generator.uniform(-1.0, 1.0)
-        #initial_state = [start_random_target_position_at_DataGen, 0.0, 0.0, 0.0]
+        # initial_state = [start_random_target_position_at_DataGen, 0.0, 0.0, 0.0]
         initial_state = [
             start_random_target_position_at_DataGen, None, None, None]
         # initial_state = [0.0, None, 0.0, None]
