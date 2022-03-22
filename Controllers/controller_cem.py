@@ -146,11 +146,11 @@ class controller_cem(template_controller):
             elite_Q = Q[best_idx,:]
             self.dist_mue = np.mean(elite_Q,axis = 0)
             self.stdev = np.std(elite_Q,axis=0)
-            self.stdev = np.clip(self.stdev,cem_stdev_min,None)
 
+        self.stdev = np.clip(self.stdev, cem_stdev_min, None)
         self.stdev = np.append(self.stdev[1:], np.sqrt(0.5)).astype(np.float32)
-        self.dist_mue = np.append(self.dist_mue[1:], 0).astype(np.float32)
         self.u = self.dist_mue[0]
+        self.dist_mue = np.append(self.dist_mue[1:], 0).astype(np.float32)
         return self.u
 
     def controller_reset(self):

@@ -7,7 +7,7 @@ controller:
     cem_stdev_min: 0.05
     cem_R: 1
     cem_ccrc_weight: 1
-    cem_best_k: 5
+    cem_best_k: 4
   mppi:
     SEED: 1897                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
