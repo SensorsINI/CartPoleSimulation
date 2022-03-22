@@ -57,10 +57,10 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     # CartPole settings
     # Length of each experiment in s:
-    length_of_experiment_DataGen = 6
+    length_of_experiment_DataGen = 100
 
     # Controller which should be used in generated experiment:
-    controller_DataGen = 'mppi'
+    controller_DataGen = 'lqr'
     # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
 
     # Randomly placed target points/s
@@ -121,9 +121,9 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
         start_random_target_position_at_DataGen = used_track_fraction * \
             TrackHalfLength * rng_data_generator.uniform(-1.0, 1.0)
-        # initial_state = [start_random_target_position_at_DataGen, 0.0, 0.0, 0.0]
         initial_state = [
-            start_random_target_position_at_DataGen, None, None, None]
+            start_random_target_position_at_DataGen, 0.0, 0.0, 0.0]
+        # initial_state = [start_random_target_position_at_DataGen, None, None, None]
         # initial_state = [0.0, None, 0.0, None]
         if initial_state[0] is None:
             initial_state_DataGen[POSITION_IDX] = rng_data_generator.uniform(
@@ -140,11 +140,11 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
         if initial_state[2] is None:
             if rng_data_generator.uniform() > 0.5:
-                initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=90 * (np.pi / 180.0),
+                initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=0 * (np.pi / 180.0),
                                                                               high=180 * (np.pi / 180.0))
             else:
                 initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=-180 * (np.pi / 180.0),
-                                                                              high=-90 * (np.pi / 180.0))
+                                                                              high=-0 * (np.pi / 180.0))
         else:
             initial_state_DataGen[ANGLE_IDX] = initial_state[2]
 
