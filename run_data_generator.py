@@ -18,14 +18,17 @@ from numpy.random import SFC64, Generator
 # # use('TkAgg')
 # use('macOSX')
 
-import yaml, os
+import yaml
+import os
 config_CartPole = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
+
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     seed = config_CartPole["data_generator"]["SEED"]
     if seed == "None":
-        seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0*7.0)  # Fully random
+        seed = int((datetime.now() - datetime(1970, 1, 1)
+                    ).total_seconds() * 1000.0*7.0)  # Fully random
 
     reset_seed_for_each_experiment = False
 
@@ -41,44 +44,44 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     # How many experiments will be generated
     number_of_experiments = 1
 
-    ###### Train/Val/Test split - only matters if you run it in ML Pipeline mode
+    # Train/Val/Test split - only matters if you run it in ML Pipeline mode
     frac_train = 0.8
     frac_val = 0.19
 
     save_mode = 'online'  # It was intended to save memory usage, but it doesn't seems to help
 
-    ###### Timescales
+    # Timescales
     dt_simulation_DataGen = 0.002  # simulation timestep
     dt_controller_update_DataGen = 0.02  # control rate
     dt_save_DataGen = 0.02  # save datapoints in csv in this interval
 
-    ###### CartPole settings
-    ### Length of each experiment in s:
-    length_of_experiment_DataGen = 100
+    # CartPole settings
+    # Length of each experiment in s:
+    length_of_experiment_DataGen = 6
 
-    ### Controller which should be used in generated experiment:
-    controller_DataGen = 'lqr'
+    # Controller which should be used in generated experiment:
+    controller_DataGen = 'mppi'
     # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
 
-    ### Randomly placed target points/s
+    # Randomly placed target points/s
     track_relative_complexity_DataGen = 1
 
-    ### How to interpolate between turning points of random trace
+    # How to interpolate between turning points of random trace
     interpolation_type_DataGen = '0-derivative-smooth'
     # Possible options: '0-derivative-smooth', 'linear', 'previous'
 
-    ### How turning points should be distributed
+    # How turning points should be distributed
     turning_points_period_DataGen = 'regular'
     # Possible options: 'regular', 'random'
 
-    ### Set the max for smoothly interpolated random target position to avoid bumping into track ends.
+    # Set the max for smoothly interpolated random target position to avoid bumping into track ends.
     used_track_fraction = 0.9
 
-    ### List of target positions, can be None to simulate with random targets
+    # List of target positions, can be None to simulate with random targets
     turning_points_DataGen = None
     # Example: turning_points_DataGen = [0.0, 0.1, -0.1, 0.0]
 
-    ### Show popup window in the end with summary of experiment?
+    # Show popup window in the end with summary of experiment?
     show_summary_plots = False
     show_controller_report = False
 
@@ -92,10 +95,10 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
         if reset_seed_for_each_experiment:
             rng_data_generator = Generator(SFC64(seed))
 
-        ### Where the target positions of the random experiment start and end
+        # Where the target positions of the random experiment start and end
         end_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0,
                                                                                                                    1.0)
-        ### Initial state
+        # Initial state
         # This is just one possibility how to set the initial state. Feel free to modify this code
         # [position, positionD, angle, angleD]
         # Unassigned variables will be randomly initialized (see below if interested)
@@ -109,14 +112,18 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
             else:
                 csv = record_path + "/Test"
 
-            try: os.makedirs(csv)
-            except: pass
+            try:
+                os.makedirs(csv)
+            except:
+                pass
 
             csv += "/Experiment"
 
-        start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0, 1.0)
-        initial_state = [start_random_target_position_at_DataGen, 0.0, 0.0, 0.0]
-        # initial_state = [start_random_target_position_at_DataGen, None, None, None]
+        start_random_target_position_at_DataGen = used_track_fraction * \
+            TrackHalfLength * rng_data_generator.uniform(-1.0, 1.0)
+        #initial_state = [start_random_target_position_at_DataGen, 0.0, 0.0, 0.0]
+        initial_state = [
+            start_random_target_position_at_DataGen, None, None, None]
         # initial_state = [0.0, None, 0.0, None]
         if initial_state[0] is None:
             initial_state_DataGen[POSITION_IDX] = rng_data_generator.uniform(
@@ -127,29 +134,31 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
         if initial_state[1] is None:
             initial_state_DataGen[POSITIOND_IDX] = rng_data_generator.uniform(low=-1.0,
-                                                                                                    high=1.0) * TrackHalfLength *0.01
+                                                                              high=1.0) * TrackHalfLength * 0.01
         else:
             initial_state_DataGen[POSITIOND_IDX] = initial_state[1]
 
         if initial_state[2] is None:
-            if rng_data_generator.uniform()>0.5:
-                initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=0 * (np.pi / 180.0),
-                                                                                                    high=180 * (np.pi / 180.0))
+            if rng_data_generator.uniform() > 0.5:
+                initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=90 * (np.pi / 180.0),
+                                                                              high=180 * (np.pi / 180.0))
             else:
                 initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=-180 * (np.pi / 180.0),
-                                                                                                    high=-0 * (np.pi / 180.0))
+                                                                              high=-90 * (np.pi / 180.0))
         else:
             initial_state_DataGen[ANGLE_IDX] = initial_state[2]
 
         if initial_state[3] is None:
             initial_state_DataGen[ANGLED_IDX] = rng_data_generator.uniform(low=-10.0 * (np.pi / 180.0),
-                                                                                                 high=10.0 * (np.pi / 180.0))
+                                                                           high=10.0 * (np.pi / 180.0))
         else:
             initial_state_DataGen[ANGLED_IDX] = initial_state[3]
 
         # Add cos/sin values to state
-        initial_state_DataGen[ANGLE_COS_IDX] = np.cos(initial_state_DataGen[ANGLE_IDX])
-        initial_state_DataGen[ANGLE_SIN_IDX] = np.sin(initial_state_DataGen[ANGLE_IDX])
+        initial_state_DataGen[ANGLE_COS_IDX] = np.cos(
+            initial_state_DataGen[ANGLE_IDX])
+        initial_state_DataGen[ANGLE_SIN_IDX] = np.sin(
+            initial_state_DataGen[ANGLE_IDX])
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
         # You may also specify some of the variables from above here, to make them change at each iteration.#

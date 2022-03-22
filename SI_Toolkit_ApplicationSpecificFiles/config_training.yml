@@ -1,8 +1,8 @@
 modeling:
-  NET_NAME: 'GRU-32H1-32H2'
+  NET_NAME: 'GRU-16H1-16H2'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Pretrained-RNN-1/'
+  path_to_experiment: 'Experiment-3/'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ApplicationSpecificFiles/Experiments/'  # Path where the experiments data is stored
 
 training_default:
@@ -17,7 +17,7 @@ training_default:
   # For training of RNN imitating MPC:
   # inputs = ['position', 'positionD', 'angle', 'angleD', 'target_position']
   # outputs = ['Q']
-  EPOCHS: 5
+  EPOCHS: 15
   BATCH_SIZE: 16
   SEED: 1873
   LR: 1.0e-2
