@@ -42,7 +42,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     # User defined simulation settings
     ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
     # How many experiments will be generated
-    number_of_experiments = 500
+    number_of_experiments = 1
 
     # Train/Val/Test split - only matters if you run it in ML Pipeline mode
     frac_train = 0.8

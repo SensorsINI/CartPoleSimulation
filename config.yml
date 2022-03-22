@@ -5,7 +5,7 @@ controller:
     mpc_horizon: 1.0                      # sec
     num_rollouts: 2000                      # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "NeuralNet"               # One of ["Euler", "NeuralNet"]
+    predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     NET_NAME: 'Dense-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
     dd_weight: 120.0
     ep_weight: 50000.0
@@ -81,7 +81,7 @@ cartpole:
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   M: 0.230  # mass of cart, kg # Checked by Antonio
-  L: "0.395/4.0"  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi
+  L: "0.395/2.0"  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi
   u_max: 2.62  # max force produced by the motor, N # Checked by Marcin
   M_fric: 4.77  # cart friction on track, N/m/s # Checked by Marcin
   J_fric: 2.5e-4  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
@@ -101,4 +101,4 @@ cartpole:
     sigma_positionD: 0.01
 
 data_generator:
-  SEED: "None"  # If "None" random seed based on datetime is used
+  SEED: "1"  # If "None" random seed based on datetime is used
