@@ -19,6 +19,7 @@ except ModuleNotFoundError:
     print('SI_Toolkit_ApplicationSpecificFiles not yet created')
 
 from SI_Toolkit.TF.TF_Functions.Initialization import get_net, get_norm_info_for_net
+from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
@@ -76,7 +77,7 @@ class controller_nn_as_mpc_tf(template_controller):
 
         return Q
 
-    @tf.function
+    @Compile
     def evaluate_net_f(self, net_input):
         # print('retracing evaluate_net_f')
         net_output = self.net(net_input)
