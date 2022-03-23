@@ -103,7 +103,7 @@ cartpole:
   k: "1.0/3.0"  # Dimensionless factor of moment of inertia of the pole with length 2L: I: (1/3)*m*(2L)^2 = (4/3)*m*(L)^2
   latency: 0.0 # s
   noise:
-    noise_mode: 'ON'
+    noise_mode: 'ON*
     sigma_angle: 0.0  # As measured by Asude
     sigma_position: 0.001
     sigma_angleD: 0.15 # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
