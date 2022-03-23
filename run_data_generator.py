@@ -57,7 +57,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     length_of_experiment_DataGen = 4
 
     ### Controller which should be used in generated experiment:
-    controller_DataGen = 'mppi'
+    controller_DataGen = 'cem'
     # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
 
     ### Randomly placed target points/s

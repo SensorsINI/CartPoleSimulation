@@ -36,13 +36,13 @@ cem_best_k = config["controller"]["cem"]["cem_best_k"]
 cem_samples = int(cem_horizon / dt)  # Number of steps in MPC horizon
 
 #create predictor
-predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
+predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=1)
 
 """Define Predictor"""
 if predictor_type == "EulerTF":
-    predictor = predictor_ODE_tf(horizon=cem_samples, dt=dt, intermediate_steps=10)
+    predictor = predictor_ODE_tf(horizon=cem_samples, dt=dt, intermediate_steps=1)
 elif predictor_type == "Euler":
-    predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
+    predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=1)
 elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
         horizon=cem_samples, batch_size=num_rollouts, net_name=NET_NAME
@@ -132,7 +132,7 @@ def cost(s_hor :np.ndarray,u:np.ndarray,target_position: np.float32,u_prev: np.f
     return total_cost
 
 #cem class
-class controller_cem(template_controller):
+class controller_cem_euler(template_controller):
     def __init__(self):
         #First configure random sampler
         SEED = config["controller"]["mppi"]["SEED"]
@@ -183,7 +183,7 @@ class controller_cem(template_controller):
 
 
 if __name__ == '__main__':
-    ctrl = controller_cem()
+    ctrl = controller_cem_euler()
 
 
     import timeit

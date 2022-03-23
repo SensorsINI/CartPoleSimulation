@@ -1,5 +1,43 @@
 import numpy as np
 from numba import jit, prange, cuda
+from CartPole.cartpole_jacobian import cartpole_jacobian
+
+from others.p_globals import (
+    k as param_k, #k
+    M as param_M, #m_c
+    m as param_m, #m_p
+    g as param_g, #g
+    J_fric as param_J_fric, #mue_p
+    M_fric as param_M_fric, #mue_c
+    L as param_L #l
+)
+def make_J(k = param_k,mc=param_M,mp=param_m,g=param_g,mue_p = param_J_fric,mue_c=param_M_fric,L = param_L):
+    #for J[1,1]
+    c1 = (1+k)*mue_c
+    c2 = (1+k)*(mc+mp)
+
+    #for J[1,2]
+    c3 = 2*(1+k)*mp
+    c4 = (1+k)*L*mp
+    def Jac(x,u): #x= [x,v,theta,omega]
+        J = np.zeros(4,4)
+        xl = x[0]
+        vel = x[1]
+        the = x[2]
+        ome = x[3]
+
+        J[0,1] = 1
+        J[2,3] = 1
+
+        sin_th = np.sin(the)
+        cos_th = np.cos(the)
+        ome2 = ome**2
+        temp1 = (-(cos_th**2)*mue_p+c2)
+
+        J[1,1] = -c1/temp1
+        J[1,2] = (-c3*u*cos_th*sin_th/((temp1)**2)-(2*cos_th*sin_th*mp*(-(c4*sin_th*ome2)+g*mp*cos_th*sin_th-c1*vel+ome*cos_th*mue_p/L))/temp1**2)
+
+
 
 class ControlStateLengthMissmatchError(Exception):
     def __init__(self,message="The length of the state array and input arrays do not coincide."):
@@ -22,6 +60,9 @@ def dxdu(x,u,k):
 @jit(nopython=True, cache=True, fastmath=True)
 def dxdx(x,u,k):
     return -x[k,0]
+
+
+
 
 def make_cost_backprop(dldu,dldx,dldxn,dxdu,dxdx):
 
