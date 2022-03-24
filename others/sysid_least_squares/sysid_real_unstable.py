@@ -12,7 +12,7 @@ from numba import jit
 
 def read_data(file):
     data = []
-    with open(file) as csvfile:
+    with open(file, newline='') as csvfile:
         reader = csv.reader(csvfile, delimiter=',')
         for row in reader:
             if row[0] == 'time':

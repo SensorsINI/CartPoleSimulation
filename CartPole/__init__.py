@@ -470,7 +470,7 @@ class CartPole:
 
             print('Saving to the file: {}'.format(self.csv_filepath))
             # Write the .csv file
-            with open(self.csv_filepath, "a") as outfile:
+            with open(self.csv_filepath, "a", newline='') as outfile:
                 writer = csv.writer(outfile)
 
                 writer.writerow(['# ' + 'This is CartPole simulation from {} at time {}'
@@ -508,7 +508,7 @@ class CartPole:
         elif mode == 'save online':
 
             # Save this dict
-            with open(self.csv_filepath, "a") as outfile:
+            with open(self.csv_filepath, "a", newline='') as outfile:
                 writer = csv.writer(outfile)
                 if self.rounding_decimals == np.inf:
                     pass
@@ -520,7 +520,7 @@ class CartPole:
 
         elif mode == 'save offline':
             # Round data to a set precision
-            with open(self.csv_filepath, "a") as outfile:
+            with open(self.csv_filepath, "a", newline='') as outfile:
                 writer = csv.writer(outfile)
                 if self.rounding_decimals == np.inf:
                     pass

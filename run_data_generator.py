@@ -191,7 +191,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
         #         csv=csv,
         #         save_mode=save_mode
         #     )
-        # with open('profiling_stats.txt', 'w') as stream:
+        # with open('profiling_stats.txt', 'w', newline='') as stream:
         #     stats = Stats(pr, stream=stream)
         #     stats.strip_dirs()
         #     stats.sort_stats('time')

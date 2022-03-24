@@ -537,7 +537,7 @@ class MainWindow(QMainWindow):
         history_pd, filepath = self.CartPoleInstance.load_history_csv(csv_name=csv_name)
 
         # Set cartpole in the right mode (just to ensure slider behaves properly)
-        with open(filepath) as f:
+        with open(filepath, newline='') as f:
             reader = csv.reader(f)
             for line in reader:
                 line = line[0]
