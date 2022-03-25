@@ -4,13 +4,28 @@ from CartPole.state_utilities import (
     create_cartpole_state,
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 )
+import tensorflow as tf
 
 from others.p_globals import (
     k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
 )
 
+k = tf.convert_to_tensor(k)
+M = tf.convert_to_tensor(M)
+m = tf.convert_to_tensor(m)
+g = tf.convert_to_tensor(g)
+J_fric = tf.convert_to_tensor(J_fric)
+M_fric = tf.convert_to_tensor(M_fric)
+L = tf.convert_to_tensor(L)
+v_max = tf.convert_to_tensor(v_max)
+u_max = tf.convert_to_tensor(u_max)
+controlDisturbance = tf.convert_to_tensor(controlDisturbance)
+controlBias = tf.convert_to_tensor(controlBias)
+TrackHalfLength = tf.convert_to_tensor(TrackHalfLength)
+
 import numpy as np
 from numpy.random import SFC64, Generator
+import tensorflow as tf
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
@@ -154,6 +169,19 @@ def cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD
     angleD_next = euler_step(angleD, angleDD, t_step)
     position_next = euler_step(position, positionD, t_step)
     positionD_next = euler_step(positionD, positionDD, t_step)
+
+    return angle_next, angleD_next, position_next, positionD_next
+
+@tf.function(jit_compile=True)
+def euler_step_tf(state, stateD, t_step):
+    return state + stateD * t_step
+
+@tf.function(jit_compile=True)
+def cartpole_integration_tf(angle, angleD, angleDD, position, positionD, positionDD, t_step, ):
+    angle_next = euler_step_tf(angle, angleD, t_step)
+    angleD_next = euler_step_tf(angleD, angleDD, t_step)
+    position_next = euler_step_tf(position, positionD, t_step)
+    positionD_next = euler_step_tf(positionD, positionDD, t_step)
 
     return angle_next, angleD_next, position_next, positionD_next
 

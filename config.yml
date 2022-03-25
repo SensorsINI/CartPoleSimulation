@@ -2,20 +2,20 @@ controller:
   cem:
     cem_outer_it: 1                     #how many outer iterations to use
     cem_rollouts: 1000                   #how many rollouts per outer cem iteration
-    cem_predictor_type: "NeuralNet"               # One of ["Euler", "NeuralNet"]
-    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-32H3-5OUT-0' # Applies only if predictor_type is NeuralNet
+    cem_predictor_type: "Euler"               # One of ["Euler", "NeuralNet"]
+    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
     cem_stdev_min: 0.05
     cem_R: 1
     cem_ccrc_weight: 1
-    cem_best_k: 4
+    cem_best_k: 10
   mppi:
     SEED: 1897                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 2000                     # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "NeuralNet"               # One of ["Euler", "NeuralNet"]
-    NET_NAME: 'GRU-6IN-32H1-32H2-32H3-5OUT-0'  # Applies only if predictor_type is NeuralNet
+    predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01
@@ -103,7 +103,7 @@ cartpole:
   k: "1.0/3.0"  # Dimensionless factor of moment of inertia of the pole with length 2L: I: (1/3)*m*(2L)^2 = (4/3)*m*(L)^2
   latency: 0.0 # s
   noise:
-    noise_mode: 'ON*
+    noise_mode: 'ON'
     sigma_angle: 0.0  # As measured by Asude
     sigma_position: 0.001
     sigma_angleD: 0.15 # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
