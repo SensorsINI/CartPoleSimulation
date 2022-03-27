@@ -9,5 +9,7 @@
 *.env
 *.vscode
 /Modeling/SI_Toolkit/TF/NNI/NNI_Results
-
+/.idea
+/.tmp.drivedownload
+/.tmp.driveupload
 /SI_Toolkit_ApplicationSpecificFiles/Experiments/*
