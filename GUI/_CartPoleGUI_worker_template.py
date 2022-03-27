@@ -1,9 +1,9 @@
 # The following classes WorkerSignals and Worker are a standard tamplete
-# used to implement multithreading in PyQt5 context
+# used to implement multithreading in PyQt6 context
 # This is taking from: https://www.learnpyqt.com/tutorials/multithreading-pyqt-applications-qthreadpool/
 # See also: https://realpython.com/python-pyqt-qthread/ to learn more about multithreading in PyQt5
 
-from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
+from PyQt6.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
 
 import traceback
 

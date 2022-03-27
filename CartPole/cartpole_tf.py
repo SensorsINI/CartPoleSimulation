@@ -6,30 +6,33 @@ from others.p_globals import (
     k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
 )
 
+from SI_Toolkit.TF.TF_Functions.Compile import Compile
+
+
 ###
 # FIXME: Currently tf predictor is not modeling edge bounce!
 ###
 
 
-_cartpole_ode_tf = tf.function(_cartpole_ode, experimental_compile=True)
+_cartpole_ode_tf = Compile(_cartpole_ode)
 
 
-euler_step_tf = tf.function(euler_step, experimental_compile=True)
+euler_step_tf = Compile(euler_step)
 
 
-edge_bounce_tf = tf.function(edge_bounce, experimental_compile=True)
+edge_bounce_tf = Compile(edge_bounce)
 
 
-@tf.function(experimental_compile=True)
+@Compile
 def wrap_angle_rad(sin, cos):
     return tf.math.atan2(sin, cos)
 
 
-cartpole_ode_tf = tf.function(cartpole_ode, experimental_compile=True)
+cartpole_ode_tf = Compile(cartpole_ode)
 
-edge_bounce_wrapper_tf = tf.function(edge_bounce_wrapper, experimental_compile=True)
+edge_bounce_wrapper_tf = Compile(edge_bounce_wrapper)
 
-# @tf.function(experimental_compile=True)
+# @Compile
 def edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L=L):
     angle_bounced = tf.TensorArray(tf.float32, size=tf.size(angle), dynamic_size=False)
     angleD_bounced = tf.TensorArray(tf.float32, size=tf.size(angleD), dynamic_size=False)
@@ -52,7 +55,7 @@ def edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L
     return angle_bounced_tensor, angleD_bounced_tensor, position_bounced_tensor, positionD_bounced_tensor
 
 
-@tf.function(experimental_compile=True)
+@Compile
 def Q2u_tf(Q):
     """
     Converts dimensionless motor power [-1,1] to a physical force acting on a cart.
@@ -67,10 +70,10 @@ def Q2u_tf(Q):
     return u
 
 
-cartpole_integration_tf = tf.function(cartpole_integration, experimental_compile=True)
+cartpole_integration_tf = Compile(cartpole_integration)
 
 
-# @tf.function(experimental_compile=True)
+# @Compile
 def _cartpole_fine_integration_tf(angle, angleD, angle_cos, angle_sin, position, positionD, u, t_step, intermediate_steps,
                               k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
     for _ in tf.range(intermediate_steps):

@@ -25,7 +25,7 @@ data['angle'] = smooth(data['angle'], 30)
 data['positionD'] = smooth(data['positionD'], 30)
 data['angleD'] = smooth(data['angleD'], 30)
 
-with open(file_path[:-4]+'_s30.csv', "a") as outfile:
+with open(file_path[:-4]+'_s30.csv', "a", newline='') as outfile:
     writer = csv.writer(outfile)
 
     # FIXME: This is wrong. It just takes the fix dt, not even taken from the loaded csv.

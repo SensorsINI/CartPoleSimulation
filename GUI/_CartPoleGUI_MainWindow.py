@@ -19,13 +19,13 @@ from others.p_globals import (
 
 # region Imports needed to create layout of the window in __init__ method
 
-# Import functions from PyQt5 module (creating GUI)
-from PyQt5.QtWidgets import QMainWindow, QRadioButton, QApplication, QSlider, QVBoxLayout, \
+# Import functions from PyQt6 module (creating GUI)
+from PyQt6.QtWidgets import QMainWindow, QRadioButton, QApplication, QSlider, QVBoxLayout, \
     QHBoxLayout, QLabel, QPushButton, QWidget, QCheckBox, \
     QLineEdit, QMessageBox, QComboBox, QButtonGroup, QFrame
-from PyQt5.QtCore import QThreadPool, QTimer, Qt
+from PyQt6.QtCore import QThreadPool, QTimer, Qt
 # The main drawing functionalities are implemented in CartPole Class
-# Some more functions needed for interaction of matplotlib with PyQt5
+# Some more functions needed for interaction of matplotlib with PyQt6
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 # This import mus go before pyplot so also before our scripts
@@ -41,7 +41,7 @@ from time import sleep
 import csv
 
 # Import Cart class - the class keeping all the parameters and methods
-# related to CartPole which are not related to PyQt5 GUI
+# related to CartPole which are not related to PyQt6 GUI
 from CartPole import CartPole
 from CartPole.state_utilities import ANGLED_IDX, ANGLE_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
 
@@ -245,12 +245,12 @@ class MainWindow(QMainWindow):
         lb.addLayout(lspb)
         lb.addWidget(bq)
         ip = QHBoxLayout()  # Layout for initial position sliders
-        self.initial_position_slider = QSlider(orientation=Qt.Horizontal)
+        self.initial_position_slider = QSlider(orientation=Qt.Orientation.Horizontal)
         self.initial_position_slider.setRange(-int(float(1000*TrackHalfLength)), int(float(1000*TrackHalfLength)))
         self.initial_position_slider.setValue(0)
         self.initial_position_slider.setSingleStep(1)
         self.initial_position_slider.valueChanged.connect(self.update_initial_position)
-        self.initial_angle_slider = QSlider(orientation=Qt.Horizontal)
+        self.initial_angle_slider = QSlider(orientation=Qt.Orientation.Horizontal)
         self.initial_angle_slider.setRange(-int(float(100*np.pi)), int(float(100*np.pi)))
         self.initial_angle_slider.setValue(0)
         self.initial_angle_slider.setSingleStep(1)
@@ -263,7 +263,7 @@ class MainWindow(QMainWindow):
 
         # Slider setting latency
         self.LATENCY_SLIDER_RANGE_INT = 1000
-        self.latency_slider = QSlider(orientation=Qt.Horizontal)
+        self.latency_slider = QSlider(orientation=Qt.Orientation.Horizontal)
         self.latency_slider.setRange(0, self.LATENCY_SLIDER_RANGE_INT)
         self.latency_slider.setValue(int(self.CartPoleInstance.LatencyAdderInstance.latency*self.LATENCY_SLIDER_RANGE_INT/self.CartPoleInstance.LatencyAdderInstance.max_latency))
         self.latency_slider.setSingleStep(1)
@@ -359,7 +359,7 @@ class MainWindow(QMainWindow):
 
         self.wrong_speedup_msg = QMessageBox()
         self.wrong_speedup_msg.setWindowTitle("Speed-up value problem")
-        self.wrong_speedup_msg.setIcon(QMessageBox.Critical)
+        self.wrong_speedup_msg.setIcon(QMessageBox.Icon.Critical)
         # endregion
 
         # region - Checkboxes
@@ -537,7 +537,7 @@ class MainWindow(QMainWindow):
         history_pd, filepath = self.CartPoleInstance.load_history_csv(csv_name=csv_name)
 
         # Set cartpole in the right mode (just to ensure slider behaves properly)
-        with open(filepath) as f:
+        with open(filepath, newline='') as f:
             reader = csv.reader(f)
             for line in reader:
                 line = line[0]
