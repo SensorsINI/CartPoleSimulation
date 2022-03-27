@@ -1,7 +1,8 @@
 """mpc controller"""
 
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import TrackHalfLength, s0, Q2u, cartpole_ode
+from CartPole.cartpole_model import TrackHalfLength, s0, Q2u
+from CartPole.cartpole_numba import cartpole_ode_numba
 from others.p_globals import v_max
 from CartPole.state_utilities import create_cartpole_state, \
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
@@ -29,7 +30,7 @@ def mpc_next_state(s, u, dt):
 
     s_next = s
 
-    angleDD, positionDD = cartpole_ode(s_next, u)  # Calculates CURRENT second derivatives
+    angleDD, positionDD = cartpole_ode_numba(s_next, u)  # Calculates CURRENT second derivatives
 
     # Calculate NEXT state:
     s_next = cartpole_integration(s_next, angleDD, positionDD, dt)

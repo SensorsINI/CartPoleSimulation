@@ -5,7 +5,8 @@ controller:
     mpc_horizon: 1.0                      # sec
     num_rollouts: 2000                      # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "NeuralNet"               # One of ["Euler", "NeuralNet"]
+    predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01
@@ -90,7 +91,7 @@ cartpole:
   controlDisturbance: 0.0  # disturbance, as factor of u_max
   controlBias: 0.0  # bias of control input
   g: 9.81  # absolute value of gravity acceleration, m/s^2
-  k: "4.0/3.0"  # Dimensionless factor of moment of inertia of the pole with length 2L: I: (1/3)*m*(2L)^2 = (4/3)*m*(L)^2
+  k: "1.0/3.0"  # Dimensionless factor of moment of inertia of the pole with length 2L: I: (1/3)*m*(2L)^2 = (4/3)*m*(L)^2
   latency: 0.0 # s
   noise:
     noise_mode: 'ON'

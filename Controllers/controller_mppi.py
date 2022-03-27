@@ -24,7 +24,7 @@ from datetime import datetime
 
 from CartPole._CartPole_mathematical_helpers import (
     conditional_decorator,
-    wrap_angle_rad_inplace_no_numba,
+    wrap_angle_rad_inplace,
 )
 from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import (
@@ -42,26 +42,24 @@ from matplotlib.widgets import Slider
 from numba import jit
 from numpy.random import SFC64, Generator
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
+from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 from scipy.interpolate import interp1d
-from SI_Toolkit.Predictors.predictor_autoregressive_tf import (
-    predictor_autoregressive_tf,
-)
+from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
+# from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
+# from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
 
 from Controllers.template_controller import template_controller
 
 from others.p_globals import L
 
-config = yaml.load(
-    open(os.path.join("SI_Toolkit_ApplicationSpecificFiles", "config.yml"), "r"), Loader=yaml.FullLoader
-)
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-NET_NAME = config["modeling"]["NET_NAME"]
+NET_NAME = config["controller"]["mppi"]["NET_NAME"]
 try:
     NET_TYPE = NET_NAME.split("-")[0]
 except AttributeError:  # Should get Attribute Error if NET_NAME is None
     NET_TYPE = None
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 """Timestep and sampling settings"""
 dt = config["controller"]["mppi"]["dt"]
 mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
@@ -168,12 +166,16 @@ def penalize_deviation(cc, u):
 
 
 """Define Predictor"""
-if predictor_type == "Euler":
+if predictor_type == "EulerTF":
+    predictor = predictor_ODE_tf(horizon=mpc_samples, dt=dt, intermediate_steps=10)
+elif predictor_type == "Euler":
     predictor = predictor_ODE(horizon=mpc_samples, dt=dt, intermediate_steps=10)
 elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
         horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
+# elif predictor_type == "GP":
+#     predictor = predictor_autoregressive_GP(horizon=mpc_samples)
 
 predictor_ground_truth = predictor_ODE(
     horizon=mpc_samples, dt=dt, intermediate_steps=10
@@ -206,8 +208,7 @@ def trajectory_rollouts(
     """
     initial_state = np.tile(s, (num_rollouts, 1))
 
-    predictor.setup(initial_state=initial_state)
-    s_horizon = predictor.predict(u + delta_u)[:, :, : len(STATE_INDICES)]
+    s_horizon = predictor.predict(initial_state, (u + delta_u)[..., np.newaxis])[:, :, : len(STATE_INDICES)]
 
     # Compute stage costs
     cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
@@ -523,18 +524,13 @@ class controller_mppi(template_controller):
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
                 if predictor_type == "Euler":
-                    predictor.setup(
-                        initial_state=np.copy(self.s)
-                    )
-                    rollout_trajectory = predictor.predict(self.u)
-                elif predictor_type == "NeuralNet":
-                    predictor.setup(
-                        initial_state=np.tile(self.s, (num_rollouts, 1)),
-                        prediction_denorm=True,
-                    )
+                    rollout_trajectory = predictor.predict(np.copy(self.s), self.u[:, np.newaxis])
+                elif predictor_type == "NeuralNet" or predictor_type == 'EulerTF' or predictor_type == "GP":
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
-                    rollout_trajectory = predictor.predict(
-                        np.tile(self.u, (num_rollouts, 1))
+                    # FIXME: Problaby you can reduce it!
+
+                    rollout_trajectory = predictor.predict(np.tile(self.s, (num_rollouts, 1)),
+                        np.tile(self.u[np.newaxis, :, np.newaxis], (num_rollouts, 1, 1))
                     )[0, ...]
                 LOGS.get("nominal_rollouts").append(np.copy(rollout_trajectory[:-1, :]))
 
@@ -586,8 +582,8 @@ class controller_mppi(template_controller):
         # self.u = zeros_like(self.u)
 
         # Prepare predictor for next timestep
-        Q_update = np.tile(Q, (num_rollouts, 1))
-        predictor.update_internal_state(Q_update)
+        Q_update = np.tile(Q, (num_rollouts, 1, 1))
+        predictor.update_internal_state(self.s, Q_update)
 
         return Q  # normed control input in the range [-1,1]
 
@@ -722,15 +718,15 @@ class controller_mppi(template_controller):
             # Prepare data
             # shape(slgs) = ITERATIONS x num_rollouts x mpc_samples x STATE_VARIABLES
             slgs = np.stack(LOGS.get("states"), axis=0)
-            wrap_angle_rad_inplace_no_numba(slgs[:, :, :, ANGLE_IDX])
+            wrap_angle_rad_inplace(slgs[:, :, :, ANGLE_IDX])
             # shape(iplgs) = ITERATIONS x mpc_horizon
             iplgs = np.stack(LOGS.get("inputs"), axis=0)
             # shape(nrlgs) = ITERATIONS x mpc_horizon x STATE_VARIABLES
             nrlgs = np.stack(LOGS.get("nominal_rollouts"), axis=0)
-            wrap_angle_rad_inplace_no_numba(nrlgs[:, :, ANGLE_IDX])
+            wrap_angle_rad_inplace(nrlgs[:, :, ANGLE_IDX])
             # shape(trjctlgs) = (update_every * ITERATIONS) x STATE_VARIABLES
             trjctlgs = np.stack(LOGS.get("trajectory")[:-1], axis=0)
-            wrap_angle_rad_inplace_no_numba(trjctlgs[:, ANGLE_IDX])
+            wrap_angle_rad_inplace(trjctlgs[:, ANGLE_IDX])
             # shape(trgtlgs) = ITERATIONS x [position]
             trgtlgs = np.stack(LOGS.get("target_trajectory")[:-1], axis=0)
             # For each rollout, calculate what the nominal trajectory would be using the known true model
@@ -740,7 +736,7 @@ class controller_mppi(template_controller):
                 np.copy(nrlgs[:, 0, :]), prediction_denorm=True
             )
             true_nominal_rollouts = predictor_ground_truth.predict(iplgs)[:, :-1, :]
-            wrap_angle_rad_inplace_no_numba(true_nominal_rollouts[:, :, ANGLE_IDX])
+            wrap_angle_rad_inplace(true_nominal_rollouts[:, :, ANGLE_IDX])
 
             # Create figure
             fig, (ax1, ax2) = plt.subplots(
