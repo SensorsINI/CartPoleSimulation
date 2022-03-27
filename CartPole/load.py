@@ -109,7 +109,7 @@ def load_cartpole_parameters(dataset_path):
     p = SimpleNamespace()
 
     # region Get information about the pretrained network from the associated txt file
-    with open(dataset_path) as f:
+    with open(dataset_path, newline='') as f:
         reader = csv.reader(f)
         updated_features = 0
         for line in reader:

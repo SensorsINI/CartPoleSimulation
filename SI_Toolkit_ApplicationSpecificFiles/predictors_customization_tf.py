@@ -6,6 +6,8 @@ from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITI
 from CartPole.cartpole_tf import cartpole_fine_integration_tf, Q2u_tf
 from CartPole.cartpole_model import L
 
+from SI_Toolkit.TF.TF_Functions.Compile import Compile
+
 STATE_INDICES_TF = tf.lookup.StaticHashTable(
     initializer=tf.lookup.KeyValueTensorInitializer(
         keys=tf.constant(list(STATE_INDICES.keys())), values=tf.constant(list(STATE_INDICES.values()))),
@@ -21,10 +23,10 @@ class next_state_predictor_ODE_tf():
         self.intermediate_steps = tf.convert_to_tensor(intermediate_steps, dtype=tf.int32)
         self.t_step = tf.convert_to_tensor(dt / float(self.intermediate_steps), dtype=tf.float32)
 
-    @tf.function(experimental_compile=True)
+    @Compile
     def step(self, s, Q, params):
 
-        # assers does not work with tf.function, but left here for information
+        # assers does not work with Compile, but left here for information
         # assert Q.shape[0] == s.shape[0]
         # assert Q.ndim == 2
         # assert s.ndim == 2

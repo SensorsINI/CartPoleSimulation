@@ -1,6 +1,7 @@
 import tensorflow as tf
+from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
-@tf.function(experimental_compile=True)
+@Compile
 def runge_kutta(self, x, Q, h):
     k1 = self.cartpole_ode(x, Q)
     k2 = self.cartpole_ode(x + 0.5 * k1 * h, Q)
