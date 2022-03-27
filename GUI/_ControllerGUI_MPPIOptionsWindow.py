@@ -6,8 +6,8 @@ except:
 
 import numpy as np
 
-# Import functions from PyQt5 module (creating GUI)
-from PyQt5.QtWidgets import (
+# Import functions from PyQt6 module (creating GUI)
+from PyQt6.QtWidgets import (
     QMainWindow,
     QRadioButton,
     QApplication,
@@ -23,7 +23,7 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QButtonGroup,
 )
-from PyQt5.QtCore import QThreadPool, QTimer, Qt
+from PyQt6.QtCore import QThreadPool, QTimer, Qt
 from numpy.core.numeric import roll
 
 import Controllers.controller_mppi as controller_mppi
@@ -51,13 +51,13 @@ class MPPIOptionsWindow(QWidget):
         horizon_options_layout = QVBoxLayout()
 
         self.horizon_label = QLabel("")
-        self.horizon_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.horizon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         horizon_options_layout.addWidget(self.horizon_label)
 
-        slider = QSlider(orientation=Qt.Horizontal)
+        slider = QSlider(orientation=Qt.Orientation.Horizontal)
         slider.setRange(10, 300)
         slider.setValue(self.horizon_steps)
-        slider.setTickPosition(QSlider.TicksBelow)
+        slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         slider.setTickInterval(10)
         slider.setSingleStep(10)
         horizon_options_layout.addWidget(slider)
@@ -68,13 +68,13 @@ class MPPIOptionsWindow(QWidget):
         rollouts_options_layout = QVBoxLayout()
 
         self.rollouts_label = QLabel("")
-        self.rollouts_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.rollouts_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         rollouts_options_layout.addWidget(self.rollouts_label)
 
-        slider = QSlider(orientation=Qt.Horizontal)
+        slider = QSlider(orientation=Qt.Orientation.Horizontal)
         slider.setRange(10, 3000)
         slider.setValue(self.num_rollouts)
-        slider.setTickPosition(QSlider.TicksBelow)
+        slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         slider.setTickInterval(10)
         slider.setSingleStep(10)
         rollouts_options_layout.addWidget(slider)
@@ -86,15 +86,15 @@ class MPPIOptionsWindow(QWidget):
         
         # Distance difference cost
         self.dd_weight_label = QLabel("")
-        self.dd_weight_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.dd_weight_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cost_weight_layout.addWidget(self.dd_weight_label)
         self.dd_label = QLabel("")
-        self.dd_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.dd_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cost_weight_layout.addWidget(self.dd_label)
-        slider = QSlider(orientation=Qt.Horizontal)
+        slider = QSlider(orientation=Qt.Orientation.Horizontal)
         slider.setRange(0, 990)
         slider.setValue(self.dd_weight)
-        slider.setTickPosition(QSlider.TicksBelow)
+        slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         slider.setTickInterval(10)
         slider.setSingleStep(10)
         cost_weight_layout.addWidget(slider)
@@ -102,15 +102,15 @@ class MPPIOptionsWindow(QWidget):
 
         # Potential energy cost
         self.ep_weight_label = QLabel("")
-        self.ep_weight_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.ep_weight_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cost_weight_layout.addWidget(self.ep_weight_label)
         self.ep_label = QLabel("")
-        self.ep_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.ep_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cost_weight_layout.addWidget(self.ep_label)
-        slider = QSlider(orientation=Qt.Horizontal)
+        slider = QSlider(orientation=Qt.Orientation.Horizontal)
         slider.setRange(0, 1e5-1e3)
         slider.setValue(self.ep_weight)
-        slider.setTickPosition(QSlider.TicksBelow)
+        slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         slider.setTickInterval(1e3)
         slider.setSingleStep(1e3)
         cost_weight_layout.addWidget(slider)
@@ -118,15 +118,15 @@ class MPPIOptionsWindow(QWidget):
 
         # Pole kinetic energy cost
         self.ekp_weight_label = QLabel("")
-        self.ekp_weight_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.ekp_weight_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cost_weight_layout.addWidget(self.ekp_weight_label)
         self.ekp_label = QLabel("")
-        self.ekp_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.ekp_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cost_weight_layout.addWidget(self.ekp_label)
-        slider = QSlider(orientation=Qt.Horizontal)
+        slider = QSlider(orientation=Qt.Orientation.Horizontal)
         slider.setRange(0, 99)
         slider.setValue(self.ekp_weight)
-        slider.setTickPosition(QSlider.TicksBelow)
+        slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         slider.setTickInterval(1)
         slider.setSingleStep(1)
         cost_weight_layout.addWidget(slider)
@@ -134,15 +134,15 @@ class MPPIOptionsWindow(QWidget):
 
         # Cart kinetic energy cost
         self.ekc_weight_label = QLabel("")
-        self.ekc_weight_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.ekc_weight_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cost_weight_layout.addWidget(self.ekc_weight_label)
         self.ekc_label = QLabel("")
-        self.ekc_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.ekc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cost_weight_layout.addWidget(self.ekc_label)
-        slider = QSlider(orientation=Qt.Horizontal)
+        slider = QSlider(orientation=Qt.Orientation.Horizontal)
         slider.setRange(0, 99)
         slider.setValue(self.ekc_weight)
-        slider.setTickPosition(QSlider.TicksBelow)
+        slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         slider.setTickInterval(1)
         slider.setSingleStep(1)
         cost_weight_layout.addWidget(slider)
@@ -150,15 +150,15 @@ class MPPIOptionsWindow(QWidget):
 
         # Control cost
         self.cc_weight_label = QLabel("")
-        self.cc_weight_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.cc_weight_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cost_weight_layout.addWidget(self.cc_weight_label)
         self.cc_label = QLabel("")
-        self.cc_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.cc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cost_weight_layout.addWidget(self.cc_label)
-        slider = QSlider(orientation=Qt.Horizontal)
+        slider = QSlider(orientation=Qt.Orientation.Horizontal)
         slider.setRange(0, 99)
         slider.setValue(self.cc_weight)
-        slider.setTickPosition(QSlider.TicksBelow)
+        slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         slider.setTickInterval(1)
         slider.setSingleStep(1)
         cost_weight_layout.addWidget(slider)
@@ -166,15 +166,15 @@ class MPPIOptionsWindow(QWidget):
 
         # Control change rate cost
         self.ccrc_weight_label = QLabel("")
-        self.ccrc_weight_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.ccrc_weight_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cost_weight_layout.addWidget(self.ccrc_weight_label)
         self.ccrc_label = QLabel("")
-        self.ccrc_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.ccrc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cost_weight_layout.addWidget(self.ccrc_label)
-        slider = QSlider(orientation=Qt.Horizontal)
+        slider = QSlider(orientation=Qt.Orientation.Horizontal)
         slider.setRange(0, 99)
         slider.setValue(self.ccrc_weight)
-        slider.setTickPosition(QSlider.TicksBelow)
+        slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         slider.setTickInterval(1)
         slider.setSingleStep(1)
         cost_weight_layout.addWidget(slider)
@@ -245,7 +245,7 @@ class MPPIOptionsWindow(QWidget):
         layout.addLayout(mppi_constants_layout)
 
         self.setLayout(layout)
-        self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
         self.setGeometry(0, 0, 400, 50)
 
         self.show()
