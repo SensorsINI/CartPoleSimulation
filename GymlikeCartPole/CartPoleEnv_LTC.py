@@ -1,7 +1,7 @@
-
 import gym
 from CartPole import CartPole
-from CartPole.cartpole_model import ANGLE_IDX, POSITION_IDX, cartpole_fine_integration_s
+from CartPole.cartpole_model import ANGLE_IDX, POSITION_IDX
+from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
 from others.p_globals import TrackHalfLength
 
 import math
@@ -28,6 +28,7 @@ dt_control = config["dt_control"]
 length_of_episode = config["length_of_episode"]
 mode = config["mode"]
 
+
 class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 50}
 
@@ -48,7 +49,6 @@ class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         # Angle at which to fail the episode
         self.theta_threshold_stabilization_radians = 24 * np.pi / 360  # Fail episode if goes beyond this
         self.x_threshold = 0.9 * TrackHalfLength  # Takes care that the cart is not going beyond the boundary
-
 
         observation_space_boundary = np.array([
             np.float32(TrackHalfLength),
@@ -99,8 +99,8 @@ class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         # Convert dimensionless motor power to a physical force acting on the Cart
         self.CartPoleInstance.Q2u()
 
-        self.CartPoleInstance.s = cartpole_fine_integration_s(self.CartPoleInstance.s, self.CartPoleInstance.u,
-                                                              self.t_step_fine, self.intermediate_steps)
+        self.CartPoleInstance.s = cartpole_fine_integration_s_numba(self.CartPoleInstance.s, self.CartPoleInstance.u,
+                                                                    self.t_step_fine, self.intermediate_steps)
 
         self.CartPoleInstance.add_noise_and_latency()
 
@@ -117,7 +117,7 @@ class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.state = self.CartPoleInstance.s_with_noise_and_latency
 
     def step_termination_and_reward(self):
-        if self.mode ==  'stabilization':
+        if self.mode == 'stabilization':
             if not self.done:
                 self.done = self.state[POSITION_IDX] < -self.x_threshold \
                             or self.state[POSITION_IDX] > self.x_threshold \
