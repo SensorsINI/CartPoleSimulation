@@ -3,6 +3,7 @@ from CartPole import CartPole
 from CartPole.cartpole_model import ANGLE_IDX, POSITION_IDX
 from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
 from others.p_globals import TrackHalfLength
+from run_data_generator import random_experiment_setter
 
 import math
 import numpy as np
@@ -23,8 +24,6 @@ from pygame import gfxdraw
 
 
 config = yaml.load(open("GymlikeCartPole/config_gym.yml", "r"), Loader=yaml.FullLoader)
-intermediate_steps = config["intermediate_steps"]
-dt_control = config["dt_control"]
 length_of_episode = config["length_of_episode"]
 mode = config["mode"]
 
@@ -35,13 +34,12 @@ class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     def __init__(self):
 
         self.CartPoleInstance = CartPole()
+        self.RES = random_experiment_setter()
         self.mode = mode
 
-        self.intermediate_steps = intermediate_steps
-        self.t_step_fine = np.float32(dt_control / float(self.intermediate_steps))
-        self.CartPoleInstance.dt_simulation = dt_control  # This is because fine stepping is not done with CartPoleInstance method
+        self.intermediate_steps = int(self.RES.dt_controller_update/self.RES.dt_simulation)
 
-        self.CartPoleInstance.length_of_experiment = length_of_episode
+        self.RES.length_of_experiment = length_of_episode
 
         self.min_action = -1.0
         self.max_action = 1.0
@@ -100,7 +98,7 @@ class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.CartPoleInstance.Q2u()
 
         self.CartPoleInstance.s = cartpole_fine_integration_s_numba(self.CartPoleInstance.s, self.CartPoleInstance.u,
-                                                                    self.t_step_fine, self.intermediate_steps)
+                                                                    np.float32(self.CartPoleInstance.dt_simulation), self.intermediate_steps)
 
         self.CartPoleInstance.add_noise_and_latency()
 
@@ -112,17 +110,18 @@ class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.CartPoleInstance.target_position = 0.0  # TODO: Make option of random target position
 
         # Save data to internal dictionary
-        self.CartPoleInstance.save_csv_routine()
+        # FIXE: Not working for some reason
+        # self.CartPoleInstance.save_csv_routine()
 
         self.state = self.CartPoleInstance.s_with_noise_and_latency
 
     def step_termination_and_reward(self):
         if self.mode == 'stabilization':
             if not self.done:
-                self.done = self.state[POSITION_IDX] < -self.x_threshold \
-                            or self.state[POSITION_IDX] > self.x_threshold \
-                            or self.state[ANGLE_IDX] < -self.theta_threshold_stabilization_radians \
-                            or self.state[ANGLE_IDX] > self.theta_threshold_stabilization_radians
+                # self.done = self.state[POSITION_IDX] < -self.x_threshold \
+                #             or self.state[POSITION_IDX] > self.x_threshold \
+                #             or self.state[ANGLE_IDX] < -self.theta_threshold_stabilization_radians \
+                #             or self.state[ANGLE_IDX] > self.theta_threshold_stabilization_radians
                 self.done = bool(self.done)
 
             reached_final_time = bool(self.CartPoleInstance.time >= self.CartPoleInstance.length_of_experiment)
@@ -155,8 +154,7 @@ class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             raise ValueError('Unknown mode (definition of the task)')
 
     def reset(self):
-        # TODO: Generate random target positions
-        self.CartPoleInstance.set_cartpole_state_at_t0()  # TODO Make setting of options for initial state richer like in Data Generator
+        self.CartPoleInstance = self.RES.set(self.CartPoleInstance)
         self.state = self.CartPoleInstance.s
         self.target = self.CartPoleInstance.target_position
         self.done = False
