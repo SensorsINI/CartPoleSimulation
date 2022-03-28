@@ -1,7 +1,8 @@
 import tensorflow as tf
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
+from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
-@tf.function(jit_compile=True)
+@Compile
 def copy_internal_states_to_ref(net, layers_ref):
     for layer, layer_ref in zip(net.layers, layers_ref):
         if (('gru' in layer.name) or
@@ -14,7 +15,7 @@ def copy_internal_states_to_ref(net, layers_ref):
             pass
 
 
-@tf.function(jit_compile=True)
+@Compile
 def copy_internal_states_from_ref(net, layers_ref):
     for layer, layer_ref in zip(net.layers, layers_ref):
         if (('gru' in layer.name) or
