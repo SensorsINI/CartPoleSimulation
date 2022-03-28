@@ -1,0 +1,34 @@
+PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
+SEED: 1  # If not assign random seed based on datetime is used
+number_of_experiments: 10  # How many experiments will be generated
+length_of_experiment: 100  # Length of each experiment in s:
+controller: 'lqr'  # name of the controller to be used - does not matter for Cartpole Gym TODO: CHECK!
+split: [0.81, 0.19]  # Train/Val/(Test) split - only matters if you run it in ML Pipeline mode
+random_initial_state:
+  # Unassigned variables will be randomly initialized (see below)
+  position: ~
+  positionD: ~
+  angle: ~
+  angleD: ~
+  target_position: ~
+  init_limits: # The initial state is randomly chosen from below range if above is not assigned
+    angle: [90.0, 180.0]  # degree, 0 is up, 180 down, set the range for right half plane, same will be applied to left
+    angleD: 10.0
+    position: 0.5  # Fraction of TrackHalfLength to each side
+    positionD: 0.01 # Fraction of TrackHalfLength to each side
+start_at_target: True  # initial target position should be equal to initial state
+track_fraction_usable_for_target_position: 0.9  # Set the max for smoothly interpolated random target position to avoid bumping into track ends.
+target_position_end: ~  # value OR not assigned - random value is taken
+dt:
+  simulation: 0.002  # simulation timestep, s
+  control: 0.02  # control rate, s
+  saving: 0.02  # save datapoints in csv in this interval, s
+turning_points:
+  track_relative_complexity: 1  # Randomly placed target points/s
+  interpolation_type: '0-derivative-smooth'  # How to interpolate between turning points of random trace, Possible options: '0-derivative-smooth', 'linear', 'previous'
+  turning_points: # List of target positions, can be None to simulate with random targets, Example: turning_points_DataGen = [0.0, 0.1, -0.1, 0.0]
+  turning_points_period: 'regular' # How turning points should be distributed, Possible options: 'regular', 'random'; never used, leave it as it is
+save_mode: 'online'  # It was intended to save memory usage, but it doesn't seems to help, setit to "offline" only if you want to show summary plots
+# Show popup window in the end with summary of experiment?
+show_summary_plots: False
+show_controller_report: False
