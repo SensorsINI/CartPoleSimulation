@@ -20,7 +20,7 @@ def grad_desc(u,s):
         with tf.GradientTape() as tape:
             tape.watch(u)
             rollout_trajectory = predictor.predict_tf(s,u)
-            cost = rollout_trajectory[0,-1,POSITION_IDX]**2
+            cost = rollout_trajectory[:,-1,POSITION_IDX]**2
         dc_du = tape.gradient(cost,u)
         # dc_du = 0.0
         return dc_du,cost
@@ -40,7 +40,7 @@ config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 dt = config["controller"]["mppi"]["dt"]
 cem_horizon = config["controller"]["mppi"]["mpc_horizon"]
 cem_samples = int(cem_horizon / dt)  # Number of steps in MPC horizon
-predictor = predictor_ODE_tf_pure(horizon=cem_samples, dt=dt, intermediate_steps=4)
+predictor = predictor_ODE_tf_pure(horizon=cem_samples, dt=dt, intermediate_steps=10)
 
 s0 = create_cartpole_state()
 # Set non-zero input
@@ -63,12 +63,14 @@ u_org = tf.Variable([0.594623, 0.11093523, -0.32577565, 0.36339644, 0.19863953,
                  -0.13692386, 0.4193466, 0.08954383, -0.02065406, 0.7458399,
                  -1., 0.83411133, -0.5809542, -0.5786972, -0.70775455],
                 dtype=tf.float32)
+
+u_alt = tf.reverse(u_org,axis=[0])
 u = u_org
 s = s_org
-s = s[tf.newaxis, :]
+s = tf.stack([s,s],axis=0)
 rollout_trajectory = predictor.predict_tf(s, u[tf.newaxis, :, tf.newaxis])
 lr = 10
-u = u[tf.newaxis, :, tf.newaxis]
+u = tf.stack([u[ :, tf.newaxis],u_alt[ :, tf.newaxis]],axis = 0)
 test(u,s)
 
 import timeit
