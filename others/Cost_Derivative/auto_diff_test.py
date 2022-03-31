@@ -17,11 +17,12 @@ tf.config.run_functions_eagerly(False)
 
 @tf.function(jit_compile = True)
 def grad_desc(u,s):
-        u = tf.Variable(u)
         with tf.GradientTape() as tape:
-            rollout_trajectory = predictor.predict(s, u[tf.newaxis, :, tf.newaxis])
-            cost = rollout_trajectory[-1,POSITION_IDX]**2
+            tape.watch(u)
+            rollout_trajectory = predictor.predict_tf(s,u)
+            cost = rollout_trajectory[0,-1,POSITION_IDX]**2
         dc_du = tape.gradient(cost,u)
+        # dc_du = 0.0
         return dc_du,cost
 
 
@@ -61,9 +62,11 @@ u = tf.Variable([0.594623, 0.11093523, -0.32577565, 0.36339644, 0.19863953,
 s = s[tf.newaxis, :]
 rollout_trajectory = predictor.predict_tf(s, u[tf.newaxis, :, tf.newaxis])
 lr = 10
+u = u[tf.newaxis, :, tf.newaxis]
 for i in range(0,100):
     dc_du,cost  = grad_desc(u,s)
     print(cost)
     u = u - lr * dc_du
+
 
 pass
