@@ -7,6 +7,7 @@ from CartPole.cartpole_tf import cartpole_fine_integration_tf, Q2u_tf
 from CartPole.cartpole_model import L
 
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
+import numpy as np
 
 STATE_INDICES_TF = tf.lookup.StaticHashTable(
     initializer=tf.lookup.KeyValueTensorInitializer(
@@ -51,3 +52,53 @@ class next_state_predictor_ODE_tf():
         )
 
         return s_next
+
+
+class predictor_output_augmentation_tf:
+    def __init__(self, net_info):
+        indices_augmentation = []
+        features_augmentation = []
+        if 'angle' not in net_info.outputs:
+            indices_augmentation.append(STATE_INDICES['angle'])
+            features_augmentation.append('angle')
+        if 'angle_sin' not in net_info.outputs and '':
+            indices_augmentation.append(STATE_INDICES['angle_sin'])
+            features_augmentation.append('angle_sin')
+        if 'angle_cos' not in net_info.outputs:
+            indices_augmentation.append(STATE_INDICES['angle_cos'])
+            features_augmentation.append('angle_cos')
+
+        self.indices_augmentation = indices_augmentation
+        self.features_augmentation = features_augmentation
+        self.augmentation_len = len(self.indices_augmentation)
+
+        self.net_output_indices = {x: np.where(STATE_VARIABLES == x)[0][0] for x in STATE_VARIABLES}
+
+    def get_indices_augmentation(self):
+        return self.indices_augmentation
+
+    def get_features_augmentation(self):
+        return self.features_augmentation
+
+    @Compile
+    def augment(self, net_output):
+
+        output = net_output
+        if 'angle' in self.features_augmentation:
+            angle = \
+                tf.math.atan2(
+                    net_output[..., self.net_output_indices['angle_sin']],
+                    net_output[..., self.net_output_indices['angle_cos']])[:, :, tf.newaxis]
+            output = tf.concat([output, angle], axis=2)
+
+        if 'angle_sin' in self.features_augmentation:
+            angle_sin = \
+                tf.sin(net_output[..., self.net_output_indices['angle']])
+            output = tf.concat([output, angle_sin], axis=2)
+
+        if 'angle_cos' in self.features_augmentation:
+            angle_cos = \
+                tf.cos(net_output[..., self.net_output_indices['angle']])
+            output = tf.concat([output, angle_cos], axis=2)
+
+        return output
