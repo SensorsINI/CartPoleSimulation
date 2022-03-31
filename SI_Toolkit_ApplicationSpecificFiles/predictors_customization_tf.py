@@ -35,9 +35,9 @@ class next_state_predictor_ODE_tf():
             pole_half_length = tf.convert_to_tensor(params, dtype=tf.float32)
 
         Q = tf.squeeze(Q, axis=1)  # Removes features dimension, specific for cartpole as it has only one control input
-        print('shit stick 3')
+        print('test 3')
         u = Q2u_tf(Q)
-        print('shit stick 4')
+        print('test 4')
         (
             s_next
         ) = cartpole_fine_integration_tf(

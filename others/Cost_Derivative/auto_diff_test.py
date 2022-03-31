@@ -14,7 +14,7 @@ from SI_Toolkit.Predictors.predictor_ODE_tf_pure import predictor_ODE_tf_pure
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
 import tensorflow as tf
 
-tf.config.run_functions_eagerly(False)
+tf.config.run_functions_eagerly(True)
 
 
 #load constants from config file
@@ -44,19 +44,17 @@ u = tf.Variable([0.594623, 0.11093523, -0.32577565, 0.36339644, 0.19863953,
                  0.37337917, -0.46058115, -0.6156913, 0.52652395, 0.06510112,
                  -0.13692386, 0.4193466, 0.08954383, -0.02065406, 0.7458399,
                  -1., 0.83411133, -0.5809542, -0.5786972, -0.70775455],
-                dtype=np.float32)
+                dtype=tf.float32)
 
 
 rollout_trajectory = predictor.predict(s, u[tf.newaxis,:,tf.newaxis])
 pass
-# lr = 1
-# for i in range(0,100):
-#     with tf.GradientTape() as tape:
-#         tf.print('shit stick 1')
-#
-#         cost = rollout_trajectory[-1,POSITION_IDX]**2
-#     print(cost)
-#     dc_du = tape.gradient(cost,u)
-#     u = u-lr*dc_du
-#     u = tf.Variable(u)
+lr = 1
+for i in range(0,100):
+    with tf.GradientTape() as tape:
+        cost = rollout_trajectory[-1,POSITION_IDX]**2
+    print(cost)
+    dc_du = tape.gradient(cost,u)
+    u = u-lr*dc_du
+    u = tf.Variable(u)
 pass
