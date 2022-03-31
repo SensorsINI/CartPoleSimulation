@@ -13,8 +13,20 @@ from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf_pure import predictor_ODE_tf_pure
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
 import tensorflow as tf
+tf.config.run_functions_eagerly(False)
 
-tf.config.run_functions_eagerly(True)
+@tf.function(jit_compile = True)
+def grad_desc(u,s):
+        u = tf.Variable(u)
+        with tf.GradientTape() as tape:
+            rollout_trajectory = predictor.predict(s, u[tf.newaxis, :, tf.newaxis])
+            cost = rollout_trajectory[-1,POSITION_IDX]**2
+        dc_du = tape.gradient(cost,u)
+        return dc_du,cost
+
+
+
+
 
 
 #load constants from config file
@@ -46,15 +58,12 @@ u = tf.Variable([0.594623, 0.11093523, -0.32577565, 0.36339644, 0.19863953,
                  -1., 0.83411133, -0.5809542, -0.5786972, -0.70775455],
                 dtype=tf.float32)
 
-
-rollout_trajectory = predictor.predict(s, u[tf.newaxis,:,tf.newaxis])
-pass
-lr = 1
+s = s[tf.newaxis, :]
+rollout_trajectory = predictor.predict_tf(s, u[tf.newaxis, :, tf.newaxis])
+lr = 10
 for i in range(0,100):
-    with tf.GradientTape() as tape:
-        cost = rollout_trajectory[-1,POSITION_IDX]**2
+    dc_du,cost  = grad_desc(u,s)
     print(cost)
-    dc_du = tape.gradient(cost,u)
-    u = u-lr*dc_du
-    u = tf.Variable(u)
+    u = u - lr * dc_du
+
 pass

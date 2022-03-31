@@ -88,8 +88,8 @@ def Q2u_tf(Q):
 # cartpole_integration_tf = tf.function(cartpole_integration, jit_compile = True)
 
 
-@tf.function(jit_compile=True,
-             input_signature=[tf.TensorSpec(shape=[None], dtype=tf.float32), tf.TensorSpec(shape=[None], dtype=tf.float32),
+@tf.function(jit_compile=True
+             ,input_signature=[tf.TensorSpec(shape=[None], dtype=tf.float32), tf.TensorSpec(shape=[None], dtype=tf.float32),
                               tf.TensorSpec(shape=[None], dtype=tf.float32), tf.TensorSpec(shape=[None], dtype=tf.float32),
                               tf.TensorSpec(shape=[None], dtype=tf.float32), tf.TensorSpec(shape=[None], dtype=tf.float32),
                               tf.TensorSpec(shape=[None], dtype=tf.float32), tf.TensorSpec(shape=[], dtype=tf.float32),
@@ -105,7 +105,7 @@ def _cartpole_fine_integration_tf(angle, angleD,
                                   M=M, m=m,
                                   g=g, J_fric=J_fric,
                                   M_fric=M_fric, L=L):
-    print('test 6')
+    #print('test 6')
     for _ in tf.range(intermediate_steps):
         # Find second derivative for CURRENT "k" step (same as in input).
         # State and u in input are from the same timestep, output is belongs also to THE same timestep ("k")
@@ -124,14 +124,14 @@ def _cartpole_fine_integration_tf(angle, angleD,
         angle_sin = tf.sin(angle)
 
         angle = wrap_angle_rad(angle_sin, angle_cos)
-    print('test 7')
+    #print('test 7')
     return angle, angleD, position, positionD, angle_cos, angle_sin
 
 
 @tf.function(jit_compile=True)
 def cartpole_fine_integration_tf(s, u, t_step, intermediate_steps,
                                  k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
-    print('test 5')
+    #print('test 5')
     (
         angle, angleD, position, positionD, angle_cos, angle_sin
     ) = _cartpole_fine_integration_tf(

@@ -22,6 +22,8 @@ class next_state_predictor_ODE_tf():
         self.t_step = tf.convert_to_tensor(dt / float(self.intermediate_steps), dtype=tf.float32)
 
     @tf.function(jit_compile = True)
+                 # ,input_signature = [tf.TensorSpec(shape=[None,6], dtype=tf.float32),tf.TensorSpec(shape=[None], dtype=tf.float32)
+
     def step(self, s, Q, params):
 
         # assers does not work with tf.function, but left here for information
@@ -35,9 +37,9 @@ class next_state_predictor_ODE_tf():
             pole_half_length = tf.convert_to_tensor(params, dtype=tf.float32)
 
         Q = tf.squeeze(Q, axis=1)  # Removes features dimension, specific for cartpole as it has only one control input
-        print('test 3')
+        #print('test 3')
         u = Q2u_tf(Q)
-        print('test 4')
+        #print('test 4')
         (
             s_next
         ) = cartpole_fine_integration_tf(
