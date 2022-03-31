@@ -172,11 +172,11 @@ def cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD
 
     return angle_next, angleD_next, position_next, positionD_next
 
-@tf.function(jit_compile=True)
+# @tf.function(jit_compile=True)
 def euler_step_tf(state, stateD, t_step):
     return state + stateD * t_step
 
-@tf.function(jit_compile=True)
+# @tf.function(jit_compile=True)
 def cartpole_integration_tf(angle, angleD, angleDD, position, positionD, positionDD, t_step, ):
     angle_next = euler_step_tf(angle, angleD, t_step)
     angleD_next = euler_step_tf(angleD, angleDD, t_step)

@@ -21,8 +21,8 @@ class next_state_predictor_ODE_tf():
         self.intermediate_steps = tf.convert_to_tensor(intermediate_steps, dtype=tf.int32)
         self.t_step = tf.convert_to_tensor(dt / float(self.intermediate_steps), dtype=tf.float32)
 
-    @tf.function(jit_compile = True
-                 ,input_signature = [tf.TensorSpec(shape=[None,6], dtype=tf.float32),tf.TensorSpec(shape=[1,1], dtype=tf.float32)])
+    # @tf.function(jit_compile = True
+    #              ,input_signature = [tf.TensorSpec(shape=[None,6], dtype=tf.float32),tf.TensorSpec(shape=[1,1], dtype=tf.float32)])
 
     def step(self, s, Q):
 
