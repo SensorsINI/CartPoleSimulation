@@ -23,8 +23,8 @@ def grad_desc(u,s):
             tape.watch(u)
             rollout_trajectory = predictor.predict_tf(s,u)
             cost = rollout_trajectory[:,-1,POSITION_IDX]**2
-        # dc_du = tape.gradient(cost,u)
-        dc_du = 0.0
+        dc_du = tape.gradient(cost,u)
+        # dc_du = 0.0
         return dc_du,cost
 
 # @tf.function(jit_compile = True)
@@ -69,7 +69,7 @@ SEED = 5876
 rng_gen = Generator(SFC64(SEED))
 dist_var = 0.5*np.ones([1,50])
 stdev = np.sqrt(dist_var)
-num_rollouts = 10000
+num_rollouts = 100
 dist_mue = np.zeros([1,50])
 Q = np.tile(dist_mue,(num_rollouts,1))+ np.multiply(rng_gen.standard_normal(
                 size=(num_rollouts, 50), dtype=np.float32),stdev)

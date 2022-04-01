@@ -26,12 +26,14 @@ TrackHalfLength = tf.convert_to_tensor(TrackHalfLength)
 ###
 
 
-_cartpole_ode_tf = tf.function(_cartpole_ode, jit_compile=True)
+# _cartpole_ode_tf = tf.function(_cartpole_ode, jit_compile=True)
+_cartpole_ode_tf = _cartpole_ode
 
 # euler_step_tf = tf.function(euler_step, jit_compile = True)
 
 
-edge_bounce_tf = tf.function(edge_bounce, jit_compile=True)
+# edge_bounce_tf = tf.function(edge_bounce, jit_compile=True)
+edge_bounce_tf = edge_bounce
 
 
 # @tf.function(jit_compile=True)
@@ -39,9 +41,11 @@ def wrap_angle_rad(sin, cos):
     return tf.math.atan2(sin, cos)
 
 
-cartpole_ode_tf = tf.function(cartpole_ode, jit_compile=True)
+# cartpole_ode_tf = tf.function(cartpole_ode, jit_compile=True)
+cartpole_ode_tf = cartpole_ode
 
-edge_bounce_wrapper_tf = tf.function(edge_bounce_wrapper, jit_compile=True)
+# edge_bounce_wrapper_tf = tf.function(edge_bounce_wrapper, jit_compile=True)
+edge_bounce_wrapper_tf = edge_bounce_wrapper
 
 
 # @tf.function(jit_compile=True)
