@@ -583,7 +583,7 @@ class controller_mppi(template_controller):
 
         # Prepare predictor for next timestep
         Q_update = np.tile(Q, (num_rollouts, 1, 1))
-        predictor.update_internal_state(self.s, Q_update)
+        predictor.update_internal_state(Q_update, self.s)
 
         return Q  # normed control input in the range [-1,1]
 
