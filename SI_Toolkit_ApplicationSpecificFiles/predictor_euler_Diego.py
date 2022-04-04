@@ -54,35 +54,19 @@ class predictor_euler_Diego():
 
         self.dt = dt
         self.max_steps = max_steps
-        out = tf.zeros([self.batch_size, self.horizon, 6])
-        self.out = tf.Variable(out)
-
-    def ode_fun(self, t, y, **const):
-        angle = y[0]
-        angleD = y[1]
-
-        position = y[2]
-        positionD = y[3]
-
-        u = y[4]
-
-        angle_cos = tf.cos(angle)
-        angle_sin = tf.sin(angle)
-        angleDD, positionDD = _cartpole_ode(angle_cos, angle_sin, angleD, positionD, u,
-                                            k_val, M, m, g, J_fric, M_fric, L)
-
-        return tf.stack([angleD, angleDD, positionD, positionDD, 0])
+        # self.out = tf.TensorArray(tf.float32, size=self.horizon, dynamic_size=False)
 
     def wrap_angle_rad(self, sin, cos):
         return tf.math.atan2(sin, cos)
 
-    def fine_euler(self, s, U, k):
+    # @tf.function(jit_compile=True)
+    def fine_euler(self, s, U):
         angle_sin = s[:, ANGLE_SIN_IDX]
         angle_cos = s[:, ANGLE_COS_IDX]
         angle = s[:, ANGLE_IDX]
         s_trunk = tf.stack([angle, s[:, ANGLED_IDX], s[:, POSITION_IDX], s[:, POSITIOND_IDX]], axis=1)
         for _ in tf.range(self.max_steps):
-            angleDD, positionDD = _cartpole_ode(angle_cos, angle_sin, s_trunk[:, 1], s_trunk[:, 3], U[:, k, 0],
+            angleDD, positionDD = _cartpole_ode(angle_cos, angle_sin, s_trunk[:, 1], s_trunk[:, 3], U[:, 0],
                                                 k_val, M, m, g, J_fric, M_fric, L)
             ds = tf.stack([s[:, ANGLED_IDX], angleDD, s[:, POSITION_IDX], positionDD], axis=1)
             s_trunk = s_trunk + ds * self.dt
@@ -93,23 +77,24 @@ class predictor_euler_Diego():
         s_next = tf.stack([angle, s_trunk[:,1], angle_cos, angle_sin, s_trunk[:,2], s_trunk[:,3]], axis = 1)
         return s_next
 
-    @tf.function(jit_compile=True)
+    # @tf.function(jit_compile=True)
     def predict(self, s, Q):
-        s = tf.convert_to_tensor(s)
-        Q = tf.convert_to_tensor(Q)
+        # s = tf.convert_to_tensor(s)
+        # Q = tf.convert_to_tensor(Q)
         U = Q2u_tf(Q)
 
-        if tf.rank(s) == 1:
-            s = s[tf.newaxis, :]
-
+        # if tf.rank(s) == 1:
+        # s = s[tf.newaxis, :]
+        out = tf.TensorArray(tf.float32, size=self.horizon+1, dynamic_size=False)
+        out = out.write(0, s)
         s_next = s
         for k in tf.range(self.horizon):
-            s_next = self.fine_euler(s_next, U, k)
-            self.out[:,k,:].assign(s_next)
-        return self.out
+            s_next = self.fine_euler(s_next, U[:,k,:])
+            out = out.write(k+1,s_next)
+        return tf.transpose(out.stack(), perm=[1, 0, 2])
 
 
-# @tf.function(jit_compile=True)
+@tf.function(jit_compile=True)
 def predict_wrap(predictor, s, u):
     return predictor.predict(s, u)
 
@@ -133,7 +118,7 @@ if __name__ == '__main__':
     #                  -0.13692386, 0.4193466, 0.08954383, -0.02065406, 0.7458399,
     #                  -1., 0.83411133, -0.5809542, -0.5786972, -0.70775455],
     #                 dtype=tf.float32)
-    num_rollouts = 10
+    num_rollouts = 10000
     predictor = predictor_euler_Diego(batch_size=num_rollouts)
 
     SEED = 5876
@@ -154,10 +139,20 @@ if __name__ == '__main__':
     u = u[:, :, tf.newaxis]
     rollout_trajectory = predict_wrap(predictor, s, u)
     pass
-    # import timeit
-    #
-    # f_to_measure = 'predictor.predict(s,u)'
-    # number = 10  # Gives the number of times each timeit call executes the function which we want to measure
-    # repeat_timeit = 1
-    # timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)
-    # print(timings)
+    import timeit
+
+    f_to_measure = 'predict_wrap(predictor, s, u)'
+    number = 1  # Gives the number of times each timeit call executes the function which we want to measure
+    repeat_timeit = 100  # Gives how many times timeit should be repeated
+    timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)
+    min_time = min(timings) / float(number)
+    max_time = max(timings) / float(number)
+    average_time = np.mean(timings) / float(number)
+    print()
+    print('----------------------------------------------------------------------------------')
+    print('Min time to evaluate is {} ms'.format(min_time * 1.0e3))  # ca. 5 us
+    print('Average time to evaluate is {} ms'.format(average_time * 1.0e3))  # ca 5 us
+    # The max is of little relevance as it is heavily influenced by other processes running on the computer at the same time
+    print('Max time to evaluate is {} ms'.format(max_time * 1.0e3))  # ca. 100 us
+    print('----------------------------------------------------------------------------------')
+    print()
