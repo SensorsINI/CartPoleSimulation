@@ -43,13 +43,13 @@ def make_J(k = param_k,mc=param_M,mp=param_m,g=param_g,mue_p = param_J_fric,mue_
     c8 = (mc+mp)*mue_p/lmp
 
     @jit(nopython=True, cache=True, fastmath=True)
-    def Jac(x,u,k): #x= [x,v,theta,omega]
+    def Jac(x,u,kk): #x= [x,v,theta,omega]
         J = np.zeros((4,5))
-        xl = x[k,0]
-        vel = x[k,1]
-        the = x[k,2]
-        ome = x[k,3]
-        u = u_max*u[k,0]
+        xl = x[kk,0]
+        vel = x[kk,1]
+        the = x[kk,2]
+        ome = x[kk,3]
+        u = u_max*u[kk,0]
 
         J[0,1] = 1
         J[2,3] = 1
@@ -96,14 +96,15 @@ def dldu(x,u,k):
 @jit(nopython=True, cache=True, fastmath=True)
 def dldx(x,u,k):
     ret = np.zeros((1,4))
-    ret[0,0] = dd_weight*2*((x[k,0])/(2.0*param_L))/(2.0*param_L)
-    ret[0,2] = ep_weight*0.25*2*(1.0-np.cos(x[k,2]))*(-np.sin(x[k,2]))
+    # ret[0,0] = dd_weight*2*((x[k,0])/(2.0*param_L))/(2.0*param_L)
+    # ret[0,2] = ep_weight*0.25*2*(1.0-np.cos(x[k,2]))*(np.sin(x[k,2]))
     return ret
 
 # @jit(nopython=True, cache=True, fastmath=True)
 def dldxn(x):
     ret = np.zeros((1,4))
-    ret[0,0] = np.exp(10*(x[-1,0]-0.2))-np.exp(10*(-x[-1,0]-0.2))
+    ret[0,0]=2*x[-1,0]
+    # ret[0,0] = np.exp(10*(x[-1,0]-0.2))-np.exp(10*(-x[-1,0]-0.2))
     return ret
 
 def make_cost_backprop(dldu,dldx,dldxn,J):
@@ -171,7 +172,7 @@ jac = make_J()
 Jo = cartpole_jacobian(s,u[0])
 Ji = Jo[0:4,0:4]
 x = np.array([s[POSITION_IDX],s[POSITIOND_IDX],s[ANGLE_IDX],s[ANGLED_IDX]])
-Jm = jac(s[np.newaxis,:],u[np.newaxis,:],0)
+Jm = jac(s[np.newaxis,:],u[np.newaxis,:]/u_max_param,0)
 
 #print(Ji)
 print(Jm)

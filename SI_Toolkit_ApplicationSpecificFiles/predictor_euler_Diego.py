@@ -53,6 +53,7 @@ class predictor_euler_Diego():
         self.initial_state = tf.zeros(shape=(1, len(STATE_VARIABLES)))
 
         self.dt = dt
+        self.dt_small = dt/max_steps
         self.max_steps = max_steps
         # self.out = tf.TensorArray(tf.float32, size=self.horizon, dynamic_size=False)
 
@@ -61,19 +62,20 @@ class predictor_euler_Diego():
 
     # @tf.function(jit_compile=True)
     def fine_euler(self, s, U):
-        angle_sin = s[:, ANGLE_SIN_IDX]
-        angle_cos = s[:, ANGLE_COS_IDX]
-        angle = s[:, ANGLE_IDX]
-        s_trunk = tf.stack([angle, s[:, ANGLED_IDX], s[:, POSITION_IDX], s[:, POSITIOND_IDX]], axis=1)
+        # angle = s[:, ANGLE_IDX]
+        angle_sin = tf.sin(s[:, ANGLE_IDX])
+        angle_cos = tf.cos(s[:, ANGLE_IDX])
+        s_trunk = tf.stack([s[:, ANGLE_IDX], s[:, ANGLED_IDX], s[:, POSITION_IDX], s[:, POSITIOND_IDX]], axis=1)
         for _ in tf.range(self.max_steps):
             angleDD, positionDD = _cartpole_ode(angle_cos, angle_sin, s_trunk[:, 1], s_trunk[:, 3], U[:, 0],
                                                 k_val, M, m, g, J_fric, M_fric, L)
-            ds = tf.stack([s[:, ANGLED_IDX], angleDD, s[:, POSITION_IDX], positionDD], axis=1)
-            s_trunk = s_trunk + ds * self.dt
+            ds = tf.stack([s_trunk[:, 1], angleDD, s_trunk[:,3], positionDD], axis=1)
+            s_trunk = s_trunk + ds * self.dt_small
             angle_sin = tf.sin(s_trunk[:, 0])
             angle_cos = tf.cos(s_trunk[:, 0])
-            angle = self.wrap_angle_rad(angle_sin, angle_cos)
-            s_trunk = tf.stack([angle, s_trunk[:, 1], s_trunk[:, 2], s_trunk[:, 3]], axis = 1)
+            # angle = self.wrap_angle_rad(angle_sin, angle_cos)
+            # s_trunk = tf.stack([angle, s_trunk[:, 1], s_trunk[:, 2], s_trunk[:, 3]], axis = 1)
+        angle = self.wrap_angle_rad(angle_sin, angle_cos)
         s_next = tf.stack([angle, s_trunk[:,1], angle_cos, angle_sin, s_trunk[:,2], s_trunk[:,3]], axis = 1)
         return s_next
 
@@ -94,12 +96,14 @@ class predictor_euler_Diego():
         return tf.transpose(out.stack(), perm=[1, 0, 2])
 
 
-@tf.function(jit_compile=True)
-def predict_wrap(predictor, s, u):
-    return predictor.predict(s, u)
+
 
 
 if __name__ == '__main__':
+    @tf.function(jit_compile=True)
+    def predict_wrap(predictor, s, u):
+        return predictor.predict(s, u)
+
     s0 = create_cartpole_state()
     s_org = s0
     s_org[POSITION_IDX] = -30.2
