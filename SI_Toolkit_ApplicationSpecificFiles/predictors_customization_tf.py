@@ -4,7 +4,7 @@ from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INP
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
 from CartPole.cartpole_tf import cartpole_fine_integration_tf, Q2u_tf
-from CartPole.cartpole_model import L
+from CartPole.cartpole_model_tf import L
 
 STATE_INDICES_TF = tf.lookup.StaticHashTable(
     initializer=tf.lookup.KeyValueTensorInitializer(

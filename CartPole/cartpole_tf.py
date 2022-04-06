@@ -1,5 +1,5 @@
 import tensorflow as tf
-from CartPole.cartpole_model import _cartpole_ode, euler_step_tf, edge_bounce, cartpole_ode, edge_bounce_wrapper, \
+from CartPole.cartpole_model_tf import _cartpole_ode, euler_step_tf, edge_bounce, cartpole_ode, edge_bounce_wrapper, \
     cartpole_integration_tf
 from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, \
     STATE_INDICES

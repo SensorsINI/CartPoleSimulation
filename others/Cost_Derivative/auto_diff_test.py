@@ -69,7 +69,7 @@ SEED = 5876
 rng_gen = Generator(SFC64(SEED))
 dist_var = 0.5*np.ones([1,50])
 stdev = np.sqrt(dist_var)
-num_rollouts = 100
+num_rollouts = 1
 dist_mue = np.zeros([1,50])
 Q = np.tile(dist_mue,(num_rollouts,1))+ np.multiply(rng_gen.standard_normal(
                 size=(num_rollouts, 50), dtype=np.float32),stdev)

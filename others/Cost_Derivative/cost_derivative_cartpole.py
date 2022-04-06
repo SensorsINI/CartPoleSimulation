@@ -5,7 +5,7 @@ from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, AN
     create_cartpole_state
 import yaml
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
-
+from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 dd_weight = config["controller"]["mppi"]["dd_weight"]
@@ -53,7 +53,7 @@ def make_J(k=param_k, mc=param_M, mp=param_m, g=param_g, mue_p=param_J_fric, mue
         vel = x[kk, 1]
         the = x[kk, 2]
         ome = x[kk, 3]
-        u = u_max * u[kk, 0]
+        u = u[kk, 0]
 
         J[0, 1] = 1
         J[2, 3] = 1
@@ -113,13 +113,17 @@ def dldx(x, u, k):
 def dldxn(x):
     ret = np.zeros((1, 4))
     ret[0, 0] = 2 * x[-1, 0]
+    ret[0, 2] = 2 * x[-1, 2]
+    ret[0, 1] = 2 * x[-1, 1]
+    ret[0, 3] = 2 * x[-1, 3]
     # ret[0,0] = np.exp(10*(x[-1,0]-0.2))-np.exp(10*(-x[-1,0]-0.2))
     return ret
 
 
 def make_cost_backprop(dldu, dldx, dldxn, J, dt):
     # @jit(nopython=True, cache=True, fastmath=True)
-    def cost_backprop(s, u):
+    def cost_backprop(s, u_in):
+        u = u_in*u_max_param
         Nx = s.shape[0]
         x = np.zeros((Nx, 4))
         x[:, 0] = s[:, POSITION_IDX]
@@ -146,7 +150,7 @@ def make_cost_backprop(dldu, dldx, dldxn, J, dt):
             dxduk = Jk[:, 4]*dt
             dxduk = dxduk[:, np.newaxis]
             lossgrad[k, 0] = dldu(x, u, k) + dldxk @ dxduk
-        return lossgrad
+        return lossgrad/u_max_param
 
     return cost_backprop
 
@@ -174,11 +178,18 @@ import timeit
 s0 = create_cartpole_state()
 # Set non-zero input
 s = s0
-s[POSITION_IDX] = -20.2
-s[POSITIOND_IDX] = 1.87
-s[ANGLE_IDX] = -0.42
+s[POSITION_IDX] = -13.2
+s[POSITIOND_IDX] = -1.87
+s[ANGLE_IDX] = 1.32
 s[ANGLED_IDX] = 0.537
-u = np.array([-0.44])
+s[ANGLE_SIN_IDX] = np.sin(s[ANGLE_IDX])
+s[ANGLE_COS_IDX] = np.cos(s[ANGLE_IDX])
+u = np.array([-0.14])
+
+# s[POSITION_IDX] = 0
+# s[POSITIOND_IDX] = 0
+# s[ANGLE_IDX] = 0
+# s[ANGLED_IDX] = 0
 
 jac = make_J()
 Jo = cartpole_jacobian(s, u[0])
@@ -204,9 +215,9 @@ u = np.array([0.594623, 0.11093523, -0.32577565, 0.36339644, 0.19863953,
               -1., 0.83411133, -0.5809542, -0.5786972, -0.70775455],
              dtype=np.float32)
 u = u[:, np.newaxis]
-
-predictor = predictor_ODE(horizon=u.shape[0], intermediate_steps=1, dt=0.02)
-predictor.predict(s[np.newaxis,:], u[np.newaxis,:,:])
+u = np.clip(u, -0.7, 0.7)
+predictor = predictor_ODE_tf(horizon=u.shape[0], intermediate_steps=1, dt=0.02)
+s = predictor.predict(s0[np.newaxis,:], u[np.newaxis,:,:])
 
 s_test = s[-1,:]
 u_test = u[-1]
@@ -214,10 +225,20 @@ x_test = np.array([s_test[POSITION_IDX], s_test[POSITIOND_IDX], s_test[ANGLE_IDX
 J_test = jac(x_test[np.newaxis, :], u_test[np.newaxis, :] / u_max_param, 0)
 
 cost_bp = make_cost_backprop(dldu, dldx, dldxn, jac,0.02)
-lgd = cost_bp(s, u)
 
+lgd = 0
+lr = 0.01
+for _ in range(1000):
+    u = u-lr*lgd
+    np.clip(u,-1,1)
+    s = predictor.predict(s0[np.newaxis, :], u[np.newaxis, :, :])
+    cost = s[-1, ANGLE_IDX]**2+s[-1, POSITION_IDX]**2+s[-1, ANGLED_IDX]**2+s[-1, POSITIOND_IDX]**2
+    print(cost)
+    lgd = cost_bp(s, u)
 
 pass
+
+
 # cost_bp = make_cost_backprop(dldu,dldx,dldx,dxdu,dxdx)
 # u = np.array([-0.1,-0.1,-0.1,-0.1],dtype=np.float64)
 # u = u[:,np.newaxis]

@@ -10,18 +10,18 @@ from others.p_globals import (
     k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
 )
 
-# k = tf.convert_to_tensor(k)
-# M = tf.convert_to_tensor(M)
-# m = tf.convert_to_tensor(m)
-# g = tf.convert_to_tensor(g)
-# J_fric = tf.convert_to_tensor(J_fric)
-# M_fric = tf.convert_to_tensor(M_fric)
-# L = tf.convert_to_tensor(L)
-# v_max = tf.convert_to_tensor(v_max)
-# u_max = tf.convert_to_tensor(u_max)
-# controlDisturbance = tf.convert_to_tensor(controlDisturbance)
-# controlBias = tf.convert_to_tensor(controlBias)
-# TrackHalfLength = tf.convert_to_tensor(TrackHalfLength)
+k = tf.convert_to_tensor(k)
+M = tf.convert_to_tensor(M)
+m = tf.convert_to_tensor(m)
+g = tf.convert_to_tensor(g)
+J_fric = tf.convert_to_tensor(J_fric)
+M_fric = tf.convert_to_tensor(M_fric)
+L = tf.convert_to_tensor(L)
+v_max = tf.convert_to_tensor(v_max)
+u_max = tf.convert_to_tensor(u_max)
+controlDisturbance = tf.convert_to_tensor(controlDisturbance)
+controlBias = tf.convert_to_tensor(controlBias)
+TrackHalfLength = tf.convert_to_tensor(TrackHalfLength)
 
 import numpy as np
 from numpy.random import SFC64, Generator
