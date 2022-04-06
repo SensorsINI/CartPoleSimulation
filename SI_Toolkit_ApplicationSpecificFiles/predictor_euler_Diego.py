@@ -146,7 +146,7 @@ if __name__ == '__main__':
     import timeit
 
     f_to_measure = 'predict_wrap(predictor, s, u)'
-    number = 1  # Gives the number of times each timeit call executes the function which we want to measure
+    number = 10  # Gives the number of times each timeit call executes the function which we want to measure
     repeat_timeit = 100  # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)
     min_time = min(timings) / float(number)
