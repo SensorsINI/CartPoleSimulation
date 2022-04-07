@@ -48,7 +48,7 @@ speedup_init = 1.0  # Multiplicative factor by which the simulation seen by the 
 # Variables for random trace generation - GUI only
 # Data Generator sets these parameters independently
 track_relative_complexity_init = 0.5  # randomly placed target points/s, 0.5 is normal default
-length_of_experiment_init = 100.0e1  # seconds, length of the random length trace
+length_of_experiment_init = 1.0e3  # seconds, length of the random length trace
 interpolation_type_init = 'previous'  # Sets how to interpolate between turning points of random trace
 # Possible choices: '0-derivative-smooth', 'linear', 'previous'
 turning_points_period_init = 'regular'  # How turning points should be distributed

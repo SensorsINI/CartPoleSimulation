@@ -43,7 +43,7 @@ t0 = timeit.default_timer()
 for row_number in range(autoregres_at_after_start):
     initial_state = df.iloc[[row_number], :]
     Q = np.atleast_1d(df.loc[df.index[row_number], 'Q'])
-    predictor.update_internal_state(initial_state, Q)
+    predictor.update_internal_state(Q, initial_state)
 t1 = timeit.default_timer()
 
 # Prepare initial state for predictions

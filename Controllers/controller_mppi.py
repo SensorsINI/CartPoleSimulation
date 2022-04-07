@@ -583,7 +583,7 @@ class controller_mppi(template_controller):
 
         # Prepare predictor for next timestep
         Q_update = np.tile(Q, (num_rollouts, 1, 1))
-        predictor.update_internal_state(self.s, Q_update)
+        predictor.update_internal_state(Q_update, self.s)
 
         return Q  # normed control input in the range [-1,1]
 
@@ -732,10 +732,8 @@ class controller_mppi(template_controller):
             # For each rollout, calculate what the nominal trajectory would be using the known true model
             # This can uncover if the model used makes inaccurate predictions
             # shape(true_nominal_rollouts) = ITERATIONS x mpc_horizon x [position, positionD, angle, angleD]
-            predictor_ground_truth.setup(
-                np.copy(nrlgs[:, 0, :]), prediction_denorm=True
-            )
-            true_nominal_rollouts = predictor_ground_truth.predict(iplgs)[:, :-1, :]
+
+            true_nominal_rollouts = predictor_ground_truth.predict(np.copy(nrlgs[:, 0, :]), iplgs)[:, :-1, :]
             wrap_angle_rad_inplace(true_nominal_rollouts[:, :, ANGLE_IDX])
 
             # Create figure
@@ -908,9 +906,6 @@ class controller_mppi(template_controller):
             "inputs": [],
             "nominal_rollouts": [],
         }
-        try:
-            self.warm_up_countdown = self.wash_out_len
-            # TODO: Not sure if this works for predictor autoregressive tf
-            predictor.net.reset_states()
-        except:
-            pass
+
+        self.warm_up_countdown = self.wash_out_len
+

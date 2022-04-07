@@ -86,7 +86,7 @@ class controller_lqr(template_controller):
         state = np.array(
             [[s[POSITION_IDX] - target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
 
-        Q = np.asscalar(np.dot(-self.K, state))
+        Q = np.dot(-self.K, state).item()
 
         Q = np.float32(Q * (1 + p_Q * self.rng_lqr.uniform(-1.0, 1.0)))
         # Q = self.rng_lqr.uniform(-1.0, 1.0)
