@@ -3,6 +3,7 @@ import numpy as np
 from numpy.random import SFC64, Generator
 from datetime import datetime
 from numba import jit, prange
+import tensorflow as tf
 
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import TrackHalfLength
@@ -14,7 +15,7 @@ from CartPole.cartpole_jacobian import cartpole_jacobian
 import yaml
 
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
-from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
+from SI_Toolkit.Predictors.predictor_ODE_tf_pure import predictor_ODE_tf_pure
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
 
 #load constants from config file
@@ -40,7 +41,7 @@ predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
 
 """Define Predictor"""
 if predictor_type == "EulerTF":
-    predictor = predictor_ODE_tf(horizon=cem_samples, dt=dt, intermediate_steps=1)
+    predictor = predictor_ODE_tf_pure(horizon=cem_samples, dt=dt, intermediate_steps=1)
 elif predictor_type == "Euler":
     predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
 elif predictor_type == "NeuralNet":
@@ -50,27 +51,23 @@ elif predictor_type == "NeuralNet":
 
 
 #cost for distance from track edge
-@jit(nopython=True, cache=True, fastmath=True)
 def distance_difference_cost(position, target_position):
     """Compute penalty for distance of cart to the target position"""
-    return ((position - target_position) / (2.0 * TrackHalfLength)) ** 2 + (
-        np.abs(position) > 0.95 * TrackHalfLength
-    ) * 1.0e6  # Soft constraint: Do not crash into border
+    return ((position - target_position) / (2.0 * TrackHalfLength)) ** 2 + tf.cast(
+        tf.abs(position) > 0.95 * TrackHalfLength
+    , tf.float32) * 1.0e6  # Soft constraint: Do not crash into border
 
 #cost for difference from upright position
-@jit(nopython=True, cache=True, fastmath=True)
 def E_pot_cost(angle):
     """Compute penalty for not balancing pole upright (penalize large angles)"""
-    return 0.25 * (1.0 - np.cos(angle)) ** 2
+    return 0.25 * (1.0 - tf.cos(angle)) ** 2
 
 #actuation cost
-@jit(nopython=True,cache = True, fastmath = True)
 def CC_cost(u):
     return R * (u ** 2)
 
 #final stage cost
-@jit(nopython=True, cache=True, fastmath=True)
-def phi(s: np.ndarray, target_position: np.float32) -> np.ndarray:
+def phi(s, target_position):
     """Calculate terminal cost of a set of trajectories
 
     Williams et al use an indicator function type of terminal cost in
@@ -87,17 +84,16 @@ def phi(s: np.ndarray, target_position: np.float32) -> np.ndarray:
     :rtype: np.ndarray
     """
     terminal_states = s[:, -1, :]
-    terminal_cost = 10000 * (
-        (np.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
+    terminal_cost = 10000 * tf.cast(
+        (tf.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
         | (
-            np.abs(terminal_states[:, POSITION_IDX] - target_position)
+            tf.abs(terminal_states[:, POSITION_IDX] - target_position)
             > 0.1 * TrackHalfLength
         )
-    )
+    , tf.float32)
     return terminal_cost
 
 #optimized mean function
-@jit(parallel=True)
 def mean_numba(a):
 
     res = []
@@ -107,32 +103,31 @@ def mean_numba(a):
     return np.array(res)
 
 #cost of changeing control to fast
-@jit(nopython=True, cache=True, fastmath=True)
 def control_change_rate_cost(u, u_prev,nrol):
     """Compute penalty of control jerk, i.e. difference to previous control input"""
-    u_prev_vec = np.concatenate((np.ones((nrol,1))*u_prev,u[:,:-1]),axis=-1)
+    u_prev_vec = tf.concat((tf.ones((nrol,1))*u_prev,u[:,:-1]),axis=-1)
     return (u - u_prev_vec) ** 2
 
 #all stage costs together
-def q(s :np.ndarray,u:np.ndarray,target_position: np.float32, u_prev: np.float32):
+def q(s,u,target_position, u_prev):
     dd = dd_weight * distance_difference_cost(
         s[:, :, POSITION_IDX], target_position
-    ).astype(np.float32)
-    ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX]).astype(np.float32)
+    )
+    ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX])
     cc = cc_weight * CC_cost(u)
     ccrc = ccrc_weight * control_change_rate_cost(u,u_prev,num_rollouts)
     stage_cost = dd+ep+cc+ccrc
     return stage_cost
 
 #total cost of the trajectory
-def cost(s_hor :np.ndarray,u:np.ndarray,target_position: np.float32,u_prev: np.float32):
+def cost(s_hor ,u,target_position,u_prev):
     stage_cost = q(s_hor[:,1:,:],u,target_position,u_prev)
-    total_cost = np.sum(stage_cost,axis=1)
-    total_cost+= phi(s_hor,target_position)
+    total_cost = tf.math.reduce_sum(stage_cost,axis=1)
+    total_cost = total_cost + phi(s_hor,target_position)
     return total_cost
 
 #cem class
-class controller_cem(template_controller):
+class controller_cem_tf(template_controller):
     def __init__(self):
         #First configure random sampler
         SEED = config["controller"]["mppi"]["SEED"]
@@ -145,6 +140,11 @@ class controller_cem(template_controller):
         self.stdev = np.sqrt(self.dist_var)
         self.u = 0
 
+    @tf.function(jit_compile=True)
+    def predict_and_cost(self, s, Q, target_position):
+        rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
+        traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
+        return traj_cost, rollout_trajectory
 
     #step function to find control
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
@@ -153,14 +153,16 @@ class controller_cem(template_controller):
             Q = np.tile(self.dist_mue,(num_rollouts,1))+ np.multiply(self.rng_cem.standard_normal(
                 size=(num_rollouts, cem_samples), dtype=np.float32),self.stdev)
             Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
+            s = np.tile(s, tf.constant([num_rollouts, 1]))
+            s = tf.convert_to_tensor(s, dtype=tf.float32)
+            Q = tf.convert_to_tensor(Q, dtype=tf.float32)
+            target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 
             #rollout the trajectories
-            rollout_trajectory = predictor.predict(np.copy(s), Q[:,:, np.newaxis])
-
-            #get cost of all trajectories
-            traj_cost = cost(rollout_trajectory, Q, target_position,self.u)
+            traj_cost, rollout_trajectory = self.predict_and_cost(s, Q, target_position)
+            Q = Q.numpy()
             #sort the costs and find best k costs
-            sorted_cost = np.argsort(traj_cost)
+            sorted_cost = np.argsort(traj_cost.numpy())
             best_idx = sorted_cost[0:cem_best_k]
             elite_Q = Q[best_idx,:]
             #update the distribution for next inner loop
@@ -183,7 +185,7 @@ class controller_cem(template_controller):
 
 
 if __name__ == '__main__':
-    ctrl = controller_cem()
+    ctrl = controller_cem_tf()
 
 
     import timeit
@@ -197,8 +199,8 @@ if __name__ == '__main__':
     s[ANGLED_IDX] = 0.237
     u = -0.24
 
-    ctrl.step(s0, 0)
-    f_to_measure = 'ctrl.step(s0,0)'
+    ctrl.step(s0, 0.0)
+    f_to_measure = 'ctrl.step(s0,0.0)'
     number = 1  # Gives the number of times each timeit call executes the function which we want to measure
     repeat_timeit = 1000  # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)
