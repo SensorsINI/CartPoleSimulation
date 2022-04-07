@@ -1,5 +1,7 @@
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.random import SFC64, Generator
+import math
 
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import TrackHalfLength
@@ -22,17 +24,22 @@ def grad_desc(u,s):
         with tf.GradientTape() as tape:
             tape.watch(u)
             rollout_trajectory = predictor.predict_tf(s,u)
-            cost = rollout_trajectory[:,-1,POSITION_IDX]**2
+            costx = tf.math.reduce_mean(rollout_trajectory[:,:,POSITION_IDX]**2+2*(1-rollout_trajectory[:,:,ANGLE_COS_IDX])**2, axis = 1)
+            costu = tf.math.reduce_mean(u[:,:,0]**2,axis=1)
+            cost = costx+10*costu
         dc_du = tape.gradient(cost,u)
         # dc_du = 0.0
-        return dc_du,cost
+        return dc_du, cost, costx, costu, rollout_trajectory
 
 # @tf.function(jit_compile = True)
-def test(u,s):
+def test(u,s,lr):
     for i in range(0,100):
-        dc_du,cost  = grad_desc(u,s)
+        dc_du, cost, costx, costu, send  = grad_desc(u,s)
         print(cost)
         u = u - lr * dc_du
+        u = tf.clip_by_value(u,-1,1)
+
+    return send
 
 
 
@@ -47,10 +54,10 @@ predictor = predictor_ODE_tf_pure(horizon=cem_samples, dt=dt, intermediate_steps
 s0 = create_cartpole_state()
 # Set non-zero input
 s = s0
-s[POSITION_IDX] = -30.2
-s[POSITIOND_IDX] = 2.87
-s[ANGLE_IDX] = -0.32
-s[ANGLED_IDX] = 0.237
+s[POSITION_IDX] = 0.1
+s[POSITIOND_IDX] = 0
+s[ANGLE_IDX] = 0
+s[ANGLED_IDX] = 0
 
 s_org = tf.convert_to_tensor(s)
 
@@ -66,13 +73,14 @@ s_org = tf.convert_to_tensor(s)
 #                  -1., 0.83411133, -0.5809542, -0.5786972, -0.70775455],
 #                 dtype=tf.float32)
 SEED = 5876
+horizon = cem_samples
 rng_gen = Generator(SFC64(SEED))
-dist_var = 0.5*np.ones([1,50])
+dist_var = 0.5*np.ones([1,horizon])
 stdev = np.sqrt(dist_var)
-num_rollouts = 1
-dist_mue = np.zeros([1,50])
+num_rollouts = 10
+dist_mue = np.zeros([1,horizon])
 Q = np.tile(dist_mue,(num_rollouts,1))+ np.multiply(rng_gen.standard_normal(
-                size=(num_rollouts, 50), dtype=np.float32),stdev)
+                size=(num_rollouts, horizon), dtype=np.float32),stdev)
 Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
 
 
@@ -81,15 +89,26 @@ s = np.tile(s,tf.constant([num_rollouts,1]))
 u = tf.convert_to_tensor(Q)
 u = u[:, :, tf.newaxis]
 rollout_trajectory = predictor.predict_tf(s, u)
-lr = 10
+lr = 0.05
 
-test(u,s)
+send = test(u,s,lr)
 
-import timeit
-f_to_measure = 'test(u,s)'
-number = 10  # Gives the number of times each timeit call executes the function which we want to measure
-repeat_timeit = 1
-timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)
-print(timings)
+#%% plotting
+toplt = tf.transpose(send,perm=[1,0,2])
+fig, ax = plt.subplots()
+ax.plot(toplt[:,:,ANGLE_IDX])
+plt.title('Angle')
+plt.show()
+fig2, ax2 = plt.subplots()
+ax2.plot(toplt[:,:,POSITION_IDX])
+plt.title('Position')
+plt.show()
 
+# import timeit
+# f_to_measure = 'test(u,s)'
+# number = 10  # Gives the number of times each timeit call executes the function which we want to measure
+# repeat_timeit = 1
+# timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)
+# print(timings)
+rollout_trajectory = send
 pass
