@@ -1,0 +1,156 @@
+# This is normalization information calculated 2022-02-18 at time 20-01-25
+# Done with git-revision: cae76a8aff0065c99894ed466d40e20a25ae851b
+#
+# Sampling interval of data used to calculate normalization: 0.02 s
+#
+# Data files used to calculate normalization information:
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-0.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-1.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-10.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-100.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-101.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-102.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-103.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-104.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-105.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-106.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-107.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-108.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-109.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-11.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-110.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-111.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-112.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-113.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-114.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-115.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-116.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-117.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-118.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-119.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-12.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-120.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-121.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-122.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-123.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-124.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-125.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-126.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-127.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-128.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-129.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-13.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-130.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-131.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-132.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-133.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-14.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-15.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-16.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-17.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-18.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-19.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-2.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-20.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-21.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-22.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-23.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-24.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-25.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-26.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-27.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-28.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-29.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-3.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-30.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-31.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-32.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-33.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-34.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-35.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-36.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-37.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-38.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-39.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-4.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-40.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-41.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-42.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-43.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-44.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-45.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-46.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-47.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-48.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-49.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-5.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-50.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-51.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-52.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-53.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-54.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-55.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-56.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-57.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-58.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-59.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-6.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-60.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-61.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-62.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-63.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-64.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-65.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-66.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-67.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-68.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-69.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-7.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-70.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-71.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-72.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-73.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-74.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-75.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-76.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-77.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-78.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-79.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-8.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-80.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-81.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-82.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-83.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-84.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-85.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-86.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-87.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-88.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-89.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-9.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-90.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-91.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-92.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-93.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-94.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-95.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-96.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-97.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-98.csv
+#     ./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Recordings/Train/Experiment-99.csv
+#
+# Original (calculated from data) Normalization Information:
+#,         ,      ,         ,Q,         ,angle,         ,angleD,         ,angle_cos,         ,angle_sin,         ,position,         ,positionD,         ,target_position,         
+#,           ,mean,           ,-0.00605,           ,0.03503,           ,0.33904,           ,0.34791,           ,0.01568,           ,0.00618,           ,-0.00083,           ,0.0,           
+#,           ,std,           ,0.60084,           ,1.45164,           ,5.1104,           ,0.73467,           ,0.58223,           ,0.04795,           ,0.2675,           ,0.0,           
+#,           ,max,           ,1.0,           ,3.14132,           ,13.65243,           ,1.0,           ,1.0,           ,0.18942,           ,0.53961,           ,0.0,           
+#,           ,min,           ,-1.0,           ,-3.14033,           ,-37.46748,           ,-1.0,           ,-1.0,           ,-0.18211,           ,-0.54386,           ,0.0,           
+#
+# Does user modified normalization info calculated from data?: Yes
+#
+# Normalization Information:
+,Q,angle,angleD,angleDD,angle_cos,angle_sin,position,positionD,positionDD,target_position,u
+mean,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+std,0.60084,1.45164,5.1104,,0.73467,0.58223,0.04795,0.2675,,0.0,
+max,1.0,3.14159,37.46748,,1.0,1.0,0.198,0.54386,,0.198,6.21
+min,-1.0,-3.14159,-37.46748,,-1.0,-1.0,-0.198,-0.54386,,-0.198,-6.21

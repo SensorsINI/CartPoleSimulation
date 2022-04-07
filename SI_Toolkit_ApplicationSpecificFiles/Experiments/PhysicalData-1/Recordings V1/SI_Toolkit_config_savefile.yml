@@ -1,0 +1,33 @@
+modeling:
+  NET_NAME: GRU-6IN-32H1-32H2-5OUT-0
+  PREDICTION_FEATURES_NAMES:
+  - angle_cos
+  - angle_sin
+  - angleD
+  - position
+  - positionD
+  RNN_PATH: ./save_tf/
+paths:
+  PATH_TO_EXPERIMENT_FOLDERS: ./SI_Toolkit_ApplicationSpecificFiles/Experiments/
+  path_to_experiment: PhysicalData-1/
+testing:
+  TEST_FILE: Experiment.csv
+  tests:
+  - Euler
+  - GRU-6IN-32H1-32H2-5OUT-0
+training_default:
+  control_inputs:
+  - Q
+  outputs:
+  - angle_sin
+  - angle_cos
+  - angleD
+  - position
+  - positionD
+  setpoint_inputs: []
+  state_inputs:
+  - angle_sin
+  - angle_cos
+  - angleD
+  - position
+  - positionD

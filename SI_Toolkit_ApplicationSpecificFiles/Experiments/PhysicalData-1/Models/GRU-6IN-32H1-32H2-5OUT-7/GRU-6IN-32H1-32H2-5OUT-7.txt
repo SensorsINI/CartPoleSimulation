@@ -1,0 +1,41 @@
+CREATED:
+2022-02-19 at time 19:36:05
+
+WITH GIT REVISION:
+cae76a8aff0065c99894ed466d40e20a25ae851b
+
+NET NAME:
+GRU-32H1-32H2
+
+NET FULL NAME:
+GRU-6IN-32H1-32H2-5OUT-7
+
+INPUTS:
+Q, angleD, angle_cos, angle_sin, position, positionD
+
+OUTPUTS:
+angleD, angle_cos, angle_sin, position, positionD
+
+TYPE:
+GRU
+
+NORMALIZATION:
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1/Models/GRU-6IN-32H1-32H2-5OUT-7/NI_2022-02-19_19-32-17.csv
+
+SAMPLING INTERVAL:
+0.02 s
+
+PARENT NET:
+Network trained from scratch
+
+WASH OUT LENGTH:
+10
+
+TRAINING_FILES:
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1//Recordings/Train/
+
+VALIDATION_FILES:
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1//Recordings/Validate/
+
+TEST_FILES:
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/PhysicalData-1//Recordings/Test/

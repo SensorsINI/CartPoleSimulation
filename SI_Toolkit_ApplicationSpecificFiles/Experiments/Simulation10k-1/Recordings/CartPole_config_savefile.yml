@@ -1,0 +1,100 @@
+cartpole:
+  J_fric: 0.00025
+  L: 0.395/2.0
+  M: 0.23
+  M_fric: 6.34
+  PATH_TO_CONTROLLERS: ./Controllers/
+  PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: ./Experiment_Recordings/
+  SEED: None
+  cart_length: 0.044
+  controlBias: 0.0
+  controlDisturbance: 0.0
+  g: 9.81
+  k: 1.0/3.0
+  latency: 0.0
+  m: 0.087
+  noise:
+    noise_mode: 'ON'
+    sigma_angle: 0.0
+    sigma_angleD: 0.15
+    sigma_position: 0.001
+    sigma_positionD: 0.01
+  u_max: 6.21
+  usable_track_length: 0.44
+  v_max: 0.8
+controller:
+  custom_mpc_scipy:
+    DT: 0.1
+    ftol: 1.0e-08
+    l1: 100.0
+    l1_2: 0.0
+    l2: 0.0
+    l3: 0.0
+    l4: 0.01
+    m1: 0.0
+    m2: 0.0
+    m3: 0.0
+    m4: 0.0
+    method: SLSQP
+    mpc_horizon: 10
+    wr: 0.001
+  do_mpc:
+    dt_mpc_simulation: 0.02
+    l_angle: 0.1
+    l_position: 1.0
+    l_positionD: 0.1
+    mpc_horizon: 50
+    p_Q: 0.0
+    p_angle: 0.0
+    p_position: 0.0
+    p_positionD: 0.0
+  do_mpc_discrete:
+    dt_mpc_simulation: 0.02
+    mpc_horizon: 50
+  lqr:
+    Q:
+    - 10.0
+    - 1.0
+    - 1.0
+    - 1.0
+    R: 10.0
+    SEED: None
+    control_noise: 1.0
+  mpc_opti:
+    dt_mpc_simulation: 0.2
+    mpc_horizon: 10
+  mppi:
+    GAMMA: 1.0
+    LBD: 100.0
+    LOGGING: false
+    NU: 1000.0
+    R: 1.0
+    SAMPLING_TYPE: interpolated
+    SEED: None
+    SQRTRHOINV: 0.01
+    WASH_OUT_LEN: 100
+    cc_weight: 1.0
+    ccrc_weight: 1.0
+    control_noise: 0.0
+    cost_noise: 0.0
+    dd_weight: 120.0
+    dt: 0.02
+    ekc_weight: 5.0
+    ekp_weight: 0.01
+    ep_weight: 50000.0
+    mpc_horizon: 1.0
+    num_rollouts: 2000
+    predictor_type: NeuralNet
+    update_every: 1
+  nn_as_mpc_tf:
+    PATH_TO_MODELS: ./Controllers/models_for_nn_as_mpc_tf/
+    net_name: Dense-6IN-32H1-32H2-1OUT-0
+  pid:
+    D_angle: 0.0
+    D_position: 0.1
+    I_angle: 0.0
+    I_position: 0.0
+    P_angle: 9.0
+    P_position: 0.1
+data_generator:
+  SEED: None
