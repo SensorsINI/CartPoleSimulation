@@ -28,6 +28,7 @@ dd_weight = config["controller"]["mppi"]["dd_weight"]
 cc_weight = config["controller"]["mppi"]["cc_weight"]
 ep_weight = config["controller"]["mppi"]["ep_weight"]
 R = config["controller"]["cem"]["cem_R"]
+
 cem_outer_it = config["controller"]["cem"]["cem_outer_it"]
 NET_NAME = config["controller"]["cem"]["CEM_NET_NAME"]
 predictor_type = config["controller"]["cem"]["cem_predictor_type"]
@@ -35,6 +36,11 @@ cem_stdev_min = config["controller"]["cem"]["cem_stdev_min"]
 ccrc_weight = config["controller"]["cem"]["cem_ccrc_weight"]
 cem_best_k = config["controller"]["cem"]["cem_best_k"]
 cem_samples = int(cem_horizon / dt)  # Number of steps in MPC horizon
+
+cem_LR = config["controller"]["cem"]["cem_LR"]
+cem_max_LR = config["controller"]["cem"]["cem_max_LR"]
+cem_LR = tf.constant(cem_LR, dtype=tf.float32)
+cem_max_LR = tf.constant(cem_max_LR, dtype = tf.float32)
 
 #create predictor
 predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
@@ -142,9 +148,20 @@ class controller_cem_tf(template_controller):
 
     @tf.function(jit_compile=True)
     def predict_and_cost(self, s, Q, target_position):
-        rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
-        traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
-        return traj_cost, rollout_trajectory
+        with tf.GradientTape(watch_accessed_variables=False) as tape:
+            tape.watch(Q)
+            rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
+            traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
+        dc_dQ = tape.gradient(traj_cost, Q)
+        dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ), axis = 1)
+        mask = (dc_dQ_max > 1)[:,tf.newaxis]
+        invmask = tf.logical_not(mask)
+        Q_update = (cem_max_LR*(dc_dQ/dc_dQ_max[:,tf.newaxis])*tf.cast(mask,tf.float32) + cem_LR*dc_dQ*tf.cast(invmask,tf.float32))
+        Qn = Q-Q_update
+        Qn = tf.clip_by_value(Qn,-1,1)
+        rollout_trajectory = predictor.predict_tf(s, Qn[:, :, tf.newaxis])
+        traj_cost = cost(rollout_trajectory, Qn, target_position, self.u)
+        return traj_cost, rollout_trajectory, Qn
 
     #step function to find control
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
@@ -159,12 +176,12 @@ class controller_cem_tf(template_controller):
             target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 
             #rollout the trajectories
-            traj_cost, rollout_trajectory = self.predict_and_cost(s, Q, target_position)
-            Q = Q.numpy()
+            traj_cost, rollout_trajectory, Qn = self.predict_and_cost(s, Q, target_position)
+            Qn = Qn.numpy()
             #sort the costs and find best k costs
             sorted_cost = np.argsort(traj_cost.numpy())
             best_idx = sorted_cost[0:cem_best_k]
-            elite_Q = Q[best_idx,:]
+            elite_Q = Qn[best_idx,:]
             #update the distribution for next inner loop
             self.dist_mue = np.mean(elite_Q,axis = 0)
             self.stdev = np.std(elite_Q,axis=0)
@@ -202,7 +219,7 @@ if __name__ == '__main__':
     ctrl.step(s0, 0.0)
     f_to_measure = 'ctrl.step(s0,0.0)'
     number = 1  # Gives the number of times each timeit call executes the function which we want to measure
-    repeat_timeit = 1000  # Gives how many times timeit should be repeated
+    repeat_timeit = 100  # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)
     min_time = min(timings) / float(number)
     max_time = max(timings) / float(number)
