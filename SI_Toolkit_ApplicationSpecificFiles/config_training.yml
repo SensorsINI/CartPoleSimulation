@@ -1,5 +1,5 @@
 modeling:
-  NET_NAME: 'Dense-32H1-32H2'
+  NET_NAME: 'GRU-32H1-32H2'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
   path_to_experiment: 'Experiment-1/'
