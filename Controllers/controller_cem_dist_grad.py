@@ -133,7 +133,7 @@ def cost(s_hor ,u,target_position,u_prev):
     return total_cost
 
 #cem class
-class controller_cem_tf(template_controller):
+class controller_cem_dist_grad(template_controller):
     def __init__(self):
         #First configure random sampler
         SEED = config["controller"]["mppi"]["SEED"]
@@ -148,9 +148,20 @@ class controller_cem_tf(template_controller):
 
     @tf.function(jit_compile=True)
     def predict_and_cost(self, s, Q, target_position):
-        rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
-        traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
-        return traj_cost, rollout_trajectory
+        with tf.GradientTape(watch_accessed_variables=False) as tape:
+            tape.watch(Q)
+            rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
+            traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
+        dc_dQ = tape.gradient(traj_cost, Q)
+        dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ), axis = 1)
+        mask = (dc_dQ_max > 1)[:,tf.newaxis]
+        invmask = tf.logical_not(mask)
+        Q_update = (cem_max_LR*(dc_dQ/dc_dQ_max[:,tf.newaxis])*tf.cast(mask,tf.float32) + cem_LR*dc_dQ*tf.cast(invmask,tf.float32))
+        Qn = Q-Q_update
+        Qn = tf.clip_by_value(Qn,-1,1)
+        rollout_trajectory = predictor.predict_tf(s, Qn[:, :, tf.newaxis])
+        traj_cost = cost(rollout_trajectory, Qn, target_position, self.u)
+        return traj_cost, rollout_trajectory, Qn
 
     #step function to find control
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
@@ -165,12 +176,12 @@ class controller_cem_tf(template_controller):
             target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 
             #rollout the trajectories
-            traj_cost, rollout_trajectory = self.predict_and_cost(s, Q, target_position)
-            Q = Q.numpy()
+            traj_cost, rollout_trajectory, Qn = self.predict_and_cost(s, Q, target_position)
+            Qn = Qn.numpy()
             #sort the costs and find best k costs
             sorted_cost = np.argsort(traj_cost.numpy())
             best_idx = sorted_cost[0:cem_best_k]
-            elite_Q = Q[best_idx,:]
+            elite_Q = Qn[best_idx,:]
             #update the distribution for next inner loop
             self.dist_mue = np.mean(elite_Q,axis = 0)
             self.stdev = np.std(elite_Q,axis=0)
@@ -191,7 +202,7 @@ class controller_cem_tf(template_controller):
 
 
 if __name__ == '__main__':
-    ctrl = controller_cem_tf()
+    ctrl = controller_cem_dist_grad()
 
 
     import timeit
