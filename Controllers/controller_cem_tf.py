@@ -154,13 +154,14 @@ class controller_cem_tf(template_controller):
 
     #step function to find control
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
+        s = np.tile(s, tf.constant([num_rollouts, 1]))
+        s = tf.convert_to_tensor(s, dtype=tf.float32)
         for _ in range(0,cem_outer_it):
             #generate random input sequence and clip to control limits
             Q = np.tile(self.dist_mue,(num_rollouts,1))+ np.multiply(self.rng_cem.standard_normal(
                 size=(num_rollouts, cem_samples), dtype=np.float32),self.stdev)
             Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
-            s = np.tile(s, tf.constant([num_rollouts, 1]))
-            s = tf.convert_to_tensor(s, dtype=tf.float32)
+
             Q = tf.convert_to_tensor(Q, dtype=tf.float32)
             target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 

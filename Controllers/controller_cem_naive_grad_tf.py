@@ -90,7 +90,7 @@ def phi(s, target_position):
     :rtype: np.ndarray
     """
     terminal_states = s[:, -1, :]
-    terminal_cost = 10000 * tf.cast(
+    terminal_cost = 50000 * tf.cast(
         (tf.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
         | (
             tf.abs(terminal_states[:, POSITION_IDX] - target_position)
@@ -133,18 +133,18 @@ def cost(s_hor ,u,target_position,u_prev):
     return total_cost
 
 #cem class
-class controller_cem_naive_grad(template_controller):
+class controller_cem_naive_grad_tf(template_controller):
     def __init__(self):
         #First configure random sampler
         SEED = config["controller"]["mppi"]["SEED"]
         if SEED == "None":
             SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)
-        self.rng_cem = Generator(SFC64(SEED))
+        self.rng_cem = tf.random.Generator.from_seed(SEED)
 
-        self.dist_mue = np.zeros([1,cem_samples])
-        self.dist_var = 0.5*np.ones([1,cem_samples])
-        self.stdev = np.sqrt(self.dist_var)
-        self.u = 0
+        self.dist_mue = tf.zeros([1,cem_samples], dtype=tf.float32)
+        self.dist_var = 0.5*tf.ones([1,cem_samples], dtype=tf.float32)
+        self.stdev = tf.sqrt(self.dist_var)
+        self.u = 0.0
 
     @tf.function(jit_compile=True)
     def predict_and_cost(self, s, Q, target_position):
@@ -167,42 +167,41 @@ class controller_cem_naive_grad(template_controller):
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
         s = np.tile(s, tf.constant([num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
+        target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
         for _ in range(0,cem_outer_it):
             #generate random input sequence and clip to control limits
-            Q = np.tile(self.dist_mue,(num_rollouts,1))+ np.multiply(self.rng_cem.standard_normal(
-                size=(num_rollouts, cem_samples), dtype=np.float32),self.stdev)
-            Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
-            Q = tf.convert_to_tensor(Q, dtype=tf.float32)
-            target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
+            Q = tf.tile(self.dist_mue,[num_rollouts,1])+ self.rng_cem.normal(
+                [num_rollouts, cem_samples], dtype=tf.float32)*self.stdev
+            Q = tf.clip_by_value(Q, -1.0, 1.0)
 
             #rollout the trajectories
             traj_cost, rollout_trajectory, Qn = self.predict_and_cost(s, Q, target_position)
-            Qn = Qn.numpy()
+
             #sort the costs and find best k costs
-            sorted_cost = np.argsort(traj_cost.numpy())
+            sorted_cost = tf.argsort(traj_cost.numpy())
             best_idx = sorted_cost[0:cem_best_k]
-            elite_Q = Qn[best_idx,:]
+            elite_Q = tf.gather(Qn,best_idx,axis=0)
             #update the distribution for next inner loop
-            self.dist_mue = np.mean(elite_Q,axis = 0)
-            self.stdev = np.std(elite_Q,axis=0)
+            self.dist_mue = tf.math.reduce_mean(elite_Q,axis = 0, keepdims=True)
+            self.stdev = tf.math.reduce_std(elite_Q,axis=0, keepdims=True)
 
         #after all inner loops, clip std min, so enough is explored and shove all the values down by one for next control input
-        self.stdev = np.clip(self.stdev, cem_stdev_min, None)
-        self.stdev = np.append(self.stdev[1:], np.sqrt(0.5)).astype(np.float32)
-        self.u = self.dist_mue[0]
-        self.dist_mue = np.append(self.dist_mue[1:], 0).astype(np.float32)
-        return self.u
+        self.stdev = tf.clip_by_value(self.stdev, cem_stdev_min, 10.0)
+        self.stdev = tf.concat([self.stdev[:, 1:], tf.sqrt(0.5)[tf.newaxis, tf.newaxis]], -1)
+        self.u = self.dist_mue[0,0]
+        self.dist_mue = tf.concat([self.dist_mue[:, 1:], tf.constant(0.0, shape = [1,1])], -1)
+        return self.u.numpy()
 
     def controller_reset(self):
-        self.dist_mue = np.zeros([1, cem_samples])
-        self.dist_var = 0.5 * np.ones([1, cem_samples])
-        self.stdev = np.sqrt(self.dist_var)
+        self.dist_mue = tf.zeros([1, cem_samples])
+        self.dist_var = 0.5 * tf.ones([1, cem_samples])
+        self.stdev = tf.sqrt(self.dist_var)
 
 
 
 
 if __name__ == '__main__':
-    ctrl = controller_cem_naive_grad()
+    ctrl = controller_cem_naive_grad_tf()
 
 
     import timeit
