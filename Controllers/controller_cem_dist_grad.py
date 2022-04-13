@@ -37,6 +37,10 @@ ccrc_weight = config["controller"]["cem"]["cem_ccrc_weight"]
 cem_best_k = config["controller"]["cem"]["cem_best_k"]
 cem_samples = int(cem_horizon / dt)  # Number of steps in MPC horizon
 
+sig_LR = config["controller"]["cem-dist-grad"]["sig_LR"]
+mue_LR = config["controller"]["cem-dist-grad"]["mue_LR"]
+sig_min_clip = config["controller"]["cem-dist-grad"]["sig_min_clip"]
+sig_max_clip = config["controller"]["cem-dist-grad"]["sig_max_clip"]
 cem_LR = config["controller"]["cem"]["cem_LR"]
 cem_max_LR = config["controller"]["cem"]["cem_max_LR"]
 cem_LR = tf.constant(cem_LR, dtype=tf.float32)
@@ -142,7 +146,7 @@ class controller_cem_dist_grad(template_controller):
         self.rng_cem = Generator(SFC64(SEED))
 
         self.dist_mue = np.zeros([1,cem_samples])
-        self.dist_var = 0.5*np.ones([1,cem_samples])
+        self.dist_var = 0.1*np.ones([1,cem_samples])
         self.stdev = np.sqrt(self.dist_var)
         self.u = 0
 
@@ -153,22 +157,15 @@ class controller_cem_dist_grad(template_controller):
             rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
             traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
         dc_dQ = tape.gradient(traj_cost, Q)
-        dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ), axis = 1)
-        mask = (dc_dQ_max > 1)[:,tf.newaxis]
-        invmask = tf.logical_not(mask)
-        Q_update = (cem_max_LR*(dc_dQ/dc_dQ_max[:,tf.newaxis])*tf.cast(mask,tf.float32) + cem_LR*dc_dQ*tf.cast(invmask,tf.float32))
-        Qn = Q-Q_update
-        Qn = tf.clip_by_value(Qn,-1,1)
-        rollout_trajectory = predictor.predict_tf(s, Qn[:, :, tf.newaxis])
-        traj_cost = cost(rollout_trajectory, Qn, target_position, self.u)
-        return traj_cost, rollout_trajectory, Qn
+        return traj_cost, rollout_trajectory, dc_dQ
 
     #step function to find control
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
         for _ in range(0,cem_outer_it):
             #generate random input sequence and clip to control limits
-            Q = np.tile(self.dist_mue,(num_rollouts,1))+ np.multiply(self.rng_cem.standard_normal(
-                size=(num_rollouts, cem_samples), dtype=np.float32),self.stdev)
+            epsilon = self.rng_cem.standard_normal(
+                size=(num_rollouts, cem_samples), dtype=np.float32)
+            Q = np.tile(self.dist_mue,(num_rollouts,1))+ np.multiply(epsilon,self.stdev)
             Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
             s = np.tile(s, tf.constant([num_rollouts, 1]))
             s = tf.convert_to_tensor(s, dtype=tf.float32)
@@ -176,18 +173,26 @@ class controller_cem_dist_grad(template_controller):
             target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 
             #rollout the trajectories
-            traj_cost, rollout_trajectory, Qn = self.predict_and_cost(s, Q, target_position)
-            Qn = Qn.numpy()
+            traj_cost, rollout_trajectory, dc_dQ = self.predict_and_cost(s, Q, target_position)
+            dc_dQn = dc_dQ.numpy()
+            # dc_dmue = tf.reduce_mean(dc_dQ,axis = 0).numpy()
+            # dc_dstd = tf.reduce_mean(epsilon*dc_dQ, axis = 0).numpy()
+
             #sort the costs and find best k costs
             sorted_cost = np.argsort(traj_cost.numpy())
             best_idx = sorted_cost[0:cem_best_k]
-            elite_Q = Qn[best_idx,:]
+            elite_Q = Q.numpy()[best_idx,:]
+            dc_dmue = np.mean(dc_dQn[best_idx,:], axis = 0)
+            dc_dstd = np.mean(dc_dQn[best_idx,:], axis = 0)
             #update the distribution for next inner loop
             self.dist_mue = np.mean(elite_Q,axis = 0)
+            self.dist_mue = np.clip(self.dist_mue-self.dist_mue*mue_LR, -1.0,1.0)
             self.stdev = np.std(elite_Q,axis=0)
+            self.stdev = self.stdev-sig_LR*dc_dstd
+            self.stdev = np.clip(self.stdev, sig_min_clip, sig_max_clip)
 
         #after all inner loops, clip std min, so enough is explored and shove all the values down by one for next control input
-        self.stdev = np.clip(self.stdev, cem_stdev_min, None)
+
         self.stdev = np.append(self.stdev[1:], np.sqrt(0.5)).astype(np.float32)
         self.u = self.dist_mue[0]
         self.dist_mue = np.append(self.dist_mue[1:], 0).astype(np.float32)
@@ -195,7 +200,7 @@ class controller_cem_dist_grad(template_controller):
 
     def controller_reset(self):
         self.dist_mue = np.zeros([1, cem_samples])
-        self.dist_var = 0.5 * np.ones([1, cem_samples])
+        self.dist_var = 0.1 * np.ones([1, cem_samples])
         self.stdev = np.sqrt(self.dist_var)
 
 

@@ -4,12 +4,17 @@ controller:
     cem_rollouts: 200                  #how many rollouts per outer cem iteration
     cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
-    cem_stdev_min: 0.05
+    cem_stdev_min: 0.005
     cem_R: 1
     cem_ccrc_weight: 1
     cem_best_k: 4
     cem_LR: 0.05
     cem_max_LR: 0.1
+  cem-dist-grad:
+    sig_LR: 0.05
+    sig_min_clip: 0.005
+    sig_max_clip: 0.7
+    mue_LR: 1.0e-4
   mppi:
     SEED: 1897                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
