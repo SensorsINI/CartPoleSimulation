@@ -111,17 +111,17 @@ def mean_numba(a):
 #cost of changeing control to fast
 def control_change_rate_cost(u, u_prev,nrol):
     """Compute penalty of control jerk, i.e. difference to previous control input"""
-    u_prev_vec = tf.concat((tf.ones((nrol,1))*u_prev,u[:,:-1]),axis=-1)
+    u_prev_vec = tf.concat((tf.ones((nrol, 1))*u_prev,u[:,:-1]),axis=-1)
     return (u - u_prev_vec) ** 2
 
 #all stage costs together
-def q(s,u,target_position, u_prev):
+def q(s,u,target_position, u_prev, nrol = num_rollouts):
     dd = dd_weight * distance_difference_cost(
         s[:, :, POSITION_IDX], target_position
     )
     ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX])
     cc = cc_weight * CC_cost(u)
-    ccrc = ccrc_weight * control_change_rate_cost(u,u_prev,num_rollouts)
+    ccrc = ccrc_weight * control_change_rate_cost(u,u_prev, nrol)
     stage_cost = dd+ep+cc+ccrc
     return stage_cost
 

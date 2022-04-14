@@ -115,13 +115,13 @@ def control_change_rate_cost(u, u_prev,nrol):
     return (u - u_prev_vec) ** 2
 
 #all stage costs together
-def q(s,u,target_position, u_prev):
+def q(s,u,target_position, u_prev, nrol = num_rollouts):
     dd = dd_weight * distance_difference_cost(
         s[:, :, POSITION_IDX], target_position
     )
     ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX])
     cc = cc_weight * CC_cost(u)
-    ccrc = ccrc_weight * control_change_rate_cost(u,u_prev,num_rollouts)
+    ccrc = ccrc_weight * control_change_rate_cost(u,u_prev, nrol)
     stage_cost = dd+ep+cc+ccrc
     return stage_cost
 
