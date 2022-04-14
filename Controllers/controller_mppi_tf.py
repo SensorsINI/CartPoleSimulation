@@ -4,6 +4,7 @@ from numpy.random import SFC64, Generator
 from datetime import datetime
 from numba import jit, prange
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import TrackHalfLength
@@ -46,7 +47,7 @@ predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
 
 """Define Predictor"""
 if predictor_type == "EulerTF":
-    predictor = predictor_ODE_tf_pure(horizon=mppi_samples, dt=dt, intermediate_steps=1)
+    predictor = predictor_ODE_tf_pure(horizon=mppi_samples, dt=dt, intermediate_steps=10)
 elif predictor_type == "Euler":
     predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
 elif predictor_type == "NeuralNet":
@@ -145,6 +146,21 @@ def reward_weighted_average(S, delta_u):
     b = tf.math.reduce_sum(exp_s[:,tf.newaxis]*delta_u, axis = 0, keepdims=True)/a
     return b
 
+def inizialize_pertubation(random_gen, stdev = SQRTRHODTINV, sampling_type = SAMPLING_TYPE):
+    if sampling_type == "interpolated":
+        step = 10
+        range_stop = int(tf.math.ceil(mppi_samples / step)*step) + 1
+        t = tf.range(range_stop, delta = step)
+        t_interp = tf.cast(tf.range(range_stop), tf.float32)
+        delta_u = random_gen.normal([num_rollouts, t.shape[0]], dtype=tf.float32) * stdev
+        interp = tfp.math.interp_regular_1d_grid(t_interp, t_interp[0], t_interp[-1], delta_u)
+        delta_u = interp[:,:mppi_samples]
+    else:
+        delta_u = random_gen.normal([num_rollouts, mppi_samples], dtype=tf.float32) * stdev
+    return delta_u
+
+
+
 #cem class
 class controller_mppi_tf(template_controller):
     def __init__(self):
@@ -160,7 +176,7 @@ class controller_mppi_tf(template_controller):
     @tf.function(jit_compile=True)
     def predict_and_cost(self, s, target_position, u_nom, random_gen, u_old):
         # generate random input sequence and clip to control limits
-        delta_u = random_gen.normal([num_rollouts, mppi_samples], dtype=tf.float32) * SQRTRHODTINV
+        delta_u = inizialize_pertubation(random_gen)
         u_run = tf.tile(u_nom, [num_rollouts, 1])+delta_u
         u_run = tf.clip_by_value(u_run, -1.0, 1.0)
         rollout_trajectory = predictor.predict_tf(s, u_run[:, :, tf.newaxis])
