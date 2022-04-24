@@ -6,24 +6,14 @@ except:
 
 import numpy as np
 
-# Import functions from PyQt5 module (creating GUI)
-from PyQt5.QtWidgets import (
-    QMainWindow,
-    QRadioButton,
-    QApplication,
+# Import functions from PyQt6 module (creating GUI)
+from PyQt6.QtWidgets import (
     QVBoxLayout,
-    QHBoxLayout,
     QLabel,
-    QPushButton,
     QWidget,
-    QCheckBox,
     QSlider,
-    QLineEdit,
-    QMessageBox,
-    QComboBox,
-    QButtonGroup,
 )
-from PyQt5.QtCore import QThreadPool, QTimer, Qt
+from PyQt6.QtCore import QThreadPool, QTimer, Qt
 
 import CartPole.noise_adder as noise_settings
 
@@ -43,19 +33,19 @@ class NoiseOptionsWindow(QWidget):
         layout = QVBoxLayout()
 
         self.setLayout(layout)
-        self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
         self.setGeometry(0, 0, 400, 50)
 
         sigmas_layout = QVBoxLayout()
 
         def make_slider(MAX_RANGE, INIT_VALUE):
             label = QLabel("")
-            label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-            slider = QSlider(orientation=Qt.Horizontal)
+            slider = QSlider(orientation=Qt.Orientation.Horizontal)
             slider.setRange(0, SLIDER_MAX_RANGE_INT)
             slider.setValue(int(SLIDER_MAX_RANGE_INT*(INIT_VALUE/MAX_RANGE)))
-            slider.setTickPosition(QSlider.TicksBelow)
+            slider.setTickPosition(QSlider.TickPosition.TicksBelow)
             slider.setTickInterval(int(SLIDER_MAX_RANGE_INT*0.1))
             slider.setSingleStep(1)
 

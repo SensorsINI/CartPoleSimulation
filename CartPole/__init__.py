@@ -242,7 +242,7 @@ class CartPole:
         self.update_parameters()
 
         # Update the total time of the simulation
-        self.time = self.time + self.dt_simulation
+        self.step_time()
 
         # Update target position depending on the mode of operation
         self.update_target_position()
@@ -257,29 +257,47 @@ class CartPole:
         block_pole_at_90 = self.block_pole_at_90_deg()
 
         # Calculate cosine and sine
-        self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
-        self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
+        self.update_cos_and_sin()
 
         # Wrap angle to +/-π
-        self.s[ANGLE_IDX] = wrap_angle_rad(self.s[ANGLE_IDX])
+        self.wrap_angle()
 
-        self.LatencyAdderInstance.add_current_state_to_latency_buffer(self.s)
-        s_delayed = self.LatencyAdderInstance.get_interpolated_delayed_state()
-        self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
+        self.add_noise_and_latency()
 
         # Determine the dimensionless [-1,1] value of the motor power Q
         self.Update_Q()
 
         # Convert dimensionless motor power to a physical force acting on the Cart
-        self.u = Q2u(self.Q)
+        self.Q2u()
 
         # Update second derivatives
-        self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u)
+        self.cartpole_ode()
 
         if block_pole_at_90:
             self.angleDD = 0.0
 
         self.save_csv_routine()
+
+    def step_time(self):
+        self.time = self.time + self.dt_simulation
+
+    def update_cos_and_sin(self):
+        self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
+        self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
+
+    def wrap_angle(self):
+        self.s[ANGLE_IDX] = wrap_angle_rad(self.s[ANGLE_IDX])
+
+    def add_noise_and_latency(self):
+        self.LatencyAdderInstance.add_current_state_to_latency_buffer(self.s)
+        s_delayed = self.LatencyAdderInstance.get_interpolated_delayed_state()
+        self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
+
+    def cartpole_ode(self):
+        self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u)
+
+    def Q2u(self):
+        self.u = Q2u(self.Q)
 
     def update_target_position(self):
         if self.use_pregenerated_target_position:
@@ -470,7 +488,7 @@ class CartPole:
 
             print('Saving to the file: {}'.format(self.csv_filepath))
             # Write the .csv file
-            with open(self.csv_filepath, "a") as outfile:
+            with open(self.csv_filepath, "a", newline='') as outfile:
                 writer = csv.writer(outfile)
 
                 writer.writerow(['# ' + 'This is CartPole simulation from {} at time {}'
@@ -508,7 +526,7 @@ class CartPole:
         elif mode == 'save online':
 
             # Save this dict
-            with open(self.csv_filepath, "a") as outfile:
+            with open(self.csv_filepath, "a", newline='') as outfile:
                 writer = csv.writer(outfile)
                 if self.rounding_decimals == np.inf:
                     pass
@@ -520,7 +538,7 @@ class CartPole:
 
         elif mode == 'save offline':
             # Round data to a set precision
-            with open(self.csv_filepath, "a") as outfile:
+            with open(self.csv_filepath, "a", newline='') as outfile:
                 writer = csv.writer(outfile)
                 if self.rounding_decimals == np.inf:
                     pass

@@ -1,6 +1,7 @@
 from CartPole import CartPole
 from CartPole.cartpole_model import create_cartpole_state, TrackHalfLength
 from others.p_globals import TrackHalfLength
+
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
 import os
@@ -18,88 +19,168 @@ from numpy.random import SFC64, Generator
 # # use('TkAgg')
 # use('macOSX')
 
-import yaml, os
-config_CartPole = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
+import yaml
+import os
+
+class random_experiment_setter:
+    def __init__(self):
+
+        config = yaml.load(open('config_data_gen.yml'), Loader=yaml.FullLoader)
+
+        self.length_of_experiment = config["length_of_experiment"]
+
+        self.controller = config["controller"]
+        
+        self.position_init = config["random_initial_state"]["position"]
+        self.positionD_init = config["random_initial_state"]["positionD"]
+        self.angle_init = config["random_initial_state"]["angle"]
+        self.angleD_init = config["random_initial_state"]["angleD"]
+
+        self.target_position_init = config["random_initial_state"]["target_position"]
+
+        self.position_init_limits = config["random_initial_state"]["init_limits"]["position"]
+        self.positionD_init_limits = config["random_initial_state"]["init_limits"]["positionD"]
+        self.angle_init_limits = config["random_initial_state"]["init_limits"]["angle"]
+        self.angleD_init_limits = config["random_initial_state"]["init_limits"]["angleD"]
+        self.init_limits = [self.position_init_limits, self.positionD_init_limits, self.angle_init_limits, self.angleD_init_limits]
+
+        self.start_at_target = config["start_at_target"]
+        self.track_fraction_usable_for_target_position = config["track_fraction_usable_for_target_position"]
+        self.target_position_end = config["target_position_end"]
+
+        self.dt_simulation = config["dt"]["simulation"]
+        self.dt_controller_update = config["dt"]["control"]
+        self.dt_save = config["dt"]["saving"]
+
+        self.track_relative_complexity = config["turning_points"]["track_relative_complexity"]
+        self.interpolation_type = config["turning_points"]["interpolation_type"]
+        self.turning_points = config["turning_points"]["turning_points"]
+        self.turning_points_period = config["turning_points"]["turning_points_period"]
+
+        self.seed = config["SEED"]
+        self.rng = Generator(SFC64(self.seed))
+        
+    def set(self, CartPoleInstance):
+        
+        # set initial_state
+
+        initial_state_stub = create_cartpole_state()
+
+        initial_state_stub[POSITION_IDX] = self.position_init
+        initial_state_stub[POSITIOND_IDX] = self.positionD_init
+        initial_state_stub[ANGLE_IDX] = self.angle_init
+        initial_state_stub[ANGLED_IDX] = self.angleD_init
+
+        initial_state = generate_random_initial_state(initial_state_stub, init_limits=self.init_limits, rng=self.rng)
+        
+        if self.start_at_target:
+            start_random_target_position_at = initial_state[POSITION_IDX]
+        else:
+            if self.target_position_init is None:
+               start_random_target_position_at = self.track_fraction_usable_for_target_position * \
+                                                  TrackHalfLength * self.rng.uniform(-1.0, 1.0)
+            else:
+                start_random_target_position_at = self.target_position_init
+
+        if self.target_position_end is None:
+            end_random_target_position_at =\
+                self.track_fraction_usable_for_target_position * TrackHalfLength * self.rng.uniform(-1.0, 1.0)
+        else:
+            end_random_target_position_at = self.target_position_end
+
+        CartPoleInstance.setup_cartpole_random_experiment(
+            # Initial state
+            s0=initial_state,
+
+            # controller to be used in performed experiment
+            controller=self.controller,
+
+            # Timescales
+            dt_simulation=self.dt_simulation,
+            dt_controller=self.dt_controller_update,
+            dt_save=self.dt_save,
+
+            # Settings related to random trace generation
+            track_relative_complexity=self.track_relative_complexity,
+            length_of_experiment=self.length_of_experiment,
+            interpolation_type=self.interpolation_type,
+            turning_points_period=self.turning_points_period,
+            start_random_target_position_at=start_random_target_position_at,
+            end_random_target_position_at=end_random_target_position_at,
+            turning_points=self.turning_points,
+            used_track_fraction=self.track_fraction_usable_for_target_position,
+        )
+
+        return CartPoleInstance # ready to run a random experiment
+
+def generate_random_initial_state(init_state_stub, init_limits, rng=None):
+
+    position_init_limits, positionD_init_limits, angle_init_limits, angleD_init_limits = init_limits
+
+    # If rng is None, create new, unpredictable random number generator
+    if rng is None:
+        rng = Generator(SFC64())
+
+    initial_state_post = create_cartpole_state()
+
+    if np.isnan(init_state_stub[POSITION_IDX]):
+        initial_state_post[POSITION_IDX] = rng.uniform(
+            low=-1.0, high=1.0) * TrackHalfLength * position_init_limits
+    else:
+        initial_state_post[POSITION_IDX] = init_state_stub[POSITION_IDX]
+
+    if np.isnan(init_state_stub[1]):
+        initial_state_post[POSITIOND_IDX] = rng.uniform(low=-1.0, high=1.0) * TrackHalfLength * positionD_init_limits
+    else:
+        initial_state_post[POSITIOND_IDX] = init_state_stub[POSITIOND_IDX]
+
+    if np.isnan(init_state_stub[ANGLE_IDX]):
+        if rng.uniform() > 0.5:
+            initial_state_post[ANGLE_IDX] = rng.uniform(low=angle_init_limits[0], high=angle_init_limits[1]) * (np.pi / 180.0)
+        else:
+            initial_state_post[ANGLE_IDX] = rng.uniform(low=-angle_init_limits[1], high=-angle_init_limits[0]) * (np.pi / 180.0)
+    else:
+        initial_state_post[ANGLE_IDX] = init_state_stub[ANGLE_IDX]
+
+    if np.isnan(init_state_stub[ANGLED_IDX]):
+        initial_state_post[ANGLED_IDX] = rng.uniform(low=-1.0, high=1.0) * angleD_init_limits * (np.pi / 180.0)
+    else:
+        initial_state_post[ANGLED_IDX] = init_state_stub[ANGLED_IDX]
+
+    # Add cos/sin values to state
+    initial_state_post[ANGLE_COS_IDX] = np.cos(initial_state_post[ANGLE_IDX])
+    initial_state_post[ANGLE_SIN_IDX] = np.sin(initial_state_post[ANGLE_IDX])
+
+    return initial_state_post
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
-    seed = config_CartPole["data_generator"]["SEED"]
-    if seed == "None":
-        seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0*7.0)  # Fully random
+    config = yaml.load(open('config_data_gen.yml'), Loader=yaml.FullLoader)
 
-    reset_seed_for_each_experiment = False
-
-    rng_data_generator = Generator(SFC64(seed))
-
-    #csv = './adaptive_test/Experiment.csv'
     if record_path is None:
-        record_path = config_CartPole["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
+        record_path = config["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
         csv = record_path + '/Experiment'
 
-    # User defined simulation settings
-    ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
-    # How many experiments will be generated
-    number_of_experiments = 500
+    number_of_experiments = config["number_of_experiments"]
 
-    ###### Train/Val/Test split - only matters if you run it in ML Pipeline mode
-    frac_train = 0.8
-    frac_val = 0.19
+    frac_train = config["split"][0]
+    frac_val = config["split"][1]
 
-    save_mode = 'online'  # It was intended to save memory usage, but it doesn't seems to help
+    save_mode = config["save_mode"]
 
-    ###### Timescales
-    dt_simulation_DataGen = 0.002  # simulation timestep
-    dt_controller_update_DataGen = 0.02  # control rate
-    dt_save_DataGen = 0.02  # save datapoints in csv in this interval
+    show_summary_plots = config["show_summary_plots"]
+    show_controller_report = config["show_controller_report"]
 
-    ###### CartPole settings
-    ### Length of each experiment in s:
-    length_of_experiment_DataGen = 5
+    if save_mode == 'online':
+        if show_summary_plots is True or show_controller_report is True:
+            raise PermissionError("You cannot plot summary if save_mode is online")
 
-    ### Controller which should be used in generated experiment:
-    controller_DataGen = 'mppi'
-    # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
 
-    ### Randomly placed target points/s
-    track_relative_complexity_DataGen = 1
-
-    ### How to interpolate between turning points of random trace
-    interpolation_type_DataGen = '0-derivative-smooth'
-    # Possible options: '0-derivative-smooth', 'linear', 'previous'
-
-    ### How turning points should be distributed
-    turning_points_period_DataGen = 'regular'
-    # Possible options: 'regular', 'random'
-
-    ### Set the max for smoothly interpolated random target position to avoid bumping into track ends.
-    used_track_fraction = 0.9
-
-    ### List of target positions, can be None to simulate with random targets
-    turning_points_DataGen = None
-    # Example: turning_points_DataGen = [0.0, 0.1, -0.1, 0.0]
-
-    ### Show popup window in the end with summary of experiment?
-    show_summary_plots = False
-    show_controller_report = False
+    RES = random_experiment_setter()
 
     ############ END OF PARAMETERS SECTION ############
 
-    initial_state_DataGen = create_cartpole_state()
-
     for i in range(number_of_experiments):
-
-        # Take care - the seed will be the same as every experiment!
-        if reset_seed_for_each_experiment:
-            rng_data_generator = Generator(SFC64(seed))
-
-        ### Where the target positions of the random experiment start and end
-        end_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0,
-                                                                                                                   1.0)
-        ### Initial state
-        # This is just one possibility how to set the initial state. Feel free to modify this code
-        # [position, positionD, angle, angleD]
-        # Unassigned variables will be randomly initialized (see below if interested)
-        # initial_state = [start_random_target_position_at_DataGen, None, None, None]
 
         if run_for_ML_Pipeline:
             if i < int(frac_train*number_of_experiments):
@@ -109,47 +190,14 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
             else:
                 csv = record_path + "/Test"
 
-            try: os.makedirs(csv)
-            except: pass
+            try:
+                os.makedirs(csv)
+            except:
+                pass
 
             csv += "/Experiment"
 
-        start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0, 1.0)
-        # initial_state = [start_random_target_position_at_DataGen, 0.0, 0.0, 0.0]
-        initial_state = [start_random_target_position_at_DataGen, None, None, None]
-        # initial_state = [0.0, None, 0.0, None]
-        if initial_state[0] is None:
-            initial_state_DataGen[POSITION_IDX] = rng_data_generator.uniform(
-                low=-TrackHalfLength / 2.0,
-                high=TrackHalfLength / 2.0)
-        else:
-            initial_state_DataGen[POSITION_IDX] = initial_state[0]
-
-        if initial_state[1] is None:
-            initial_state_DataGen[POSITIOND_IDX] = rng_data_generator.uniform(low=-1.0,
-                                                                                                    high=1.0) * TrackHalfLength *0.01
-        else:
-            initial_state_DataGen[POSITIOND_IDX] = initial_state[1]
-
-        if initial_state[2] is None:
-            if rng_data_generator.uniform()>0.5:
-                initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=90 * (np.pi / 180.0),
-                                                                                                    high=180 * (np.pi / 180.0))
-            else:
-                initial_state_DataGen[ANGLE_IDX] = rng_data_generator.uniform(low=-180 * (np.pi / 180.0),
-                                                                                                    high=-90 * (np.pi / 180.0))
-        else:
-            initial_state_DataGen[ANGLE_IDX] = initial_state[2]
-
-        if initial_state[3] is None:
-            initial_state_DataGen[ANGLED_IDX] = rng_data_generator.uniform(low=-10.0 * (np.pi / 180.0),
-                                                                                                 high=10.0 * (np.pi / 180.0))
-        else:
-            initial_state_DataGen[ANGLED_IDX] = initial_state[3]
-
-        # Add cos/sin values to state
-        initial_state_DataGen[ANGLE_COS_IDX] = np.cos(initial_state_DataGen[ANGLE_IDX])
-        initial_state_DataGen[ANGLE_SIN_IDX] = np.sin(initial_state_DataGen[ANGLE_IDX])
+        
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
         # You may also specify some of the variables from above here, to make them change at each iteration.#
@@ -158,28 +206,9 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
         print('{}/{}'.format(i+1, number_of_experiments))
         sleep(0.1)
         CartPoleInstance = CartPole()
-        CartPoleInstance.setup_cartpole_random_experiment(
-            # Initial state
-            s0=initial_state_DataGen,
 
-            # controller to be used in performed experiment
-            controller=controller_DataGen,
-
-            # Timescales
-            dt_simulation=dt_simulation_DataGen,
-            dt_controller=dt_controller_update_DataGen,
-            dt_save=dt_save_DataGen,
-
-            # Settings related to random trace generation
-            track_relative_complexity=track_relative_complexity_DataGen,
-            length_of_experiment=length_of_experiment_DataGen,
-            interpolation_type=interpolation_type_DataGen,
-            turning_points_period=turning_points_period_DataGen,
-            start_random_target_position_at=start_random_target_position_at_DataGen,
-            end_random_target_position_at=end_random_target_position_at_DataGen,
-            turning_points=turning_points_DataGen,
-            used_track_fraction=used_track_fraction,
-        )
+        CartPoleInstance = RES.set(CartPoleInstance)
+        
         gen_start = timeit.default_timer()
 
         ############ Profiling ############
@@ -191,7 +220,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
         #         csv=csv,
         #         save_mode=save_mode
         #     )
-        # with open('profiling_stats.txt', 'w') as stream:
+        # with open('profiling_stats.txt', 'w', newline='') as stream:
         #     stats = Stats(pr, stream=stream)
         #     stats.strip_dirs()
         #     stats.sort_stats('time')

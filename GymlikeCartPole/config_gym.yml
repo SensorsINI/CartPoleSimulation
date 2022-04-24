@@ -1,0 +1,4 @@
+mode: 'stabilization'
+#mode: 'swing-up'
+#mode: 'follow target position'
+length_of_episode: 10  # seconds

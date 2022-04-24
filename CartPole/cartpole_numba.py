@@ -67,6 +67,34 @@ def cartpole_fine_integration_numba(angle, angleD, angle_cos, angle_sin, positio
 
     return angle, angleD, position, positionD, angle_cos, angle_sin
 
+
+def cartpole_fine_integration_s_numba(s, u, t_step, intermediate_steps,
+                              k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+
+    if s.ndim == 1:
+        s = s[np.newaxis, :]
+
+    s_next = np.zeros_like(s)
+
+    (
+        s_next[..., ANGLE_IDX], s_next[..., ANGLED_IDX], s_next[..., POSITION_IDX], s_next[..., POSITIOND_IDX],
+        s_next[..., ANGLE_COS_IDX], s_next[..., ANGLE_SIN_IDX]
+    ) = cartpole_fine_integration_numba(
+        angle=s[..., ANGLE_IDX],
+        angleD=s[..., ANGLED_IDX],
+        angle_cos=s[..., ANGLE_COS_IDX],
+        angle_sin=s[..., ANGLE_SIN_IDX],
+        position=s[..., POSITION_IDX],
+        positionD=s[..., POSITIOND_IDX],
+        u=u,
+        t_step=t_step,
+        intermediate_steps=intermediate_steps,
+        L=L,
+        k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric
+    )
+
+    return s_next
+
 if __name__ == '__main__':
     import timeit
 

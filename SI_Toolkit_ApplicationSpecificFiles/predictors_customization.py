@@ -4,10 +4,10 @@ from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INP
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
 from CartPole.cartpole_model import Q2u, L
-from CartPole.cartpole_numba import cartpole_fine_integration_numba
+from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
 
 class next_state_predictor_ODE():
-    
+
     def __init__(self, dt, intermediate_steps):
         self.s = create_cartpole_state()
 
@@ -20,8 +20,6 @@ class next_state_predictor_ODE():
         assert Q.ndim == 2
         assert s.ndim == 2
 
-        s_next = np.zeros_like(s)
-
         if params is None:
             pole_half_length = L
         else:
@@ -30,16 +28,9 @@ class next_state_predictor_ODE():
         Q = np.squeeze(Q, axis=1)  # Removes features dimension, specific for cartpole as it has only one control input
 
         u = Q2u(Q)
-    
-        (
-            s_next[..., ANGLE_IDX], s_next[..., ANGLED_IDX], s_next[..., POSITION_IDX], s_next[..., POSITIOND_IDX], s_next[..., ANGLE_COS_IDX], s_next[..., ANGLE_SIN_IDX]
-        ) = cartpole_fine_integration_numba(
-            angle=s[..., ANGLE_IDX],
-            angleD=s[..., ANGLED_IDX],
-            angle_cos=s[..., ANGLE_COS_IDX],
-            angle_sin=s[..., ANGLE_SIN_IDX],
-            position=s[..., POSITION_IDX],
-            positionD=s[..., POSITIOND_IDX],
+
+        s_next = cartpole_fine_integration_s_numba(
+            s=s,
             u=u,
             t_step=self.t_step,
             intermediate_steps=self.intermediate_steps,
