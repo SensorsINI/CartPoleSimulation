@@ -51,7 +51,6 @@ class next_state_predictor_ODE():
 
 
 def augment_predictor_output(output_array, net_info):
-
     if 'angle' not in net_info.outputs:
         output_array[..., STATE_INDICES['angle']] = \
             np.arctan2(
@@ -62,6 +61,6 @@ def augment_predictor_output(output_array, net_info):
             np.sin(output_array[..., STATE_INDICES['angle']])
     if 'angle_cos' not in net_info.outputs:
         output_array[..., STATE_INDICES['angle_cos']] = \
-            np.sin(output_array[..., STATE_INDICES['angle']])
+            np.cos(output_array[..., STATE_INDICES['angle']])
 
     return output_array
