@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 foldernames = ['./Ground Truth', './Dense-48', './GRU-16', './Dense-96', './GRU-32-0', './GRU-32-1', './Dense-96-L',
-               './GRU-32-L-0', './GRU-32-L-1']
+               './GRU-32-L-0', './GRU-32-L-1', './GRU-32-L-3', './GRU-32-L-5']
 
 
 def swing_up_task(file_start=0, file_end=4, folder_number=0, pole_length='L395', fig_size=(6, 8), save=False,
@@ -66,7 +66,11 @@ def swing_up_task(file_start=0, file_end=4, folder_number=0, pole_length='L395',
     return sw_up_time
 
 
+def main():
+    for i in range(11):
+        swing_up_task(file_start=0, file_end=4, folder_number=i, pole_length='L395', fig_size=(6, 8), save=False,
+                      save_name='')
+
+
 if __name__ == '__main__':
-    # for i in range(9):
-    swing_up_task(file_start=0, file_end=9, folder_number=5, pole_length='L395', fig_size=(6.5, 10), save=True,
-                  save_name='-1')
+    main()
