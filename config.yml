@@ -1,7 +1,7 @@
 controller:
   cem:
     cem_outer_it: 1                     #how many outer iterations to use
-    cem_rollouts: 10000                  #how many rollouts per outer cem iteration
+    cem_rollouts: 100000                  #how many rollouts per outer cem iteration
     cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
     cem_stdev_min: 0.05
@@ -37,7 +37,7 @@ controller:
     SQRTRHOINV: 0.02                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
-    LOGGING: True                        # Collect and show detailed insights into the controller's behavior
+    LOGGING: False                        # Collect and show detailed insights into the controller's behavior
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
   custom_mpc_scipy:
     DT: 0.1

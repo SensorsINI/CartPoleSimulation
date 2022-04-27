@@ -72,7 +72,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     # Possible options: 'regular', 'random'
 
     ### Set the max for smoothly interpolated random target position to avoid bumping into track ends.
-    used_track_fraction = 0.9
+    used_track_fraction = 0
 
     ### List of target positions, can be None to simulate with random targets
     turning_points_DataGen = None
