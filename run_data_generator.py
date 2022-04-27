@@ -34,12 +34,12 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     #csv = './adaptive_test/Experiment.csv'
     if record_path is None:
         record_path = config_CartPole["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
-        csv = record_path + '/Experiment-mppi-tf'
+        csv = record_path + '/Exp-mppi-tf-noiseless-100k-B'
 
     # User defined simulation settings
     ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
     # How many experiments will be generated
-    number_of_experiments = 100
+    number_of_experiments = 60
 
     ###### Train/Val/Test split - only matters if you run it in ML Pipeline mode
     frac_train = 0.8

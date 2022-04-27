@@ -8,7 +8,7 @@ import glob
 import matplotlib.pyplot as plt
 import matplotlib
 import sys
-from Controllers.controller_grad_cem import q as stage_cost #use correct stage cost here, probably need to slightly adjust cost in controller
+from Controllers.controller_mppi_tf import q as stage_cost #use correct stage cost here, probably need to slightly adjust cost in controller
 
 # from PyQt5.QtCore import *
 # from PyQt5.QtGui import *
@@ -22,8 +22,8 @@ def runnig_avg(costs, horizon):
 
 
 def swingup_time_calc(S, target_pos, TrackHalfLength):
-    invalid = tf.cast((tf.abs(S[..., ANGLE_IDX]) > 0.2) \
-                      | (tf.abs(S[..., POSITION_IDX] - target_pos) > 0.90 * TrackHalfLength), tf.float32)
+    invalid = tf.cast((tf.abs(S[..., ANGLE_IDX]) > 0.34) \
+                      | (tf.abs(S[..., POSITION_IDX] - target_pos) > 1.0 * TrackHalfLength), tf.float32)
     swingup_test = tf.cumsum(invalid, axis=1, reverse=True).numpy()
     violation = np.argwhere(np.flip(swingup_test, axis=1) == 1)
     _, last_ind = np.unique(violation[:, 0], return_index=True)
@@ -74,9 +74,11 @@ def data_idx(list):
 
 # %% extract all data from all experiments
 
-path = 'Experiment_Recordings/Experiment-mppi-tf-[0-9]*.csv'
+path = 'Experiment_Recordings/Exp-cem-naive-grad-2k-B*.csv'
+
 files = glob.glob(path)
 
+#%%
 all_data = []
 
 for file in files:
@@ -144,31 +146,48 @@ costs = stage_cost(S, Q, target_pos, Q[0, 0], nrol=num_rol)
     ***********************************"""
 
 
-ravg = runnig_avg(costs, 50)
+ravg = runnig_avg(costs, 20)
 swingup_time = swingup_time_calc(S, target_pos, TrackHalfLength)
 
+
+#%%
+ravg_mean = tf.math.reduce_mean(ravg, axis = 0)
+successful_swingups = swingup_time < 5.0
+swingup_time = swingup_time[successful_swingups]
+swingup_mean = np.mean(swingup_time)
+swingup_std = np.std(swingup_time)
+
+
+
+#%%
+figHist, axHist = plt.subplots(1,1)
+axHist.hist(swingup_time, bins= 10)
 
 
 # %% Example for plotting
 data = all_data[10]
+paf = 1.1
 
 fig, ax1 = plt.subplots(5, 1, num='yoyoyo')
 ax1 = plt.subplot(5, 1, 1)
 plt.plot(data[:, time_idx], data[:, angle_idx])
-plt.ylim(-np.pi, np.pi)
+plt.axhline(y = 0.34, color = 'r')
+plt.axhline(y = -0.34, color = 'r')
+plt.ylim(-np.pi*paf, np.pi*paf)
 
 ax1 = plt.subplot(5, 1, 2)
 plt.plot(data[:, time_idx], data[:, position_idx])
-plt.ylim(-exp_info[TrackHalfLength_idx], exp_info[TrackHalfLength_idx])
+plt.ylim(-exp_info[TrackHalfLength_idx]*paf, exp_info[TrackHalfLength_idx]*paf)
 
 ax1 = plt.subplot(5, 1, 3)
 plt.plot(data[:, time_idx], data[:, u_idx])
-plt.ylim(-exp_info[u_max_param_idx], exp_info[u_max_param_idx])
+plt.ylim(-exp_info[u_max_param_idx]*paf, exp_info[u_max_param_idx]*paf)
 
 plt.subplot(5, 1, 4)
 plt.semilogy(data[:, time_idx], costs[0, :])
 
 plt.subplot(5, 1, 5)
-plt.semilogy(data[:, time_idx], ravg[0, :])
+plt.semilogy(data[:, time_idx], ravg_mean)
 
 plt.show()
+
