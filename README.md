@@ -44,8 +44,8 @@ It should be also possible to create this file with `conda list -e > requirement
 You can use this repository to generate training data, train a neural network model using SI_Toolkit, and run the resulting controller.
 
 1. Define all the parameters in `run_data_generator.py` and `config.yml` to your liking.
-2. Run `python -m SI_Toolkit_ApplicationSpecificFiles.run_data_generator_for_ML_Pipeline`. This will create a new experiment folder `./SI_Toolkit_ApplicationSpecificFiles/Experiments/Experiment-[X]/`. You will work in this folder from now on. Within there, in `Recordings/` there is now a set of CSVs saved and split up into Train/Validate/Test folders. Also, copies of the current configuration files are saved there.
-3. In `./SI_Toolkit_ApplicationSpecificFiles/config.yml` you can now set `paths/path_to_experiment:` to the newly created one. All pipeline-related scripts access this parameter to know which data to work on and where to store the models.
+2. Run `python -m SI_Toolkit_ASF.run_data_generator_for_ML_Pipeline`. This will create a new experiment folder `./SI_Toolkit_ASF/Experiments/Experiment-[X]/`. You will work in this folder from now on. Within there, in `Recordings/` there is now a set of CSVs saved and split up into Train/Validate/Test folders. Also, copies of the current configuration files are saved there.
+3. In `./SI_Toolkit_ASF/config.yml` you can now set `paths/path_to_experiment:` to the newly created one. All pipeline-related scripts access this parameter to know which data to work on and where to store the models.
 4. Normalize the data using `python -m SI_Toolkit.load_and_normalize`. This creates a normalization file within the experiment folder set in step 3.
 5. Train a model. Type `python -m SI_Toolkit.TF.Train -h` for a list of parameters you can define. Some default values are set in the same config as in step 3 and can also be modified there. Now run the Train module with all parameter flags that you wish. You will want to specify the network architecture. Training will store a new model within a subfolder `Models/` in the chosen experiment folder.
 6. Test the model. Run `python -m SI_Toolkit.Testing.run_brunton_test` which selects the test run set in config and compares the model's predictions versus true model behavior in Brunton-style plots. You can again see all params with the flag `-h`. If the script breaks, set a smaller `--test_len`.
@@ -87,7 +87,7 @@ Quit button is provided
 because when launched from some IDEs (e.g. Spyder on Windows 10)
 the standard cross in the window corner may not work correctly.
 
-The "CSV file name" text box is used for naming a file to be saved or to be loaded. The path is assumed relative to `./SI_Toolkit_ApplicationSpecificFiles/Experiments/`. If left empty while saving, the default name is given. If left empty while loading data, the latest experiment will be loaded.
+The "CSV file name" text box is used for naming a file to be saved or to be loaded. The path is assumed relative to `./SI_Toolkit_ASF/Experiments/`. If left empty while saving, the default name is given. If left empty while loading data, the latest experiment will be loaded.
 
 ## Folding convention
 Files regions are folded with #region #endregion syntax

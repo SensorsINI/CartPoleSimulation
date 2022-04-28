@@ -32,10 +32,10 @@ WASH OUT LENGTH:
 10
 
 TRAINING_FILES:
-./SI_Toolkit_ApplicationSpecificFiles/Experiments/Imitation-lqr//Recordings/Train/
+./SI_Toolkit_ASF/Experiments/Imitation-lqr//Recordings/Train/
 
 VALIDATION_FILES:
-./SI_Toolkit_ApplicationSpecificFiles/Experiments/Imitation-lqr//Recordings/Validate/
+./SI_Toolkit_ASF/Experiments/Imitation-lqr//Recordings/Validate/
 
 TEST_FILES:
-./SI_Toolkit_ApplicationSpecificFiles/Experiments/Imitation-lqr//Recordings/Test/
+./SI_Toolkit_ASF/Experiments/Imitation-lqr//Recordings/Test/
