@@ -74,11 +74,11 @@ def data_idx(list):
 
 # %% extract all data from all experiments
 
-path = 'Experiment_Recordings/Exp-cem-naive-grad-2k-B*.csv'
+path = 'Experiment_Recordings/Exp-mppi-tf-2k-A*.csv'
 
 files = glob.glob(path)
 
-#%%
+
 all_data = []
 
 for file in files:
@@ -90,7 +90,7 @@ for file in files:
                 lines.append(line)
     ds = data_idx(lines) + 1
     all_data.append(lines[ds + 1:])
-
+#%%
 beginning = re.compile('#.*:\s*')
 second = re.compile('\s*s\Z')
 exp_info = []
@@ -165,12 +165,12 @@ axHist.hist(swingup_time, bins= 10)
 
 
 # %% Example for plotting
-data = all_data[10]
+data = all_data[0]
 paf = 1.1
 
 fig, ax1 = plt.subplots(5, 1, num='yoyoyo')
 ax1 = plt.subplot(5, 1, 1)
-plt.plot(data[:, time_idx], data[:, angle_idx])
+plt.plot(data[:, time_idx], data[:,angle_idx])
 plt.axhline(y = 0.34, color = 'r')
 plt.axhline(y = -0.34, color = 'r')
 plt.ylim(-np.pi*paf, np.pi*paf)
@@ -190,4 +190,11 @@ plt.subplot(5, 1, 5)
 plt.semilogy(data[:, time_idx], ravg_mean)
 
 plt.show()
+
+#%%
+fig, ax1 = plt.subplots(1, 1, num='Only angles')
+plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., angle_idx],0,1))
+plt.axhline(y = 0.34, color = 'r')
+plt.axhline(y = -0.34, color = 'r')
+plt.ylim(-np.pi*paf, np.pi*paf)
 
