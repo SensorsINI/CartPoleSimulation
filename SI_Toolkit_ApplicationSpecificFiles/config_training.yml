@@ -25,4 +25,5 @@ training_default:
   POST_WASH_OUT_LEN: 20
   ON_FLY_DATA_GENERATION: False
   NORMALIZE: True
+  SHIFT_LABELS: 1  # for k, as a label to row i is taken row i+k
 
