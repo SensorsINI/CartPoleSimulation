@@ -28,7 +28,7 @@ length_of_episode = config["length_of_episode"]
 mode = config["mode"]
 
 
-class CartPoleEnv_LTC(gym.Env[np.ndarray, Union[int, np.ndarray]]):
+class CartPoleEnv_LTC(gym.Env):
     metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 50}
 
     def __init__(self):

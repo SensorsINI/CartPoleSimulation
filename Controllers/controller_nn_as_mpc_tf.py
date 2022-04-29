@@ -1,22 +1,18 @@
 import yaml
-import copy
-import os
 
 import tensorflow as tf
 import numpy as np
-import pandas as pd
 
 from types import SimpleNamespace
 
-from CartPole.state_utilities import ANGLED_IDX, ANGLE_IDX, POSITIOND_IDX, POSITION_IDX
 from Controllers.template_controller import template_controller
-from SI_Toolkit.load_and_normalize import denormalize_df, load_normalization_info, normalize_df, normalize_numpy_array
+from SI_Toolkit.load_and_normalize import normalize_numpy_array
 
 try:
-    from SI_Toolkit_ApplicationSpecificFiles.predictors_customization import STATE_VARIABLES, STATE_INDICES, \
+    from SI_Toolkit_ASF_global.predictors_customization import STATE_VARIABLES, STATE_INDICES, \
         CONTROL_INPUTS, augment_predictor_output
 except ModuleNotFoundError:
-    print('SI_Toolkit_ApplicationSpecificFiles not yet created')
+    print('SI_Toolkit_ASF not yet created')
 
 from SI_Toolkit.TF.TF_Functions.Initialization import get_net, get_norm_info_for_net
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
