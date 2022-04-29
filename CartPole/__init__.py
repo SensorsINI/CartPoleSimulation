@@ -192,6 +192,8 @@ class CartPole:
         self.slider_max = 1.0
         self.slider_value = 0.0
 
+        self.show_hanging_pole = False
+
         self.physical_to_graphics = None
         self.graphics_to_physical = None
 
@@ -1169,13 +1171,14 @@ class CartPole:
 
         AxCart.add_patch(InvisiblePointUp)
 
-        # InvisiblePointDown = Rectangle((0, -self.MastHight - 2.0),
-        #                              self.MastThickness,
-        #                              0.0001,
-        #                              fc='w',
-        #                              ec='w')
-        #
-        # AxCart.add_patch(InvisiblePointDown)
+        if self.show_hanging_pole:
+            InvisiblePointDown = Rectangle((0, -self.MastHight - 2.0),
+                                         self.MastThickness,
+                                         0.0001,
+                                         fc='w',
+                                         ec='w')
+
+            AxCart.add_patch(InvisiblePointDown)
 
         # Apply scaling
         AxCart.axis('scaled')

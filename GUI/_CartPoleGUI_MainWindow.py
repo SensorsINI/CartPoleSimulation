@@ -97,6 +97,7 @@ class MainWindow(QMainWindow):
         self.simulator_mode = simulator_mode_init
         self.slider_on_click = slider_on_click_init  # Update slider on click/update slider while hoovering over it
         self.speedup = speedup_init  # Default simulation speed-up
+        self.CartPoleInstance.show_hanging_pole = show_hanging_pole_init
 
         # endregion
 
@@ -394,6 +395,15 @@ class MainWindow(QMainWindow):
             self.cb_slider_on_click.toggle()
         self.cb_slider_on_click.toggled.connect(self.cb_slider_on_click_f)
         l_cb.addWidget(self.cb_slider_on_click)
+
+        # endregion
+
+        # region -- Checkbox: Decide how the cartpole should be displayed
+        self.cb_show_hanging_pole = QCheckBox('Show hanging pole', self)
+        if self.CartPoleInstance.show_hanging_pole:
+            self.cb_show_hanging_pole.toggle()
+        self.cb_show_hanging_pole.toggled.connect(self.cb_show_hanging_pole_f)
+        l_cb.addWidget(self.cb_show_hanging_pole)
 
         # endregion
 
@@ -1008,6 +1018,17 @@ class MainWindow(QMainWindow):
             self.slider_on_click = True
         else:
             self.slider_on_click = False
+
+    # Action toggling between showing the ground level and above
+    # and showing above and below ground level the length of the pole
+    # Second option is good for visualizing swing-up
+    def cb_show_hanging_pole_f(self, state):
+        if state:
+            self.CartPoleInstance.show_hanging_pole = True
+        else:
+            self.CartPoleInstance.show_hanging_pole = False
+        self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
+        self.canvas.draw()
 
     # endregion
 
