@@ -44,6 +44,10 @@ speedup_init = 1.0  # Multiplicative factor by which the simulation seen by the 
 # WARNING: This is the target value, max speedup is limited by speed of performing CartPole simulation
 # True instantaneous speedup is displayed in CartPole GUI as "Speed-up(measured)"
 
+# Action toggling between showing the ground level and above
+# and showing above and below ground level the length of the pole
+# Second option is good for visualizing swing-up
+show_hanging_pole_init = False
 
 # Variables for random trace generation - GUI only
 # Data Generator sets these parameters independently
