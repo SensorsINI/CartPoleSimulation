@@ -74,7 +74,7 @@ def data_idx(list):
 
 # %% extract all data from all experiments
 
-path = 'Experiment_Recordings/Exp-cem-naive-grad-2k-D*.csv'
+path = 'Experiment_Recordings/Exp-dist-adam*.csv'
 
 files = glob.glob(path)
 
