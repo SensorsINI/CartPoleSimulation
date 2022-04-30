@@ -74,7 +74,7 @@ def data_idx(list):
 
 # %% extract all data from all experiments
 
-path = 'Experiment_Recordings/Exp-mppi-tf-2k-A*.csv'
+path = 'Experiment_Recordings/Exp-cem-naive-grad-2k-D*.csv'
 
 files = glob.glob(path)
 
@@ -153,6 +153,8 @@ swingup_time = swingup_time_calc(S, target_pos, TrackHalfLength)
 #%%
 ravg_mean = tf.math.reduce_mean(ravg, axis = 0)
 successful_swingups = swingup_time < 5.0
+swcount = np.sum(successful_swingups)
+print("{} of {} swingups successful".format(swcount, S.shape[0]))
 swingup_time = swingup_time[successful_swingups]
 swingup_mean = np.mean(swingup_time)
 swingup_std = np.std(swingup_time)
