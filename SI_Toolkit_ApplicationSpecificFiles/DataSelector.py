@@ -18,17 +18,20 @@ class DataSelector:
         self.post_wash_out_len = args.post_wash_out_len  # 1 is minimum here! Also for dense net
         self.exp_len = self.wash_out_len + self.post_wash_out_len
 
-        self.num = 20  # You get one more bean as num
-        self.points_per_bin = 1000
-        self.nr_states_per_bin = np.ones((self.num,self.num,self.num,self.num))*self.points_per_bin
+        self.num = 10  # You get one more bean as num
+        self.points_per_bin = 5
+        self.nr_states_per_bin = np.ones((self.num, self.num, self.num, self.num, self.num))*self.points_per_bin
         self.nr_states_per_bin_current = np.zeros_like(self.nr_states_per_bin)
-        self.table_empty_places_init = np.sum(self.nr_states_per_bin)
+        self.table_empty_places_init = np.sum(self.nr_states_per_bin)  # + 180*4*10*10*10*10
         self.table_empty_places = self.table_empty_places_init
 
         self.position_bin_boundries = None
         self.positionD_bin_boundries = None
         self.angle_bin_boundries = None
+        # self.angle_sin_bin_boundries = None
+        # self.angle_cos_bin_boundries = None
         self.angleD_bin_boundries = None
+        self.Q_bin_boundries = None
 
         self.max_iter = None
 
@@ -52,11 +55,11 @@ class DataSelector:
 
                 # Get max/min values
                 maxs.append(data_set.max())    # Take care! There is intentionally min here!
-                mins.append(data_set.min().abs())
+                mins.append(data_set.min())
 
             maxs = pd.concat(maxs, axis=1).T.max()
-            mins = pd.concat(mins, axis=1).T.max()
-            self.maxs = pd.concat([maxs, mins], axis=1).T.min()
+            mins = pd.concat(mins, axis=1).T.min().abs()
+            self.maxs = pd.concat([maxs, mins], axis=1).T.max()
             self.number_of_samples = self.df_lengths_cs[-1]
             # Get global max/min values
 
@@ -69,13 +72,16 @@ class DataSelector:
         print('There are {} datapoints available'.format(self.number_of_samples))
         print('You requested to collect {} points'.format(self.table_empty_places))
 
-        first = 1.0/(self.num-1)
-        last = (self.num-1-1)/(self.num-1)
+        first = 3/4 # 1.0/(self.num-1)
+        last = 3/4 # (self.num-1-1)/(self.num-1)
 
         self.position_bin_boundries = np.linspace(start=-self.maxs['position']*first, stop=self.maxs['position']*last, num=self.num-1)
         self.positionD_bin_boundries = np.linspace(start=-self.maxs['positionD']*first, stop=self.maxs['positionD']*last, num=self.num-1)
         self.angle_bin_boundries = np.linspace(start=-self.maxs['angle']*first, stop=self.maxs['angle']*last, num=self.num-1)
+        # self.angle_sin_bin_boundries = np.linspace(start=-self.maxs['angle_sin'] * first, stop=self.maxs['angle_sin'] * last, num=self.num-1)
+        # self.angle_cos_bin_boundries = np.linspace(start=-self.maxs['angle_cos'] * first, stop=self.maxs['angle_cos'] * last, num=self.num-1)
         self.angleD_bin_boundries = np.linspace(start=-self.maxs['angleD']*first, stop=self.maxs['angleD']*last, num=self.num-1)
+        self.Q_bin_boundries = np.linspace(start=-self.maxs['Q'] * first, stop=self.maxs['Q'] * last, num=self.num-1)
 
         self.max_iter = self.number_of_samples-1
 
@@ -99,13 +105,26 @@ class DataSelector:
             # Get index of this point in the grid
             position_idx = next((i for i, v in enumerate(self.position_bin_boundries) if v > data_point['position']), len(self.position_bin_boundries))
             positionD_idx = next((i for i, v in enumerate(self.positionD_bin_boundries) if v > data_point['positionD']), len(self.positionD_bin_boundries))
-            angle_idx = next((i for i, v in enumerate(self.angle_bin_boundries) if v > data_point['positionD']), len(self.angle_bin_boundries))
-            angleD_idx = next((i for i, v in enumerate(self.angleD_bin_boundries) if v > data_point['positionD']), len(self.angleD_bin_boundries))
+            angle_idx = next((i for i, v in enumerate(self.angle_bin_boundries) if v > data_point['angle']), len(self.angle_bin_boundries))
+            # angle_sin_idx = next((i for i, v in enumerate(self.angle_sin_bin_boundries) if v > data_point['angle_sin']), len(self.angle_sin_bin_boundries))
+            # angle_cos_idx = next((i for i, v in enumerate(self.angle_cos_bin_boundries) if v > data_point['angle_cos']), len(self.angle_cos_bin_boundries))
+            angleD_idx = next((i for i, v in enumerate(self.angleD_bin_boundries) if v > data_point['angleD']), len(self.angleD_bin_boundries))
+            Q_idx = next((i for i, v in enumerate(self.Q_bin_boundries) if v > data_point['Q']), len(self.Q_bin_boundries))
 
-            bin_idx = (position_idx, positionD_idx, angle_idx, angleD_idx)
+            bin_idx = (position_idx, positionD_idx, angle_idx, angleD_idx, Q_idx)
+            if angle_idx in range(3, 7) and angleD_idx in range(3, 7):
+                self.nr_states_per_bin[bin_idx] = 50
+            # else:
+            #     self.nr_states_per_bin[bin_idx] = 0
+            # elif angle_cos_idx >= 6:
+            #     self.nr_states_per_bin[bin_idx] = 10
+            # elif angle_cos_idx >= 3:
+            #     self.nr_states_per_bin[bin_idx] = 3
+            # else:
+            #     self.nr_states_per_bin[bin_idx] = 0
 
             # Check if there is already a max number of points there
-            if self.nr_states_per_bin_current[bin_idx] <= self.nr_states_per_bin[bin_idx]:
+            if self.nr_states_per_bin_current[bin_idx] < self.nr_states_per_bin[bin_idx]:
                 self.selected_indeces.append([idx_data_set, idx])
                 self.nr_states_per_bin_current[bin_idx] += 1
                 self.collected_points += 1
