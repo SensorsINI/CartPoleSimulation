@@ -1,14 +1,14 @@
 modeling:
-  NET_NAME: 'GRU-32H1-32H2'
+  NET_NAME: 'GRU-16H1'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Pretrained-RNN-1/'
+  path_to_experiment: 'Physical-Experiment-Augmented/'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
 
 training_default:
   # For training closed loop dynamics model:
   control_inputs: ['Q']
-  state_inputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
+  state_inputs: ['angle_sin_pred', 'angle_cos_pred', 'angleD_pred', 'position_pred', 'positionD_pred']
   setpoint_inputs: []  # Can be only 'target_position' or empty for CartPole
   outputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
   # For training open loop dynamics model:
@@ -25,5 +25,5 @@ training_default:
   POST_WASH_OUT_LEN: 20
   ON_FLY_DATA_GENERATION: False
   NORMALIZE: True
-  SHIFT_LABELS: 1  # for k, as a label to row i is taken row i+k
+  SHIFT_LABELS: 0  # for k, as a label to row i is taken row i+k
 
