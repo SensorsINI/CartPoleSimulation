@@ -42,6 +42,8 @@ cem_max_LR = config["controller"]["cem"]["cem_max_LR"]
 cem_LR = tf.constant(cem_LR, dtype=tf.float32)
 cem_max_LR = tf.constant(cem_max_LR, dtype = tf.float32)
 
+pre_desc_sig = config["controller"]["cem-dist-grad-desc-ns"]["pre_desc_sig"]
+
 #create predictor
 predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
 
@@ -133,7 +135,7 @@ def cost(s_hor ,u,target_position,u_prev):
     return total_cost
 
 #cem class
-class controller_dist_grad_desc(template_controller):
+class controller_dist_grad_desc_ns(template_controller):
     def __init__(self):
         #First configure random sampler
         SEED = config["controller"]["mppi"]["SEED"]
@@ -151,7 +153,7 @@ class controller_dist_grad_desc(template_controller):
         self.count = 0
 
     @tf.function(jit_compile=True)
-    def predict_and_cost(self, s, target_position, Q):
+    def predict_and_cost(self, s, target_position, Q, generator):
         # generate random input sequence and clip to control limits
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(Q)
@@ -182,6 +184,7 @@ class controller_dist_grad_desc(template_controller):
         u = dist_mue[0, 0]
         # dist_mue = tf.concat([dist_mue[:, 1:], dist_mue[:,-1]], -1)
         Qn = tf.concat([Q[:, 1:], Q[:, -1, tf.newaxis]], -1)
+        Qn = generator.normal([num_rollouts, cem_samples], dtype=tf.float32) * pre_desc_sig
         return u, dist_mue, Qn
 
     #step function to find control
@@ -194,7 +197,7 @@ class controller_dist_grad_desc(template_controller):
         else:
             iters = 1
         for _ in range(0, iters):
-            self.u, self.dist_mue, self.Q = self.predict_and_cost(s, target_position, self.Q)
+            self.u, self.dist_mue, self.Q = self.predict_and_cost(s, target_position, self.Q, self.rng_cem)
         self.count += 1
         return self.u.numpy()
 
@@ -211,7 +214,7 @@ class controller_dist_grad_desc(template_controller):
 
 
 if __name__ == '__main__':
-    ctrl = controller_dist_grad_desc()
+    ctrl = controller_dist_grad_desc_ns()
 
 
     import timeit
