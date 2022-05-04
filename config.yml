@@ -1,6 +1,6 @@
 controller:
   cem:
-    cem_outer_it: 5                    #how many outer iterations to use
+    cem_outer_it: 8                    #how many outer iterations to use
     cem_rollouts: 10                  #how many rollouts per outer cem iteration
     cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet

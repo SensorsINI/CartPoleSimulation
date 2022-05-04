@@ -41,7 +41,7 @@ cem_LR = config["controller"]["cem"]["cem_LR"]
 cem_max_LR = config["controller"]["cem"]["cem_max_LR"]
 cem_LR = tf.constant(cem_LR, dtype=tf.float32)
 cem_max_LR = tf.constant(cem_max_LR, dtype = tf.float32)
-opt = tf.keras.optimizers.Adam(learning_rate=cem_LR)
+
 
 #create predictor
 predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
@@ -151,6 +151,7 @@ class controller_dist_adam(template_controller):
         self.Q = tf.clip_by_value(self.Q, -1.0, 1.0)
         self.Q = tf.Variable(self.Q)
         self.count = 0
+        self.opt = tf.keras.optimizers.Adam(learning_rate=cem_LR/5)
 
     @tf.function(jit_compile=True)
     def grad_step(self, s, target_position, Q, opt):
@@ -194,8 +195,13 @@ class controller_dist_adam(template_controller):
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
         for _ in range(0, cem_outer_it):
-            Qn = self.grad_step(s, target_position, self.Q, opt)
+            Qn = self.grad_step(s, target_position, self.Q, self.opt)
             self.Q.assign(Qn)
+        adam_weights = self.opt.get_weights()
+        # w1 = tf.concat([adam_weights[1][:,1:], tf.zeros([num_rollouts,1])], -1)
+        # w2 = tf.concat([adam_weights[2][:,1:], tf.zeros([num_rollouts,1])], -1)
+        self.opt.set_weights([tf.zeros_like(el) for el in adam_weights])
+        # opt.set_weights([adam_weights[0], w1, w2])
         self.u, self.dist_mue, Qn = self.get_action(s, target_position, self.Q)
         self.Q.assign(Qn)
         self.count += 1
@@ -210,6 +216,9 @@ class controller_dist_adam(template_controller):
         Qn = tf.clip_by_value(self.Q, -1.0, 1.0)
         self.Q.assign(Qn)
         self.count = 0
+        adam_weights = self.opt.get_weights()
+        self.opt.set_weights([tf.zeros_like(el) for el in adam_weights])
+        # opt.variables().__init__()
 
 
 

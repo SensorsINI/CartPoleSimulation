@@ -219,6 +219,8 @@ class controller_dist_opt(template_controller):
         Qn = tf.clip_by_value(self.Q, -1.0, 1.0)
         self.Q.assign(Qn)
         self.count = 0
+        weights = opt.get_weights()
+        opt.set_weights([tf.zeros_like(el) for el in weights])
 
 
 
