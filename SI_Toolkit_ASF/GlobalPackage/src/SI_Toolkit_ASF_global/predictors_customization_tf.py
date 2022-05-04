@@ -108,3 +108,27 @@ class predictor_output_augmentation_tf:
             output = tf.concat([output, angle_cos], axis=-1)
 
         return output
+
+    # TODO: sin, cos newaxis
+    @Compile
+    def augment_single_state(self, net_output):
+
+        output = net_output
+        if 'angle' in self.features_augmentation:
+            angle = \
+                tf.math.atan2(
+                    net_output[..., self.index_angle_sin],
+                    net_output[..., self.index_angle_cos])[:, tf.newaxis]
+            output = tf.concat([output, angle], axis=-1)
+
+        if 'angle_sin' in self.features_augmentation:
+            angle_sin = \
+                tf.sin(net_output[..., self.index_angle])
+            output = tf.concat([output, angle_sin], axis=-1)
+
+        if 'angle_cos' in self.features_augmentation:
+            angle_cos = \
+                tf.cos(net_output[..., self.index_angle])
+            output = tf.concat([output, angle_cos], axis=-1)
+
+        return output
