@@ -21,8 +21,8 @@ ccrc_weight = config["controller"]["cem"]["cem_ccrc_weight"]
 def distance_difference_cost(position, target_position):
     """Compute penalty for distance of cart to the target position"""
     return ((position - target_position) / (2.0 * TrackHalfLength)) ** 2 + tf.cast(
-        tf.abs(position) > 0.95 * TrackHalfLength
-    , tf.float32) * 1e9*((tf.abs(position) - 0.95*TrackHalfLength)/(0.05*TrackHalfLength))**2  # Soft constraint: Do not crash into border
+        tf.abs(position) > 0.90 * TrackHalfLength
+    , tf.float32) * 1.0e7  # Soft constraint: Do not crash into border
 
 #cost for difference from upright position
 def E_pot_cost(angle):

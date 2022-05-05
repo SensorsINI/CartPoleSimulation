@@ -23,16 +23,19 @@ from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregr
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
+cost_function = config["controller"]["general"]["cost_function"]
+cost_function = cost_function.replace('-', '_')
+cost_function_cmd = 'from others.cost_functions.'+cost_function+' import q, phi'
+exec(cost_function_cmd)
+
 dt = config["controller"]["mppi"]["dt"]
 mppi_horizon = config["controller"]["mppi"]["mpc_horizon"]
 num_rollouts = config["controller"]["cem"]["cem_rollouts"]
-dd_weight = config["controller"]["mppi"]["dd_weight"]
+
 cc_weight = config["controller"]["mppi"]["cc_weight"]
-ep_weight = config["controller"]["mppi"]["ep_weight"]
 
 NET_NAME = config["controller"]["cem"]["CEM_NET_NAME"]
 predictor_type = config["controller"]["cem"]["cem_predictor_type"]
-ccrc_weight = config["controller"]["cem"]["cem_ccrc_weight"]
 
 mppi_samples = int(mppi_horizon / dt)  # Number of steps in MPC horizon
 
@@ -48,84 +51,13 @@ predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
 
 """Define Predictor"""
 if predictor_type == "EulerTF":
-    predictor = predictor_ODE_tf_pure(horizon=mppi_samples, dt=dt, intermediate_steps=10)
+    predictor = predictor_ODE_tf_pure(horizon=mppi_samples, dt=dt, intermediate_steps=1)
 elif predictor_type == "Euler":
     predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
 elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
         horizon=mppi_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
-
-
-#cost for distance from track edge
-def distance_difference_cost(position, target_position):
-    """Compute penalty for distance of cart to the target position"""
-    return ((position - target_position) / (2.0 * TrackHalfLength)) ** 2 + tf.cast(
-        tf.abs(position) > 0.90 * TrackHalfLength
-    , tf.float32) * 1.0e7  # Soft constraint: Do not crash into border
-
-#cost for difference from upright position
-def E_pot_cost(angle):
-    """Compute penalty for not balancing pole upright (penalize large angles)"""
-    return 0.25 * (1.0 - tf.cos(angle)) ** 2
-
-#actuation cost
-def CC_cost(u):
-    return R * (u ** 2)
-
-#final stage cost
-def phi(s, target_position):
-    """Calculate terminal cost of a set of trajectories
-
-    Williams et al use an indicator function type of terminal cost in
-    "Information theoretic MPC for model-based reinforcement learning"
-
-    TODO: Try a quadratic terminal cost => Use the LQR terminal cost term obtained
-    by linearizing the system around the unstable equilibrium.
-
-    :param s: Reference to numpy array of states of all rollouts
-    :type s: np.ndarray
-    :param target_position: Target position to move the cart to
-    :type target_position: np.float32
-    :return: One terminal cost per rollout
-    :rtype: np.ndarray
-    """
-    terminal_states = s[:, -1, :]
-    terminal_cost = 10000 * tf.cast(
-        (tf.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
-        | (
-            tf.abs(terminal_states[:, POSITION_IDX] - target_position)
-            > 0.1 * TrackHalfLength
-        )
-    , tf.float32)
-    return terminal_cost
-
-#optimized mean function
-def mean_numba(a):
-
-    res = []
-    for i in prange(a.shape[0]):
-        res.append(a[i, :].mean())
-
-    return np.array(res)
-
-#cost of changeing control to fast
-def control_change_rate_cost(u, u_prev,nrol):
-    """Compute penalty of control jerk, i.e. difference to previous control input"""
-    u_prev_vec = tf.concat((tf.ones((nrol, 1))*u_prev,u[:,:-1]),axis=-1)
-    return (u - u_prev_vec) ** 2
-
-#all stage costs together
-def q(s,u,target_position, u_prev, nrol = num_rollouts):
-    dd = dd_weight * distance_difference_cost(
-        s[:, :, POSITION_IDX], target_position
-    )
-    ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX])
-    cc = cc_weight * CC_cost(u)
-    ccrc = ccrc_weight * control_change_rate_cost(u,u_prev, nrol)
-    stage_cost = dd+ep+cc+ccrc
-    return stage_cost
-
 
 #mppi correction
 def mppi_correction_cost(u, delta_u):
