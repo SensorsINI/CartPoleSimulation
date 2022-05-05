@@ -17,7 +17,7 @@ save_interval = 0.02  # s, How often to save the results of simulation
 
 # Starting setting of the CartPole GUI (can be changed in GUI)
 # controller_init = 'custom-mpc-scipy'  # Defines which controller is loaded at the start of the program
-controller_init = 'dist-opt'
+controller_init = 'dist-adam-alt'
 """
 Possible choices for CartPole controller:
 
