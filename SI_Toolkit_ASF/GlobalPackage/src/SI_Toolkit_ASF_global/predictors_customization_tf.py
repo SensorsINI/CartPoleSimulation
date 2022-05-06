@@ -89,22 +89,21 @@ class predictor_output_augmentation_tf:
     @Compile
     def augment(self, net_output):
 
-        output = net_output
+        output = net_output  # [batch_size, time_steps, features]
         if 'angle' in self.features_augmentation:
-            angle = \
-                tf.math.atan2(
+            angle = tf.math.atan2(
                     net_output[..., self.index_angle_sin],
-                    net_output[..., self.index_angle_cos])[:, :, tf.newaxis]
+                    net_output[..., self.index_angle_cos])[:, :, tf.newaxis]  # tf.math.atan2 removes the features (last) dimension, so it is added back with [:, :, tf.newaxis]
             output = tf.concat([output, angle], axis=-1)
 
         if 'angle_sin' in self.features_augmentation:
             angle_sin = \
-                tf.sin(net_output[..., self.index_angle])
+                tf.sin(net_output[..., self.index_angle])[:, :, tf.newaxis]
             output = tf.concat([output, angle_sin], axis=-1)
 
         if 'angle_cos' in self.features_augmentation:
             angle_cos = \
-                tf.cos(net_output[..., self.index_angle])
+                tf.cos(net_output[..., self.index_angle])[:, :, tf.newaxis]
             output = tf.concat([output, angle_cos], axis=-1)
 
         return output
