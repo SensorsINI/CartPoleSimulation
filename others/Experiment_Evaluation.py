@@ -8,7 +8,7 @@ import glob
 import matplotlib.pyplot as plt
 import matplotlib
 import sys
-from Controllers.controller_mppi_tf import q as stage_cost #use correct stage cost here, probably need to slightly adjust cost in controller
+from others.cost_functions.quadratic_boundary import q as stage_cost #use correct stage cost here, probably need to slightly adjust cost in controller
 
 # from PyQt5.QtCore import *
 # from PyQt5.QtGui import *
@@ -74,7 +74,7 @@ def data_idx(list):
 
 # %% extract all data from all experiments
 
-path = 'Experiment_Recordings/Exp-dist-adam-alt-A*.csv'
+path = 'Experiment_Recordings/Exp-dist-adam-alt-C*.csv'
 
 files = glob.glob(path)
 
@@ -138,7 +138,9 @@ Q = all_data[..., Q_idx]
 Q = tf.constant(Q, dtype=tf.float32)
 S = tf.constant(S, dtype=tf.float32)
 num_rol = all_data.shape[0]
-costs = stage_cost(S, Q, target_pos, Q[0, 0], nrol=num_rol)
+
+#%%
+costs = stage_cost(S, Q, target_pos, Q[0, 0])
 
 #%%evaluation
 """ ***********************************
@@ -148,7 +150,8 @@ costs = stage_cost(S, Q, target_pos, Q[0, 0], nrol=num_rol)
 
 ravg = runnig_avg(costs, 20)
 swingup_time = swingup_time_calc(S, target_pos, TrackHalfLength)
-
+avg_cost = tf.math.reduce_mean(costs)
+print(avg_cost.numpy())
 
 #%%
 ravg_mean = tf.math.reduce_mean(ravg, axis = 0)
@@ -199,4 +202,5 @@ plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., angle_idx],0,1))
 plt.axhline(y = 0.34, color = 'r')
 plt.axhline(y = -0.34, color = 'r')
 plt.ylim(-np.pi*paf, np.pi*paf)
+pass
 

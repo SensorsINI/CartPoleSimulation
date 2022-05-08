@@ -74,8 +74,8 @@ class controller_dist_adam_alt(template_controller):
         self.dist_var = 0.5*tf.ones([1,cem_samples], dtype=tf.float32)
         self.stdev = tf.sqrt(self.dist_var)
         self.u = 0.0
-        self.Q = tf.tile(self.dist_mue, [num_rollouts, 1]) + self.rng_cem.normal(
-            [num_rollouts, cem_samples], dtype=tf.float32) * self.stdev
+        self.Q = tf.tile(self.dist_mue, [num_rollouts, 1]) + self.rng_cem.uniform(
+            [num_rollouts, cem_samples], -1, 1, dtype=tf.float32) * self.stdev
         self.Q = tf.clip_by_value(self.Q, -1.0, 1.0)
         self.Q = tf.Variable(self.Q)
         self.count = 0
@@ -130,10 +130,10 @@ class controller_dist_adam_alt(template_controller):
             Qn = self.grad_step(s, target_position, self.Q, self.opt)
             self.Q.assign(Qn)
         adam_weights = self.opt.get_weights()
-        # w1 = tf.concat([adam_weights[1][:,1:], tf.zeros([num_rollouts,1])], -1)
-        # w2 = tf.concat([adam_weights[2][:,1:], tf.zeros([num_rollouts,1])], -1)
-        self.opt.set_weights([tf.zeros_like(el) for el in adam_weights])
-        # opt.set_weights([adam_weights[0], w1, w2])
+        w1 = tf.concat([adam_weights[1][:,1:], tf.zeros([num_rollouts,1])], -1)
+        w2 = tf.concat([adam_weights[2][:,1:], tf.zeros([num_rollouts,1])], -1)
+        # self.opt.set_weights([tf.zeros_like(el) for el in adam_weights])
+        self.opt.set_weights([adam_weights[0], w1, w2])
         self.u, self.dist_mue, Qn = self.get_action(s, target_position, self.Q)
         self.Q.assign(Qn)
         self.count += 1
