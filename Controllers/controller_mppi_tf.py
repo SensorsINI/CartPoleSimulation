@@ -25,14 +25,14 @@ config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 dt = config["controller"]["mppi"]["dt"]
 mppi_horizon = config["controller"]["mppi"]["mpc_horizon"]
-num_rollouts = config["controller"]["cem"]["cem_rollouts"]
+num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 dd_weight = config["controller"]["mppi"]["dd_weight"]
 cc_weight = config["controller"]["mppi"]["cc_weight"]
 ep_weight = config["controller"]["mppi"]["ep_weight"]
 
-NET_NAME = config["controller"]["cem"]["CEM_NET_NAME"]
-predictor_type = config["controller"]["cem"]["cem_predictor_type"]
-ccrc_weight = config["controller"]["cem"]["cem_ccrc_weight"]
+NET_NAME = config["controller"]["mppi"]["NET_NAME"]
+predictor_type = config["controller"]["mppi"]["predictor_type"]
+ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
 
 mppi_samples = int(mppi_horizon / dt)  # Number of steps in MPC horizon
 
