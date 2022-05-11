@@ -62,7 +62,7 @@ elif predictor_type == "NeuralNet":
 
 
 #cem class
-class controller_dist_adam_alt(template_controller):
+class controller_dist_adam_resamp(template_controller):
     def __init__(self):
         #First configure random sampler
         SEED = config["controller"]["mppi"]["SEED"]
@@ -74,7 +74,8 @@ class controller_dist_adam_alt(template_controller):
         self.dist_var = 0.5*tf.ones([1,cem_samples], dtype=tf.float32)
         self.stdev = tf.sqrt(self.dist_var)
         self.u = 0.0
-        self.Q = self.rng_cem.uniform([num_rollouts, cem_samples], -1, 1, dtype=tf.float32)
+        self.Q = tf.tile(self.dist_mue, [num_rollouts, 1]) + self.rng_cem.uniform(
+            [num_rollouts, cem_samples], -1, 1, dtype=tf.float32) * self.stdev
         self.Q = tf.clip_by_value(self.Q, -1.0, 1.0)
         self.Q = tf.Variable(self.Q)
         self.count = 0
@@ -108,32 +109,32 @@ class controller_dist_adam_alt(template_controller):
         # after all inner loops, clip std min, so enough is explored and shove all the values down by one for next control input
         elite_Q = tf.gather(Q, best_idx, axis=0)
         dist_mue = tf.math.reduce_mean(elite_Q, axis=0, keepdims=True)
-        # dist_std = tf.math.reduce_std(elite_Q, axis=0, keepdims=True)
-        # dist_std = tf.clip_by_value(dist_std, cem_stdev_min, 10.0)
-        # dist_std = tf.concat([dist_std[:, 1:], tf.sqrt(0.5)[tf.newaxis, tf.newaxis]], -1)
-        u = dist_mue[0, 0]
-        # dist_mue = tf.concat([dist_mue[:, 1:], dist_mue[:,-1]], -1)
+        dist_std = tf.math.reduce_std(elite_Q, axis=0, keepdims=True)
+        dist_std = tf.clip_by_value(dist_std, cem_stdev_min, 10.0)
+        dist_std = tf.concat([dist_std[:, 1:], tf.sqrt(0.5)[tf.newaxis, tf.newaxis]], -1)
+        u = elite_Q[0, 0]
+        dist_mue = tf.concat([dist_mue[:, 1:], tf.zeros([1, 1])], -1)
         Qn = tf.concat([Q[:, 1:], Q[:, -1, tf.newaxis]], -1)
-        return u, dist_mue, Qn
+        return u, dist_mue, dist_std, Qn
 
     #step function to find control
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
         s = np.tile(s, tf.constant([num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
-        if self.count == 0:
-            iters = cem_samples*cem_outer_it
-        else:
-            iters = cem_outer_it
-        for _ in range(0, iters):
+        new_Q = tf.tile(self.dist_mue, [num_rollouts, 1]) + self.rng_cem.normal(
+            [num_rollouts, cem_samples], dtype=tf.float32) * self.stdev
+        new_Q = tf.clip_by_value(new_Q, -1.0, 1.0)
+        self.Q.assign(new_Q)
+        for _ in range(0, cem_outer_it):
             Qn = self.grad_step(s, target_position, self.Q, self.opt)
             self.Q.assign(Qn)
         adam_weights = self.opt.get_weights()
-        w1 = tf.concat([adam_weights[1][:,1:], tf.zeros([num_rollouts,1])], -1)
-        w2 = tf.concat([adam_weights[2][:,1:], tf.zeros([num_rollouts,1])], -1)
-        # self.opt.set_weights([tf.zeros_like(el) for el in adam_weights])
-        self.opt.set_weights([adam_weights[0], w1, w2])
-        self.u, self.dist_mue, Qn = self.get_action(s, target_position, self.Q)
+        # w1 = tf.concat([adam_weights[1][:,1:], tf.zeros([num_rollouts,1])], -1)
+        # w2 = tf.concat([adam_weights[2][:,1:], tf.zeros([num_rollouts,1])], -1)
+        self.opt.set_weights([tf.zeros_like(el) for el in adam_weights])
+        # self.opt.set_weights([adam_weights[0], w1, w2])
+        self.u, self.dist_mue, self.stdev, Qn = self.get_action(s, target_position, self.Q)
         self.Q.assign(Qn)
         self.count += 1
         return self.u.numpy()
@@ -142,8 +143,8 @@ class controller_dist_adam_alt(template_controller):
         self.dist_mue = tf.zeros([1, cem_samples])
         self.dist_var = 0.5 * tf.ones([1, cem_samples])
         self.stdev = tf.sqrt(self.dist_var)
-        Qn = self.rng_cem.normal(
-            [num_rollouts, cem_samples], dtype=tf.float32)
+        Qn = tf.tile(self.dist_mue, [num_rollouts, 1]) + self.rng_cem.normal(
+            [num_rollouts, cem_samples], dtype=tf.float32) * self.stdev
         Qn = tf.clip_by_value(self.Q, -1.0, 1.0)
         self.Q.assign(Qn)
         self.count = 0
@@ -155,7 +156,7 @@ class controller_dist_adam_alt(template_controller):
 
 
 if __name__ == '__main__':
-    ctrl = controller_dist_adam_alt()
+    ctrl = controller_dist_adam_resamp()
 
 
     import timeit
