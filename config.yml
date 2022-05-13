@@ -3,7 +3,7 @@ controller:
     cost_function: 'quadratic-boundary' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
   cem:
     cem_outer_it: 8                    #how many outer iterations to use
-    cem_rollouts: 50             #how many rollouts per outer cem iteration
+    cem_rollouts: 55             #how many rollouts per outer cem iteration
     cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
     cem_stdev_min: 0.05
@@ -23,7 +23,7 @@ controller:
     SEED: "None"                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
-    num_rollouts: 2000                     # Number of Monte Carlo samples
+    num_rollouts: 100                     # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
@@ -37,18 +37,22 @@ controller:
     control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
-    LBD_mc: 0.01
+    LBD_mc: 10.0
     NU: 1000.0                            # Exploration variance
-    NU_mc: 2                              # Exploration variance for mathematical correct version
-    SQRTRHOINV: 0.02                      # Sampling variance
+    NU_mc: 20.0                              # Exploration variance for mathematical correct version
+    SQRTRHOINV: 0.02
+    SQRTRHOINV_mc: 0.002                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     LOGGING: False                        # Collect and show detailed insights into the controller's behavior
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
   mppi-grad:
-    LR: 0.1
-    STDEV_min: 0.0001
-    STDEV_max: 1
+    LR: 5.0
+    LR_B: 0.0005
+    STDEV_min: 0.1
+    STDEV_max: 10
+    STDEV_minB: 0.00001
+    STDEV_maxB: 0.5
   custom_mpc_scipy:
     DT: 0.1
     # method: 'L-BFGS-B'

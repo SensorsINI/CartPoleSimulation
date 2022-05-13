@@ -41,14 +41,14 @@ predictor_type = config["controller"]["cem"]["cem_predictor_type"]
 mppi_samples = int(mppi_horizon / dt)  # Number of steps in MPC horizon
 
 R = config["controller"]["mppi"]["R"]
-LBD = config["controller"]["mppi"]["LBD_mc"]
-NU = config["controller"]["mppi"]["NU_mc"]
-SQRTRHODTINV = config["controller"]["mppi"]["SQRTRHOINV_mc"] * (1 / np.math.sqrt(dt))
+LBD = config["controller"]["mppi"]["LBD"]
+NU = config["controller"]["mppi"]["NU"]
+SQRTRHODTINV = config["controller"]["mppi"]["SQRTRHOINV"] * (1 / np.math.sqrt(dt))
 GAMMA = config["controller"]["mppi"]["GAMMA"]
 
-mppi_lr = config["controller"]["mppi-grad"]["LR"]
-stdev_min = config["controller"]["mppi-grad"]["STDEV_min"]
-stdev_max = config["controller"]["mppi-grad"]["STDEV_max"]
+mppi_lr = config["controller"]["mppi-grad"]["LR_B"]
+stdev_min = config["controller"]["mppi-grad"]["STDEV_minB"]
+stdev_max = config["controller"]["mppi-grad"]["STDEV_maxB"]
 
 #create predictor
 predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
@@ -82,12 +82,8 @@ else:
     num_valid_vals = mppi_samples
 
 #mppi correction
-def mppi_correction_cost(u, delta_u, nuvec):
-    if SAMPLING_TYPE == "interpolated":
-        nudiv = tf.matmul(nuvec, interp_mat)
-    else:
-        nudiv = nuvec
-    return cc_weight * (0.5 * (1 - 1.0 / nudiv**2) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2))
+def mppi_correction_cost(u, delta_u, srtivec):
+    return cc_weight * (0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2))
 
 #total cost of the trajectory
 def uncorr_cost(s_hor ,u, target_position, u_prev, delta_u):
@@ -105,8 +101,8 @@ def reward_weighted_average(S, delta_u):
     b = tf.math.reduce_sum(exp_s[:,tf.newaxis]*delta_u, axis = 0, keepdims=True)/a
     return b
 
-def inizialize_pertubation(random_gen, nuvec ):
-    delta_u = random_gen.normal([num_rollouts, num_valid_vals], dtype=tf.float32) * nuvec*SQRTRHODTINV
+def inizialize_pertubation(random_gen, srtivec):
+    delta_u = random_gen.normal([num_rollouts, num_valid_vals], dtype=tf.float32) * srtivec
     if SAMPLING_TYPE == "interpolated":
         delta_u = tf.matmul(delta_u, interp_mat)
     return delta_u
@@ -114,7 +110,7 @@ def inizialize_pertubation(random_gen, nuvec ):
 
 
 #controller class
-class controller_mppi_var(template_controller):
+class controller_mppi_varB(template_controller):
     def __init__(self):
         #First configure random sampler
         SEED = config["controller"]["mppi"]["SEED"]
@@ -122,52 +118,52 @@ class controller_mppi_var(template_controller):
             SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)
         self.rng_cem = tf.random.Generator.from_seed(SEED)
         self.u_nom = tf.zeros([1,mppi_samples], dtype=tf.float32)
-        self.nuvec = np.math.sqrt(NU)*tf.ones([1, num_valid_vals])
-        self.nuvec = tf.Variable(self.nuvec)
+        self.srtivec = SQRTRHODTINV*tf.ones([1, num_valid_vals])
+        self.srtivec = tf.Variable(self.srtivec)
         self.u = 0.0
 
     @tf.function(jit_compile=True)
-    def predict_and_cost(self, s, target_position, u_nom, random_gen, u_old, nuvec):
+    def predict_and_cost(self, s, target_position, u_nom, random_gen, u_old, srtivec):
         # generate random input sequence and clip to control limits
         with tf.GradientTape(watch_accessed_variables=False) as tape:
-            tape.watch(nuvec)
-            delta_u = inizialize_pertubation(random_gen, nuvec)
+            tape.watch(srtivec)
+            delta_u = inizialize_pertubation(random_gen, srtivec)
             u_run = tf.tile(u_nom, [num_rollouts, 1])+delta_u
             u_run = tfp.math.clip_by_value_preserve_gradient(u_run, -1.0, 1.0)
             rollout_trajectory = predictor.predict_tf(s, u_run[:, :, tf.newaxis])
             unc_cost = uncorr_cost(rollout_trajectory, u_run, target_position, u_old, delta_u)
             mean_uncost = tf.math.reduce_mean(unc_cost)
-            dc_ds = tape.gradient(mean_uncost, nuvec)
-        cor_cost = mppi_correction_cost(u_run, delta_u, nuvec)
+            dc_ds = tape.gradient(mean_uncost, srtivec)
+        cor_cost = mppi_correction_cost(u_run, delta_u, srtivec)
         cor_cost = tf.math.reduce_sum(cor_cost, axis=1)
         traj_cost = unc_cost + cor_cost
         u_nom = tf.clip_by_value(u_nom + reward_weighted_average(traj_cost, delta_u), -1.0, 1.0)
         u = u_nom[0, 0]
         u_nom = tf.concat([u_nom[:, 1:], tf.constant(0.0, shape=[1, 1])], -1)
-        new_nuvec = nuvec-mppi_lr*dc_ds
-        new_nuvec = tf.clip_by_value(new_nuvec, stdev_min, stdev_max)
-        return u, u_nom, new_nuvec
+        new_srtivec = srtivec-mppi_lr*dc_ds
+        new_srtivec = tf.clip_by_value(new_srtivec, stdev_min, stdev_max)
+        return u, u_nom, new_srtivec
 
     #step function to find control
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
         s = np.tile(s, tf.constant([num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
-        self.u, self.u_nom, new_nuvec = self.predict_and_cost(s, target_position, self.u_nom, self.rng_cem, self.u, self.nuvec)
-        self.nuvec.assign(new_nuvec)
+        self.u, self.u_nom, new_srtivec = self.predict_and_cost(s, target_position, self.u_nom, self.rng_cem, self.u, self.srtivec)
+        self.srtivec.assign(new_srtivec)
         # print("eyo here i go")
         return self.u.numpy()
 
     def controller_reset(self):
         self.u_nom = tf.zeros([1, mppi_samples], dtype=tf.float32)
-        self.nuvec.assign(np.math.sqrt(NU)*tf.ones([1, num_valid_vals]))
+        self.srtivec.assign(SQRTRHODTINV*tf.ones([1, num_valid_vals]))
         self.u = 0.0
 
 
 
 
 if __name__ == '__main__':
-    ctrl = controller_mppi_var()
+    ctrl = controller_mppi_varB()
 
 
     import timeit
