@@ -18,10 +18,11 @@ import yaml
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf_pure import predictor_ODE_tf_pure
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
-
+from SI_Toolkit.Predictors.predictor_autoregressive_GP_Euler import predictor_autoregressive_GP
+from SI_Toolkit.Predictors.predictor_hybrid import predictor_hybrid
 
 #load constants from config file
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
 
 dt = config["controller"]["mppi"]["dt"]
 mppi_horizon = config["controller"]["mppi"]["mpc_horizon"]
@@ -55,13 +56,16 @@ elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
         horizon=mppi_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
-
+elif predictor_type == "GP":
+    predictor = predictor_autoregressive_GP(horizon=mppi_samples, num_rollouts=num_rollouts)
+elif predictor_type == "Hybrid":
+    predictor = predictor_hybrid(horizon=mppi_samples, dt=dt, intermediate_steps=10, batch_size=num_rollouts, net_name=NET_NAME)
 
 #cost for distance from track edge
 def distance_difference_cost(position, target_position):
     """Compute penalty for distance of cart to the target position"""
     return ((position - target_position) / (2.0 * TrackHalfLength)) ** 2 + tf.cast(
-        tf.abs(position) > 0.90 * TrackHalfLength
+        tf.abs(position) > 0.80 * TrackHalfLength
     , tf.float32) * 1.0e7  # Soft constraint: Do not crash into border
 
 #cost for difference from upright position
@@ -174,6 +178,9 @@ class controller_mppi_tf(template_controller):
         self.u_nom = tf.zeros([1,mppi_samples], dtype=tf.float32)
         self.u = 0.0
 
+        self.num_rollouts = num_rollouts
+        self.horizon = mppi_horizon
+
     @tf.function(jit_compile=True)
     def predict_and_cost(self, s, target_position, u_nom, random_gen, u_old):
         # generate random input sequence and clip to control limits
@@ -181,6 +188,7 @@ class controller_mppi_tf(template_controller):
         u_run = tf.tile(u_nom, [num_rollouts, 1])+delta_u
         u_run = tf.clip_by_value(u_run, -1.0, 1.0)
         rollout_trajectory = predictor.predict_tf(s, u_run[:, :, tf.newaxis])
+        # print(rollout_trajectory[0,0,0])
         traj_cost = cost(rollout_trajectory, u_run, target_position, u_old, delta_u)
         u_nom = tf.clip_by_value(u_nom + reward_weighted_average(traj_cost, delta_u), -1.0, 1.0)
         u = u_nom[0, 0]
