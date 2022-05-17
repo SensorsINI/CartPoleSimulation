@@ -18,14 +18,19 @@ STATE_INDICES_TF = tf.lookup.StaticHashTable(
 
 class next_state_predictor_ODE_tf():
 
-    def __init__(self, dt, intermediate_steps):
+    def __init__(self, dt, intermediate_steps, disable_individual_compilation=False):
         self.s = tf.convert_to_tensor(create_cartpole_state())
 
         self.intermediate_steps = tf.convert_to_tensor(intermediate_steps, dtype=tf.int32)
         self.t_step = tf.convert_to_tensor(dt / float(self.intermediate_steps), dtype=tf.float32)
 
-    @Compile
-    def step(self, s, Q, params):
+        if disable_individual_compilation:
+            self.step = self._step
+        else:
+            self.step = Compile(self._step)
+
+
+    def _step(self, s, Q, params):
 
         # assers does not work with Compile, but left here for information
         # assert Q.shape[0] == s.shape[0]
@@ -55,7 +60,7 @@ class next_state_predictor_ODE_tf():
 
 
 class predictor_output_augmentation_tf:
-    def __init__(self, net_info):
+    def __init__(self, net_info, disable_individual_compilation=False):
         self.net_output_indices = {key: value for value, key in enumerate(net_info.outputs)}
         indices_augmentation = []
         features_augmentation = []
@@ -80,14 +85,18 @@ class predictor_output_augmentation_tf:
         if 'angle_cos' in net_info.outputs:
             self.index_angle_cos = tf.convert_to_tensor(self.net_output_indices['angle_cos'])
 
+        if disable_individual_compilation:
+            self.augment = self._augment
+        else:
+            self.augment = Compile(self._augment)
+
     def get_indices_augmentation(self):
         return self.indices_augmentation
 
     def get_features_augmentation(self):
         return self.features_augmentation
 
-    @Compile
-    def augment(self, net_output):
+    def _augment(self, net_output):
 
         output = net_output  # [batch_size, time_steps, features]
         if 'angle' in self.features_augmentation:
