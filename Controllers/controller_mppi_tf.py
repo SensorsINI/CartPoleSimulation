@@ -19,6 +19,7 @@ from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf_pure import predictor_ODE_tf_pure
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
 
+from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
@@ -174,7 +175,7 @@ class controller_mppi_tf(template_controller):
         self.u_nom = tf.zeros([1,mppi_samples], dtype=tf.float32)
         self.u = 0.0
 
-    @tf.function(jit_compile=True)
+    @Compile
     def predict_and_cost(self, s, target_position, u_nom, random_gen, u_old):
         # generate random input sequence and clip to control limits
         delta_u = inizialize_pertubation(random_gen)
