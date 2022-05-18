@@ -118,24 +118,25 @@ class controller_dist_adam_alt(template_controller):
 
     #step function to find control
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
-        s = np.tile(s, tf.constant([num_rollouts, 1]))
-        s = tf.convert_to_tensor(s, dtype=tf.float32)
-        target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
-        if self.count == 0:
-            iters = cem_samples*cem_outer_it
-        else:
-            iters = cem_outer_it
-        for _ in range(0, iters):
-            Qn = self.grad_step(s, target_position, self.Q, self.opt)
+        with tf.device('/CPU:0'):
+            s = np.tile(s, tf.constant([num_rollouts, 1]))
+            s = tf.convert_to_tensor(s, dtype=tf.float32)
+            target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
+            if self.count == 0:
+                iters = cem_samples*cem_outer_it
+            else:
+                iters = cem_outer_it
+            for _ in range(0, iters):
+                Qn = self.grad_step(s, target_position, self.Q, self.opt)
+                self.Q.assign(Qn)
+            adam_weights = self.opt.get_weights()
+            w1 = tf.concat([adam_weights[1][:,1:], tf.zeros([num_rollouts,1])], -1)
+            w2 = tf.concat([adam_weights[2][:,1:], tf.zeros([num_rollouts,1])], -1)
+            # self.opt.set_weights([tf.zeros_like(el) for el in adam_weights])
+            self.opt.set_weights([adam_weights[0], w1, w2])
+            self.u, self.dist_mue, Qn = self.get_action(s, target_position, self.Q)
             self.Q.assign(Qn)
-        adam_weights = self.opt.get_weights()
-        w1 = tf.concat([adam_weights[1][:,1:], tf.zeros([num_rollouts,1])], -1)
-        w2 = tf.concat([adam_weights[2][:,1:], tf.zeros([num_rollouts,1])], -1)
-        # self.opt.set_weights([tf.zeros_like(el) for el in adam_weights])
-        self.opt.set_weights([adam_weights[0], w1, w2])
-        self.u, self.dist_mue, Qn = self.get_action(s, target_position, self.Q)
-        self.Q.assign(Qn)
-        self.count += 1
+            self.count += 1
         return self.u.numpy()
 
     def controller_reset(self):

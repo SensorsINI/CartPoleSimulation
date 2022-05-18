@@ -34,7 +34,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     #csv = './adaptive_test/Experiment.csv'
     if record_path is None:
         record_path = config_CartPole["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
-        csv = record_path + '/Exp-dist-adam-alt-C'
+        csv = record_path + '/Exp-dist-adam-alt-swingup-B'
 
 
     # User defined simulation settings
@@ -76,8 +76,9 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     used_track_fraction = 0
 
     ### List of target positions, can be None to simulate with random targets
-    turning_points_DataGen = None
-    # Example: turning_points_DataGen = [0.0, 0.1, -0.1, 0.0]
+    #turning_points_DataGen = None
+    # Example:
+    turning_points_DataGen = [0.0]#, 0.1, -0.1, 0.0, 0.05, -0.1, -0.05, 0.1, 0.15, -0.15, 0]
 
     ### Show popup window in the end with summary of experiment?
     show_summary_plots = False
@@ -116,7 +117,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
             csv += "/Experiment"
 
         start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0, 1.0)
-        initial_state = [start_random_target_position_at_DataGen, 0.0, np.pi, 0.0]
+        initial_state = [0.0, 0.0, np.pi, 0.0]
         # initial_state = [start_random_target_position_at_DataGen, None, None, None]
         # initial_state = [0.0, None, 0.0, None]
         if initial_state[0] is None:
