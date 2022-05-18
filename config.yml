@@ -1,16 +1,22 @@
 controller:
   general:
-    cost_function: 'quadratic-boundary' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
+    cost_function: 'quadratic-boundary-nonconvex' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
+  dist-adam-resamp:
+    resamp_per: 10
+    stdev_min: 0.5
+    LR: 0.0018
+    cem_best_k: 15
+    num_rollouts: 20
   cem:
     cem_outer_it: 16                    #how many outer iterations to use
-    cem_rollouts: 10             #how many rollouts per outer cem iteration
+    cem_rollouts: 20             #how many rollouts per outer cem iteration
     cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
     cem_stdev_min: 0.05
     cem_R: 1
     cem_ccrc_weight: 1
     cem_best_k: 1
-    cem_LR: 0.09
+    cem_LR: 0.009
     cem_max_LR: 0.09
   cem-dist-grad:
     sig_LR: 0.05

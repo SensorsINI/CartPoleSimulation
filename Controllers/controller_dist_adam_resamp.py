@@ -25,7 +25,7 @@ config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 dt = config["controller"]["mppi"]["dt"]
 cem_horizon = config["controller"]["mppi"]["mpc_horizon"]
-num_rollouts = config["controller"]["cem"]["cem_rollouts"]
+num_rollouts = config["controller"]["dist-adam-resamp"]["num_rollouts"]
 
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
@@ -36,15 +36,16 @@ exec(cost_function_cmd)
 cem_outer_it = config["controller"]["cem"]["cem_outer_it"]
 NET_NAME = config["controller"]["cem"]["CEM_NET_NAME"]
 predictor_type = config["controller"]["cem"]["cem_predictor_type"]
-cem_stdev_min = config["controller"]["cem"]["cem_stdev_min"]
+samp_stdev_min = config["controller"]["dist-adam-resamp"]["stdev_min"]
 ccrc_weight = config["controller"]["cem"]["cem_ccrc_weight"]
-cem_best_k = config["controller"]["cem"]["cem_best_k"]
+cem_best_k = config["controller"]["dist-adam-resamp"]["cem_best_k"]
 cem_samples = int(cem_horizon / dt)  # Number of steps in MPC horizon
 
-cem_LR = config["controller"]["cem"]["cem_LR"]
+cem_LR = config["controller"]["dist-adam-resamp"]["LR"]
 cem_max_LR = config["controller"]["cem"]["cem_max_LR"]
 cem_LR = tf.constant(cem_LR, dtype=tf.float32)
 cem_max_LR = tf.constant(cem_max_LR, dtype = tf.float32)
+resamp_per = config["controller"]["dist-adam-resamp"]["resamp_per"]
 
 
 #create predictor
@@ -74,12 +75,13 @@ class controller_dist_adam_resamp(template_controller):
         self.dist_var = 0.5*tf.ones([1,cem_samples], dtype=tf.float32)
         self.stdev = tf.sqrt(self.dist_var)
         self.u = 0.0
-        self.Q = tf.tile(self.dist_mue, [num_rollouts, 1]) + self.rng_cem.uniform(
-            [num_rollouts, cem_samples], -1, 1, dtype=tf.float32) * self.stdev
-        self.Q = tf.clip_by_value(self.Q, -1.0, 1.0)
+        self.Q = self.rng_cem.uniform(
+            [num_rollouts, cem_samples], -1.0, 1.0, dtype=tf.float32)
+
         self.Q = tf.Variable(self.Q)
         self.count = 0
-        self.opt = tf.keras.optimizers.Adam(learning_rate=cem_LR/5)
+        self.opt = tf.keras.optimizers.Adam(learning_rate=cem_LR)
+        self.bestQ = None
 
     @tf.function(jit_compile=True)
     def grad_step(self, s, target_position, Q, opt):
@@ -110,31 +112,42 @@ class controller_dist_adam_resamp(template_controller):
         elite_Q = tf.gather(Q, best_idx, axis=0)
         dist_mue = tf.math.reduce_mean(elite_Q, axis=0, keepdims=True)
         dist_std = tf.math.reduce_std(elite_Q, axis=0, keepdims=True)
-        dist_std = tf.clip_by_value(dist_std, cem_stdev_min, 10.0)
+        dist_std = tf.clip_by_value(dist_std, samp_stdev_min, 10.0)
         dist_std = tf.concat([dist_std[:, 1:], tf.sqrt(0.5)[tf.newaxis, tf.newaxis]], -1)
         u = elite_Q[0, 0]
         dist_mue = tf.concat([dist_mue[:, 1:], tf.zeros([1, 1])], -1)
         Qn = tf.concat([Q[:, 1:], Q[:, -1, tf.newaxis]], -1)
-        return u, dist_mue, dist_std, Qn
+        return u, dist_mue, dist_std, Qn, best_idx
 
     #step function to find control
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
         s = np.tile(s, tf.constant([num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
-        new_Q = tf.tile(self.dist_mue, [num_rollouts, 1]) + self.rng_cem.normal(
-            [num_rollouts, cem_samples], dtype=tf.float32) * self.stdev
-        new_Q = tf.clip_by_value(new_Q, -1.0, 1.0)
-        self.Q.assign(new_Q)
         for _ in range(0, cem_outer_it):
             Qn = self.grad_step(s, target_position, self.Q, self.opt)
             self.Q.assign(Qn)
+
+        self.u, self.dist_mue, self.stdev, Qn, self.bestQ = self.get_action(s, target_position, self.Q)
+
         adam_weights = self.opt.get_weights()
-        # w1 = tf.concat([adam_weights[1][:,1:], tf.zeros([num_rollouts,1])], -1)
-        # w2 = tf.concat([adam_weights[2][:,1:], tf.zeros([num_rollouts,1])], -1)
-        self.opt.set_weights([tf.zeros_like(el) for el in adam_weights])
-        # self.opt.set_weights([adam_weights[0], w1, w2])
-        self.u, self.dist_mue, self.stdev, Qn = self.get_action(s, target_position, self.Q)
+        if self.count % resamp_per == 0:
+            Qn = self.rng_cem.normal(
+            [num_rollouts-cem_best_k, cem_samples], dtype=tf.float32)*samp_stdev_min
+            Qn = tf.clip_by_value(Qn, -1.0, 1.0)
+            Q_keep = tf.gather(self.Q, self.bestQ)
+            Qn = tf.concat([Qn, Q_keep], 0)
+            wk1 = tf.concat([tf.gather(adam_weights[1], self.bestQ)[:,1:], tf.zeros([cem_best_k, 1])], -1)
+            wk2 = tf.concat([tf.gather(adam_weights[2], self.bestQ)[:,1:], tf.zeros([cem_best_k, 1])], -1)
+            w1 = tf.zeros([num_rollouts-cem_best_k, cem_samples])
+            w2 = tf.zeros([num_rollouts-cem_best_k, cem_samples])
+            w1 = tf.concat([w1, wk1], 0)
+            w2 = tf.concat([w2, wk2], 0)
+            self.opt.set_weights([adam_weights[0], w1, w2])
+        else:
+            w1 = tf.concat([adam_weights[1][:,1:], tf.zeros([num_rollouts,1])], -1)
+            w2 = tf.concat([adam_weights[2][:,1:], tf.zeros([num_rollouts,1])], -1)
+            self.opt.set_weights([adam_weights[0], w1, w2])
         self.Q.assign(Qn)
         self.count += 1
         return self.u.numpy()
@@ -143,9 +156,8 @@ class controller_dist_adam_resamp(template_controller):
         self.dist_mue = tf.zeros([1, cem_samples])
         self.dist_var = 0.5 * tf.ones([1, cem_samples])
         self.stdev = tf.sqrt(self.dist_var)
-        Qn = tf.tile(self.dist_mue, [num_rollouts, 1]) + self.rng_cem.normal(
-            [num_rollouts, cem_samples], dtype=tf.float32) * self.stdev
-        Qn = tf.clip_by_value(self.Q, -1.0, 1.0)
+        Qn = self.rng_cem.uniform(
+            [num_rollouts, cem_samples], -1.0, 1.0, dtype=tf.float32)
         self.Q.assign(Qn)
         self.count = 0
         adam_weights = self.opt.get_weights()
