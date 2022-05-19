@@ -10,7 +10,7 @@ import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 dd_weight = config["controller"]["mppi"]["dd_weight"]
-cc_weight = config["controller"]["mppi"]["cc_weight"]
+cc_weight = tf.convert_to_tensor(config["controller"]["mppi"]["cc_weight"])
 ep_weight = config["controller"]["mppi"]["ep_weight"]
 R = config["controller"]["mppi"]["R"]
 
@@ -62,7 +62,7 @@ def phi(s, target_position):
 #cost of changeing control to fast
 def control_change_rate_cost(u, u_prev):
     """Compute penalty of control jerk, i.e. difference to previous control input"""
-    u_prev_vec = tf.concat((tf.ones((u.shape[0],1))*u_prev,u[:,:-1]),axis=-1)
+    u_prev_vec = tf.concat((tf.ones((u.shape[0], 1, u.shape[-1]))*u_prev, u[:, :-1, :]), axis=1)
     return (u - u_prev_vec) ** 2
 
 #all stage costs together
@@ -71,8 +71,8 @@ def q(s,u,target_position, u_prev):
         s[:, :, POSITION_IDX], target_position
     )
     ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX])
-    cc = cc_weight * CC_cost(u)
-    ccrc = ccrc_weight * control_change_rate_cost(u,u_prev)
+    cc = tf.math.reduce_sum(cc_weight * CC_cost(u), axis=-1)
+    ccrc = tf.math.reduce_sum(ccrc_weight * control_change_rate_cost(u,u_prev), axis=-1)
     stage_cost = dd+ep+cc+ccrc
     return stage_cost
 

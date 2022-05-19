@@ -24,6 +24,8 @@ from SI_Toolkit.TF.TF_Functions.Compile import Compile
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
+num_control_inputs = 1  # specific to a system
+
 q, phi = None, None
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
@@ -41,10 +43,10 @@ predictor_type = config["controller"]["mppi"]["predictor_type"]
 
 mppi_samples = int(mppi_horizon / dt)  # Number of steps in MPC horizon
 
-R = config["controller"]["mppi"]["R"]
+R = tf.convert_to_tensor(config["controller"]["mppi"]["R"])
 LBD = config["controller"]["mppi"]["LBD"]
-NU = config["controller"]["mppi"]["NU"]
-SQRTRHODTINV = config["controller"]["mppi"]["SQRTRHOINV"] * (1 / np.math.sqrt(dt))
+NU = tf.convert_to_tensor(config["controller"]["mppi"]["NU"])
+SQRTRHODTINV = tf.convert_to_tensor(config["controller"]["mppi"]["SQRTRHOINV"]) * tf.convert_to_tensor((1 / np.math.sqrt(dt)))
 GAMMA = config["controller"]["mppi"]["GAMMA"]
 SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
 
@@ -63,7 +65,7 @@ elif predictor_type == "NeuralNet":
 
 #mppi correction
 def mppi_correction_cost(u, delta_u):
-    return cc_weight * (0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2))
+    return tf.math.reduce_sum(cc_weight * (0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)), axis=-1)
 
 #total cost of the trajectory
 def cost(s_hor ,u, target_position, u_prev, delta_u):
@@ -78,7 +80,7 @@ def reward_weighted_average(S, delta_u):
     rho = tf.math.reduce_min(S)
     exp_s = tf.exp(-1.0/LBD * (S-rho))
     a = tf.math.reduce_sum(exp_s)
-    b = tf.math.reduce_sum(exp_s[:,tf.newaxis]*delta_u, axis = 0, keepdims=True)/a
+    b = tf.math.reduce_sum(exp_s[:, tf.newaxis, tf.newaxis]*delta_u, axis=0)/a
     return b
 
 def inizialize_pertubation(random_gen, stdev = SQRTRHODTINV, sampling_type = SAMPLING_TYPE):
@@ -87,11 +89,11 @@ def inizialize_pertubation(random_gen, stdev = SQRTRHODTINV, sampling_type = SAM
         range_stop = int(tf.math.ceil(mppi_samples / step)*step) + 1
         t = tf.range(range_stop, delta = step)
         t_interp = tf.cast(tf.range(range_stop), tf.float32)
-        delta_u = random_gen.normal([num_rollouts, t.shape[0]], dtype=tf.float32) * stdev
-        interp = tfp.math.interp_regular_1d_grid(t_interp, t_interp[0], t_interp[-1], delta_u)
-        delta_u = interp[:,:mppi_samples]
+        delta_u = random_gen.normal([num_rollouts, t.shape[0], num_control_inputs], dtype=tf.float32) * stdev
+        interp = tfp.math.interp_regular_1d_grid(t_interp, t_interp[0], t_interp[-1], delta_u, axis=1)
+        delta_u = interp[:,:mppi_samples, :]
     else:
-        delta_u = random_gen.normal([num_rollouts, mppi_samples], dtype=tf.float32) * stdev
+        delta_u = random_gen.normal([num_rollouts, mppi_samples, num_control_inputs], dtype=tf.float32) * stdev
     return delta_u
 
 
@@ -105,20 +107,20 @@ class controller_mppi_tf(template_controller):
             SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)
         self.rng_cem = tf.random.Generator.from_seed(SEED)
 
-        self.u_nom = tf.zeros([1,mppi_samples], dtype=tf.float32)
+        self.u_nom = tf.zeros([1, mppi_samples, num_control_inputs], dtype=tf.float32)
         self.u = 0.0
 
     @Compile
     def predict_and_cost(self, s, target_position, u_nom, random_gen, u_old):
         # generate random input sequence and clip to control limits
         delta_u = inizialize_pertubation(random_gen)
-        u_run = tf.tile(u_nom, [num_rollouts, 1])+delta_u
+        u_run = tf.tile(u_nom, [num_rollouts, 1, 1])+delta_u
         u_run = tf.clip_by_value(u_run, -1.0, 1.0)
-        rollout_trajectory = predictor.predict_tf(s, u_run[:, :, tf.newaxis])
+        rollout_trajectory = predictor.predict_tf(s, u_run)
         traj_cost = cost(rollout_trajectory, u_run, target_position, u_old, delta_u)
         u_nom = tf.clip_by_value(u_nom + reward_weighted_average(traj_cost, delta_u), -1.0, 1.0)
-        u = u_nom[0, 0]
-        u_nom = tf.concat([u_nom[:, 1:], tf.constant(0.0, shape=[1, 1])], -1)
+        u = u_nom[0, 0, :]
+        u_nom = tf.concat([u_nom[:, 1:, :], tf.constant(0.0, shape=[1, 1, 1])], axis=1)
         return u, u_nom
 
     #step function to find control
@@ -131,7 +133,7 @@ class controller_mppi_tf(template_controller):
         return self.u.numpy()
 
     def controller_reset(self):
-        self.u_nom = tf.zeros([1, mppi_samples], dtype=tf.float32)
+        self.u_nom = tf.zeros([1, mppi_samples, num_control_inputs], dtype=tf.float32)
         self.u = 0.0
 
 
