@@ -2,13 +2,13 @@ controller:
   mppi:
     SEED: 1897                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
-    mpc_horizon: 1.0                      # sec
-    num_rollouts: 2000                      # Number of Monte Carlo samples
+    mpc_horizon: 0.7                      # sec
+    num_rollouts: 2000                     # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
+    predictor_type: "GP"               # One of ["Euler", "NeuralNet"]
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
-    dd_weight: 120.0
-    ep_weight: 50000.0
+    dd_weight: 500.0
+    ep_weight: 70000.0
     ekp_weight: 0.01
     ekc_weight: 5.0
     cc_weight: 1.0
@@ -21,7 +21,7 @@ controller:
     SQRTRHOINV: 0.01                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
-    LOGGING: True                        # Collect and show detailed insights into the controller's behavior
+    LOGGING: False                      # Collect and show detailed insights into the controller's behavior
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
   custom_mpc_scipy:
     DT: 0.1
@@ -77,7 +77,7 @@ controller:
     PATH_TO_MODELS: './Controllers/models_for_nn_as_mpc_tf/'
 cartpole:
   SEED: 1873  # This is a seed for rng for CartPole instance class only. If "None" random seed based on datetime is used
-  PATH_TO_CONTROLLERS: './Controllers/'  # Path where controllers are stored
+  PATH_TO_CONTROLLERS: './CartPoleSimulation/Controllers/'  # Path where controllers are stored
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   M: 0.230  # mass of cart, kg # Checked by Antonio

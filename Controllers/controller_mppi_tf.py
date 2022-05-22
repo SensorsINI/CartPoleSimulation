@@ -18,7 +18,7 @@ import yaml
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf_pure import predictor_ODE_tf_pure
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
-from SI_Toolkit.Predictors.predictor_autoregressive_GP_Euler import predictor_autoregressive_GP
+from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
 from SI_Toolkit.Predictors.predictor_hybrid import predictor_hybrid
 
 #load constants from config file
@@ -188,7 +188,6 @@ class controller_mppi_tf(template_controller):
         u_run = tf.tile(u_nom, [num_rollouts, 1])+delta_u
         u_run = tf.clip_by_value(u_run, -1.0, 1.0)
         rollout_trajectory = predictor.predict_tf(s, u_run[:, :, tf.newaxis])
-        # print(rollout_trajectory[0,0,0])
         traj_cost = cost(rollout_trajectory, u_run, target_position, u_old, delta_u)
         u_nom = tf.clip_by_value(u_nom + reward_weighted_average(traj_cost, delta_u), -1.0, 1.0)
         u = u_nom[0, 0]
