@@ -47,6 +47,8 @@ cem_LR = tf.constant(cem_LR, dtype=tf.float32)
 cem_max_LR = tf.constant(cem_max_LR, dtype = tf.float32)
 resamp_per = config["controller"]["dist-adam-resamp"]["resamp_per"]
 
+SAMPLING_TYPE = config["controller"]["dist-adam-resamp"]["SAMPLING_TYPE"]
+
 
 #create predictor
 predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
@@ -60,6 +62,24 @@ elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
         horizon=cem_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
+
+if SAMPLING_TYPE == "interpolated":
+    step = 10
+    num_valid_vals = int(np.ceil(cem_samples / step) + 1)
+    interp_mat = np.zeros(((num_valid_vals - 1) * step, num_valid_vals))
+    step_block = np.zeros((step, 2))
+    for j in range(step):
+        step_block[j][0] = step - j
+        step_block[j][1] = j
+    for i in range(num_valid_vals - 1):
+        interp_mat[i * step:(i + 1) * step, i:i + 2] = step_block
+    interp_mat = interp_mat[:cem_samples, :] / step
+    interp_mat = tf.constant(interp_mat.T, dtype=tf.float32)
+else:
+    interp_mat = None
+    num_valid_vals = cem_samples
+
+
 
 
 #cem class
@@ -82,6 +102,15 @@ class controller_dist_adam_resamp(template_controller):
         self.count = 0
         self.opt = tf.keras.optimizers.Adam(learning_rate=cem_LR)
         self.bestQ = None
+
+    @tf.function(jit_compile=True)
+    def sample_actions(self, rng_gen):
+        Qn = rng_gen.normal(
+            [num_rollouts - cem_best_k, num_valid_vals], dtype=tf.float32) * samp_stdev_min
+        Qn = tf.clip_by_value(Qn, -1.0, 1.0)
+        if SAMPLING_TYPE == "interpolated":
+            Qn = tf.matmul(Qn, interp_mat)
+        return Qn
 
     @tf.function(jit_compile=True)
     def grad_step(self, s, target_position, Q, opt):
@@ -132,9 +161,7 @@ class controller_dist_adam_resamp(template_controller):
 
         adam_weights = self.opt.get_weights()
         if self.count % resamp_per == 0:
-            Qn = self.rng_cem.normal(
-            [num_rollouts-cem_best_k, cem_samples], dtype=tf.float32)*samp_stdev_min
-            Qn = tf.clip_by_value(Qn, -1.0, 1.0)
+            Qn = self.sample_actions(self.rng_cem)
             Q_keep = tf.gather(self.Q, self.bestQ)
             Qn = tf.concat([Qn, Q_keep], 0)
             wk1 = tf.concat([tf.gather(adam_weights[1], self.bestQ)[:,1:], tf.zeros([cem_best_k, 1])], -1)

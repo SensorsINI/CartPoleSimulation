@@ -1,12 +1,13 @@
 controller:
   general:
-    cost_function: 'quadratic-boundary-nonconvex' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
+    cost_function: 'quadratic-boundary' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
   dist-adam-resamp:
-    resamp_per: 50
+    resamp_per: 10
     stdev_min: 0.5
     LR: 0.0018
     cem_best_k: 10
     num_rollouts: 20
+    SAMPLING_TYPE: "interpolated"
   cem:
     cem_outer_it: 20                    #how many outer iterations to use
     cem_rollouts: 10          #how many rollouts per outer cem iteration
