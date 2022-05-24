@@ -65,7 +65,7 @@ elif predictor_type == "Hybrid":
 def distance_difference_cost(position, target_position):
     """Compute penalty for distance of cart to the target position"""
     return ((position - target_position) / (2.0 * TrackHalfLength)) ** 2 + tf.cast(
-        tf.abs(position) > 0.80 * TrackHalfLength
+        tf.abs(position) > 0.85 * TrackHalfLength
     , tf.float32) * 1.0e7  # Soft constraint: Do not crash into border
 
 #cost for difference from upright position
