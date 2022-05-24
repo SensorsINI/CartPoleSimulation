@@ -49,6 +49,7 @@ GAMMA = config["controller"]["mppi"]["GAMMA"]
 mppi_lr = config["controller"]["mppi-grad"]["LR"]
 stdev_min = config["controller"]["mppi-grad"]["STDEV_min"]
 stdev_max = config["controller"]["mppi-grad"]["STDEV_max"]
+max_grad_norm = config["controller"]["mppi-grad"]["max_grad_norm"]
 
 #create predictor
 predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
@@ -138,6 +139,7 @@ class controller_mppi_var(template_controller):
             unc_cost = uncorr_cost(rollout_trajectory, u_run, target_position, u_old, delta_u)
             mean_uncost = tf.math.reduce_mean(unc_cost)
             dc_ds = tape.gradient(mean_uncost, nuvec)
+            dc_ds = tf.clip_by_norm(dc_ds, max_grad_norm,axes = [1])
         cor_cost = mppi_correction_cost(u_run, delta_u, nuvec)
         cor_cost = tf.math.reduce_sum(cor_cost, axis=1)
         traj_cost = unc_cost + cor_cost

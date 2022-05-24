@@ -2,14 +2,14 @@ controller:
   general:
     cost_function: 'quadratic-boundary-nonconvex' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
   dist-adam-resamp:
-    resamp_per: 10
+    resamp_per: 50
     stdev_min: 0.5
     LR: 0.0018
-    cem_best_k: 15
+    cem_best_k: 10
     num_rollouts: 20
   cem:
-    cem_outer_it: 16                    #how many outer iterations to use
-    cem_rollouts: 20             #how many rollouts per outer cem iteration
+    cem_outer_it: 20                    #how many outer iterations to use
+    cem_rollouts: 10          #how many rollouts per outer cem iteration
     cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
     cem_stdev_min: 0.05
@@ -29,7 +29,7 @@ controller:
     SEED: "None"                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
-    num_rollouts: 100                     # Number of Monte Carlo samples
+    num_rollouts: 2000                     # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
@@ -53,12 +53,13 @@ controller:
     LOGGING: False                        # Collect and show detailed insights into the controller's behavior
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
   mppi-grad:
-    LR: 5.0
+    LR: 1000
     LR_B: 0.0005
-    STDEV_min: 0.1
-    STDEV_max: 10
+    STDEV_min: 0.5
+    STDEV_max: 15
     STDEV_minB: 0.00001
     STDEV_maxB: 0.5
+    max_grad_norm: 5
   custom_mpc_scipy:
     DT: 0.1
     # method: 'L-BFGS-B'

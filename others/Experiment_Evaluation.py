@@ -74,7 +74,7 @@ def data_idx(list):
 
 # %% extract all data from all experiments
 
-path = 'Experiment_Recordings/Exp-dist-adam-alt-swingup-B*.csv'
+path = 'Experiment_Recordings/Exp-dist-adam-alt-smooth-B*.csv'
 
 files = glob.glob(path)
 
@@ -151,6 +151,7 @@ costs = stage_cost(S, Q, target_pos, Q[0, 0])
 ravg = runnig_avg(costs, 20)
 swingup_time = swingup_time_calc(S, target_pos, TrackHalfLength)
 avg_cost = tf.math.reduce_mean(costs)
+avg_cost_per = tf.math.reduce_mean(costs, axis = 1)
 print(avg_cost.numpy())
 
 #%%
@@ -168,6 +169,9 @@ swingup_std = np.std(swingup_time)
 figHist, axHist = plt.subplots(1,1)
 axHist.hist(swingup_time, bins= 10)
 
+#%%
+figHist1, axHist1 = plt.subplots(1,1, num='running cost')
+axHist1.hist(avg_cost_per.numpy(), bins = 10)
 
 # %% Example for plotting
 data = all_data[0]
@@ -199,6 +203,13 @@ plt.show()
 #%%
 fig, ax1 = plt.subplots(1, 1, num='Only angles')
 plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., angle_idx],0,1))
+plt.axhline(y = 0.34, color = 'r')
+plt.axhline(y = -0.34, color = 'r')
+plt.ylim(-np.pi*paf, np.pi*paf)
+
+#%%
+fig, ax1 = plt.subplots(1, 1, num='Only position')
+plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., position_idx],0,1))
 plt.axhline(y = 0.34, color = 'r')
 plt.axhline(y = -0.34, color = 'r')
 plt.ylim(-np.pi*paf, np.pi*paf)
