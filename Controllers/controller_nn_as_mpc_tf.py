@@ -19,8 +19,8 @@ from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-NET_NAME = config['controller']['nn_as_mpc_tf']['net_name']
-PATH_TO_MODELS = config['controller']['nn_as_mpc_tf']['PATH_TO_MODELS']
+NET_NAME = 'Dense-6IN-32H1-32H2-1OUT-0'
+PATH_TO_MODELS = config['controller']['nn_imitator_tf']['PATH_TO_MODELS']
 
 
 class controller_nn_as_mpc_tf(template_controller):
