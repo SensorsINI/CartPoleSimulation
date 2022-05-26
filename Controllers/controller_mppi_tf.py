@@ -32,6 +32,7 @@ cc_weight = config["controller"]["mppi"]["cc_weight"]
 ep_weight = config["controller"]["mppi"]["ep_weight"]
 
 NET_NAME = config["controller"]["mppi"]["NET_NAME"]
+GP_NAME = config["controller"]["mppi"]["GP_NAME"]
 predictor_type = config["controller"]["mppi"]["predictor_type"]
 ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
 
@@ -57,7 +58,7 @@ elif predictor_type == "NeuralNet":
         horizon=mppi_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
 elif predictor_type == "GP":
-    predictor = predictor_autoregressive_GP(horizon=mppi_samples, num_rollouts=num_rollouts)
+    predictor = predictor_autoregressive_GP(model_name=GP_NAME, horizon=mppi_samples, num_rollouts=num_rollouts)
 elif predictor_type == "Hybrid":
     predictor = predictor_hybrid(horizon=mppi_samples, dt=dt, intermediate_steps=10, batch_size=num_rollouts, net_name=NET_NAME)
 
