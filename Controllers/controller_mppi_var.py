@@ -30,7 +30,7 @@ exec(cost_function_cmd)
 
 dt = config["controller"]["mppi"]["dt"]
 mppi_horizon = config["controller"]["mppi"]["mpc_horizon"]
-num_rollouts = config["controller"]["cem"]["cem_rollouts"]
+num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
 
 cc_weight = config["controller"]["mppi"]["cc_weight"]

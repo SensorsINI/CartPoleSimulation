@@ -34,7 +34,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     #csv = './adaptive_test/Experiment.csv'
     if record_path is None:
         record_path = config_CartPole["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
-        csv = record_path + '/Exp-dist-adam-alt-swingup-D'
+        csv = record_path + '/Exp-dist-adam-resamp-swingup-O'
 
 
     # User defined simulation settings
@@ -55,17 +55,17 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     ###### CartPole settings
     ### Length of each experiment in s:
-    length_of_experiment_DataGen = 30
+    length_of_experiment_DataGen = 7
 
     ### Controller which should be used in generated experiment:
-    controller_DataGen = 'dist-adam-alt'
+    controller_DataGen = 'dist-adam-resamp'
     # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
 
     ### Randomly placed target points/s
     track_relative_complexity_DataGen = 1
 
     ### How to interpolate between turning points of random trace
-    interpolation_type_DataGen = '0-derivative-smooth'
+    interpolation_type_DataGen = 'previous'
     # Possible options: '0-derivative-smooth', 'linear', 'previous'
 
     ### How turning points should be distributed

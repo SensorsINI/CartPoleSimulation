@@ -46,9 +46,13 @@ cem_max_LR = config["controller"]["cem"]["cem_max_LR"]
 cem_LR = tf.constant(cem_LR, dtype=tf.float32)
 cem_max_LR = tf.constant(cem_max_LR, dtype = tf.float32)
 resamp_per = config["controller"]["dist-adam-resamp"]["resamp_per"]
+adam_beta_1 = config["controller"]["dist-adam-resamp"]["adam_beta_1"]
+adam_beta_2 = config["controller"]["dist-adam-resamp"]["adam_beta_2"]
+adam_epsilon = float(config["controller"]["dist-adam-resamp"]["adam_epsilon"])
 
 SAMPLING_TYPE = config["controller"]["dist-adam-resamp"]["SAMPLING_TYPE"]
-
+interpolation_step = config["controller"]["dist-adam-resamp"]["interpolation_step"]
+do_warmup = config["controller"]["dist-adam-resamp"]["warmup"]
 
 #create predictor
 predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
@@ -63,8 +67,12 @@ elif predictor_type == "NeuralNet":
         horizon=cem_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
 
+first_iter_count = cem_outer_it
+if do_warmup:
+    first_iter_count = cem_samples * cem_outer_it
+
 if SAMPLING_TYPE == "interpolated":
-    step = 10
+    step = interpolation_step
     num_valid_vals = int(np.ceil(cem_samples / step) + 1)
     interp_mat = np.zeros(((num_valid_vals - 1) * step, num_valid_vals))
     step_block = np.zeros((step, 2))
@@ -95,18 +103,17 @@ class controller_dist_adam_resamp(template_controller):
         self.dist_var = 0.5*tf.ones([1,cem_samples], dtype=tf.float32)
         self.stdev = tf.sqrt(self.dist_var)
         self.u = 0.0
-        self.Q = self.rng_cem.uniform(
-            [num_rollouts, cem_samples], -1.0, 1.0, dtype=tf.float32)
+        self.Q = self.sample_actions(self.rng_cem, num_rollouts)
 
         self.Q = tf.Variable(self.Q)
         self.count = 0
-        self.opt = tf.keras.optimizers.Adam(learning_rate=cem_LR)
+        self.opt = tf.keras.optimizers.Adam(learning_rate=cem_LR, beta_1 = adam_beta_1, beta_2 = adam_beta_2, epsilon = adam_epsilon)
         self.bestQ = None
 
     @tf.function(jit_compile=True)
-    def sample_actions(self, rng_gen):
+    def sample_actions(self, rng_gen, batchsize):
         Qn = rng_gen.normal(
-            [num_rollouts - cem_best_k, num_valid_vals], dtype=tf.float32) * samp_stdev_min
+            [batchsize, num_valid_vals], dtype=tf.float32) * samp_stdev_min
         Qn = tf.clip_by_value(Qn, -1.0, 1.0)
         if SAMPLING_TYPE == "interpolated":
             Qn = tf.matmul(Qn, interp_mat)
@@ -153,7 +160,11 @@ class controller_dist_adam_resamp(template_controller):
         s = np.tile(s, tf.constant([num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
-        for _ in range(0, cem_outer_it):
+        if self.count == 0:
+            iters = first_iter_count
+        else:
+            iters = cem_outer_it
+        for _ in range(0, iters):
             Qn = self.grad_step(s, target_position, self.Q, self.opt)
             self.Q.assign(Qn)
 
@@ -161,9 +172,9 @@ class controller_dist_adam_resamp(template_controller):
 
         adam_weights = self.opt.get_weights()
         if self.count % resamp_per == 0:
-            Qn = self.sample_actions(self.rng_cem)
-            Q_keep = tf.gather(self.Q, self.bestQ)
-            Qn = tf.concat([Qn, Q_keep], 0)
+            Qres = self.sample_actions(self.rng_cem, num_rollouts - cem_best_k)
+            Q_keep = tf.gather(Qn, self.bestQ)
+            Qn = tf.concat([Qres, Q_keep], 0)
             wk1 = tf.concat([tf.gather(adam_weights[1], self.bestQ)[:,1:], tf.zeros([cem_best_k, 1])], -1)
             wk2 = tf.concat([tf.gather(adam_weights[2], self.bestQ)[:,1:], tf.zeros([cem_best_k, 1])], -1)
             w1 = tf.zeros([num_rollouts-cem_best_k, cem_samples])
@@ -183,8 +194,7 @@ class controller_dist_adam_resamp(template_controller):
         self.dist_mue = tf.zeros([1, cem_samples])
         self.dist_var = 0.5 * tf.ones([1, cem_samples])
         self.stdev = tf.sqrt(self.dist_var)
-        Qn = self.rng_cem.uniform(
-            [num_rollouts, cem_samples], -1.0, 1.0, dtype=tf.float32)
+        Qn = self.sample_actions(self.rng_cem, num_rollouts)
         self.Q.assign(Qn)
         self.count = 0
         adam_weights = self.opt.get_weights()

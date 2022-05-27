@@ -73,14 +73,20 @@ def data_idx(list):
 
 
 # %% extract all data from all experiments
+Expname = 'Exp-dist-adam-resamp-swingup-O'
+isSwingup = True
 
-path = 'Experiment_Recordings/Exp-dist-adam-alt-smooth-B*.csv'
+path = 'Experiment_Recordings/'+Expname+'*.csv'
+savepath = 'Experiment_Setups/'+Expname+'/'
+os.makedirs(savepath, exist_ok = True)
+
 
 files = glob.glob(path)
 
 
-all_data = []
 
+all_data = []
+exp_tick_length = 0
 for file in files:
     lines = []
     with open(file, mode='r') as file_read:
@@ -90,6 +96,12 @@ for file in files:
                 lines.append(line)
     ds = data_idx(lines) + 1
     all_data.append(lines[ds + 1:])
+    if len(lines[ds + 1:]) > exp_tick_length:
+        exp_tick_length = len(lines[ds + 1:])
+#%%
+for experiment in all_data:
+    if len(experiment) < exp_tick_length:
+        all_data.remove(experiment)
 #%%
 beginning = re.compile('#.*:\s*')
 second = re.compile('\s*s\Z')
@@ -149,69 +161,99 @@ costs = stage_cost(S, Q, target_pos, Q[0, 0])
 
 
 ravg = runnig_avg(costs, 20)
-swingup_time = swingup_time_calc(S, target_pos, TrackHalfLength)
 avg_cost = tf.math.reduce_mean(costs)
 avg_cost_per = tf.math.reduce_mean(costs, axis = 1)
 print(avg_cost.numpy())
 
 #%%
 ravg_mean = tf.math.reduce_mean(ravg, axis = 0)
-successful_swingups = swingup_time < 5.0
-swcount = np.sum(successful_swingups)
-print("{} of {} swingups successful".format(swcount, S.shape[0]))
-swingup_time = swingup_time[successful_swingups]
-swingup_mean = np.mean(swingup_time)
-swingup_std = np.std(swingup_time)
 
+if isSwingup:
+    swingup_time = swingup_time_calc(S, target_pos, TrackHalfLength)
+    successful_swingups = swingup_time < 5.0
+    swcount = np.sum(successful_swingups)
+    print("{} of {} swingups successful".format(swcount, S.shape[0]))
+    swingup_time = swingup_time[successful_swingups]
+    swingup_mean = np.mean(swingup_time)
+    swingup_std = np.std(swingup_time)
 
+    figHist, axHist = plt.subplots(1,1,figsize = (16,12))
+    n, bins, edges = axHist.hist(swingup_time, bins= 10, ec='black')
+    plt.axvline(x=swingup_mean, color='r')
+    plt.xticks(bins)
+    plt.savefig(savepath + 'swingup_times.png', bbox_inches='tight', dpi=200)
 
 #%%
-figHist, axHist = plt.subplots(1,1)
-axHist.hist(swingup_time, bins= 10)
-
-#%%
-figHist1, axHist1 = plt.subplots(1,1, num='running cost')
-axHist1.hist(avg_cost_per.numpy(), bins = 10)
+figHist1, axHist1 = plt.subplots(1,1, num='running cost', figsize = (16,12))
+n, bins, edges = axHist1.hist(avg_cost_per.numpy(), bins = 10, ec='black')
+plt.xticks(bins)
+# figHist1.figure(figsize = (16,12))
+plt.title('Total cost distribution')
+plt.axvline(x = avg_cost, color = 'r')
+plt.savefig(savepath+'avg_cost_histo.png', bbox_inches='tight',dpi = 200)
 
 # %% Example for plotting
 data = all_data[0]
 paf = 1.1
 
-fig, ax1 = plt.subplots(5, 1, num='yoyoyo')
-ax1 = plt.subplot(5, 1, 1)
+fig1, ax1 = plt.subplots(4, 1, num='Example plot', figsize = (16,12))
+
+ax1 = plt.subplot(4, 1, 1)
 plt.plot(data[:, time_idx], data[:,angle_idx])
 plt.axhline(y = 0.34, color = 'r')
 plt.axhline(y = -0.34, color = 'r')
 plt.ylim(-np.pi*paf, np.pi*paf)
 
-ax1 = plt.subplot(5, 1, 2)
+ax1 = plt.subplot(4, 1, 2)
 plt.plot(data[:, time_idx], data[:, position_idx])
 plt.ylim(-exp_info[TrackHalfLength_idx]*paf, exp_info[TrackHalfLength_idx]*paf)
 
-ax1 = plt.subplot(5, 1, 3)
+ax1 = plt.subplot(4, 1, 3)
 plt.plot(data[:, time_idx], data[:, u_idx])
 plt.ylim(-exp_info[u_max_param_idx]*paf, exp_info[u_max_param_idx]*paf)
 
-plt.subplot(5, 1, 4)
+plt.subplot(4, 1, 4)
 plt.semilogy(data[:, time_idx], costs[0, :])
+plt.locator_params(axis='y', numticks=4)
 
-plt.subplot(5, 1, 5)
-plt.semilogy(data[:, time_idx], ravg_mean)
+# plt.subplot(5, 1, 5)
+# plt.semilogy(data[:, time_idx], ravg[0, :])
+# plt.locator_params(axis='y', numticks=4)
 
-plt.show()
+plt.savefig(savepath+'example_plot.png', bbox_inches='tight',dpi = 200)
+
 
 #%%
-fig, ax1 = plt.subplots(1, 1, num='Only angles')
+fig2, ax2 = plt.subplots(1, 1, num='Only angles', figsize = (16,12))
+plt.title('Angles')
 plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., angle_idx],0,1))
 plt.axhline(y = 0.34, color = 'r')
 plt.axhline(y = -0.34, color = 'r')
 plt.ylim(-np.pi*paf, np.pi*paf)
+plt.savefig(savepath+'Angles', bbox_inches='tight',dpi = 200)
 
 #%%
-fig, ax1 = plt.subplots(1, 1, num='Only position')
+fig3, ax3 = plt.subplots(1, 1, num='Only position', figsize = (16,12))
+plt.title('Positions')
 plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., position_idx],0,1))
-plt.axhline(y = 0.34, color = 'r')
-plt.axhline(y = -0.34, color = 'r')
-plt.ylim(-np.pi*paf, np.pi*paf)
+# plt.axhline(y = 0.34, color = 'r')
+# plt.axhline(y = -0.34, color = 'r')
+plt.ylim(-exp_info[TrackHalfLength_idx]*paf, exp_info[TrackHalfLength_idx]*paf)
+plt.savefig(savepath+'Positions.png', bbox_inches='tight',dpi = 200)
+
+#%%
+fig4, ax4 = plt.subplots(1, 1, num='Only mot power', figsize = (16,12))
+plt.title('Motor Powers')
+plt.plot(all_data[0,:,time_idx], np.swapaxes(all_data[...,u_idx],0,1))
+plt.ylim(-exp_info[u_max_param_idx]*paf, exp_info[u_max_param_idx]*paf)
+plt.savefig(savepath+'Motor_power.png', bbox_inches='tight',dpi = 200)
+
+
+#%%
+fig5, ax5 = plt.subplots(1, 1, num='Averaged cost', figsize = (16,12))
+plt.title('Averaged cost')
+plt.semilogy(all_data[0,:,time_idx], tf.math.reduce_mean(costs, axis = 0))
+plt.savefig(savepath+'Avg_cost.png', bbox_inches='tight',dpi = 200)
+plt.show()
 pass
 
