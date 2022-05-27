@@ -50,29 +50,47 @@ SQRTRHODTINV = tf.convert_to_tensor(config["controller"]["mppi"]["SQRTRHOINV"]) 
 GAMMA = config["controller"]["mppi"]["GAMMA"]
 SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
 
+clip_control_input = tf.constant(config["controller"]["mppi"]["CLIP_CONTROL_INPUT"], dtype=tf.float32)
+
 #create predictor
 predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
 
 """Define Predictor"""
 if predictor_type == "EulerTF":
     predictor = predictor_ODE_tf(horizon=mppi_samples, dt=dt, intermediate_steps=10, disable_individual_compilation=True)
+    predictor_single_trajectory = predictor
 elif predictor_type == "Euler":
     predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
+    predictor_single_trajectory = predictor
 elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
-        horizon=mppi_samples, batch_size=num_rollouts, net_name=NET_NAME
+        horizon=mppi_samples, batch_size=num_rollouts, net_name=NET_NAME, disable_individual_compilation=True
     )
+    predictor_single_trajectory = predictor_autoregressive_tf(
+        horizon=mppi_samples, batch_size=1, net_name=NET_NAME, disable_individual_compilation=True
+    )
+
+GET_ROLLOUTS_FROM_MPPI = False
+
+GET_OPTIMAL_TRAJECTORY = False
+
+def check_dimensions_s(s):
+    # Make sure the input is at least 2d
+    if tf.rank(s) == 1:
+        s = s[tf.newaxis, :]
+
+    return s
 
 #mppi correction
 def mppi_correction_cost(u, delta_u):
     return tf.math.reduce_sum(cc_weight * (0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)), axis=-1)
 
 #total cost of the trajectory
-def cost(s_hor ,u, target_position, u_prev, delta_u):
-    stage_cost = q(s_hor[:,1:,:],u,target_position, u_prev)
+def cost(s_hor ,u, target, u_prev, delta_u):
+    stage_cost = q(s_hor[:,1:,:],u,target, u_prev)
     stage_cost = stage_cost + mppi_correction_cost(u, delta_u)
     total_cost = tf.math.reduce_sum(stage_cost,axis=1)
-    total_cost = total_cost + phi(s_hor, target_position)
+    total_cost = total_cost + phi(s_hor, target)
     return total_cost
 
 
@@ -98,7 +116,6 @@ def inizialize_pertubation(random_gen, stdev = SQRTRHODTINV, sampling_type = SAM
 
 
 
-#cem class
 class controller_mppi_tf(template_controller):
     def __init__(self):
         #First configure random sampler
@@ -108,28 +125,56 @@ class controller_mppi_tf(template_controller):
         self.rng_cem = tf.random.Generator.from_seed(SEED)
 
         self.u_nom = tf.zeros([1, mppi_samples, num_control_inputs], dtype=tf.float32)
-        self.u = 0.0
+        self.u = tf.convert_to_tensor([0.0], dtype=tf.float32)
+
+        self.rollout_trajectory = None
+        self.traj_cost = None
+
+        self.optimal_trajectory = None
 
     @Compile
-    def predict_and_cost(self, s, target_position, u_nom, random_gen, u_old):
+    def predict_and_cost(self, s, target, u_nom, random_gen, u_old):
+        s = check_dimensions_s(s)
+        s = tf.tile(s, tf.constant([num_rollouts, 1]))
         # generate random input sequence and clip to control limits
+        u_nom = tf.concat([u_nom[:, 1:, :], u_nom[:, -1, tf.newaxis, :]], axis=1)
         delta_u = inizialize_pertubation(random_gen)
         u_run = tf.tile(u_nom, [num_rollouts, 1, 1])+delta_u
-        u_run = tf.clip_by_value(u_run, -1.0, 1.0)
+        u_run = tf.clip_by_value(u_run, -clip_control_input, clip_control_input)
         rollout_trajectory = predictor.predict_tf(s, u_run)
-        traj_cost = cost(rollout_trajectory, u_run, target_position, u_old, delta_u)
-        u_nom = tf.clip_by_value(u_nom + reward_weighted_average(traj_cost, delta_u), -1.0, 1.0)
+        traj_cost = cost(rollout_trajectory, u_run, target, u_old, delta_u)
+        u_nom = tf.clip_by_value(u_nom + reward_weighted_average(traj_cost, delta_u), -clip_control_input, clip_control_input)
         u = u_nom[0, 0, :]
-        u_nom = tf.concat([u_nom[:, 1:, :], tf.constant(0.0, shape=[1, 1, 1])], axis=1)
-        return u, u_nom
+        if predictor_type ==  'NeuralNet':
+            u_tiled = tf.tile(u_nom[:, :1, :], tf.constant([num_rollouts, 1, 1]))
+            predictor.update_internal_state_tf(s=s, Q0=u_tiled)
+        if GET_ROLLOUTS_FROM_MPPI:
+            return u, u_nom, rollout_trajectory, traj_cost
+        else:
+            return u, u_nom, None, None
+
+    @Compile
+    def predict_optimal_trajectory(self, s, u_nom):
+        s = check_dimensions_s(s)
+        optimal_trajectory = predictor_single_trajectory.predict_tf(s, u_nom)
+        if predictor_type ==  'NeuralNet':
+            predictor_single_trajectory.update_internal_state_tf(s=s, Q0=u_nom[:, :1, :])
+        return optimal_trajectory
 
     #step function to find control
-    def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
-        s = np.tile(s, tf.constant([num_rollouts, 1]))
+    def step(self, s: np.ndarray, target: np.ndarray, time=None):
         s = tf.convert_to_tensor(s, dtype=tf.float32)
-        target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
+        target = tf.convert_to_tensor(target, dtype=tf.float32)
 
-        self.u, self.u_nom = self.predict_and_cost(s, target_position, self.u_nom, self.rng_cem, self.u)
+        self.u, self.u_nom, rollout_trajectory, traj_cost = self.predict_and_cost(s, target, self.u_nom, self.rng_cem,
+                                                                                  self.u)
+        if GET_ROLLOUTS_FROM_MPPI:
+            self.rollout_trajectory = rollout_trajectory.numpy()
+            self.traj_cost = traj_cost.numpy()
+
+        if GET_OPTIMAL_TRAJECTORY:
+            self.optimal_trajectory = self.predict_optimal_trajectory(s, self.u_nom).numpy()
+
         return self.u.numpy()
 
     def controller_reset(self):
