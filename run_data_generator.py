@@ -34,7 +34,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     #csv = './adaptive_test/Experiment.csv'
     if record_path is None:
         record_path = config_CartPole["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
-        csv = record_path + '/Exp-dist-adam-resamp-swingup-O'
+        csv = record_path + '/Exp-dist-adam-resamp-swingup-P'
 
 
     # User defined simulation settings

@@ -4,15 +4,28 @@ controller:
   dist-adam-resamp:
     resamp_per: 5
     stdev_min: 0.5
-    LR: 0.005
+    LR: 0.0018
     adam_beta_1: 0.9    #default: 0.9
-    adam_beta_2: 0.9  #default: 0.999
+    adam_beta_2: 0.95  #default: 0.999
     adam_epsilon: 1e-07 #default: 1e-07
     cem_best_k: 5
     num_rollouts: 20
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
     warmup: True
-    interpolation_step: 2
+    interpolation_step: 10
+  adam-resamp:
+    resamp_per: 5
+    stdev_min: 0.5
+    LR: 0.01       #default: 0.001
+    adam_beta_1: 0.9    #default: 0.9
+    adam_beta_2: 0.999  #default: 0.999
+    adam_epsilon: 1e-07 #default: 1e-07
+    cem_best_k: 5
+    num_rollouts: 20
+    SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
+    warmup: True
+    interpolation_step: 5
+    norm_clip_val: 1
   cem:
     cem_outer_it: 20                    #how many outer iterations to use
     cem_rollouts: 20          #how many rollouts per outer cem iteration
@@ -21,7 +34,7 @@ controller:
     cem_stdev_min: 0.05
     cem_R: 1
     cem_ccrc_weight: 1
-    cem_best_k: 1
+    cem_best_k: 5
     cem_LR: 0.009
     cem_max_LR: 0.09
   cem-dist-grad:
