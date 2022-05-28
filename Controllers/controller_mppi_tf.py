@@ -50,7 +50,13 @@ SQRTRHODTINV = tf.convert_to_tensor(config["controller"]["mppi"]["SQRTRHOINV"]) 
 GAMMA = config["controller"]["mppi"]["GAMMA"]
 SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
 
-clip_control_input = tf.constant(config["controller"]["mppi"]["CLIP_CONTROL_INPUT"], dtype=tf.float32)
+clip_control_input = config["controller"]["mppi"]["CLIP_CONTROL_INPUT"]
+if isinstance(clip_control_input[0], list):
+    clip_control_input_low = tf.constant(clip_control_input[0], dtype=tf.float32)
+    clip_control_input_high = tf.constant(clip_control_input[1], dtype=tf.float32)
+else:
+    clip_control_input_high = tf.constant(clip_control_input, dtype=tf.float32)
+    clip_control_input_low = -clip_control_input_high
 
 #create predictor
 predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
@@ -132,30 +138,44 @@ class controller_mppi_tf(template_controller):
 
         self.optimal_trajectory = None
 
+        # Defining function - the compiled part must not have if-else statements with changing output dimensions
+        if predictor_type == 'NeuralNet':
+            self.update_internal_state = self.update_internal_state_of_RNN
+        else:
+            self.update_internal_state = lambda s, u_nom: ...
+
+        if GET_ROLLOUTS_FROM_MPPI:
+            self.mppi_output = self.return_all
+        else:
+            self.mppi_output = self.return_restricted
+
+    def return_all(self, u, u_nom, rollout_trajectory, traj_cost):
+        return u, u_nom, rollout_trajectory, traj_cost
+
+    def return_restricted(self, u, u_nom, rollout_trajectory, traj_cost):
+        return u, u_nom, None, None
+
     @Compile
     def predict_and_cost(self, s, target, u_nom, random_gen, u_old):
-        s = check_dimensions_s(s)
         s = tf.tile(s, tf.constant([num_rollouts, 1]))
         # generate random input sequence and clip to control limits
         u_nom = tf.concat([u_nom[:, 1:, :], u_nom[:, -1, tf.newaxis, :]], axis=1)
         delta_u = inizialize_pertubation(random_gen)
         u_run = tf.tile(u_nom, [num_rollouts, 1, 1])+delta_u
-        u_run = tf.clip_by_value(u_run, -clip_control_input, clip_control_input)
+        u_run = tf.clip_by_value(u_run, clip_control_input_low, clip_control_input_high)
         rollout_trajectory = predictor.predict_tf(s, u_run)
         traj_cost = cost(rollout_trajectory, u_run, target, u_old, delta_u)
-        u_nom = tf.clip_by_value(u_nom + reward_weighted_average(traj_cost, delta_u), -clip_control_input, clip_control_input)
+        u_nom = tf.clip_by_value(u_nom + reward_weighted_average(traj_cost, delta_u), clip_control_input_low, clip_control_input_high)
         u = u_nom[0, 0, :]
-        if predictor_type ==  'NeuralNet':
-            u_tiled = tf.tile(u_nom[:, :1, :], tf.constant([num_rollouts, 1, 1]))
-            predictor.update_internal_state_tf(s=s, Q0=u_tiled)
-        if GET_ROLLOUTS_FROM_MPPI:
-            return u, u_nom, rollout_trajectory, traj_cost
-        else:
-            return u, u_nom, None, None
+        self.update_internal_state(s, u_nom)
+        return self.mppi_output(u, u_nom, rollout_trajectory, traj_cost)
+
+    def update_internal_state_of_RNN(self, s, u_nom):
+        u_tiled = tf.tile(u_nom[:, :1, :], tf.constant([num_rollouts, 1, 1]))
+        predictor.update_internal_state_tf(s=s, Q0=u_tiled)
 
     @Compile
     def predict_optimal_trajectory(self, s, u_nom):
-        s = check_dimensions_s(s)
         optimal_trajectory = predictor_single_trajectory.predict_tf(s, u_nom)
         if predictor_type ==  'NeuralNet':
             predictor_single_trajectory.update_internal_state_tf(s=s, Q0=u_nom[:, :1, :])
@@ -164,6 +184,7 @@ class controller_mppi_tf(template_controller):
     #step function to find control
     def step(self, s: np.ndarray, target: np.ndarray, time=None):
         s = tf.convert_to_tensor(s, dtype=tf.float32)
+        s = check_dimensions_s(s)
         target = tf.convert_to_tensor(target, dtype=tf.float32)
 
         self.u, self.u_nom, rollout_trajectory, traj_cost = self.predict_and_cost(s, target, self.u_nom, self.rng_cem,
