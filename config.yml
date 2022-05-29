@@ -2,12 +2,12 @@ controller:
   mppi:
     SEED: 1897                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
-    mpc_horizon: 0.7                     # sec
-    num_rollouts: 3000                     # Number of Monte Carlo samples
+    mpc_horizon: 1.0                     # sec
+    num_rollouts: 2000                     # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_type: "GP"               # One of ["Euler", "NeuralNet"]
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-1'  # Applies only if predictor_type is NeuralNet
-    GP_NAME: 'SGP_10_reduced'  # Applies only if predictor_type is NeuralNet
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
+    GP_NAME: 'SGP_10_reduced_5dfs'  # Applies only if predictor_type is NeuralNet
     dd_weight: 2000.0
     ep_weight: 2200.0
     ekp_weight: 15.0
@@ -73,9 +73,9 @@ controller:
   mpc_opti:
     dt_mpc_simulation: 0.2  # s
     mpc_horizon: 10
-  nn_as_mpc_tf:
-    net_name: 'Dense-6IN-32H1-32H2-1OUT-0'
-    PATH_TO_MODELS: './Controllers/models_for_nn_as_mpc_tf/'
+  nn_imitator_tf:
+    net_name: 'Dense-6IN-128H1-128H2-1OUT-0'
+    PATH_TO_MODELS: './CartPoleSimulation/Controllers/models_for_nn_as_mpc_tf/'
 cartpole:
   SEED: 1873  # This is a seed for rng for CartPole instance class only. If "None" random seed based on datetime is used
   PATH_TO_CONTROLLERS: './CartPoleSimulation/Controllers/'  # Path where controllers are stored
