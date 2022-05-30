@@ -10,7 +10,7 @@ controller:
     adam_epsilon: 1e-07 #default: 1e-07
     cem_best_k: 5
     num_rollouts: 20
-    SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
+    SAMPLING_TYPE: "" #if interpolated: linear interpolation; else iid
     warmup: True
     interpolation_step: 10
   adam-resamp:
@@ -26,6 +26,17 @@ controller:
     warmup: True
     interpolation_step: 5
     norm_clip_val: 1
+  grad-cem:
+    cem_outer_it: 40                    #how many outer iterations to use
+    num_rollouts: 20          #how many rollouts per outer cem iteration
+    cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
+    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
+    cem_stdev_min: 0.5
+    cem_R: 1
+    cem_ccrc_weight: 1
+    cem_best_k: 5
+    cem_LR: 0.05
+    cem_max_LR: 0.1
   cem:
     cem_outer_it: 20                    #how many outer iterations to use
     cem_rollouts: 20          #how many rollouts per outer cem iteration
@@ -48,7 +59,7 @@ controller:
     SEED: "None"                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
-    num_rollouts: 800                     # Number of Monte Carlo samples
+    num_rollouts: 3500                     # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
@@ -65,7 +76,7 @@ controller:
     LBD_mc: 10.0
     NU: 1000.0                            # Exploration variance
     NU_mc: 20.0                              # Exploration variance for mathematical correct version
-    SQRTRHOINV: 0.02
+    SQRTRHOINV: 0.04
     SQRTRHOINV_mc: 0.002                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]

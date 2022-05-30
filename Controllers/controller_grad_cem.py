@@ -23,24 +23,29 @@ config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 dt = config["controller"]["mppi"]["dt"]
 cem_horizon = config["controller"]["mppi"]["mpc_horizon"]
-num_rollouts = config["controller"]["cem"]["cem_rollouts"]
+num_rollouts = config["controller"]["grad-cem"]["num_rollouts"]
 dd_weight = config["controller"]["mppi"]["dd_weight"]
 cc_weight = config["controller"]["mppi"]["cc_weight"]
 ep_weight = config["controller"]["mppi"]["ep_weight"]
-R = config["controller"]["cem"]["cem_R"]
+R = config["controller"]["grad-cem"]["cem_R"]
 
-cem_outer_it = config["controller"]["cem"]["cem_outer_it"]
-NET_NAME = config["controller"]["cem"]["CEM_NET_NAME"]
-predictor_type = config["controller"]["cem"]["cem_predictor_type"]
-cem_stdev_min = config["controller"]["cem"]["cem_stdev_min"]
-ccrc_weight = config["controller"]["cem"]["cem_ccrc_weight"]
-cem_best_k = config["controller"]["cem"]["cem_best_k"]
+cem_outer_it = config["controller"]["grad-cem"]["cem_outer_it"]
+NET_NAME = config["controller"]["grad-cem"]["CEM_NET_NAME"]
+predictor_type = config["controller"]["grad-cem"]["cem_predictor_type"]
+cem_stdev_min = config["controller"]["grad-cem"]["cem_stdev_min"]
+ccrc_weight = config["controller"]["grad-cem"]["cem_ccrc_weight"]
+cem_best_k = config["controller"]["grad-cem"]["cem_best_k"]
 cem_samples = int(cem_horizon / dt)  # Number of steps in MPC horizon
 
-cem_LR = config["controller"]["cem"]["cem_LR"]
-cem_max_LR = config["controller"]["cem"]["cem_max_LR"]
+cem_LR = config["controller"]["grad-cem"]["cem_LR"]
+cem_max_LR = config["controller"]["grad-cem"]["cem_max_LR"]
 cem_LR = tf.constant(cem_LR, dtype=tf.float32)
 cem_max_LR = tf.constant(cem_max_LR, dtype = tf.float32)
+
+cost_function = config["controller"]["general"]["cost_function"]
+cost_function = cost_function.replace('-', '_')
+cost_function_cmd = 'from others.cost_functions.'+cost_function+' import cost'
+exec(cost_function_cmd)
 
 #create predictor
 predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
@@ -54,83 +59,6 @@ elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
         horizon=cem_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
-
-
-#cost for distance from track edge
-def distance_difference_cost(position, target_position):
-    """Compute penalty for distance of cart to the target position"""
-    return ((position - target_position) / (2.0 * TrackHalfLength)) ** 2 + tf.cast(
-        tf.abs(position) > 0.90 * TrackHalfLength
-    , tf.float32) * 1.0e7  # Soft constraint: Do not crash into border
-
-#cost for difference from upright position
-def E_pot_cost(angle):
-    """Compute penalty for not balancing pole upright (penalize large angles)"""
-    return 0.25 * (1.0 - tf.cos(angle)) ** 2
-
-#actuation cost
-def CC_cost(u):
-    return R * (u ** 2)
-
-#final stage cost
-def phi(s, target_position):
-    """Calculate terminal cost of a set of trajectories
-
-    Williams et al use an indicator function type of terminal cost in
-    "Information theoretic MPC for model-based reinforcement learning"
-
-    TODO: Try a quadratic terminal cost => Use the LQR terminal cost term obtained
-    by linearizing the system around the unstable equilibrium.
-
-    :param s: Reference to numpy array of states of all rollouts
-    :type s: np.ndarray
-    :param target_position: Target position to move the cart to
-    :type target_position: np.float32
-    :return: One terminal cost per rollout
-    :rtype: np.ndarray
-    """
-    terminal_states = s[:, -1, :]
-    terminal_cost = 10000 * tf.cast(
-        (tf.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
-        | (
-            tf.abs(terminal_states[:, POSITION_IDX] - target_position)
-            > 0.1 * TrackHalfLength
-        )
-    , tf.float32)
-    return terminal_cost
-
-#optimized mean function
-def mean_numba(a):
-
-    res = []
-    for i in prange(a.shape[0]):
-        res.append(a[i, :].mean())
-
-    return np.array(res)
-
-#cost of changeing control to fast
-def control_change_rate_cost(u, u_prev,nrol):
-    """Compute penalty of control jerk, i.e. difference to previous control input"""
-    u_prev_vec = tf.concat((tf.ones((nrol,1))*u_prev,u[:,:-1]),axis=-1)
-    return (u - u_prev_vec) ** 2
-
-#all stage costs together
-def q(s,u,target_position, u_prev, nrol = num_rollouts):
-    dd = dd_weight * distance_difference_cost(
-        s[:, :, POSITION_IDX], target_position
-    )
-    ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX])
-    cc = cc_weight * CC_cost(u)
-    ccrc = ccrc_weight * control_change_rate_cost(u,u_prev, nrol)
-    stage_cost = dd+ep+cc+ccrc
-    return stage_cost
-
-#total cost of the trajectory
-def cost(s_hor ,u,target_position,u_prev):
-    stage_cost = q(s_hor[:,1:,:],u,target_position,u_prev)
-    total_cost = tf.math.reduce_sum(stage_cost,axis=1)
-    total_cost = total_cost + phi(s_hor,target_position)
-    return total_cost
 
 #cem class
 class controller_grad_cem(template_controller):
@@ -194,15 +122,17 @@ class controller_grad_cem(template_controller):
         # sort the costs and find best k costs
         sorted_cost = tf.argsort(traj_cost)
         best_idx = sorted_cost[0:cem_best_k]
-        # gather the good ones
+        # # gather the good ones
         elite_Q = tf.gather(Q, best_idx, axis=0)
         dist_mue = tf.math.reduce_mean(elite_Q, axis=0, keepdims=True)
-        dist_std = tf.math.reduce_std(elite_Q, axis=0, keepdims=True)
-        # after all inner loops, clip std min, so enough is explored and shove all the values down by one for next control input
-        dist_std = tf.clip_by_value(dist_std, cem_stdev_min, 10.0)
-        dist_std = tf.concat([dist_std[:, 1:], tf.sqrt(0.5)[tf.newaxis, tf.newaxis]], -1)
+        # dist_std = tf.math.reduce_std(elite_Q, axis=0, keepdims=True)
+        # # after all inner loops, clip std min, so enough is explored and shove all the values down by one for next control input
+        # dist_std = tf.clip_by_value(dist_std, cem_stdev_min, 10.0)
+        # dist_std = tf.concat([dist_std[:, 1:], tf.sqrt(0.5)[tf.newaxis, tf.newaxis]], -1)
         u = dist_mue[0, 0]
-        dist_mue = tf.concat([dist_mue[:, 1:], tf.constant(0.0, shape=[1, 1])], -1)
+        # dist_mue = tf.concat([dist_mue[:, 1:], tf.constant(0.0, shape=[1, 1])], -1)
+        dist_mue = tf.zeros([1, cem_samples])
+        dist_std = tf.sqrt(0.5) * tf.ones([1, cem_samples])
         return u, dist_mue, dist_std
 
     #step function to find control
