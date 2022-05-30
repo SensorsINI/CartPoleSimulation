@@ -74,50 +74,14 @@ class controller_grad_cem(template_controller):
         self.stdev = tf.sqrt(self.dist_var)
         self.u = 0.0
 
+
     @tf.function(jit_compile=True)
-    def predict_and_cost(self, s, target_position, dist_mue, dist_std, random_gen):
-        # generate random input sequence and clip to control limits
+    def final_step(self, s, target_position, dist_mue, dist_std, random_gen):
         Q = tf.tile(dist_mue, [num_rollouts, 1]) + random_gen.normal(
             [num_rollouts, cem_samples], dtype=tf.float32) * dist_std
         Q = tf.clip_by_value(Q, -1.0, 1.0)
-        # simulate once with gradient on
-        with tf.GradientTape(watch_accessed_variables=False) as tape:
-            tape.watch(Q)
-            rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
-            traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
-        for _ in range(0,cem_outer_it):
-            #sort indecies according to cost and take k best ones
-            sorted_cost = tf.argsort(traj_cost)
-            best_idx = sorted_cost[0:cem_best_k]
-            #gather the good ones
-            elite_Q = tf.gather(Q, best_idx, axis=0)
-
-            #retrive gradients of best ones
-            dc_dQ = tape.gradient(traj_cost, Q)
-            dc_dQ_elite = tf.gather(dc_dQ, best_idx, axis = 0)
-
-            #create sensible step, so step makes sense
-            dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ_elite), axis = 1)
-            mask = (dc_dQ_max > 1)[:,tf.newaxis]
-            invmask = tf.logical_not(mask)
-            Q_update = (cem_max_LR*(dc_dQ_elite/dc_dQ_max[:,tf.newaxis])*tf.cast(mask,tf.float32) + cem_LR*dc_dQ_elite*tf.cast(invmask,tf.float32))
-
-            #update best Q's
-            elite_Q = elite_Q-Q_update
-            elite_Q = tf.clip_by_value(elite_Q,-1,1)
-
-            #update distribution
-            dist_mue = tf.math.reduce_mean(elite_Q, axis=0, keepdims=True)
-            dist_std = tf.math.reduce_std(elite_Q, axis=0, keepdims=True)
-
-            #resample
-            Q = tf.tile(dist_mue, [num_rollouts, 1]) + random_gen.normal(
-                [num_rollouts, cem_samples], dtype=tf.float32) * dist_std
-            Q = tf.clip_by_value(Q, -1.0, 1.0)
-            with tf.GradientTape(watch_accessed_variables=False) as tape:
-                tape.watch(Q)
-                rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
-                traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
+        rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
+        traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
 
         # sort the costs and find best k costs
         sorted_cost = tf.argsort(traj_cost)
@@ -135,13 +99,55 @@ class controller_grad_cem(template_controller):
         dist_std = tf.sqrt(0.5) * tf.ones([1, cem_samples])
         return u, dist_mue, dist_std
 
+    @tf.function(jit_compile=True)
+    def update_dist_step(self, s, target_position, dist_mue, dist_std, random_gen):
+        # generate random input sequence and clip to control limits
+        Q = tf.tile(dist_mue, [num_rollouts, 1]) + random_gen.normal(
+            [num_rollouts, cem_samples], dtype=tf.float32) * dist_std
+        Q = tf.clip_by_value(Q, -1.0, 1.0)
+        # simulate once with gradient on
+        with tf.GradientTape(watch_accessed_variables=False) as tape:
+            tape.watch(Q)
+            rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
+            traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
+        # sort indecies according to cost and take k best ones
+        sorted_cost = tf.argsort(traj_cost)
+        best_idx = sorted_cost[0:cem_best_k]
+        # gather the good ones
+        elite_Q = tf.gather(Q, best_idx, axis=0)
+
+        # retrive gradients of best ones
+        dc_dQ = tape.gradient(traj_cost, Q)
+        dc_dQ_elite = tf.gather(dc_dQ, best_idx, axis=0)
+
+        # create sensible step, so step makes sense
+        dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ_elite), axis=1)
+        mask = (dc_dQ_max > 1)[:, tf.newaxis]
+        invmask = tf.logical_not(mask)
+        Q_update = (cem_max_LR * (dc_dQ_elite / dc_dQ_max[:, tf.newaxis]) * tf.cast(mask,
+                                                                                    tf.float32) + cem_LR * dc_dQ_elite * tf.cast(
+            invmask, tf.float32))
+
+        # update best Q's
+        elite_Q = elite_Q - Q_update
+        elite_Q = tf.clip_by_value(elite_Q, -1, 1)
+
+        # update distribution
+        dist_mue = tf.math.reduce_mean(elite_Q, axis=0, keepdims=True)
+        dist_std = tf.math.reduce_std(elite_Q, axis=0, keepdims=True)
+        return dist_mue, dist_std
+
+
     #step function to find control
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
         s = np.tile(s, tf.constant([num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
-
-        self.u, self.dist_mue, self.stdev = self.predict_and_cost(s, target_position, self.dist_mue, self.stdev, self.rng_cem)
+        for _ in range(0,cem_outer_it):
+            self.dist_mue, self.stdev = self.update_dist_step(s, target_position, self.dist_mue, self.stdev,
+                                                              self.rng_cem)
+        self.u, self.dist_mue, self.stdev = self.final_step(s, target_position, self.dist_mue, self.stdev,
+                                                              self.rng_cem)
         return self.u.numpy()
 
     def controller_reset(self):
