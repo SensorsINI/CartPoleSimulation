@@ -17,9 +17,9 @@ controller:
   dist-adam-resamp2:
     resamp_per: 1
     stdev_min: 0.5
-    LR: 0.004
-    adam_beta_1: 0.3    #default: 0.9
-    adam_beta_2: 0.95 #default: 0.999
+    LR: 0.002
+    adam_beta_1: 0.9    #default: 0.9
+    adam_beta_2: 0.999 #default: 0.999
     adam_epsilon: 1e-07 #default: 1e-07
     cem_best_k: 5
     num_rollouts: 20
