@@ -25,7 +25,7 @@ config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 dt = config["controller"]["mppi"]["dt"]
 cem_horizon = config["controller"]["mppi"]["mpc_horizon"]
-num_rollouts = config["controller"]["dist-adam-resamp"]["num_rollouts"]
+num_rollouts = config["controller"]["dist-adam-resamp2"]["num_rollouts"]
 
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
@@ -33,26 +33,28 @@ cost_function_cmd = 'from others.cost_functions.'+cost_function+' import cost'
 exec(cost_function_cmd)
 
 
-cem_outer_it = config["controller"]["dist-adam-resamp"]["cem_outer_it"]
+cem_outer_it = config["controller"]["dist-adam-resamp2"]["cem_outer_it"]
 NET_NAME = config["controller"]["cem"]["CEM_NET_NAME"]
 predictor_type = config["controller"]["cem"]["cem_predictor_type"]
-samp_stdev_min = config["controller"]["dist-adam-resamp"]["stdev_min"]
+samp_stdev_min = config["controller"]["dist-adam-resamp2"]["stdev_min"]
 ccrc_weight = config["controller"]["cem"]["cem_ccrc_weight"]
-cem_best_k = config["controller"]["dist-adam-resamp"]["cem_best_k"]
+cem_best_k = config["controller"]["dist-adam-resamp2"]["cem_best_k"]
 cem_samples = int(cem_horizon / dt)  # Number of steps in MPC horizon
 
-cem_LR = config["controller"]["dist-adam-resamp"]["LR"]
-cem_max_LR = config["controller"]["cem"]["cem_max_LR"]
-cem_LR = tf.constant(cem_LR, dtype=tf.float32)
-cem_max_LR = tf.constant(cem_max_LR, dtype = tf.float32)
-resamp_per = config["controller"]["dist-adam-resamp"]["resamp_per"]
-adam_beta_1 = config["controller"]["dist-adam-resamp"]["adam_beta_1"]
-adam_beta_2 = config["controller"]["dist-adam-resamp"]["adam_beta_2"]
-adam_epsilon = float(config["controller"]["dist-adam-resamp"]["adam_epsilon"])
+cem_LR = config["controller"]["dist-adam-resamp2"]["LR"]
 
-SAMPLING_TYPE = config["controller"]["dist-adam-resamp"]["SAMPLING_TYPE"]
-interpolation_step = config["controller"]["dist-adam-resamp"]["interpolation_step"]
-do_warmup = config["controller"]["dist-adam-resamp"]["warmup"]
+cem_LR = tf.constant(cem_LR, dtype=tf.float32)
+
+resamp_per = config["controller"]["dist-adam-resamp2"]["resamp_per"]
+adam_beta_1 = config["controller"]["dist-adam-resamp2"]["adam_beta_1"]
+adam_beta_2 = config["controller"]["dist-adam-resamp2"]["adam_beta_2"]
+adam_epsilon = float(config["controller"]["dist-adam-resamp2"]["adam_epsilon"])
+gradmax_clip = config["controller"]["grad-cem"]["gradmax_clip"]
+gradmax_clip = tf.constant(gradmax_clip, dtype = tf.float32)
+
+SAMPLING_TYPE = config["controller"]["dist-adam-resamp2"]["SAMPLING_TYPE"]
+interpolation_step = config["controller"]["dist-adam-resamp2"]["interpolation_step"]
+do_warmup = config["controller"]["dist-adam-resamp2"]["warmup"]
 
 #create predictor
 predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
@@ -91,7 +93,7 @@ else:
 
 
 #cem class
-class controller_dist_adam_resamp(template_controller):
+class controller_dist_adam_resamp2(template_controller):
     def __init__(self):
         #First configure random sampler
         SEED = config["controller"]["mppi"]["SEED"]
@@ -128,9 +130,9 @@ class controller_dist_adam_resamp(template_controller):
             traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
         dc_dQ = tape.gradient(traj_cost, Q)
         dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ), axis = 1)
-        mask = (dc_dQ_max > 1)[:,tf.newaxis]
+        mask = (dc_dQ_max > gradmax_clip)[:,tf.newaxis]
         invmask = tf.logical_not(mask)
-        dc_dQ_prc = ((dc_dQ/dc_dQ_max[:,tf.newaxis])*tf.cast(mask,tf.float32) + dc_dQ*tf.cast(invmask,tf.float32))
+        dc_dQ_prc = ((dc_dQ/dc_dQ_max[:,tf.newaxis])*tf.cast(mask,tf.float32)*gradmax_clip + dc_dQ*tf.cast(invmask,tf.float32))
         opt.apply_gradients(zip([dc_dQ_prc], [Q]))
         Qn = tf.clip_by_value(Q,-1,1)
         return Qn
@@ -205,7 +207,7 @@ class controller_dist_adam_resamp(template_controller):
 
 
 if __name__ == '__main__':
-    ctrl = controller_dist_adam_resamp()
+    ctrl = controller_dist_adam_resamp2()
 
 
     import timeit

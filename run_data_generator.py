@@ -34,7 +34,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     #csv = './adaptive_test/Experiment.csv'
     if record_path is None:
         record_path = config_CartPole["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
-        csv = record_path + '/Exp-dist-adam-resamp-swingup-P'
+        csv = record_path + '/Exp-dist-adam-resamp2-swingup-D'
 
 
     # User defined simulation settings
@@ -58,7 +58,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     length_of_experiment_DataGen = 7
 
     ### Controller which should be used in generated experiment:
-    controller_DataGen = 'dist-adam-resamp'
+    controller_DataGen = 'dist-adam-resamp2'
     # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
 
     ### Randomly placed target points/s

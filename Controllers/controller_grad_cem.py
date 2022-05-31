@@ -41,6 +41,8 @@ cem_LR = config["controller"]["grad-cem"]["cem_LR"]
 cem_max_LR = config["controller"]["grad-cem"]["cem_max_LR"]
 cem_LR = tf.constant(cem_LR, dtype=tf.float32)
 cem_max_LR = tf.constant(cem_max_LR, dtype = tf.float32)
+gradmax_clip = config["controller"]["grad-cem"]["gradmax_clip"]
+gradmax_clip = tf.constant(gradmax_clip, dtype = tf.float32)
 
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
@@ -122,9 +124,9 @@ class controller_grad_cem(template_controller):
 
         # create sensible step, so step makes sense
         dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ_elite), axis=1)
-        mask = (dc_dQ_max > 1)[:, tf.newaxis]
+        mask = (dc_dQ_max > gradmax_clip)[:, tf.newaxis]
         invmask = tf.logical_not(mask)
-        Q_update = (cem_max_LR * (dc_dQ_elite / dc_dQ_max[:, tf.newaxis]) * tf.cast(mask,
+        Q_update = (gradmax_clip*cem_max_LR * (dc_dQ_elite / dc_dQ_max[:, tf.newaxis]) * tf.cast(mask,
                                                                                     tf.float32) + cem_LR * dc_dQ_elite * tf.cast(
             invmask, tf.float32))
 

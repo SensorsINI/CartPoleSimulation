@@ -73,8 +73,9 @@ def data_idx(list):
 
 
 # %% extract all data from all experiments
-Expname = 'Exp-dist-adam-resamp-swingup-P'
+Expname = 'Exp-dist-adam-resamp2-swingup-C'
 isSwingup = True
+
 
 path = 'Experiment_Recordings/'+Expname+'*.csv'
 savepath = 'Experiment_Setups/'+Expname+'/'
@@ -82,7 +83,8 @@ os.makedirs(savepath, exist_ok = True)
 
 
 files = glob.glob(path)
-
+print("{} experiments total".format(len(files)))
+files = files[0:20]
 
 
 all_data = []
@@ -246,7 +248,10 @@ fig4, ax4 = plt.subplots(1, 1, num='Only mot power', figsize = (16,12))
 plt.title('Motor Powers')
 plt.plot(all_data[0,:,time_idx], np.swapaxes(all_data[...,u_idx],0,1))
 plt.ylim(-exp_info[u_max_param_idx]*paf, exp_info[u_max_param_idx]*paf)
+plt.axhline(y = exp_info[u_max_param_idx], color = 'r')
+plt.axhline(y = -exp_info[u_max_param_idx], color = 'r')
 plt.savefig(savepath+'Motor_power.png', bbox_inches='tight',dpi = 200)
+
 
 
 #%%
