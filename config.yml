@@ -17,16 +17,16 @@ controller:
   dist-adam-resamp2:
     resamp_per: 1
     stdev_min: 0.5
-    LR: 0.002
-    adam_beta_1: 0.9    #default: 0.9
-    adam_beta_2: 0.999 #default: 0.999
+    LR: 0.004
+    adam_beta_1: 0.3    #default: 0.9
+    adam_beta_2: 0.95 #default: 0.999
     adam_epsilon: 1e-07 #default: 1e-07
     cem_best_k: 5
     num_rollouts: 20
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
     warmup: True
     interpolation_step: 10
-    cem_outer_it: 15
+    cem_outer_it: 80
     gradmax_clip: 1000
   adam-resamp:
     resamp_per: 5
@@ -42,17 +42,17 @@ controller:
     interpolation_step: 5
     norm_clip_val: 1
   grad-cem:
-    cem_outer_it: 10                    #how many outer iterations to use
-    num_rollouts: 2000          #how many rollouts per outer cem iteration
+    cem_outer_it: 20                    #how many outer iterations to use
+    num_rollouts: 20          #how many rollouts per outer cem iteration
     cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
-    cem_stdev_min: 0.5
+    cem_stdev_min: 0.3
     cem_R: 1
     cem_ccrc_weight: 1
-    cem_best_k: 5
-    cem_LR: 0.01
-    cem_max_LR: 0.01
-    gradmax_clip: 10
+    cem_best_k: 4
+    cem_LR: 0.000001
+    cem_max_LR: 0.000001
+    gradmax_clip: 1000
   cem:
     cem_outer_it: 10                    #how many outer iterations to use
     cem_rollouts: 200          #how many rollouts per outer cem iteration
@@ -64,6 +64,18 @@ controller:
     cem_best_k: 5
     cem_LR: 0.1
     cem_max_LR: 0.1
+  cem-naive-grad:
+    cem_outer_it: 20                    #how many outer iterations to use
+    cem_rollouts: 20          #how many rollouts per outer cem iteration
+    cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
+    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
+    cem_stdev_min: 0.1
+    cem_R: 1
+    cem_ccrc_weight: 1
+    cem_best_k: 4
+    cem_LR: 0.00002
+    cem_max_LR: 0.00002
+    gradmax_clip: 1000
   cem-dist-grad:
     sig_LR: 0.05
     sig_min_clip: 0.005
