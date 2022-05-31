@@ -15,13 +15,17 @@ controller:
     interpolation_step: 10
     cem_outer_it: 10
   dist-adam-resamp2:
+    dt: 0.02
+    mpc_horizon: 1.0
+    predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet", "EulerTF"]
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  #DOES NOT WORK YET!!! Applies only if predictor_type is NeuralNet
     resamp_per: 1
-    stdev_min: 0.5
+    sample_stdev: 0.5
     LR: 0.002
     adam_beta_1: 0.9    #default: 0.9
     adam_beta_2: 0.999 #default: 0.999
     adam_epsilon: 1e-07 #default: 1e-07
-    cem_best_k: 5
+    opt_keep_k: 5
     num_rollouts: 20
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
     warmup: True

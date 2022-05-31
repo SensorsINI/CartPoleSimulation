@@ -23,8 +23,8 @@ from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregr
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-dt = config["controller"]["mppi"]["dt"]
-cem_horizon = config["controller"]["mppi"]["mpc_horizon"]
+dt = config["controller"]["dist-adam-resamp2"]["dt"]
+cem_horizon = config["controller"]["dist-adam-resamp2"]["mpc_horizon"]
 num_rollouts = config["controller"]["dist-adam-resamp2"]["num_rollouts"]
 
 cost_function = config["controller"]["general"]["cost_function"]
@@ -34,11 +34,10 @@ exec(cost_function_cmd)
 
 
 cem_outer_it = config["controller"]["dist-adam-resamp2"]["cem_outer_it"]
-NET_NAME = config["controller"]["cem"]["CEM_NET_NAME"]
-predictor_type = config["controller"]["cem"]["cem_predictor_type"]
-samp_stdev_min = config["controller"]["dist-adam-resamp2"]["stdev_min"]
-ccrc_weight = config["controller"]["cem"]["cem_ccrc_weight"]
-cem_best_k = config["controller"]["dist-adam-resamp2"]["cem_best_k"]
+NET_NAME = config["controller"]["dist-adam-resamp2"]["NET_NAME"]
+predictor_type = config["controller"]["dist-adam-resamp2"]["predictor_type"]
+samp_stdev = config["controller"]["dist-adam-resamp2"]["sample_stdev"]
+opt_keep_k = config["controller"]["dist-adam-resamp2"]["opt_keep_k"]
 cem_samples = int(cem_horizon / dt)  # Number of steps in MPC horizon
 
 cem_LR = config["controller"]["dist-adam-resamp2"]["LR"]
@@ -49,7 +48,7 @@ resamp_per = config["controller"]["dist-adam-resamp2"]["resamp_per"]
 adam_beta_1 = config["controller"]["dist-adam-resamp2"]["adam_beta_1"]
 adam_beta_2 = config["controller"]["dist-adam-resamp2"]["adam_beta_2"]
 adam_epsilon = float(config["controller"]["dist-adam-resamp2"]["adam_epsilon"])
-gradmax_clip = config["controller"]["grad-cem"]["gradmax_clip"]
+gradmax_clip = config["controller"]["dist-adam-resamp2"]["gradmax_clip"]
 gradmax_clip = tf.constant(gradmax_clip, dtype = tf.float32)
 
 SAMPLING_TYPE = config["controller"]["dist-adam-resamp2"]["SAMPLING_TYPE"]
