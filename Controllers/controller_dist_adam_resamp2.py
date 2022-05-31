@@ -114,7 +114,7 @@ class controller_dist_adam_resamp2(template_controller):
     @tf.function(jit_compile=True)
     def sample_actions(self, rng_gen, batchsize):
         Qn = rng_gen.normal(
-            [batchsize, num_valid_vals], dtype=tf.float32) * samp_stdev_min
+            [batchsize, num_valid_vals], dtype=tf.float32) * samp_stdev
         Qn = tf.clip_by_value(Qn, -1.0, 1.0)
         if SAMPLING_TYPE == "interpolated":
             Qn = tf.matmul(Qn, interp_mat)
@@ -144,12 +144,12 @@ class controller_dist_adam_resamp2(template_controller):
             traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
             # sort the costs and find best k costs
         sorted_cost = tf.argsort(traj_cost)
-        best_idx = sorted_cost[0:cem_best_k]
+        best_idx = sorted_cost[0:opt_keep_k]
         # after all inner loops, clip std min, so enough is explored and shove all the values down by one for next control input
         elite_Q = tf.gather(Q, best_idx, axis=0)
         dist_mue = tf.math.reduce_mean(elite_Q, axis=0, keepdims=True)
         dist_std = tf.math.reduce_std(elite_Q, axis=0, keepdims=True)
-        dist_std = tf.clip_by_value(dist_std, samp_stdev_min, 10.0)
+        dist_std = tf.clip_by_value(dist_std, samp_stdev, 10.0)
         dist_std = tf.concat([dist_std[:, 1:], tf.sqrt(0.5)[tf.newaxis, tf.newaxis]], -1)
         u = elite_Q[0, 0]
         dist_mue = tf.concat([dist_mue[:, 1:], tf.zeros([1, 1])], -1)
@@ -173,13 +173,13 @@ class controller_dist_adam_resamp2(template_controller):
 
         adam_weights = self.opt.get_weights()
         if self.count % resamp_per == 0:
-            Qres = self.sample_actions(self.rng_cem, num_rollouts - cem_best_k)
+            Qres = self.sample_actions(self.rng_cem, num_rollouts - opt_keep_k)
             Q_keep = tf.gather(Qn, self.bestQ)
             Qn = tf.concat([Qres, Q_keep], 0)
-            wk1 = tf.concat([tf.gather(adam_weights[1], self.bestQ)[:,1:], tf.zeros([cem_best_k, 1])], -1)
-            wk2 = tf.concat([tf.gather(adam_weights[2], self.bestQ)[:,1:], tf.zeros([cem_best_k, 1])], -1)
-            w1 = tf.zeros([num_rollouts-cem_best_k, cem_samples])
-            w2 = tf.zeros([num_rollouts-cem_best_k, cem_samples])
+            wk1 = tf.concat([tf.gather(adam_weights[1], self.bestQ)[:,1:], tf.zeros([opt_keep_k, 1])], -1)
+            wk2 = tf.concat([tf.gather(adam_weights[2], self.bestQ)[:,1:], tf.zeros([opt_keep_k, 1])], -1)
+            w1 = tf.zeros([num_rollouts-opt_keep_k, cem_samples])
+            w2 = tf.zeros([num_rollouts-opt_keep_k, cem_samples])
             w1 = tf.concat([w1, wk1], 0)
             w2 = tf.concat([w2, wk2], 0)
             self.opt.set_weights([adam_weights[0], w1, w2])

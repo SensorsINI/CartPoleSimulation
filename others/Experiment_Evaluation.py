@@ -73,7 +73,7 @@ def data_idx(list):
 
 
 # %% extract all data from all experiments
-Expname = 'Exp-cem-naive-grad-tf-swingup-A'
+Expname = 'Exp-dist-adam-resamp2-swingup-E'
 isSwingup = True
 
 

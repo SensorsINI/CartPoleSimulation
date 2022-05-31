@@ -30,7 +30,7 @@ controller:
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
     warmup: True
     interpolation_step: 10
-    cem_outer_it: 80
+    cem_outer_it: 15
     gradmax_clip: 1000
   adam-resamp:
     resamp_per: 5
