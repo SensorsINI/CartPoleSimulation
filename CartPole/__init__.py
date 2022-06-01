@@ -102,6 +102,7 @@ class CartPole:
         self.u = 0.0  # Physical force acting on the cart
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
         self.target_position = 0.0
+        self.pole_length = L
 
         self.latency = config["cartpole"]["latency"]
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency)
@@ -359,6 +360,7 @@ class CartPole:
                 # The target_position is not always meaningful
                 # If it is not meaningful all values in this column are set to 0
                 self.dict_history['target_position'].append(self.target_position)
+                self.dict_history['pole_length'].append(self.pole_length)
 
                 try:
                     for key, value in self.controller.controller_data_for_csv.items():
@@ -371,24 +373,24 @@ class CartPole:
             else:
 
                 self.dict_history = {
-                                     'time': [self.time],
+                    'time': [self.time],
 
-                                     'angle': [self.s[ANGLE_IDX]],
-                                     'angleD': [self.s[ANGLED_IDX]],
-                                     'angleDD': [self.angleDD],
-                                     'angle_cos': [self.s[ANGLE_COS_IDX]],
-                                     'angle_sin': [self.s[ANGLE_SIN_IDX]],
-                                     'position': [self.s[POSITION_IDX]],
-                                     'positionD': [self.s[POSITIOND_IDX]],
-                                     'positionDD': [self.positionDD],
+                    'angle': [self.s[ANGLE_IDX]],
+                    'angleD': [self.s[ANGLED_IDX]],
+                    'angleDD': [self.angleDD],
+                    'angle_cos': [self.s[ANGLE_COS_IDX]],
+                    'angle_sin': [self.s[ANGLE_SIN_IDX]],
+                    'position': [self.s[POSITION_IDX]],
+                    'positionD': [self.s[POSITIOND_IDX]],
+                    'positionDD': [self.positionDD],
 
+                    'Q': [self.Q],
+                    'u': [self.u],
 
-                                     'Q': [self.Q],
-                                     'u': [self.u],
+                    'target_position': [self.target_position],
+                    'pole_length': [self.pole_length],
 
-                                     'target_position': [self.target_position],
-
-                                     }
+                }
 
                 try:
                     self.dict_history.update(self.controller.controller_data_for_csv)
@@ -409,8 +411,8 @@ class CartPole:
         """
 
         self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = \
-            cartpole_integration_numba(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD, self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation,)
-
+            cartpole_integration_numba(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD, self.s[POSITION_IDX],
+                                       self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation, )
 
     def edge_bounce(self):
         # Elastic collision at edges
@@ -960,7 +962,8 @@ class CartPole:
                 self.Q = self.controller.step(self.s, self.target_position, self.time)
 
             self.u = Q2u(self.Q)  # Calculate CURRENT control input
-            self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)  # Calculate CURRENT second derivatives
+            self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u,
+                                                               L=L)  # Calculate CURRENT second derivatives
 
         # Reset the dict keeping the experiment history and save the state for t = 0
         self.dt_save_steps_counter = 0
@@ -969,23 +972,24 @@ class CartPole:
         if reset_dict_history:
             self.dict_history = {
 
-                                 'time': [self.time],
+                'time': [self.time],
 
-                                 'angle': [self.s[ANGLE_IDX]],
-                                 'angleD': [self.s[ANGLED_IDX]],
-                                 'angleDD': [self.angleDD],
-                                 'angle_cos': [self.s[ANGLE_COS_IDX]],
-                                 'angle_sin': [self.s[ANGLE_SIN_IDX]],
-                                 'position': [self.s[POSITION_IDX]],
-                                 'positionD': [self.s[POSITIOND_IDX]],
-                                 'positionDD': [self.positionDD],
+                'angle': [self.s[ANGLE_IDX]],
+                'angleD': [self.s[ANGLED_IDX]],
+                'angleDD': [self.angleDD],
+                'angle_cos': [self.s[ANGLE_COS_IDX]],
+                'angle_sin': [self.s[ANGLE_SIN_IDX]],
+                'position': [self.s[POSITION_IDX]],
+                'positionD': [self.s[POSITIOND_IDX]],
+                'positionDD': [self.positionDD],
 
-                                 'Q': [self.Q],
-                                 'u': [self.u],
+                'Q': [self.Q],
+                'u': [self.u],
 
-                                 'target_position': [self.target_position],
+                'target_position': [self.target_position],
+                'pole_length': [self.pole_length],
 
-                                 }
+            }
             try:
                 self.dict_history.update(self.controller.controller_data_for_csv)
             except AttributeError:
@@ -1077,44 +1081,48 @@ class CartPole:
         self.MastThickness = 0.05
         self.TrackHalfLengthGraphics = 50.0  # Full Length of the track
 
-        self.physical_to_graphics = (self.TrackHalfLengthGraphics-self.WheelToMiddle)/TrackHalfLength  # TrackHalfLength is the effective length of track
-        self.graphics_to_physical = 1.0/self.physical_to_graphics
+        self.physical_to_graphics = (
+                                                self.TrackHalfLengthGraphics - self.WheelToMiddle) / TrackHalfLength  # TrackHalfLength is the effective length of track
+        self.graphics_to_physical = 1.0 / self.physical_to_graphics
 
         self.y_acceleration_arrow = 1.5 * self.WheelRadius
         self.scaling_dx_acceleration_arrow = 20.0
         self.x_acceleration_arrow = (
-                                   self.s[POSITION_IDX]*self.physical_to_graphics +
-                                   # np.sign(self.Q) * (self.CartLength / 2.0) +
-                                   self.scaling_dx_acceleration_arrow * self.Q
+                self.s[POSITION_IDX] * self.physical_to_graphics +
+                # np.sign(self.Q) * (self.CartLength / 2.0) +
+                self.scaling_dx_acceleration_arrow * self.Q
         )
 
         # Initialize elements of the drawing
-        self.Mast = FancyBboxPatch(xy=(self.s[POSITION_IDX]*self.physical_to_graphics - (self.MastThickness / 2.0), 1.25 * self.WheelRadius),
-                                   width=self.MastThickness,
-                                   height=self.MastHight,
-                                   fc='g')
+        self.Mast = FancyBboxPatch(
+            xy=(self.s[POSITION_IDX] * self.physical_to_graphics - (self.MastThickness / 2.0), 1.25 * self.WheelRadius),
+            width=self.MastThickness,
+            height=self.MastHight,
+            fc='g')
 
-        self.Chassis = FancyBboxPatch((self.s[POSITION_IDX]*self.physical_to_graphics - (self.CartLength / 2.0), self.WheelRadius),
-                                      self.CartLength,
-                                      1 * self.WheelRadius,
-                                      fc='r')
+        self.Chassis = FancyBboxPatch(
+            (self.s[POSITION_IDX] * self.physical_to_graphics - (self.CartLength / 2.0), self.WheelRadius),
+            self.CartLength,
+            1 * self.WheelRadius,
+            fc='r')
 
-        self.WheelLeft = Circle((self.s[POSITION_IDX]*self.physical_to_graphics - self.WheelToMiddle, self.y_wheel),
+        self.WheelLeft = Circle((self.s[POSITION_IDX] * self.physical_to_graphics - self.WheelToMiddle, self.y_wheel),
                                 radius=self.WheelRadius,
                                 fc='y',
                                 ec='k',
                                 lw=5)
 
-        self.WheelRight = Circle((self.s[POSITION_IDX]*self.physical_to_graphics + self.WheelToMiddle, self.y_wheel),
+        self.WheelRight = Circle((self.s[POSITION_IDX] * self.physical_to_graphics + self.WheelToMiddle, self.y_wheel),
                                  radius=self.WheelRadius,
                                  fc='y',
                                  ec='k',
                                  lw=5)
 
-        self.Acceleration_Arrow = FancyArrowPatch((self.s[POSITION_IDX]*self.physical_to_graphics, self.y_acceleration_arrow),
-                                                  (self.x_acceleration_arrow, self.y_acceleration_arrow),
-                                                  arrowstyle='simple', mutation_scale=10,
-                                                  facecolor='gold', edgecolor='orange')
+        self.Acceleration_Arrow = FancyArrowPatch(
+            (self.s[POSITION_IDX] * self.physical_to_graphics, self.y_acceleration_arrow),
+            (self.x_acceleration_arrow, self.y_acceleration_arrow),
+            arrowstyle='simple', mutation_scale=10,
+            facecolor='gold', edgecolor='orange')
 
         self.Slider_Arrow = FancyArrowPatch((self.slider_value, 0), (self.slider_value, 0),
                                             arrowstyle='fancy', mutation_scale=50)
@@ -1148,7 +1156,7 @@ class CartPole:
         AxCart.yaxis.set_major_locator(plt.NullLocator())  # NullLocator is used to disable ticks on the Figures
 
         locs = [-50.0, -25.0, - 0.0, 25.0, 50.0]
-        labels = [str(np.around(np.array(x*self.graphics_to_physical), 3)) for x in locs]
+        labels = [str(np.around(np.array(x * self.graphics_to_physical), 3)) for x in locs]
         AxCart.xaxis.set_major_locator(plt.FixedLocator(locs))
         AxCart.xaxis.set_major_formatter(plt.FixedFormatter(labels))
 
@@ -1189,7 +1197,7 @@ class CartPole:
         if self.controller_name == 'manual-stabilization':
             pass
         else:
-            locs = np.array([-50.0, -37.5, -25.0, -12.5, - 0.0, 12.5, 25.0, 37.5, 50.0])/50.0
+            locs = np.array([-50.0, -37.5, -25.0, -12.5, - 0.0, 12.5, 25.0, 37.5, 50.0]) / 50.0
             labels = [str(np.around(np.array(x * TrackHalfLength), 3)) for x in locs]
             AxSlider.xaxis.set_major_locator(plt.FixedLocator(locs))
             AxSlider.xaxis.set_major_formatter(plt.FixedFormatter(labels))
@@ -1206,18 +1214,19 @@ class CartPole:
     def update_drawing(self):
 
         self.x_acceleration_arrow = (
-                                   self.s[POSITION_IDX]*self.physical_to_graphics +
-                                   # np.sign(self.Q) * (self.CartLength / 2.0) +
-                                   self.scaling_dx_acceleration_arrow * self.Q
+                self.s[POSITION_IDX] * self.physical_to_graphics +
+                # np.sign(self.Q) * (self.CartLength / 2.0) +
+                self.scaling_dx_acceleration_arrow * self.Q
         )
 
-        self.Acceleration_Arrow.set_positions((self.s[POSITION_IDX]*self.physical_to_graphics, self.y_acceleration_arrow),
-                                             (self.x_acceleration_arrow, self.y_acceleration_arrow))
+        self.Acceleration_Arrow.set_positions(
+            (self.s[POSITION_IDX] * self.physical_to_graphics, self.y_acceleration_arrow),
+            (self.x_acceleration_arrow, self.y_acceleration_arrow))
 
         # Draw mast
-        mast_position = (self.s[POSITION_IDX]*self.physical_to_graphics - (self.MastThickness / 2.0))
+        mast_position = (self.s[POSITION_IDX] * self.physical_to_graphics - (self.MastThickness / 2.0))
         self.Mast.set_x(mast_position)
-        self.Mast.set_height(self.MastHight*(float(L)/self.PoleInitialPhysicalHight))
+        self.Mast.set_height(self.MastHight * (float(L) / self.PoleInitialPhysicalHight))
         # Draw rotated mast
         t21 = transforms.Affine2D().translate(-mast_position, -1.25 * self.WheelRadius)
         if ANGLE_CONVENTION == 'CLOCK-NEG':
@@ -1229,17 +1238,17 @@ class CartPole:
         t23 = transforms.Affine2D().translate(mast_position, 1.25 * self.WheelRadius)
         self.t2 = t21 + t22 + t23
         # Draw Chassis
-        self.Chassis.set_x(self.s[POSITION_IDX]*self.physical_to_graphics - (self.CartLength / 2.0))
+        self.Chassis.set_x(self.s[POSITION_IDX] * self.physical_to_graphics - (self.CartLength / 2.0))
         # Draw Wheels
-        self.WheelLeft.center = (self.s[POSITION_IDX]*self.physical_to_graphics - self.WheelToMiddle, self.y_wheel)
-        self.WheelRight.center = (self.s[POSITION_IDX]*self.physical_to_graphics + self.WheelToMiddle, self.y_wheel)
+        self.WheelLeft.center = (self.s[POSITION_IDX] * self.physical_to_graphics - self.WheelToMiddle, self.y_wheel)
+        self.WheelRight.center = (self.s[POSITION_IDX] * self.physical_to_graphics + self.WheelToMiddle, self.y_wheel)
         # Draw SLider
         if self.controller_name == 'manual-stabilization':
             self.Slider_Bar.set_width(self.slider_value)
         else:
             self.Slider_Arrow.set_positions((self.slider_value, 0), (self.slider_value, 1.0))
 
-        return self.Mast, self.t2, self.Chassis, self.WheelRight, self.WheelLeft,\
+        return self.Mast, self.t2, self.Chassis, self.WheelRight, self.WheelLeft, \
                self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow
 
     # A function redrawing the changing elements of the Figure
@@ -1253,7 +1262,7 @@ class CartPole:
             fig.AxCart.add_patch(self.Acceleration_Arrow)
             fig.AxSlider.add_patch(self.Slider_Bar)
             fig.AxSlider.add_patch(self.Slider_Arrow)
-            return self.Mast, self.Chassis, self.WheelLeft, self.WheelRight,\
+            return self.Mast, self.Chassis, self.WheelLeft, self.WheelRight, \
                    self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow
 
         def animationManage(i):
@@ -1262,7 +1271,7 @@ class CartPole:
             # Special care has to be taken of the mast rotation
             self.t2 = self.t2 + fig.AxCart.transData
             self.Mast.set_transform(self.t2)
-            return self.Mast, self.Chassis, self.WheelLeft, self.WheelRight,\
+            return self.Mast, self.Chassis, self.WheelLeft, self.WheelRight, \
                    self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow
 
         # Initialize animation object
