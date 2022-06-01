@@ -1,5 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.fft import rfft, rfftfreq
+
+"""Generates and saves Plots of the swing-up task from data files as well as generates plots of discrete fourier
+ transforms."""
+
 
 foldernames = ['./Ground Truth', './Dense-48', './GRU-16', './Dense-96', './GRU-32-0', './GRU-32-1', './Dense-96-L',
                './GRU-32-L-0', './GRU-32-L-1', './GRU-32-L-3', './GRU-32-L-5']
@@ -13,13 +18,13 @@ def swing_up_task(file_start=0, file_end=4, folder_number=0, pole_length='L395',
         file_start += 1
     else:
         experiments = []
-    for l in range(file_start, file_end + 1):
-        experiments.append('/Experiment-' + str(l) + '.csv')
+    for m in range(file_start, file_end + 1):
+        experiments.append('/Experiment-' + str(m) + '.csv')
 
     sw_up_time = 0
 
     # plot the sub figures
-    fig, axs = plt.subplots(len(experiments), sharex=True, sharey=True, figsize=fig_size)
+    fig, axs = plt.subplots(len(experiments), sharex=True, sharey=True, figsize=fig_size, dpi=200)
     for j, file in enumerate(experiments):
         filename = foldernames[folder_number] + file
         data = np.genfromtxt(filename, skip_header=28, delimiter=',')
@@ -48,7 +53,7 @@ def swing_up_task(file_start=0, file_end=4, folder_number=0, pole_length='L395',
                     break
         if sw_try and sw_up == False:
             sw_up_time += 10  # if try was made count 10s for swing up
-            axs[j].vlines(10, ymin=-180, ymax=180, label='Nice try: 10s',
+            axs[j].vlines(10, ymin=-180, ymax=180, label='Attempt: 10s',
                           color='tab:orange')
             axs[j].legend(loc='upper right')
 
@@ -61,16 +66,57 @@ def swing_up_task(file_start=0, file_end=4, folder_number=0, pole_length='L395',
     plt.tight_layout()
     if save:
         plt.savefig(foldernames[folder_number] + '/Angle Plot Swing-Up ' + pole_length + save_name + '.pdf')
+        plt.savefig(foldernames[folder_number] + '/Angle Plot Swing-Up ' + pole_length + save_name + '.png')
     plt.show()
 
     return sw_up_time
 
 
+def fourier_transforms(file, fig_size=(6, 4), save=False):
+    filename = './Fouriertransforms/' + file + '.csv'
+
+    data = np.genfromtxt(filename, skip_header=28, delimiter=',')
+    time = data[:, 0]
+    angle = data[:, 1] * 180 / np.pi
+    position = data[:, 6]
+
+    # convert the angle to have the pole swing about the 0 angle at upside down position
+    f = lambda x: np.sign(x) * 180 - x
+    angle = f(angle)
+
+    # perform fouriertransform
+    fft = rfft(angle)
+    freq = rfftfreq(len(angle), 0.02)
+    maxima = np.abs(fft) > max(np.abs(fft)) - max(np.abs(fft)) / 10  # top 10 per cent
+    peaks = freq[maxima]
+    peaks_rounded = np.around(peaks, 3)
+
+    fig, axs = plt.subplots(2, dpi=300, figsize=fig_size)
+    axs[0].plot(time, angle, marker='.', linestyle='', markersize=2)
+    axs[0].set(xlabel='time/s', ylabel='angle')
+    axs[0].grid(True)
+
+    axs[1].step(freq, np.abs(fft), where='mid')
+    axs[1].scatter(peaks, np.abs(fft[maxima]), s=10, color='tab:orange',
+                   label='Dominant frequencies: \n' + str(peaks_rounded) + ' at bin size ' + str(np.around(freq[1], 3)))
+    axs[1].set(ylabel='DFT', xlabel='frequency /Hz')
+    axs[1].grid(True)
+    axs[1].legend()
+
+    fig.suptitle(file)
+    fig.tight_layout()
+    plt.show()
+    if save:
+        # fig.savefig('./Fouriertransforms/Plots/' + file + ' DCT angle' + '.pdf')
+        fig.savefig('./Fouriertransforms/Plots/' + file + ' DCT angle' + '.png')
+
+
 def main():
-    for i in range(11):
-        swing_up_task(file_start=0, file_end=4, folder_number=i, pole_length='L395', fig_size=(6, 8), save=False,
-                      save_name='')
+    x = [0, 4, 5]
+    for i in x:
+        swing_up_task(file_start=0, file_end=9, folder_number=i, pole_length='L395', fig_size=(6, 9), save=True,
+                      save_name='-1')
 
 
 if __name__ == '__main__':
-    main()
+    fourier_transforms('Repeated swing-up-2 L790', fig_size=(6, 4.5), save=True)
