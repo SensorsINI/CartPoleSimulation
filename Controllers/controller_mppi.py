@@ -379,6 +379,9 @@ class controller_mppi(template_controller):
         cc_weight = cc_weight * (1 + cc_noise * self.rng_mppi.uniform(-1.0, 1.0))
 
         # State of the cart
+        self.last_up_angles = 0
+        self.last_down_angles = 0
+
         self.s = create_cartpole_state()
 
         self.target_position = 0.0
@@ -487,6 +490,21 @@ class controller_mppi(template_controller):
 
         self.iteration += 1
 
+        # generate data for swinging pole
+        # global ep_weight
+        # if abs(s[ANGLE_IDX]*180/np.pi) < 5:
+        #     self.last_down_angles = 0
+        #     self.last_up_angles += 1
+        #     # stay upright for 1/4 of a second, then let pole fall down
+        #     if self.last_up_angles == 12:
+        #         ep_weight = - abs(ep_weight)
+        # elif abs(s[ANGLE_IDX]*180/np.pi) > 170:
+        #     self.last_up_angles = 0
+        #     self.last_down_angles += 1
+        #     # stay downright for 1/4 of a second, then swing up again
+        #     if self.last_down_angles == 12:
+        #         ep_weight = + abs(ep_weight)
+
         # Adjust horizon if changed in GUI while running
         # FIXME: For this to work with NeuralNet predictor we need to build a setter,
         #  which also reinitialize arrays which size depends on horizon
@@ -580,6 +598,10 @@ class controller_mppi(template_controller):
         self.u[:-1] = self.u[1:]
         self.u[-1] = 0
         # self.u = zeros_like(self.u)
+
+        # # let pole swing for first 12 seconds of the experiment
+        # if time is not None and time <= 10:
+        #     Q = 0
 
         # Prepare predictor for next timestep
         Q_update = np.tile(Q, (num_rollouts, 1, 1))
