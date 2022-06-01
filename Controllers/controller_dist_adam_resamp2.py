@@ -4,6 +4,7 @@ from numpy.random import SFC64, Generator
 from datetime import datetime
 from numba import jit, prange
 import tensorflow as tf
+from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
 from Controllers.template_controller import template_controller
 from CartPole.cartpole_model import TrackHalfLength
@@ -111,7 +112,7 @@ class controller_dist_adam_resamp2(template_controller):
         self.opt = tf.keras.optimizers.Adam(learning_rate=cem_LR, beta_1 = adam_beta_1, beta_2 = adam_beta_2, epsilon = adam_epsilon)
         self.bestQ = None
 
-    @tf.function(jit_compile=True)
+    @Compile
     def sample_actions(self, rng_gen, batchsize):
         Qn = rng_gen.normal(
             [batchsize, num_valid_vals], dtype=tf.float32) * samp_stdev
@@ -120,7 +121,7 @@ class controller_dist_adam_resamp2(template_controller):
             Qn = tf.matmul(Qn, interp_mat)
         return Qn
 
-    @tf.function(jit_compile=True)
+    @Compile
     def grad_step(self, s, target_position, Q, opt):
         # generate random input sequence and clip to control limits
         with tf.GradientTape(watch_accessed_variables=False) as tape:
@@ -136,7 +137,7 @@ class controller_dist_adam_resamp2(template_controller):
         Qn = tf.clip_by_value(Q,-1,1)
         return Qn
 
-    @tf.function(jit_compile=True)
+    @Compile
     def get_action(self, s, target_position, Q):
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(Q)

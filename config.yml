@@ -1,6 +1,6 @@
 controller:
   general:
-    cost_function: 'quadratic-boundary' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
+    cost_function: 'quadratic-boundary-grad' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
   dist-adam-resamp:
     resamp_per: 1
     stdev_min: 0.5
@@ -28,9 +28,9 @@ controller:
     opt_keep_k: 5
     num_rollouts: 20
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
-    warmup: True
+    warmup: False
     interpolation_step: 10
-    cem_outer_it: 80
+    cem_outer_it: 15
     gradmax_clip: 1000
   mppi:
     SEED: "None"                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
