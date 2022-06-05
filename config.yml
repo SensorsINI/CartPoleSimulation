@@ -1,17 +1,17 @@
 controller:
   mppi:
-    SEED: 1897                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
+    SEED: 1998                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
-    mpc_horizon: 1.0                     # sec
-    num_rollouts: 2000                     # Number of Monte Carlo samples
+    mpc_horizon: 0.7                     # sec
+    num_rollouts: 3500                     # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "GP"               # One of ["Euler", "NeuralNet"]
+    predictor_type: "GP"             # One of ["Euler", "NeuralNet"]
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
     GP_NAME: 'SGP_10_reduced_5dfs'  # Applies only if predictor_type is NeuralNet
-    dd_weight: 2000.0
-    ep_weight: 2200.0
-    ekp_weight: 15.0
-    ekc_weight: 5.0
+    dd_weight: 200.0
+    ep_weight: 50000.0
+    ekp_weight: 0.01
+    ekc_weight: 0.0
     cc_weight: 1.0
     ccrc_weight: 1.0
     cost_noise: 0.0                       # Noise on stage cost weights by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0 othewise
@@ -43,10 +43,10 @@ controller:
     m4: 0.0  # positionD_cost
   do_mpc_discrete:
     dt_mpc_simulation: 0.02  # s
-    mpc_horizon: 50
+    mpc_horizon: 35
   do_mpc:
     dt_mpc_simulation: 0.02  # s
-    mpc_horizon: 50
+    mpc_horizon: 35
     # Perturbation factors:
     # Change of output from optimal
     p_Q: 0.00
