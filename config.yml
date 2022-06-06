@@ -1,6 +1,25 @@
 controller:
   general:
     cost_function: 'quadratic-boundary' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
+  mppi-optimize:
+    LR: 0.04
+    adam_beta_1: 0.9    #default: 0.9
+    adam_beta_2: 0.999  #default: 0.999
+    adam_epsilon: 1e-07 #default: 1e-07
+    gradmax_clip: 1000
+    dt: 0.02                              # sec
+    mpc_horizon: 1.0                      # sec
+    num_rollouts: 200                     # Number of Monte Carlo samples
+    predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
+    cc_weight: 1.0
+    R: 1.0                                # How much to punish Q
+    LBD: 100.0                            # Cost parameter lambda
+    NU: 1000.0                            # Exploration variance
+    SQRTRHOINV: 0.02
+    GAMMA: 1.00                           # Future cost discount
+    SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
+    optim_steps: 20
   dist-adam-resamp:
     resamp_per: 1
     stdev_min: 0.5
@@ -91,7 +110,7 @@ controller:
     SEED: "None"                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
-    num_rollouts: 3500                     # Number of Monte Carlo samples
+    num_rollouts: 200                     # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
