@@ -1,6 +1,33 @@
 controller:
   general:
     cost_function: 'quadratic-boundary-grad' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
+  cem:
+    dt: 0.02                              # sec
+    mpc_horizon: 1.0                      # sec
+    cem_outer_it: 5                    #how many outer iterations to use
+    cem_rollouts: 2000          #how many rollouts per outer cem iteration
+    cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
+    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
+    cem_stdev_min: 0.1
+    cem_R: 1
+    cem_ccrc_weight: 1
+    cem_best_k: 5
+    cem_LR: 0.1
+    cem_max_LR: 0.1
+  cem-naive-grad:
+    dt: 0.02                              # sec
+    mpc_horizon: 1.0                      # sec
+    cem_outer_it: 5                    #how many outer iterations to use
+    cem_rollouts: 2000          #how many rollouts per outer cem iteration
+    cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
+    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
+    cem_stdev_min: 0.1
+    cem_R: 1
+    cem_ccrc_weight: 1
+    cem_best_k: 4
+    cem_LR: 0.02
+    cem_max_LR: 0.02
+    gradmax_clip: 10
   mppi-optimize:
     LR: 0.02
     adam_beta_1: 0.9    #default: 0.9
