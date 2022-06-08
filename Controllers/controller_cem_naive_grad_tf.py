@@ -21,30 +21,30 @@ from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregr
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-dt = config["controller"]["cem-naive-grad"]["dt"]
-cem_horizon = config["controller"]["cem-naive-grad"]["mpc_horizon"]
-num_rollouts = config["controller"]["cem-naive-grad"]["cem_rollouts"]
-
-cem_outer_it = config["controller"]["cem-naive-grad"]["cem_outer_it"]
-NET_NAME = config["controller"]["cem-naive-grad"]["CEM_NET_NAME"]
-predictor_type = config["controller"]["cem-naive-grad"]["cem_predictor_type"]
-cem_stdev_min = config["controller"]["cem-naive-grad"]["cem_stdev_min"]
-ccrc_weight = config["controller"]["cem-naive-grad"]["cem_ccrc_weight"]
-cem_best_k = config["controller"]["cem-naive-grad"]["cem_best_k"]
-cem_samples = int(cem_horizon / dt)  # Number of steps in MPC horizon
-
-cem_LR = config["controller"]["cem-naive-grad"]["cem_LR"]
-cem_max_LR = config["controller"]["cem-naive-grad"]["cem_max_LR"]
-cem_LR = tf.constant(cem_LR, dtype=tf.float32)
-cem_max_LR = tf.constant(cem_max_LR, dtype = tf.float32)
-gradmax_clip = config["controller"]["cem-naive-grad"]["gradmax_clip"]
-gradmax_clip = tf.constant(gradmax_clip, dtype = tf.float32)
-
+#import cost function parts from folder according to config file
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
 cost_function_cmd = 'from others.cost_functions.'+cost_function+' import cost'
 exec(cost_function_cmd)
 
+#cem params
+dt = config["controller"]["cem-naive-grad"]["dt"]
+cem_horizon = config["controller"]["cem-naive-grad"]["mpc_horizon"]
+num_rollouts = config["controller"]["cem-naive-grad"]["cem_rollouts"]
+cem_outer_it = config["controller"]["cem-naive-grad"]["cem_outer_it"]
+
+cem_stdev_min = config["controller"]["cem-naive-grad"]["cem_stdev_min"]
+cem_best_k = config["controller"]["cem-naive-grad"]["cem_best_k"]
+cem_samples = int(cem_horizon / dt)  # Number of steps in MPC horizon
+
+NET_NAME = config["controller"]["cem-naive-grad"]["CEM_NET_NAME"]
+predictor_type = config["controller"]["cem-naive-grad"]["cem_predictor_type"]
+
+#optimization params
+cem_LR = config["controller"]["cem-naive-grad"]["cem_LR"]
+cem_LR = tf.constant(cem_LR, dtype=tf.float32)
+gradmax_clip = config["controller"]["cem-naive-grad"]["gradmax_clip"]
+gradmax_clip = tf.constant(gradmax_clip, dtype = tf.float32)
 
 #create predictor
 predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
@@ -59,11 +59,11 @@ elif predictor_type == "NeuralNet":
         horizon=cem_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
 
-#cem class
+#controller class
 class controller_cem_naive_grad_tf(template_controller):
     def __init__(self):
         #First configure random sampler
-        SEED = config["controller"]["mppi"]["SEED"]
+        SEED = config["controller"]["cem-naive-grad"]["SEED"]
         if SEED == "None":
             SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)
         self.rng_cem = tf.random.Generator.from_seed(SEED)
@@ -79,18 +79,22 @@ class controller_cem_naive_grad_tf(template_controller):
         Q = tf.tile(dist_mue, [num_rollouts, 1]) + rng_cem.normal(
             [num_rollouts, cem_samples], dtype=tf.float32) * stdev
         Q = tf.clip_by_value(Q, -1.0, 1.0)
-        # rollout the trajectories
+        # rollout the trajectories and record gradient
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(Q)
             rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
             traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
+        # retrieve gradient
         dc_dQ = tape.gradient(traj_cost, Q)
         dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ), axis = 1)
+        # modify gradients: makes sure biggest entry of each gradient is at most "gradmax_clip".
         mask = (dc_dQ_max > gradmax_clip)[:,tf.newaxis]
         invmask = tf.logical_not(mask)
-        Q_update = (gradmax_clip* cem_max_LR*(dc_dQ/dc_dQ_max[:,tf.newaxis])*tf.cast(mask,tf.float32) + cem_LR*dc_dQ*tf.cast(invmask,tf.float32))
-        Qn = Q-Q_update
+        Q_update = (gradmax_clip* (dc_dQ/dc_dQ_max[:,tf.newaxis])*tf.cast(mask,tf.float32) + dc_dQ*tf.cast(invmask,tf.float32))
+        # update Q with gradient descent step
+        Qn = Q-cem_LR*Q_update
         Qn = tf.clip_by_value(Qn,-1,1)
+        #rollout all trajectories a last time
         rollout_trajectory = predictor.predict_tf(s, Qn[:, :, tf.newaxis])
         traj_cost = cost(rollout_trajectory, Qn, target_position, self.u)
 
@@ -105,13 +109,17 @@ class controller_cem_naive_grad_tf(template_controller):
 
     #step function to find control
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
+        # tile s and convert inputs to tensor
         s = np.tile(s, tf.constant([num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
+
+        #cem steps updating distribution
         for _ in range(0,cem_outer_it):
             self.dist_mue, self.stdev = self.predict_and_cost(s, target_position, self.rng_cem, self.dist_mue, self.stdev)
 
-        #after all inner loops, clip std min, so enough is explored and shove all the values down by one for next control input
+        #after all inner loops, clip std min, so enough is explored
+        #and shove all the values down by one for next control input
         self.stdev = tf.clip_by_value(self.stdev, cem_stdev_min, 10.0)
         self.stdev = tf.concat([self.stdev[:, 1:], tf.sqrt(0.5)[tf.newaxis, tf.newaxis]], -1)
         self.u = self.dist_mue[0,0]
@@ -119,13 +127,14 @@ class controller_cem_naive_grad_tf(template_controller):
         return self.u.numpy()
 
     def controller_reset(self):
+        #reset controller initial distribution
         self.dist_mue = tf.zeros([1, cem_samples])
         self.dist_var = 0.5 * tf.ones([1, cem_samples])
         self.stdev = tf.sqrt(self.dist_var)
 
 
 
-
+# speed test, which is activated if script is run directly and not as module
 if __name__ == '__main__':
     ctrl = controller_cem_naive_grad_tf()
 

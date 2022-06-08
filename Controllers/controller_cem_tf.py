@@ -21,27 +21,24 @@ from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregr
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
+#import cost function parts from folder according to config file
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
 cost_function_cmd = 'from others.cost_functions.'+cost_function+' import q, phi, cost'
 exec(cost_function_cmd)
 
+#cem params
 dt = config["controller"]["cem"]["dt"]
 num_rollouts = config["controller"]["cem"]["cem_rollouts"]
 mpc_horizon = config["controller"]["cem"]["mpc_horizon"]
-
 cem_outer_it = config["controller"]["cem"]["cem_outer_it"]
-NET_NAME = config["controller"]["cem"]["CEM_NET_NAME"]
-predictor_type = config["controller"]["cem"]["cem_predictor_type"]
 cem_stdev_min = config["controller"]["cem"]["cem_stdev_min"]
-ccrc_weight = config["controller"]["cem"]["cem_ccrc_weight"]
 cem_best_k = config["controller"]["cem"]["cem_best_k"]
 cem_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 
-cem_LR = config["controller"]["cem"]["cem_LR"]
-cem_max_LR = config["controller"]["cem"]["cem_max_LR"]
-cem_LR = tf.constant(cem_LR, dtype=tf.float32)
-cem_max_LR = tf.constant(cem_max_LR, dtype = tf.float32)
+NET_NAME = config["controller"]["cem"]["CEM_NET_NAME"]
+predictor_type = config["controller"]["cem"]["cem_predictor_type"]
+
 
 #create predictor
 predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
@@ -61,7 +58,7 @@ elif predictor_type == "NeuralNet":
 class controller_cem_tf(template_controller):
     def __init__(self):
         #First configure random sampler
-        SEED = config["controller"]["mppi"]["SEED"]
+        SEED = config["controller"]["cem"]["SEED"]
         if SEED == "None":
             SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)
         self.rng_cem = Generator(SFC64(SEED))
@@ -73,6 +70,7 @@ class controller_cem_tf(template_controller):
 
     @tf.function(jit_compile=True)
     def predict_and_cost(self, s, Q, target_position):
+        # rollout trajectories and retrieve cost
         rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
         traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
         return traj_cost, rollout_trajectory
@@ -90,7 +88,7 @@ class controller_cem_tf(template_controller):
             Q = tf.convert_to_tensor(Q, dtype=tf.float32)
             target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 
-            #rollout the trajectories
+            #rollout the trajectories and get cost
             traj_cost, rollout_trajectory = self.predict_and_cost(s, Q, target_position)
             Q = Q.numpy()
             #sort the costs and find best k costs
@@ -115,7 +113,7 @@ class controller_cem_tf(template_controller):
 
 
 
-
+# speed test, which is activated if script is run directly and not as module
 if __name__ == '__main__':
     ctrl = controller_cem_tf()
 
