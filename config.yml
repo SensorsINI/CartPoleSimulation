@@ -1,6 +1,6 @@
 controller:
   general:
-    cost_function: 'quadratic-boundary-grad' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
+    cost_function: 'quadratic-boundary-nonconvex' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
   cem:
     SEED: "None"
     dt: 0.02                              # sec
@@ -69,16 +69,16 @@ controller:
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  #DOES NOT WORK YET!!! Applies only if predictor_type is NeuralNet
     resamp_per: 1
     sample_stdev: 0.5
-    LR: 0.006
+    LR: 0.002
     adam_beta_1: 0.9    #default: 0.9
-    adam_beta_2: 0.9 #default: 0.999
+    adam_beta_2: 0.999 #default: 0.999
     adam_epsilon: 1e-07 #default: 1e-07
     opt_keep_k: 1
     num_rollouts: 20
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
     warmup: True
     interpolation_step: 10
-    outer_its: 20
+    outer_its: 15
     gradmax_clip: 1000
   mppi:
     SEED: "None"                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
