@@ -61,9 +61,6 @@ class next_state_predictor_ODE_tf():
 
 class predictor_output_augmentation_tf:
     def __init__(self, net_info, disable_individual_compilation=False, differential_network=False):
-        self.net_output_indices = {key: value for value, key in enumerate(net_info.outputs)}
-        indices_augmentation = []
-        features_augmentation = []
 
         self.differential_network = differential_network
         if differential_network:
@@ -71,6 +68,10 @@ class predictor_output_augmentation_tf:
             outputs = DIFF_NET_STATE_VARIABLES
         else:
             outputs = net_info.outputs
+
+        self.net_output_indices = {key: value for value, key in enumerate(outputs)}
+        indices_augmentation = []
+        features_augmentation = []
 
         if 'angle' not in outputs:
             indices_augmentation.append(STATE_INDICES['angle'])
