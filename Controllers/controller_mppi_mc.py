@@ -42,7 +42,7 @@ mppi_samples = int(mppi_horizon / dt)  # Number of steps in MPC horizon
 R = config["controller"]["mppi"]["R"]
 LBD = config["controller"]["mppi"]["LBD_mc"]
 NU = config["controller"]["mppi"]["NU_mc"]
-SQRTRHODTINV = config["controller"]["mppi"]["SQRTRHOINV"] * (1 / np.math.sqrt(dt))
+SQRTRHODTINV = config["controller"]["mppi"]["SQRTRHOINV_mc"] * (1 / np.math.sqrt(dt))
 GAMMA = config["controller"]["mppi"]["GAMMA"]
 
 #create predictor

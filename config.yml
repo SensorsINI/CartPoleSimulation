@@ -126,15 +126,15 @@ controller:
     LBD: 100.0                            # Cost parameter lambda
     LBD_mc: 10.0
     NU: 1000.0                            # Exploration variance
-    NU_mc: 20.0                              # Exploration variance for mathematical correct version
+    NU_mc: 2.0                              # Exploration variance for mathematical correct version
     SQRTRHOINV: 0.04
-    SQRTRHOINV_mc: 0.002                      # Sampling variance
+    SQRTRHOINV_mc: 0.02                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     LOGGING: False                        # Collect and show detailed insights into the controller's behavior
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
   mppi-grad:
-    LR: 10000000
+    LR: 10
     LR_B: 0.0005
     STDEV_min: 0.5
     STDEV_max: 5
