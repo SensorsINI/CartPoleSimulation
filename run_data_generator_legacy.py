@@ -4,6 +4,7 @@ from others.p_globals import TrackHalfLength
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
 import os
+import shutil
 from time import sleep
 import timeit
 from datetime import datetime
@@ -31,10 +32,14 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     rng_data_generator = Generator(SFC64(seed))
 
+    Expname = 'Exp-dist-adam-resamp2-padam-noiseless-A'
     #csv = './adaptive_test/Experiment.csv'
     if record_path is None:
         record_path = config_CartPole["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
-        csv = record_path + '/Exp-dist-adam-resamp2-swingup-G'
+        csv = record_path + '/'+Expname
+
+
+
 
 
     # User defined simulation settings
@@ -55,11 +60,23 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     ###### CartPole settings
     ### Length of each experiment in s:
-    length_of_experiment_DataGen = 7
+    length_of_experiment_DataGen = 30
 
     ### Controller which should be used in generated experiment:
     controller_DataGen = 'dist-adam-resamp2'
     # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
+
+    ### Setup directory with data for exp
+    cost_function = config_CartPole["controller"]["general"]["cost_function"]
+    cost_function_file = cost_function.replace('-', '_') + ".py"
+    ctrl_file = controller_DataGen.replace('-', '_') + ".py"
+    savepath = 'Experiment_Setups/' + Expname + '/'
+    os.makedirs(savepath, exist_ok=True)
+    shutil.copy('others/cost_functions/' + cost_function_file, savepath)
+    shutil.copy('Controllers/' + 'controller_'+ctrl_file, savepath)
+    shutil.copy('config.yml', savepath)
+    shutil.copy('config_data_gen.yml', savepath)
+
 
     ### Randomly placed target points/s
     track_relative_complexity_DataGen = 1
@@ -78,7 +95,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     ### List of target positions, can be None to simulate with random targets
     #turning_points_DataGen = None
     # Example:
-    turning_points_DataGen = [0.0]#, 0.1, -0.1, -0.15, 0.15, 0.0]
+    turning_points_DataGen = [0.0, 0.1, -0.1, -0.15, 0.15, 0.0]
 
     ### Show popup window in the end with summary of experiment?
     show_summary_plots = False
@@ -117,7 +134,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
             csv += "/Experiment"
 
         start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0, 1.0)
-        initial_state = [0.0, 0.0, np.pi, 0.0]
+        initial_state = [0.0, 0.0, 0.0, 0.0]
         # initial_state = [start_random_target_position_at_DataGen, None, None, None]
         # initial_state = [0.0, None, 0.0, None]
         if initial_state[0] is None:

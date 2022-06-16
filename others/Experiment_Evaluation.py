@@ -73,8 +73,8 @@ def data_idx(list):
 
 
 # %% extract all data from all experiments
-Expname = 'Exp-dist-adam-resamp2-swingup-G'
-isSwingup = True
+Expname = 'Exp-dist-adam-resamp2-jump-0d5-noise-C'
+isSwingup = False
 
 
 path = 'Experiment_Recordings/'+Expname+'*.csv'
