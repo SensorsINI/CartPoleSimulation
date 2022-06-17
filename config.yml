@@ -5,21 +5,21 @@ controller:
     mpc_horizon: 0.7                     # sec
     num_rollouts: 3500                     # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "EulerTF"             # One of ["Euler", "NeuralNet"]
+    predictor_type: "GP"             # One of ["Euler", "NeuralNet"]
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-1'  # Applies only if predictor_type is NeuralNet
-    GP_NAME: 'SGP_10_reduced_5dfs'  # Applies only if predictor_type is NeuralNet
+    GP_NAME: 'SGP_10'  # Applies only if predictor_type is GP
     dd_weight: 2000.0
     ep_weight: 2200.0
     ekp_weight: 15.0
     ekc_weight: 5.0
-    cc_weight: 2.0
+    cc_weight: 1.0
     ccrc_weight: 1.0
     cost_noise: 0.0                       # Noise on stage cost weights by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0 othewise
     control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
     NU: 1000.0                            # Exploration variance
-    SQRTRHOINV: 0.03                      # Sampling variance
+    SQRTRHOINV: 0.01                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     LOGGING: False                      # Collect and show detailed insights into the controller's behavior
