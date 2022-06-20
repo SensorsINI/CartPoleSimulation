@@ -73,8 +73,8 @@ def data_idx(list):
 
 
 # %% extract all data from all experiments
-Expname = 'Exp-mppi-optimize-jump-0d5-noise-H'
-isSwingup = False
+Expname = 'Exp-dist-adam-resamp2-swingup-nn-Q'
+isSwingup = True
 
 
 path = 'Experiment_Recordings/'+Expname+'*.csv'
@@ -84,7 +84,7 @@ os.makedirs(savepath, exist_ok = True)
 
 files = glob.glob(path)
 print("{} experiments total".format(len(files)))
-files = files[0:20]
+
 
 
 all_data = []
@@ -104,6 +104,9 @@ for file in files:
 for experiment in all_data:
     if len(experiment) < exp_tick_length:
         all_data.remove(experiment)
+print("{} experiments usable".format(len(all_data)))
+all_data = all_data[0:20]
+
 #%%
 beginning = re.compile('#.*:\s*')
 second = re.compile('\s*s\Z')
@@ -147,7 +150,7 @@ S[..., ANGLED_IDX] = all_data[..., angleD_idx]
 
 target_pos = tf.constant(all_data[..., target_pos_idx], dtype=tf.float32)
 
-Q = all_data[..., Q_idx]
+Q = all_data[..., u_idx]/exp_info[u_max_param_idx]
 
 Q = tf.constant(Q, dtype=tf.float32)
 S = tf.constant(S, dtype=tf.float32)
@@ -232,7 +235,8 @@ plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., angle_idx],0,1))
 plt.axhline(y = 0.34, color = 'r')
 plt.axhline(y = -0.34, color = 'r')
 plt.ylim(-np.pi*paf, np.pi*paf)
-plt.savefig(savepath+'Angles', bbox_inches='tight',dpi = 200)
+plt.savefig(savepath+'Angles.png', bbox_inches='tight',dpi = 200)
+
 
 #%%
 fig3, ax3 = plt.subplots(1, 1, num='Only position', figsize = (16,12))
@@ -242,6 +246,7 @@ plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., position_idx],0,1))
 # plt.axhline(y = -0.34, color = 'r')
 plt.ylim(-exp_info[TrackHalfLength_idx]*paf, exp_info[TrackHalfLength_idx]*paf)
 plt.savefig(savepath+'Positions.png', bbox_inches='tight',dpi = 200)
+
 
 #%%
 fig4, ax4 = plt.subplots(1, 1, num='Only mot power', figsize = (16,12))
@@ -259,6 +264,51 @@ fig5, ax5 = plt.subplots(1, 1, num='Averaged cost', figsize = (16,12))
 plt.title('Averaged cost')
 plt.semilogy(all_data[0,:,time_idx], tf.math.reduce_mean(costs, axis = 0))
 plt.savefig(savepath+'Avg_cost.png', bbox_inches='tight',dpi = 200)
+
+
+
+#%%
+fig6, ax6 = plt.subplots(2, 1, num='Rap. plot 1', figsize = (16,12))
+ax61 = plt.subplot(2,1,1)
+ax61.set_ylabel('Position (m)')
+#plt.title('Positions')
+plt.axhline(y = exp_info[TrackHalfLength_idx], color = 'r')
+plt.axhline(y = -exp_info[TrackHalfLength_idx], color = 'r')
+plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., position_idx],0,1))
+plt.ylim(-exp_info[TrackHalfLength_idx]*paf, exp_info[TrackHalfLength_idx]*paf)
+
+ax62 = plt.subplot(2,1,2)
+ax62.set_ylabel('Angle (deg)')
+ax62.set_xlabel('Time (s)')
+# plt.title('Angles')
+plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., angle_idx],0,1)*180/np.pi)
+plt.axhline(y = 20, color = 'r')
+plt.axhline(y = -20, color = 'r')
+plt.ylim(-np.pi*paf, np.pi*paf)
+plt.yticks([-180, -90, -20, 0, 20, 90, 180])
+plt.savefig(savepath+'rapport1.svg', bbox_inches='tight',dpi = 200)
+
+
+#%%
+fig7, ax7 = plt.subplots(2, 1, num='Rap. plot 2', figsize = (16,12))
+ax71 = plt.subplot(2,1,1)
+ax71.set_ylabel('Position (m)')
+#plt.title('Positions')
+plt.axhline(y = exp_info[TrackHalfLength_idx], color = 'r')
+plt.axhline(y = -exp_info[TrackHalfLength_idx], color = 'r')
+plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., position_idx],0,1))
+plt.ylim(-exp_info[TrackHalfLength_idx]*paf, exp_info[TrackHalfLength_idx]*paf)
+
+ax72 = plt.subplot(2,1,2)
+ax72.set_ylabel('Motorpower (%)')
+ax72.set_xlabel('Time (s)')
+# plt.title('Angles')
+plt.plot(all_data[0,:,time_idx], np.swapaxes(all_data[...,u_idx],0,1)/exp_info[u_max_param_idx]*100.0)
+plt.axhline(y = 100, color = 'r')
+plt.axhline(y = -100, color = 'r')
+plt.ylim(-100*paf, 100*paf)
+plt.savefig(savepath+'rapport2.svg', bbox_inches='tight',dpi = 200)
+
 plt.show()
 pass
 
