@@ -45,6 +45,7 @@ from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 from scipy.interpolate import interp1d
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
+from SI_Toolkit.Predictors.predictor_hybrid import predictor_hybrid
 # from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
 # from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
 
@@ -173,6 +174,10 @@ elif predictor_type == "Euler":
 elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
         horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
+    )
+elif predictor_type == "Hybrid":
+    predictor = predictor_hybrid(
+        horizon=mpc_samples, dt=dt, intermediate_steps=10, batch_size=num_rollouts, net_name=NET_NAME
     )
 # elif predictor_type == "GP":
 #     predictor = predictor_autoregressive_GP(horizon=mpc_samples)
@@ -525,7 +530,7 @@ class controller_mppi(template_controller):
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
                 if predictor_type == "Euler":
                     rollout_trajectory = predictor.predict(np.copy(self.s), self.u[:, np.newaxis])
-                elif predictor_type == "NeuralNet" or predictor_type == 'EulerTF' or predictor_type == "GP":
+                elif predictor_type == "NeuralNet" or predictor_type == 'EulerTF' or predictor_type == "GP" or predictor_type == "Hybrid":
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     # FIXME: Problaby you can reduce it!
 
@@ -542,7 +547,7 @@ class controller_mppi(template_controller):
             self.warm_up_countdown > 0
             and self.auxiliary_controller_available
             and (NET_TYPE == "GRU" or NET_TYPE == "LSTM" or NET_TYPE == "RNN")
-            and predictor_type == "NeuralNet"
+            and (predictor_type == "NeuralNet" or predictor_type == "Hybrid")
         ):
             self.warm_up_countdown -= 1
             if abs(s[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small
