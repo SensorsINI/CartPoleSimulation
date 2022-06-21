@@ -4,10 +4,11 @@ from CartPole.state_utilities import STATE_VARIABLES, CONTROL_INPUTS
 from SI_Toolkit.Predictors.predictor_noisy import predictor_noisy
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 import re
-import timeit
+
 
 '''
-Takes the experiment recordings given in config_training and adds the ODE predictions of the states as columns
+Takes the experiment recordings given in config_training and adds the ODE predictions of the states as columns,
+such that the predictions of row k are of state at time k+1
 
 Check Predictor and check irrelevant columns. Columns in the dataset that are strings must be removed
 '''
@@ -25,7 +26,7 @@ validation_experiments = os.listdir(os.path.join(parent_dir, experiment_folder, 
 test_experiments = os.listdir(os.path.join(parent_dir, experiment_folder, 'Recordings/Test'))
 
 if experiment_folder[-1] == '/':
-    new_folder = experiment_folder[0:-1] + '-Augmented/'
+    new_folder = experiment_folder[0:-1] + '-Augmented3/'
 else:
     print('No \'/\' after experiment folder')
     new_folder = ''
@@ -36,13 +37,12 @@ os.mkdir(os.path.join(parent_dir, new_folder, 'Recordings/Train'))
 os.mkdir(os.path.join(parent_dir, new_folder, 'Recordings/Validate'))
 os.mkdir(os.path.join(parent_dir, new_folder, 'Recordings/Test'))
 
-################################# Select Predictor / Irrelevant columns #################################
+################################# Select Predictor #################################
 
-predictor = predictor_noisy(horizon=1, dt=dt, intermediate_steps=intermediate_steps)
-irrelevant_columns = []  # choose the columns you want to remove. Note: The index stays at the same spot after removal 11,11,12,12,12,14,15
+predictor = predictor_ODE(horizon=1, dt=dt, intermediate_steps=intermediate_steps)
 
-#########################################################################################################
-
+####################################################################################
+irrelevant_columns = [11,11,12,12,12,14,15]  # choose the columns you want to remove. Note: The index stays at the same spot after removal
 
 for experiment in test_experiments:
     data = []
@@ -84,11 +84,10 @@ for experiment in test_experiments:
     Q = initial_state[:, Q_index].astype(float)
     initial_state = initial_state[:, relevant_columns].astype(float)
     for i in range(len(data) - start):
-        if start + i + 1 < len(data):  # Don't do prediction if it's the last entry
+        if start + i < len(data):  # Don't do prediction if it's the last entry
             prediction = predictor.predict(initial_state[i, :], Q[i, :])
             for x in prediction[1]:
-                data[start + i + 1].append(x)
-    del data[start]
+                data[start + i].append(x)
 
     with open(os.path.join(parent_dir, new_folder, 'Recordings/Test/', str(experiment)), 'w') as file:
         writer = csv.writer(file, delimiter=',')
@@ -134,11 +133,10 @@ for experiment in training_experiments:
     Q = initial_state[:, Q_index].astype(float)
     initial_state = initial_state[:, relevant_columns].astype(float)
     for i in range(len(data) - start):
-        if start + i + 1 < len(data):  # Don't do prediction if it's the last entry
+        if start + i < len(data):  # Don't do prediction if it's the last entry
             prediction = predictor.predict(initial_state[i, :], Q[i, :])
             for x in prediction[1]:
-                data[start + i + 1].append(x)
-    del data[start]
+                data[start + i].append(x)
 
     with open(os.path.join(parent_dir, new_folder, 'Recordings/Train/', str(experiment)), 'w') as file:
         writer = csv.writer(file, delimiter=',')
@@ -184,11 +182,10 @@ for experiment in validation_experiments:
     Q = initial_state[:, Q_index].astype(float)
     initial_state = initial_state[:, relevant_columns].astype(float)
     for i in range(len(data) - start):
-        if start + i + 1 < len(data):  # Don't do prediction if it's the last entry
+        if start + i < len(data):  # Don't do prediction if it's the last entry
             prediction = predictor.predict(initial_state[i, :], Q[i, :])
             for x in prediction[1]:
-                data[start + i + 1].append(x)
-    del data[start]
+                data[start + i].append(x)
 
     with open(os.path.join(parent_dir, new_folder, 'Recordings/Validate/', str(experiment)), 'w') as file:
         writer = csv.writer(file, delimiter=',')

@@ -1,19 +1,18 @@
 import csv, os, yaml
 import numpy as np
 from CartPole.state_utilities import STATE_VARIABLES, CONTROL_INPUTS
-from SI_Toolkit.Predictors.predictor_noisy import predictor_noisy
+#from SI_Toolkit.Predictors.predictor_noisy import predictor_noisy
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 import re
 import timeit
-
 '''
-Takes the experiment recordings given in config_training and adds the ODE predictions of the states as columns
+Takes the experiment recordings given in config_training and adds the ODE predictions of the states as well as the
+difference between ODE Prediction and actual state as columns
 
 Check Predictor and check irrelevant columns. Columns in the dataset that are strings must be removed
 '''
-
 dt = 0.02
-intermediate_steps = 1
+intermediate_steps = 10
 
 config = yaml.load(open(os.path.join('SI_Toolkit_ASF', 'config_training.yml'), 'r'),
                    Loader=yaml.FullLoader)
@@ -25,7 +24,7 @@ validation_experiments = os.listdir(os.path.join(parent_dir, experiment_folder, 
 test_experiments = os.listdir(os.path.join(parent_dir, experiment_folder, 'Recordings/Test'))
 
 if experiment_folder[-1] == '/':
-    new_folder = experiment_folder[0:-1] + '-Augmented/'
+    new_folder = experiment_folder[0:-1] + '-Augmented-diff/'
 else:
     print('No \'/\' after experiment folder')
     new_folder = ''
@@ -36,13 +35,12 @@ os.mkdir(os.path.join(parent_dir, new_folder, 'Recordings/Train'))
 os.mkdir(os.path.join(parent_dir, new_folder, 'Recordings/Validate'))
 os.mkdir(os.path.join(parent_dir, new_folder, 'Recordings/Test'))
 
-################################# Select Predictor / Irrelevant columns #################################
+################################# Select Predictor #################################
 
-predictor = predictor_noisy(horizon=1, dt=dt, intermediate_steps=intermediate_steps)
-irrelevant_columns = []  # choose the columns you want to remove. Note: The index stays at the same spot after removal 11,11,12,12,12,14,15
+predictor = predictor_ODE(horizon=1, dt=dt, intermediate_steps=intermediate_steps)
 
-#########################################################################################################
-
+####################################################################################
+irrelevant_columns = [11,11,12,12,12,14,15]  # choose the columns you want to remove. Note: The index stays at the same spot after removal
 
 for experiment in test_experiments:
     data = []
@@ -74,6 +72,7 @@ for experiment in test_experiments:
         if x in STATE_VARIABLES:
             relevant_columns.append(i)
             data[start - 1].append(data[start - 1][i] + '_pred')
+            data[start - 1].append(data[start - 1][i] + '_diff')
         if x in CONTROL_INPUTS:
             Q_index.append(i)
         i += 1
@@ -86,8 +85,10 @@ for experiment in test_experiments:
     for i in range(len(data) - start):
         if start + i + 1 < len(data):  # Don't do prediction if it's the last entry
             prediction = predictor.predict(initial_state[i, :], Q[i, :])
-            for x in prediction[1]:
-                data[start + i + 1].append(x)
+            diff = prediction[1, :]-initial_state[i + 1, :]
+            for j in range(len(prediction[1, :])):
+                data[start + i + 1].append(prediction[1, j])
+                data[start + i + 1].append(diff[j])
     del data[start]
 
     with open(os.path.join(parent_dir, new_folder, 'Recordings/Test/', str(experiment)), 'w') as file:
@@ -124,6 +125,7 @@ for experiment in training_experiments:
         if x in STATE_VARIABLES:
             relevant_columns.append(i)
             data[start - 1].append(data[start - 1][i] + '_pred')
+            data[start - 1].append(data[start - 1][i] + '_diff')
         if x in CONTROL_INPUTS:
             Q_index.append(i)
         i += 1
@@ -136,8 +138,10 @@ for experiment in training_experiments:
     for i in range(len(data) - start):
         if start + i + 1 < len(data):  # Don't do prediction if it's the last entry
             prediction = predictor.predict(initial_state[i, :], Q[i, :])
-            for x in prediction[1]:
-                data[start + i + 1].append(x)
+            diff = prediction[1, :] - initial_state[i + 1, :]
+            for j in range(len(prediction[1, :])):
+                data[start + i + 1].append(prediction[1, j])
+                data[start + i + 1].append(diff[j])
     del data[start]
 
     with open(os.path.join(parent_dir, new_folder, 'Recordings/Train/', str(experiment)), 'w') as file:
@@ -174,6 +178,7 @@ for experiment in validation_experiments:
         if x in STATE_VARIABLES:
             relevant_columns.append(i)
             data[start - 1].append(data[start - 1][i] + '_pred')
+            data[start - 1].append(data[start - 1][i] + '_diff')
         if x in CONTROL_INPUTS:
             Q_index.append(i)
         i += 1
@@ -186,8 +191,10 @@ for experiment in validation_experiments:
     for i in range(len(data) - start):
         if start + i + 1 < len(data):  # Don't do prediction if it's the last entry
             prediction = predictor.predict(initial_state[i, :], Q[i, :])
-            for x in prediction[1]:
-                data[start + i + 1].append(x)
+            diff = prediction[1, :] - initial_state[i + 1, :]
+            for j in range(len(prediction[1, :])):
+                data[start + i + 1].append(prediction[1, j])
+                data[start + i + 1].append(diff[j])
     del data[start]
 
     with open(os.path.join(parent_dir, new_folder, 'Recordings/Validate/', str(experiment)), 'w') as file:

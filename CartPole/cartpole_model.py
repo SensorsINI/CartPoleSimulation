@@ -98,6 +98,62 @@ def _cartpole_ode (ca, sa, angleD, positionD, u,
 
     return angleDD, positionDD
 
+def _cartpole_ode_simplified (ca, sa, angleD, positionD, u,
+                      k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+    k=k*1.0068
+    M=M*0.9825
+    m=m*0.9190
+    L=L*1.0993
+
+    """
+    Calculates current values of second derivative of angle and position
+    from current value of angle and position, and their first derivatives
+
+    :param angle, angleD, position, positionD: Essential state information of cart
+    :param u: Force applied on cart in unnormalized range
+
+    :returns: angular acceleration, horizontal acceleration
+    """
+
+    # Clockwise rotation is defined as negative
+    # force and cart movement to the right are defined as positive
+    # g (gravitational acceleration) is positive (absolute value)
+    # Checked independently by Marcin and Krishna
+
+    A = (k + 1) * (M + m) - m * (ca ** 2)
+    F_fric = 0
+    T_fric = 0
+
+    positionDD = (
+            (
+                    m * g * sa * ca  # Movement of the cart due to gravity
+                    + ((T_fric * ca) / L)  # Movement of the cart due to pend' s friction in the joint
+                    + (k + 1) * (
+                            - (m * L * (
+                                        angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                            + F_fric  # Braking of the cart due its friction
+                            + u  # Effect of force applied to cart
+                    )
+            ) / A
+    )
+
+    # Making m go to 0 and setting J_fric=0 (fine for pole without mass)
+    # positionDD = (u_max/M)*Q-(M_fric/M)*positionD
+    # Compare this with positionDD = a*Q-b*positionD
+    # u_max = M*a = 0.230*19.6 = 4.5, 0.317*19.6 = 6.21, (Second option is if I account for pole mass)
+    # M_fric = M*b = 0.230*20 = 4.6, 0.317*20 = 6.34
+    # From experiment b = 20, a = 28
+    angleDD = (
+            (
+                    g * sa + positionDD * ca + T_fric / (m * L)
+            ) / ((k + 1) * L)
+    )
+
+    # making M go to infinity makes angleDD = (g/k*L)sin(angle) - angleD*J_fric/(k*m*L^2)
+    # This is the same as equation derived directly for a pendulum.
+    # k is 4/3! It is the factor for pendulum with length 2L: I = k*m*L^2
+
+    return angleDD, positionDD
 
 def cartpole_ode_namespace(s: SimpleNamespace, u: float,
                            k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):

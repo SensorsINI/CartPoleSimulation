@@ -1,5 +1,5 @@
 testing:
-  tests: ['Hybrid Dense-6IN-32H1-32H2-5OUT-0', 'Hybrid GRU-6IN-32H1-32H2-5OUT-0', 'Hybrid GRU-6IN-32H1-32H2-5OUT-1', 'Hybrid GRU-6IN-16H1-16H2-5OUT-0', 'Hybrid LSTM-6IN-32H1-32H2-5OUT-0']  # May be 'Euler', Euler-predictor, 'Hybrid <full name of network>,  name of network or None = 'Dense-16H1-16H2'
+  tests: ['EulerNoisy', 'Hybrid Dense-6IN-16H1-16H2-5OUT-0', 'Hybrid Dense-6IN-32H1-32H2-5OUT-0',  'Hybrid GRU-6IN-32H1-32H2-5OUT-2', 'Hybrid GRU-6IN-32H1-32H2-5OUT-1']  # May be 'Euler', Euler-predictor, 'Hybrid, 'Hybrid_diff', name of network or None = 'Dense-16H1-16H2'
   TEST_FILE: 'Experiment-1.csv'
   features: ['angle',
      'angleD',
@@ -9,7 +9,7 @@ testing:
      'positionD',
      ]
   control_inputs: ['Q']   # Indicates which inputs to network are control_input, TODO: Not sure how it would work with multiple inputs
-  PATH_TO_NN: './SI_Toolkit_ASF/Experiments/Physical-Experiment-Augmented/Models/'  # Path where the neural network models are stored
+  PATH_TO_NN: './SI_Toolkit_ASF/Experiments/Physical-Experiment-Augmented/Models/'  # Path where the neural network models are stored './SI_Toolkit_ASF/Experiments/Physical-Experiment-Augmented-diff/Models/'
   PATH_TO_TEST_FILE: './SI_Toolkit_ASF/Experiments/Physical-Experiment-Augmented/Recordings/Test/'
   TEST_LEN: 'max'
   MAX_HORIZON: 50  # Indicates prediction horizon for testing

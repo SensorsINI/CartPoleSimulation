@@ -3,7 +3,7 @@ import tensorflow as tf
 from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, CONTROL_INDICES, create_cartpole_state
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
-from CartPole.cartpole_tf import cartpole_fine_integration_tf, Q2u_tf
+from CartPole.cartpole_tf import cartpole_fine_integration_tf_simplified, Q2u_tf
 from CartPole.cartpole_model import L
 
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
@@ -16,7 +16,7 @@ STATE_INDICES_TF = tf.lookup.StaticHashTable(
 )
 
 
-class next_state_predictor_ODE_tf():
+class next_state_predictor_noisy():
 
     def __init__(self, dt, intermediate_steps):
         self.s = tf.convert_to_tensor(create_cartpole_state())
@@ -43,7 +43,7 @@ class next_state_predictor_ODE_tf():
 
         (
             s_next
-        ) = cartpole_fine_integration_tf(
+        ) = cartpole_fine_integration_tf_simplified(
             s,
             u=u,
             t_step=self.t_step,

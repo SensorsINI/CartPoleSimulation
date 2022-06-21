@@ -5,8 +5,8 @@ controller:
     mpc_horizon: 1.0                      # sec
     num_rollouts: 2000                      # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
+    predictor_type: "Euler"               # One of ["Euler", "NeuralNet", "Hybrid"]
+    NET_NAME: './SI_Toolkit_ASF/Experiments/SmallDataSet-Augmented/Models/GRU-6IN-32H1-32H2-5OUT-2'  # Applies only if predictor_type is NeuralNet
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01

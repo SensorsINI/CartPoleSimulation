@@ -1,5 +1,5 @@
 import tensorflow as tf
-from CartPole.cartpole_model import _cartpole_ode, euler_step, edge_bounce, cartpole_ode, edge_bounce_wrapper, cartpole_integration
+from CartPole.cartpole_model import _cartpole_ode, _cartpole_ode_simplified, euler_step, edge_bounce, cartpole_ode, edge_bounce_wrapper, cartpole_integration
 from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, STATE_INDICES
 
 from others.p_globals import (
@@ -102,6 +102,51 @@ def cartpole_fine_integration_tf(s, u, t_step, intermediate_steps,
     (
         angle, angleD, position, positionD, angle_cos, angle_sin
     ) = _cartpole_fine_integration_tf(
+        angle=s[..., ANGLE_IDX],
+        angleD=s[..., ANGLED_IDX],
+        angle_cos=s[..., ANGLE_COS_IDX],
+        angle_sin=s[..., ANGLE_SIN_IDX],
+        position=s[..., POSITION_IDX],
+        positionD=s[..., POSITIOND_IDX],
+        u=u,
+        t_step=t_step,
+        intermediate_steps=intermediate_steps,
+        L=L,
+        k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric
+    )
+
+    ### TODO: This is ugly! But I don't know how to resolve it...
+    s_next = tf.transpose(tf.stack([angle, angleD, angle_cos, angle_sin, position, positionD]))
+    return s_next
+
+def _cartpole_fine_integration_t_simplified(angle, angleD, angle_cos, angle_sin, position, positionD, u, t_step, intermediate_steps,
+                              k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+    for _ in tf.range(intermediate_steps):
+        # Find second derivative for CURRENT "k" step (same as in input).
+        # State and u in input are from the same timestep, output is belongs also to THE same timestep ("k")
+        angleDD, positionDD = _cartpole_ode_simplified(angle_cos, angle_sin, angleD, positionD, u,
+                                                  k, M, m, g, J_fric, M_fric, L)
+
+        # Find NEXT "k+1" state [angle, angleD, position, positionD]
+        angle, angleD, position, positionD = cartpole_integration(angle, angleD, angleDD, position, positionD,
+                                                                  positionDD, t_step, )
+
+        # The edge bounce calculation seems to be too much for a GPU to tackle
+        # angle_cos = tf.cos(angle)
+        # angle, angleD, position, positionD = edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L)
+
+        angle_cos = tf.cos(angle)
+        angle_sin = tf.sin(angle)
+
+        angle = wrap_angle_rad(angle_sin, angle_cos)
+
+    return angle, angleD, position, positionD, angle_cos, angle_sin
+
+def cartpole_fine_integration_tf_simplified(s, u, t_step, intermediate_steps,
+                              k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+    (
+        angle, angleD, position, positionD, angle_cos, angle_sin
+    ) = _cartpole_fine_integration_t_simplified(
         angle=s[..., ANGLE_IDX],
         angleD=s[..., ANGLED_IDX],
         angle_cos=s[..., ANGLE_COS_IDX],

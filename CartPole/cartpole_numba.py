@@ -3,6 +3,7 @@ import numpy as np
 from CartPole.cartpole_model import _cartpole_ode, euler_step, edge_bounce
 from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad_inplace
+from numpy.random import default_rng
 
 from others.p_globals import (
     k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
@@ -64,6 +65,52 @@ def cartpole_fine_integration_numba(angle, angleD, angle_cos, angle_sin, positio
 
         angle_cos = np.cos(angle)
         angle_sin = np.sin(angle)
+
+    return angle, angleD, position, positionD, angle_cos, angle_sin
+
+
+def cartpole_rough_integration_numba(angle, angleD, angle_cos, angle_sin, position, positionD, u, t_step,
+                                     intermediate_steps,
+                                     k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+    rng = default_rng()
+    k_noisy = k * rng.normal(loc=1.0, scale=0.05)
+    M_noisy = M * rng.normal(loc=1.0, scale=0.05)
+    m_noisy = m * rng.normal(loc=1.0, scale=0.05)
+    g_noisy = g * rng.normal(loc=1.0, scale=0.05)
+    J_fric_noisy = J_fric * rng.normal(loc=1.0, scale=0.05)
+    M_fric_noisy = M_fric * rng.normal(loc=1.0, scale=0.05)
+    L_noisy = L * rng.normal(loc=1.0, scale=0.05)
+    angle *= rng.normal(loc=1.0, scale=0.05)
+    angleD *= rng.normal(loc=1.0, scale=0.05)
+    angle_cos = np.cos(angle)
+    angle_sin = np.sin(angle)
+    position *= rng.normal(loc=1.0, scale=0.05)
+    positionD *= rng.normal(loc=1.0, scale=0.05)
+    u *= rng.normal(loc=1.0, scale=0.05)
+
+    for _ in range(intermediate_steps):
+        # Find second derivative for CURRENT "k" step (same as in input).
+        # State and u in input are from the same timestep, output is belongs also to THE same timestep ("k")
+        angleDD, positionDD = _cartpole_ode_numba(angle_cos, angle_sin, angleD, positionD, u,
+                                                  k_noisy, M_noisy, m_noisy, g_noisy, J_fric_noisy, M_fric_noisy,
+                                                  L_noisy)
+
+        # Find NEXT "k+1" state [angle, angleD, position, positionD]
+        angle, angleD, position, positionD = cartpole_integration_numba(angle, angleD, angleDD, position, positionD,
+                                                                        positionDD, t_step, )
+
+        angle_cos = np.cos(angle)
+        angle, angleD, position, positionD = edge_bounce_wrapper_numba(angle, angle_cos, angleD, position, positionD,
+                                                                       t_step, L)
+
+        wrap_angle_rad_inplace_numba(angle)
+
+        angle *= rng.normal(loc=1.0, scale=0.05)
+        angleD *= rng.normal(loc=1.0, scale=0.05)
+        angle_cos = np.cos(angle)
+        angle_sin = np.sin(angle)
+        position *= rng.normal(loc=1.0, scale=0.05)
+        positionD *= rng.normal(loc=1.0, scale=0.05)
 
     return angle, angleD, position, positionD, angle_cos, angle_sin
 
