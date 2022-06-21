@@ -18,14 +18,19 @@ STATE_INDICES_TF = tf.lookup.StaticHashTable(
 
 class next_state_predictor_ODE_tf():
 
-    def __init__(self, dt, intermediate_steps):
+    def __init__(self, dt, intermediate_steps, disable_individual_compilation=False):
         self.s = tf.convert_to_tensor(create_cartpole_state())
 
         self.intermediate_steps = tf.convert_to_tensor(intermediate_steps, dtype=tf.int32)
         self.t_step = tf.convert_to_tensor(dt / float(self.intermediate_steps), dtype=tf.float32)
 
-    @tf.function(experimental_compile=True)
-    def step(self, s, Q, params):
+        if disable_individual_compilation:
+            self.step = self._step
+        else:
+            self.step = Compile(self._step)
+
+
+    def _step(self, s, Q, params):
 
         # assers does not work with Compile, but left here for information
         # assert Q.shape[0] == s.shape[0]
@@ -55,47 +60,44 @@ class next_state_predictor_ODE_tf():
 
 
 class predictor_output_augmentation_tf:
-    def __init__(self, net_info):
-        self.net_output_indices = {key: value for value, key in enumerate(net_info.outputs)}
+    def __init__(self, net_info, disable_individual_compilation=False, differential_network=False):
+
+        self.differential_network = differential_network
+        if differential_network:
+            DIFF_NET_STATE_VARIABLES = [x[2:] for x in net_info.outputs]
+            outputs = DIFF_NET_STATE_VARIABLES
+        else:
+            outputs = net_info.outputs
+
+        self.net_output_indices = {key: value for value, key in enumerate(outputs)}
         indices_augmentation = []
         features_augmentation = []
-        if 'diff' in net_info.outputs[0]:
-            if 'angle_diff' not in net_info.outputs:
-                indices_augmentation.append(STATE_INDICES['angle'])
-                features_augmentation.append('angle')
-            if 'angle_sin_diff' not in net_info.outputs and 'angle_diff' in net_info.outputs:
-                indices_augmentation.append(STATE_INDICES['angle_sin'])
-                features_augmentation.append('angle_sin')
-            if 'angle_cos_diff' not in net_info.outputs and 'angle_diff' in net_info.outputs:
-                indices_augmentation.append(STATE_INDICES['angle_cos'])
-                features_augmentation.append('angle_cos')
 
-            if 'angle_diff' in net_info.outputs:
-                self.index_angle = tf.convert_to_tensor(self.net_output_indices['angle_diff'])
-            if 'angle_sin_diff' in net_info.outputs:
-                self.index_angle_sin = tf.convert_to_tensor(self.net_output_indices['angle_sin_diff'])
-            if 'angle_cos_diff' in net_info.outputs:
-                self.index_angle_cos = tf.convert_to_tensor(self.net_output_indices['angle_cos_diff'])
-        else:
-            if 'angle' not in net_info.outputs:
-                indices_augmentation.append(STATE_INDICES['angle'])
-                features_augmentation.append('angle')
-            if 'angle_sin' not in net_info.outputs and 'angle' in net_info.outputs:
-                indices_augmentation.append(STATE_INDICES['angle_sin'])
-                features_augmentation.append('angle_sin')
-            if 'angle_cos' not in net_info.outputs and 'angle' in net_info.outputs:
-                indices_augmentation.append(STATE_INDICES['angle_cos'])
-                features_augmentation.append('angle_cos')
+        if 'angle' not in outputs:
+            indices_augmentation.append(STATE_INDICES['angle'])
+            features_augmentation.append('angle')
+        if 'angle_sin' not in outputs and 'angle' in outputs:
+            indices_augmentation.append(STATE_INDICES['angle_sin'])
+            features_augmentation.append('angle_sin')
+        if 'angle_cos' not in outputs and 'angle' in outputs:
+            indices_augmentation.append(STATE_INDICES['angle_cos'])
+            features_augmentation.append('angle_cos')
 
-            if 'angle' in net_info.outputs:
-                self.index_angle = tf.convert_to_tensor(self.net_output_indices['angle'])
-            if 'angle_sin' in net_info.outputs:
-                self.index_angle_sin = tf.convert_to_tensor(self.net_output_indices['angle_sin'])
-            if 'angle_cos' in net_info.outputs:
-                self.index_angle_cos = tf.convert_to_tensor(self.net_output_indices['angle_cos'])
         self.indices_augmentation = indices_augmentation
         self.features_augmentation = features_augmentation
         self.augmentation_len = len(self.indices_augmentation)
+
+        if 'angle' in outputs:
+            self.index_angle = tf.convert_to_tensor(self.net_output_indices['angle'])
+        if 'angle_sin' in outputs:
+            self.index_angle_sin = tf.convert_to_tensor(self.net_output_indices['angle_sin'])
+        if 'angle_cos' in outputs:
+            self.index_angle_cos = tf.convert_to_tensor(self.net_output_indices['angle_cos'])
+
+        if disable_individual_compilation:
+            self.augment = self._augment
+        else:
+            self.augment = Compile(self._augment)
 
     def get_indices_augmentation(self):
         return self.indices_augmentation
@@ -103,25 +105,23 @@ class predictor_output_augmentation_tf:
     def get_features_augmentation(self):
         return self.features_augmentation
 
-    @tf.function(experimental_compile=True)
-    def augment(self, net_output):
+    def _augment(self, net_output):
 
-        output = net_output
+        output = net_output  # [batch_size, time_steps, features]
         if 'angle' in self.features_augmentation:
-            angle = \
-                tf.math.atan2(
+            angle = tf.math.atan2(
                     net_output[..., self.index_angle_sin],
-                    net_output[..., self.index_angle_cos])[:, :, tf.newaxis]
+                    net_output[..., self.index_angle_cos])[:, :, tf.newaxis]  # tf.math.atan2 removes the features (last) dimension, so it is added back with [:, :, tf.newaxis]
             output = tf.concat([output, angle], axis=-1)
 
         if 'angle_sin' in self.features_augmentation:
             angle_sin = \
-                tf.sin(net_output[..., self.index_angle])
+                tf.sin(net_output[..., self.index_angle])[:, :, tf.newaxis]
             output = tf.concat([output, angle_sin], axis=-1)
 
         if 'angle_cos' in self.features_augmentation:
             angle_cos = \
-                tf.cos(net_output[..., self.index_angle])
+                tf.cos(net_output[..., self.index_angle])[:, :, tf.newaxis]
             output = tf.concat([output, angle_cos], axis=-1)
 
         return output

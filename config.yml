@@ -1,6 +1,8 @@
 controller:
+  general:
+    cost_function: 'default' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
   mppi:
-    SEED: 1897                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
+    SEED: "None"                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 2000                      # Number of Monte Carlo samples
@@ -17,12 +19,16 @@ controller:
     control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
+    LBD_mc: 10.0
     NU: 1000.0                            # Exploration variance
-    SQRTRHOINV: 0.01                      # Sampling variance
+    NU_mc: 20.0                              # Exploration variance for mathematical correct version
+    SQRTRHOINV: [0.02]
+    SQRTRHOINV_mc: [0.002]                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
-    LOGGING: True                        # Collect and show detailed insights into the controller's behavior
+    LOGGING: False                        # Collect and show detailed insights into the controller's behavior
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
+    CLIP_CONTROL_INPUT: [1.0]            # How to clip control input, symmetric
   custom_mpc_scipy:
     DT: 0.1
     # method: 'L-BFGS-B'
