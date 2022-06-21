@@ -18,6 +18,7 @@ import yaml
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
+from SI_Toolkit.Predictors.predictor_hybrid import predictor_hybrid
 
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
@@ -59,14 +60,11 @@ else:
     clip_control_input_low = -clip_control_input_high
 
 #create predictor
-predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
+predictor = predictor_ODE_tf(horizon=mppi_samples, dt=dt, intermediate_steps=10)
 
 """Define Predictor"""
 if predictor_type == "EulerTF":
     predictor = predictor_ODE_tf(horizon=mppi_samples, dt=dt, intermediate_steps=10, disable_individual_compilation=True)
-    predictor_single_trajectory = predictor
-elif predictor_type == "Euler":
-    predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
     predictor_single_trajectory = predictor
 elif predictor_type == "NeuralNet":
     predictor = predictor_autoregressive_tf(
@@ -74,6 +72,13 @@ elif predictor_type == "NeuralNet":
     )
     predictor_single_trajectory = predictor_autoregressive_tf(
         horizon=mppi_samples, batch_size=1, net_name=NET_NAME, disable_individual_compilation=True
+    )
+elif predictor_type == "Hybrid":
+    predictor = predictor_hybrid(
+        horizon=mppi_samples, dt=dt, intermediate_steps=10, batch_size=num_rollouts, net_name=NET_NAME
+    )
+    predictor_single_trajectory = predictor_hybrid(
+        horizon=mppi_samples, dt=dt, intermediate_steps=10, batch_size=num_rollouts, net_name=NET_NAME
     )
 
 GET_ROLLOUTS_FROM_MPPI = False
