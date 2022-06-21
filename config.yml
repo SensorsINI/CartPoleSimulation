@@ -6,20 +6,20 @@ controller:
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     cem_outer_it: 5                    #how many outer iterations to use
-    cem_rollouts: 100          #how many rollouts per outer cem iteration
+    cem_rollouts: 80          #how many rollouts per outer cem iteration
     cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
     cem_stdev_min: 0.1
     cem_R: 1
     cem_ccrc_weight: 1
-    cem_best_k: 5
+    cem_best_k: 4
     cem_LR: 0.1
   cem-naive-grad:
     SEED: "None"
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
-    cem_outer_it: 5                    #how many outer iterations to use
-    cem_rollouts: 80          #how many rollouts per outer cem iteration
+    cem_outer_it: 10                    #how many outer iterations to use
+    cem_rollouts: 40          #how many rollouts per outer cem iteration
     cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
     cem_stdev_min: 0.05
@@ -27,7 +27,7 @@ controller:
     cem_ccrc_weight: 1
     cem_best_k: 4
     cem_LR: 0.001
-    gradmax_clip: 10
+    gradmax_clip: 100
   mppi-optimize:
     SEED: "None"
     LR: 0.002
@@ -69,22 +69,22 @@ controller:
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  #DOES NOT WORK YET!!! Applies only if predictor_type is NeuralNet
     resamp_per: 1
     sample_stdev: 0.5
-    LR: 0.0002
-    adam_beta_1: 0.9    #default: 0.9
-    adam_beta_2: 0.999 #default: 0.999
+    LR: 0.002
+    adam_beta_1: 0.4    #default: 0.9
+    adam_beta_2: 0.8 #default: 0.999
     adam_epsilon: 1e-07 #default: 1e-07
     opt_keep_k: 5
     num_rollouts: 20
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
     warmup: True
     interpolation_step: 10
-    outer_its: 200
-    gradmax_clip: 1000
+    outer_its: 20
+    gradmax_clip: 250
   mppi:
     SEED: "None"                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
-    num_rollouts: 2000                      # Number of Monte Carlo samples
+    num_rollouts: 3500                      # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet

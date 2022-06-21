@@ -76,6 +76,16 @@ def q(s,u,target_position, u_prev):
     stage_cost = dd+ep+cc+ccrc
     return stage_cost
 
+def q_debug(s,u,target_position, u_prev):
+    dd = dd_weight * distance_difference_cost(
+        s[:, :, POSITION_IDX], target_position
+    )
+    ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX])
+    cc = cc_weight * CC_cost(u)
+    ccrc = ccrc_weight * control_change_rate_cost(u,u_prev)
+    stage_cost = dd+ep+cc+ccrc
+    return stage_cost, dd, ep, cc, ccrc
+
 #total cost of the trajectory
 def cost(s_hor ,u,target_position,u_prev):
     stage_cost = q(s_hor[:,1:,:],u,target_position,u_prev)

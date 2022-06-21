@@ -32,7 +32,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     rng_data_generator = Generator(SFC64(seed))
 
-    Expname = 'Exp-dist-adam-resamp2-swingup-nn-R'
+    Expname = 'Exp-cem-naive-grad-swingup-nn-D'
     #csv = './adaptive_test/Experiment.csv'
     if record_path is None:
         record_path = config_CartPole["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
@@ -63,7 +63,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     length_of_experiment_DataGen = 7
 
     ### Controller which should be used in generated experiment:
-    controller_DataGen = 'dist-adam-resamp2'
+    controller_DataGen = 'cem-naive-grad-tf'
     # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
 
     ### Setup directory with data for exp

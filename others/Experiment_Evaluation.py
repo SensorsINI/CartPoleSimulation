@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import sys
 from others.cost_functions.quadratic_boundary_grad import q as stage_cost #use correct stage cost here, probably need to slightly adjust cost in controller
-
+from others.cost_functions.quadratic_boundary_grad import q_debug as stage_cost
 # from PyQt5.QtCore import *
 # from PyQt5.QtGui import *
 # from PyQt5.QtWidgets import *
@@ -22,8 +22,8 @@ def runnig_avg(costs, horizon):
 
 
 def swingup_time_calc(S, target_pos, TrackHalfLength):
-    invalid = tf.cast((tf.abs(S[..., ANGLE_IDX]) > 0.34) \
-                      | (tf.abs(S[..., POSITION_IDX] - target_pos) > 1.0 * TrackHalfLength), tf.float32)
+    invalid = tf.cast((tf.abs(S[..., ANGLE_IDX]) > 20*np.pi/180) \
+                      | (tf.abs(S[..., POSITION_IDX] - target_pos) > 0.15 * TrackHalfLength), tf.float32)
     swingup_test = tf.cumsum(invalid, axis=1, reverse=True).numpy()
     violation = np.argwhere(np.flip(swingup_test, axis=1) == 1)
     _, last_ind = np.unique(violation[:, 0], return_index=True)
@@ -73,9 +73,12 @@ def data_idx(list):
 
 
 # %% extract all data from all experiments
-Expname = 'Exp-dist-adam-resamp2-swingup-nn-Q'
+Expname = 'Exp-cem-naive-grad-swingup-nn-D'
 isSwingup = True
-
+clipExpNum = True
+ExpClipNum = 20
+CherryPick = False
+CherryPickNum = 12
 
 path = 'Experiment_Recordings/'+Expname+'*.csv'
 savepath = 'Experiment_Setups/'+Expname+'/'
@@ -105,7 +108,10 @@ for experiment in all_data:
     if len(experiment) < exp_tick_length:
         all_data.remove(experiment)
 print("{} experiments usable".format(len(all_data)))
-all_data = all_data[0:20]
+if clipExpNum:
+    all_data = all_data[0:ExpClipNum]
+if CherryPick:
+    all_data = all_data[CherryPickNum:CherryPickNum+1]
 
 #%%
 beginning = re.compile('#.*:\s*')
@@ -157,7 +163,9 @@ S = tf.constant(S, dtype=tf.float32)
 num_rol = all_data.shape[0]
 
 #%%
-costs = stage_cost(S, Q, target_pos, Q[0, 0])
+costs, dd_cost, ep_cost, cc_cost, ccrc_cost = stage_cost(S, Q, target_pos, Q[0, 0])
+
+
 
 #%%evaluation
 """ ***********************************
@@ -167,6 +175,10 @@ costs = stage_cost(S, Q, target_pos, Q[0, 0])
 
 ravg = runnig_avg(costs, 20)
 avg_cost = tf.math.reduce_mean(costs)
+avg_dd = tf.math.reduce_mean(dd_cost)
+avg_ep = tf.math.reduce_mean(ep_cost)
+avg_cc = tf.math.reduce_mean(cc_cost)
+avg_ccrc = tf.math.reduce_mean(ccrc_cost)
 avg_cost_per = tf.math.reduce_mean(costs, axis = 1)
 print(avg_cost.numpy())
 
@@ -187,6 +199,7 @@ if isSwingup:
     plt.axvline(x=swingup_mean, color='r')
     plt.xticks(bins)
     plt.savefig(savepath + 'swingup_times.png', bbox_inches='tight', dpi=200)
+    print("Mean swingup time: {}".format(swingup_mean))
 
 #%%
 figHist1, axHist1 = plt.subplots(1,1, num='running cost', figsize = (16,12))
@@ -274,6 +287,8 @@ ax61.set_ylabel('Position (m)')
 #plt.title('Positions')
 plt.axhline(y = exp_info[TrackHalfLength_idx], color = 'r')
 plt.axhline(y = -exp_info[TrackHalfLength_idx], color = 'r')
+plt.axhline(y = 0.15 * TrackHalfLength, color = 'darkorange')
+plt.axhline(y = -0.15 * TrackHalfLength, color = 'darkorange')
 plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., position_idx],0,1))
 plt.ylim(-exp_info[TrackHalfLength_idx]*paf, exp_info[TrackHalfLength_idx]*paf)
 
@@ -282,10 +297,10 @@ ax62.set_ylabel('Angle (deg)')
 ax62.set_xlabel('Time (s)')
 # plt.title('Angles')
 plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., angle_idx],0,1)*180/np.pi)
-plt.axhline(y = 20, color = 'r')
-plt.axhline(y = -20, color = 'r')
+plt.axhline(y = 20, color = 'darkorange')
+plt.axhline(y = -20, color = 'darkorange')
 plt.ylim(-np.pi*paf, np.pi*paf)
-plt.yticks([-180, -90, -20, 0, 20, 90, 180])
+plt.yticks([-180, -90, 0, 90, 180])
 plt.savefig(savepath+'rapport1.svg', bbox_inches='tight',dpi = 200)
 
 
@@ -296,6 +311,7 @@ ax71.set_ylabel('Position (m)')
 #plt.title('Positions')
 plt.axhline(y = exp_info[TrackHalfLength_idx], color = 'r')
 plt.axhline(y = -exp_info[TrackHalfLength_idx], color = 'r')
+plt.plot(all_data[0,:, time_idx], target_pos[0,:], color = "darkorange")
 plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., position_idx],0,1))
 plt.ylim(-exp_info[TrackHalfLength_idx]*paf, exp_info[TrackHalfLength_idx]*paf)
 
