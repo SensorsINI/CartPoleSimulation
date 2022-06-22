@@ -32,7 +32,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     rng_data_generator = Generator(SFC64(seed))
 
-    Expname = 'Exp-cem-naive-grad-swingup-nn-D'
+    Expname = 'Exp-mppi-tf-swingup-nn-A'
     #csv = './adaptive_test/Experiment.csv'
     if record_path is None:
         record_path = config_CartPole["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
@@ -45,7 +45,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     # User defined simulation settings
     ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
     # How many experiments will be generated
-    number_of_experiments = 20
+    number_of_experiments = 80
 
     ###### Train/Val/Test split - only matters if you run it in ML Pipeline mode
     frac_train = 0.8
@@ -63,7 +63,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     length_of_experiment_DataGen = 7
 
     ### Controller which should be used in generated experiment:
-    controller_DataGen = 'cem-naive-grad-tf'
+    controller_DataGen = 'mppi-tf'
     # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
 
     ### Setup directory with data for exp

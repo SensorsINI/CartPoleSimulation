@@ -73,12 +73,12 @@ def data_idx(list):
 
 
 # %% extract all data from all experiments
-Expname = 'Exp-cem-naive-grad-swingup-nn-D'
+Expname = 'Exp-mppi-tf-swingup-nn-A'
 isSwingup = True
 clipExpNum = True
-ExpClipNum = 20
+ExpClipNum = 100
 CherryPick = False
-CherryPickNum = 12
+CherryPickNum = 15
 
 path = 'Experiment_Recordings/'+Expname+'*.csv'
 savepath = 'Experiment_Setups/'+Expname+'/'
