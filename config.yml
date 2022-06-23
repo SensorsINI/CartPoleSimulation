@@ -5,9 +5,9 @@ controller:
     mpc_horizon: 0.7                     # sec
     num_rollouts: 3500                     # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "GP"             # One of ["Euler", "NeuralNet"]
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-1'  # Applies only if predictor_type is NeuralNet
-    GP_NAME: 'SGP_10'  # Applies only if predictor_type is GP
+    predictor_type: "Hybrid"             # One of ["Euler", "NeuralNet"]
+    NET_NAME: 'Dense-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
+    GP_NAME: 'SGP_10_R'  # Applies only if predictor_type is GP
     dd_weight: 2000.0
     ep_weight: 2200.0
     ekp_weight: 15.0

@@ -19,7 +19,7 @@ from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf_pure import predictor_ODE_tf_pure
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
 from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
-#from SI_Toolkit.Predictors.predictor_hybrid import predictor_hybrid
+from SI_Toolkit.Predictors.predictor_hybrid import predictor_hybrid
 
 #load constants from config file
 config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
