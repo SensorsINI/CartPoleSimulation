@@ -1,4 +1,5 @@
 from datetime import datetime
+from importlib import import_module
 
 import numpy as np
 import tensorflow as tf
@@ -22,11 +23,10 @@ config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 num_control_inputs = 1  # specific to a system
 
-q, phi = None, None
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
-cost_function_cmd = 'from others.cost_functions.'+cost_function+' import q, phi'
-exec(cost_function_cmd)
+cost_function_module = import_module(f"others.cost_functions.{cost_function}")
+q, phi = getattr(cost_function_module, "q"), getattr(cost_function_module, "phi")
 
 dt = config["controller"]["mppi"]["dt"]
 mppi_horizon = config["controller"]["mppi"]["mpc_horizon"]

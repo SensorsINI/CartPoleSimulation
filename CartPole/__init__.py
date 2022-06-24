@@ -10,6 +10,7 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 import csv
 # To detect the latest csv file
 import glob
+from importlib import import_module
 # Import module to interact with OS
 import os
 import traceback
@@ -880,9 +881,8 @@ class CartPole:
         else:
             controller_full_name = 'controller_' + self.controller_name.replace('-', '_')
             path_import = PATH_TO_CONTROLLERS[2:].replace('/', '.').replace(r'\\', '.')
-            import_str = 'from ' + path_import + controller_full_name + ' import ' + controller_full_name
-            exec(import_str)
-            self.controller = eval(controller_full_name + '()')
+            Controller = getattr(import_module(path_import + controller_full_name), controller_full_name)
+            self.controller = Controller()
 
         # Set the maximal allowed value of the slider - relevant only for GUI
         if self.controller_name == 'manual-stabilization':
