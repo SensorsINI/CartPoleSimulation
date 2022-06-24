@@ -55,7 +55,7 @@ class NoiseAdder:
 
         global sigma_angle, sigma_position, sigma_angleD, sigma_positionD
 
-        self.rng_noise_adder = create_rng(config["cartpole"]["SEED"])
+        self.rng_noise_adder = create_rng(self.__class__.__name__, config["cartpole"]["SEED"])
 
         self.noise_mode = NOISE_MODE
 

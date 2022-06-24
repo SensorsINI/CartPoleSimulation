@@ -14,7 +14,7 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-rng = create_rng(config["cartpole"]["SEED"])
+rng = create_rng(__name__, config["cartpole"]["SEED"])
 
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \

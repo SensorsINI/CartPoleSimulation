@@ -65,7 +65,7 @@ class controller_custom_mpc_scipy:
         self.predictor_time = []
         self.nfun = []
 
-        self.rng = create_rng(config["controller"]["custom_mpc_scipy"]["SEED"])
+        self.rng = create_rng(self.__class__.__name__, config["controller"]["custom_mpc_scipy"]["SEED"])
 
         # I do the norm and unnorm unnecessarilly!
         # You need only to scale once!

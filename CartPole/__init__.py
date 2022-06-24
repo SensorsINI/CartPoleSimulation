@@ -78,7 +78,7 @@ PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_R
 class CartPole:
 
     def __init__(self, initial_state=s0, path_to_experiment_recordings=None):
-        self.rng_CartPole = create_rng(config["cartpole"]["SEED"])
+        self.rng_CartPole = create_rng(self.__class__.__name__, config["cartpole"]["SEED"])
 
         if path_to_experiment_recordings is None:
             self.path_to_experiment_recordings = PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT

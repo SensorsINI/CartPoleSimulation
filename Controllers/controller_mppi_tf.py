@@ -121,7 +121,7 @@ def inizialize_pertubation(random_gen, stdev = SQRTRHODTINV, sampling_type = SAM
 class controller_mppi_tf(template_controller):
     def __init__(self):
         #First configure random sampler
-        self.rng_cem = create_rng(config["controller"]["mppi"]["SEED"], use_tf=True)
+        self.rng_cem = create_rng(self.__class__.__name__, config["controller"]["mppi"]["SEED"], use_tf=True)
 
         self.u_nom = tf.zeros([1, mppi_samples, num_control_inputs], dtype=tf.float32)
         self.u = tf.convert_to_tensor([0.0], dtype=tf.float32)

@@ -104,7 +104,7 @@ class controller_do_mpc(template_controller):
         # self.mpc.set_param(nlpsol_opts={'ipopt.linear_solver': 'mumps'})
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'MA57'})
 
-        self.rng = create_rng(config["controller"]["do_mpc"]["SEED"])
+        self.rng = create_rng(self.__class__.__name__, config["controller"]["do_mpc"]["SEED"])
         # # Standard version
         lterm = (
                 l_angle * (1+p_angle*self.rng.uniform(-1.0, 1.0)) * self.model.aux['cost_angle']

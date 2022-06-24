@@ -29,7 +29,7 @@ controlBias = tf.convert_to_tensor(controlBias)
 TrackHalfLength = tf.convert_to_tensor(TrackHalfLength)
 
 
-rng = create_rng(config["cartpole"]["SEED"])
+rng = create_rng(__name__, config["cartpole"]["SEED"])
 
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \

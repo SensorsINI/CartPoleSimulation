@@ -353,8 +353,8 @@ class controller_mppi(template_controller):
 
         """Random number generator"""
         SEED = config["controller"]["mppi"]["SEED"]
-        self.rng_mppi = create_rng(SEED)
-        self.rng_mppi_rnn = create_rng(SEED if SEED=="None" else SEED*2) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
+        self.rng_mppi = create_rng(self.__class__.__name__, SEED)
+        self.rng_mppi_rnn = create_rng(self.__class__.__name__, SEED if SEED=="None" else SEED*2) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
 
 
         global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
