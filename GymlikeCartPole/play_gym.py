@@ -13,6 +13,6 @@ while not done:
     env.render()
     sleep(0.01)
     action = controller.step(state, target)
-    # action = env.action_space.sample()
-    state, target, reward, done, _ = env.step(action)  # take a random action
+    # action = env.action_space.sample()  # take a random action
+    state, target, reward, done, _ = env.step(action)
 env.close()

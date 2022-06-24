@@ -40,7 +40,8 @@ class controller_lqr(template_controller):
         """
         # ref Bertsekas, p.151
 
-        self.rng_lqr = create_rng(config["controller"]["lqr"]["SEED"]*2)
+        SEED = config["controller"]["lqr"]["SEED"]
+        self.rng_lqr = create_rng(SEED if SEED=="None" else SEED*2)
 
         # Calculate Jacobian around equilibrium
         # Set point around which the Jacobian should be linearized
