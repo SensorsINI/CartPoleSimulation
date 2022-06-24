@@ -1,15 +1,16 @@
 """do-mpc controller"""
 
-import do_mpc
-import numpy as np
-
-from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import Q2u, cartpole_ode_namespace
-from CartPole.state_utilities import cartpole_state_vector_to_namespace
-
 from types import SimpleNamespace
 
+import do_mpc
+import numpy as np
 import yaml
+from CartPole.cartpole_model import Q2u, cartpole_ode_namespace
+from CartPole.state_utilities import cartpole_state_vector_to_namespace
+from others.globals_and_utils import create_rng
+
+from Controllers.template_controller import template_controller
+
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 dt_mpc_simulation = config["controller"]["do_mpc"]["dt_mpc_simulation"]
@@ -34,6 +35,7 @@ l_angle /= w_sum
 l_position /= w_sum
 l_positionD /= w_sum
 
+rng = create_rng(config["controller"]["do_mpc"]["SEED"])
 
 class controller_do_mpc(template_controller):
     def __init__(self,
@@ -107,9 +109,9 @@ class controller_do_mpc(template_controller):
 
         # # Standard version
         lterm = (
-                l_angle * (1+p_angle*np.random.uniform(-1.0, 1.0)) * self.model.aux['cost_angle']
-                + l_position * (1+p_position*np.random.uniform(-1.0, 1.0)) * cost_position
-                + l_positionD * (1+p_positionD*np.random.uniform(-1.0, 1.0)) * self.model.aux['cost_positionD']
+                l_angle * (1+p_angle*rng.uniform(-1.0, 1.0)) * self.model.aux['cost_angle']
+                + l_position * (1+p_position*rng.uniform(-1.0, 1.0)) * cost_position
+                + l_positionD * (1+p_positionD*rng.uniform(-1.0, 1.0)) * self.model.aux['cost_positionD']
                  )
         # mterm = 400.0 * self.model.aux['E_kin_cart']
         mterm = 0.0 * self.model.aux['cost_positionD']
@@ -170,4 +172,4 @@ class controller_do_mpc(template_controller):
 
         Q = self.mpc.make_step(self.x0)
 
-        return Q.item()*(1+p_Q*np.random.uniform(-1.0, 1.0))
+        return Q.item()*(1+p_Q*rng.uniform(-1.0, 1.0))

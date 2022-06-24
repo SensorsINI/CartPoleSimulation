@@ -3,17 +3,17 @@ This is a linear-quadratic regulator
 It assumes that the input relation is u = Q*u_max (no fancy motor model) !
 """
 
-import scipy
 import numpy as np
-from numpy.random import SFC64, Generator
-from datetime import datetime
+import scipy
+import yaml
+from CartPole.cartpole_jacobian import cartpole_jacobian
+from CartPole.cartpole_model import s0, u_max
+from CartPole.state_utilities import (ANGLE_IDX, ANGLED_IDX, POSITION_IDX,
+                                      POSITIOND_IDX)
+from others.globals_and_utils import create_rng
 
 from Controllers.template_controller import template_controller
-from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
-from CartPole.cartpole_model import u_max, s0
-from CartPole.cartpole_jacobian import cartpole_jacobian
 
-import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 Q = np.diag(config["controller"]["lqr"]["Q"])
 R = config["controller"]["lqr"]["R"]
@@ -40,11 +40,7 @@ class controller_lqr(template_controller):
         """
         # ref Bertsekas, p.151
 
-        SEED = config["controller"]["lqr"]["SEED"]
-        if SEED == "None":
-            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
-        self.rng_lqr = Generator(SFC64(SEED))
-        self.rng_lqr = Generator(SFC64(SEED*2))
+        self.rng_lqr = create_rng(config["controller"]["lqr"]["SEED"]*2)
 
         # Calculate Jacobian around equilibrium
         # Set point around which the Jacobian should be linearized

@@ -1,25 +1,21 @@
-import scipy
-import numpy as np
-from numpy.random import SFC64, Generator
 from datetime import datetime
-from numba import jit, prange
+
+import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-
-from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import TrackHalfLength
-
-from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
-from CartPole.cartpole_model import u_max, s0
-from CartPole.cartpole_jacobian import cartpole_jacobian
-
 import yaml
-
+from CartPole.cartpole_model import TrackHalfLength, s0, u_max
+from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
+                                      ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
+                                      create_cartpole_state)
+from others.globals_and_utils import create_rng
+from SI_Toolkit.Predictors.predictor_autoregressive_tf import \
+    predictor_autoregressive_tf
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
-from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
-
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
+
+from Controllers.template_controller import template_controller
 
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
@@ -125,10 +121,7 @@ def inizialize_pertubation(random_gen, stdev = SQRTRHODTINV, sampling_type = SAM
 class controller_mppi_tf(template_controller):
     def __init__(self):
         #First configure random sampler
-        SEED = config["controller"]["mppi"]["SEED"]
-        if SEED == "None":
-            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)
-        self.rng_cem = tf.random.Generator.from_seed(SEED)
+        self.rng_cem = create_rng(config["controller"]["mppi"]["SEED"], use_tf=True)
 
         self.u_nom = tf.zeros([1, mppi_samples, num_control_inputs], dtype=tf.float32)
         self.u = tf.convert_to_tensor([0.0], dtype=tf.float32)

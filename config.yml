@@ -21,15 +21,16 @@ controller:
     LBD: 100.0                            # Cost parameter lambda
     LBD_mc: 10.0
     NU: 1000.0                            # Exploration variance
-    NU_mc: 20.0                              # Exploration variance for mathematical correct version
+    NU_mc: 20.0                           # Exploration variance for mathematical correct version
     SQRTRHOINV: [0.02]
-    SQRTRHOINV_mc: [0.002]                      # Sampling variance
+    SQRTRHOINV_mc: [0.002]                # Sampling variance
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     LOGGING: False                        # Collect and show detailed insights into the controller's behavior
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
-    CLIP_CONTROL_INPUT: [1.0]            # How to clip control input, symmetric
+    CLIP_CONTROL_INPUT: [1.0]             # How to clip control input, symmetric
   custom_mpc_scipy:
+    SEED: "None"
     DT: 0.1
     # method: 'L-BFGS-B'
     method: 'SLSQP'
@@ -50,6 +51,7 @@ controller:
     dt_mpc_simulation: 0.02  # s
     mpc_horizon: 50
   do_mpc:
+    SEED: "None"
     dt_mpc_simulation: 0.02  # s
     mpc_horizon: 50
     # Perturbation factors:
@@ -64,9 +66,9 @@ controller:
     l_position: 1.0
     l_positionD: 0.1
   lqr:
+    SEED: "None"  # Seed for rng, for lqr only, put "None" to set random seed (do it when you generate data for training!)
     Q: [10.0, 1.0, 1.0, 1.0]
     R: 10.0
-    SEED: 'None'                            # Seed for rng, for lqr only, put "None" to set random seed (do it when you generate data for training!)
     control_noise: 1.0
   pid:
     P_angle: 9.0
@@ -105,6 +107,3 @@ cartpole:
     sigma_position: 0.001
     sigma_angleD: 0.15 # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
     sigma_positionD: 0.01
-
-data_generator:
-  SEED: 1  # If "None" random seed based on datetime is used

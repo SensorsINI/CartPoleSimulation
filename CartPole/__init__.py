@@ -6,58 +6,60 @@ You can find here methods with performing experiment, saving data, displaying Ca
 and many more. To run it needs some "environment": we provide you with GUI and data_generator
 @author: Marcin
 """
-
-# region Imported modules
-
-from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
-from CartPole.state_utilities import ANGLED_IDX, ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX, POSITIOND_IDX, POSITION_IDX
-from CartPole.cartpole_model import Q2u, s0
-from CartPole.cartpole_numba import cartpole_ode_numba, edge_bounce_numba, cartpole_integration_numba
-from CartPole.load import get_full_paths_to_csvs, load_csv_recording
-from CartPole.latency_adder import LatencyAdder
-from CartPole.noise_adder import NoiseAdder
-from others.p_globals import P_GLOBALS
-
-from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength,
-    export_globals
-)
-
-import numpy as np
-import pandas as pd
-
-import traceback
-
 # Import module to save history of the simulation as csv file
 import csv
 # To detect the latest csv file
 import glob
 # Import module to interact with OS
 import os
+import traceback
 # Import module to get a current time and date used to name the files containing the history of simulations
 from datetime import datetime
+
+import numpy as np
+import pandas as pd
+import yaml
+from others.globals_and_utils import create_rng
+from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
+                              controlBias, controlDisturbance, export_globals,
+                              g, k, m, u_max, v_max)
 # Interpolate function to create smooth random track
 from scipy.interpolate import BPoly, interp1d
 # Run range() automatically adding progress bar in terminal
 from tqdm import trange
+
+from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
+from CartPole.cartpole_model import Q2u, s0
+from CartPole.cartpole_numba import (cartpole_integration_numba,
+                                     cartpole_ode_numba, edge_bounce_numba)
+from CartPole.latency_adder import LatencyAdder
+from CartPole.load import get_full_paths_to_csvs, load_csv_recording
+from CartPole.noise_adder import NoiseAdder
+from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
+                                      ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
+
+# region Imported modules
+
+
+
+
 try:
     # Use gitpython to get a current revision number and use it in description of experimental data
     from git import Repo
 except:
     pass
 
-from numpy.random import SFC64, Generator
-
 # check memory usage of chosen methods. Commented by default
 # from memory_profiler import profile
 
 # region Graphics imports
 import matplotlib.pyplot as plt
-from matplotlib import animation
 # rc sets global parameters for matplotlib; transforms is used to rotate the Mast
-from matplotlib import rc, transforms
+from matplotlib import animation, rc, transforms
 # Shapes used to draw a Cart and the slider
-from matplotlib.patches import Circle, FancyBboxPatch, Rectangle, FancyArrowPatch
+from matplotlib.patches import (Circle, FancyArrowPatch, FancyBboxPatch,
+                                Rectangle)
+
 # Angle convention to rotate the mast in right direction - depends on used Equation
 from CartPole.cartpole_model import ANGLE_CONVENTION
 
@@ -68,7 +70,6 @@ rc('font', **font)
 
 # endregion
 
-import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 PATH_TO_CONTROLLERS = config["cartpole"]["PATH_TO_CONTROLLERS"]
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
@@ -77,12 +78,7 @@ PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_R
 class CartPole:
 
     def __init__(self, initial_state=s0, path_to_experiment_recordings=None):
-
-        SEED = config["cartpole"]["SEED"]
-        if SEED == "None":
-            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0//2)  # Fully random
-
-        self.rng_CartPole = Generator(SFC64(SEED))
+        self.rng_CartPole = create_rng(config["cartpole"]["SEED"])
 
         if path_to_experiment_recordings is None:
             self.path_to_experiment_recordings = PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT

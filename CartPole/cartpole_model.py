@@ -1,16 +1,21 @@
 from types import SimpleNamespace
 from typing import Union
-from CartPole.state_utilities import (
-    create_cartpole_state,
-    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
-)
-
-from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
-)
 
 import numpy as np
-from numpy.random import SFC64, Generator
+import yaml
+from others.globals_and_utils import create_rng
+from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
+                              controlBias, controlDisturbance, g, k, m, u_max,
+                              v_max)
+
+from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
+                                      ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
+                                      create_cartpole_state)
+
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+
+rng = create_rng(config["cartpole"]["SEED"])
+
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
@@ -131,7 +136,7 @@ def edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L
                                                                      t_step, L)
     return angle, angleD, position, positionD
 
-rng = Generator(SFC64(123))
+
 def Q2u(Q):
     """
     Converts dimensionless motor power [-1,1] to a physical force acting on a cart.
