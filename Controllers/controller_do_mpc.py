@@ -35,7 +35,6 @@ l_angle /= w_sum
 l_position /= w_sum
 l_positionD /= w_sum
 
-rng = create_rng(config["controller"]["do_mpc"]["SEED"])
 
 class controller_do_mpc(template_controller):
     def __init__(self,
@@ -80,12 +79,10 @@ class controller_do_mpc(template_controller):
         cost_angle_sin = np.sin(s.angle)**2
         cost_angle = (s.angle/np.pi)**2
 
-
         self.model.set_expression('cost_positionD', cost_positionD)
         self.model.set_expression('cost_angleD', cost_angleD)
         self.model.set_expression('cost_angle', cost_angle)
         self.model.set_expression('cost_position', cost_position)
-
 
         self.model.setup()
 
@@ -107,11 +104,12 @@ class controller_do_mpc(template_controller):
         # self.mpc.set_param(nlpsol_opts={'ipopt.linear_solver': 'mumps'})
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'MA57'})
 
+        self.rng = create_rng(config["controller"]["do_mpc"]["SEED"])
         # # Standard version
         lterm = (
-                l_angle * (1+p_angle*rng.uniform(-1.0, 1.0)) * self.model.aux['cost_angle']
-                + l_position * (1+p_position*rng.uniform(-1.0, 1.0)) * cost_position
-                + l_positionD * (1+p_positionD*rng.uniform(-1.0, 1.0)) * self.model.aux['cost_positionD']
+                l_angle * (1+p_angle*self.rng.uniform(-1.0, 1.0)) * self.model.aux['cost_angle']
+                + l_position * (1+p_position*self.rng.uniform(-1.0, 1.0)) * cost_position
+                + l_positionD * (1+p_positionD*self.rng.uniform(-1.0, 1.0)) * self.model.aux['cost_positionD']
                  )
         # mterm = 400.0 * self.model.aux['E_kin_cart']
         mterm = 0.0 * self.model.aux['cost_positionD']
@@ -172,4 +170,4 @@ class controller_do_mpc(template_controller):
 
         Q = self.mpc.make_step(self.x0)
 
-        return Q.item()*(1+p_Q*rng.uniform(-1.0, 1.0))
+        return Q.item()*(1+p_Q*self.rng.uniform(-1.0, 1.0))

@@ -50,8 +50,6 @@ m2 /= w_sum
 m3 /= w_sum
 m4 /= w_sum
 
-rng = create_rng(config["controller"]["custom_mpc_scipy"]["SEED"])
-
 
 class controller_custom_mpc_scipy:
     def __init__(self):
@@ -67,6 +65,8 @@ class controller_custom_mpc_scipy:
         self.predictor_time = []
         self.nfun = []
 
+        self.rng = create_rng(config["controller"]["custom_mpc_scipy"]["SEED"])
+
         # I do the norm and unnorm unnecessarilly!
         # You need only to scale once!
         """
@@ -79,7 +79,7 @@ class controller_custom_mpc_scipy:
         self.target_position = 0.0
 
         self.Q_hat = np.zeros(self.horizon)  # MPC prediction of future control inputs
-        self.Q_hat0 = rng.normal(0.0, 0.1 ,self.horizon)  # initial guess for future control inputs to be predicted
+        self.Q_hat0 = self.rng.normal(0.0, 0.1 ,self.horizon)  # initial guess for future control inputs to be predicted
         self.Q_previous = 0.0
 
         self.angle_cost = lambda angle: angle ** 2
@@ -157,7 +157,7 @@ class controller_custom_mpc_scipy:
             #                                        minimizer_kwargs={ "method": method,"bounds":self.Q_bounds })
             # self.Q_hat0 = solution.x
 
-            # self.Q_hat0 = np.clip(self.Q_hat0*(1+0.01*rng.uniform(-1.0,1.0)), -1, 1)
+            # self.Q_hat0 = np.clip(self.Q_hat0*(1+0.01*self.rng.uniform(-1.0,1.0)), -1, 1)
             solution = scipy.optimize.minimize(self.cost_function, self.Q_hat0,
                                                bounds=self.Q_bounds, method=method,
                                                options={'ftol': ftol})
@@ -167,7 +167,7 @@ class controller_custom_mpc_scipy:
             # Compose new initial guess
             self.Q_previous = Q0 = self.Q_hat[0]
             # self.Q_hat0 = np.hstack((self.Q_hat[1:], self.Q_hat[-1]))
-            self.Q_hat0 = self.Q_hat + rng.normal(0.0, 0.01, self.horizon)
+            self.Q_hat0 = self.Q_hat + self.rng.normal(0.0, 0.01, self.horizon)
             # self.plot_prediction()
         else:
             Q0 = self.lqr_controller.step(s, target_position)
