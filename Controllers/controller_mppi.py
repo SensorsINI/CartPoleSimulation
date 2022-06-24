@@ -91,7 +91,7 @@ gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = gui_ccrc = np.zeros(1, dtype=np.f
 R = config["controller"]["mppi"]["R"]
 LBD = config["controller"]["mppi"]["LBD"]
 NU = config["controller"]["mppi"]["NU"]
-SQRTRHODTINV = config["controller"]["mppi"]["SQRTRHOINV"] * (1 / np.math.sqrt(dt))
+SQRTRHODTINV = float(config["controller"]["mppi"]["SQRTRHOINV"]) * (1 / np.math.sqrt(dt))
 GAMMA = config["controller"]["mppi"]["GAMMA"]
 SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
 
