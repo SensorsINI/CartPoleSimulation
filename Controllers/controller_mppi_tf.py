@@ -1,5 +1,5 @@
-from datetime import datetime
 from importlib import import_module
+from operator import attrgetter
 
 import numpy as np
 import tensorflow as tf
@@ -26,7 +26,7 @@ num_control_inputs = 1  # specific to a system
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
 cost_function_module = import_module(f"others.cost_functions.{cost_function}")
-q, phi = getattr(cost_function_module, "q"), getattr(cost_function_module, "phi")
+q, phi = attrgetter("q", "phi")(cost_function_module)
 
 dt = config["controller"]["mppi"]["dt"]
 mppi_horizon = config["controller"]["mppi"]["mpc_horizon"]
