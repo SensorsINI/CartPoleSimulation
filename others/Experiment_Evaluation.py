@@ -8,14 +8,14 @@ import glob
 import matplotlib.pyplot as plt
 import matplotlib
 import sys
-from others.cost_functions.quadratic_boundary_grad import q as stage_cost #use correct stage cost here, probably need to slightly adjust cost in controller
+# from others.cost_functions.quadratic_boundary_grad import q as stage_cost #use correct stage cost here, probably need to slightly adjust cost in controller
 from others.cost_functions.quadratic_boundary_grad import q_debug as stage_cost
 # from PyQt5.QtCore import *
 # from PyQt5.QtGui import *
 # from PyQt5.QtWidgets import *
 matplotlib.use('Qt5Agg')
 
-
+## Imports and definitions
 def runnig_avg(costs, horizon):
     filt = tf.ones([horizon, 1, 1], dtype=tf.float32)
     return tf.squeeze(tf.nn.conv1d(costs[:, :, tf.newaxis], filt, 1, 'SAME', data_format="NWC")) / filt.shape[0]
@@ -70,16 +70,19 @@ def data_idx(list):
         if ds.match(list[i][0]):
             return i
     return -1
-
-
+######################################################################################################
+"""Enter name of experiment and relevant data"""
+######################################################################################################
 # %% extract all data from all experiments
-Expname = 'Exp-mppi-tf-swingup-nn-A'
-isSwingup = True
-clipExpNum = True
-ExpClipNum = 100
-CherryPick = False
-CherryPickNum = 15
+Expname = 'Exp-mppi-tf-swingup-nn-B'
+isSwingup = True #is it a swingup experiment?
+clipExpNum = True #do you want to show all experiments or only a subset?
+ExpClipNum = 100 #how many do you want to show?
+CherryPick = True #Cherry pick a single experiment to plot?
+CherryPickNum = 15 #which one?
 
+
+#create paths and directorys
 path = 'Experiment_Recordings/'+Expname+'*.csv'
 savepath = 'Experiment_Setups/'+Expname+'/'
 os.makedirs(savepath, exist_ok = True)
@@ -88,7 +91,9 @@ os.makedirs(savepath, exist_ok = True)
 files = glob.glob(path)
 print("{} experiments total".format(len(files)))
 
-
+""" ***********************************
+    Start of import procedure
+    ***********************************"""
 
 all_data = []
 exp_tick_length = 0
@@ -161,6 +166,12 @@ Q = all_data[..., u_idx]/exp_info[u_max_param_idx]
 Q = tf.constant(Q, dtype=tf.float32)
 S = tf.constant(S, dtype=tf.float32)
 num_rol = all_data.shape[0]
+
+
+""" ***********************************
+    End of import procedure
+    ***********************************"""
+
 
 #%%
 costs, dd_cost, ep_cost, cc_cost, ccrc_cost = stage_cost(S, Q, target_pos, Q[0, 0])
@@ -297,8 +308,8 @@ ax62.set_ylabel('Angle (deg)')
 ax62.set_xlabel('Time (s)')
 # plt.title('Angles')
 plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., angle_idx],0,1)*180/np.pi)
-plt.axhline(y = 20, color = 'darkorange')
-plt.axhline(y = -20, color = 'darkorange')
+plt.axhline(y = 0, color = 'darkorange')
+# plt.axhline(y = -20, color = 'darkorange')
 plt.ylim(-np.pi*paf, np.pi*paf)
 plt.yticks([-180, -90, 0, 90, 180])
 plt.savefig(savepath+'rapport1.svg', bbox_inches='tight',dpi = 200)

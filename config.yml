@@ -3,7 +3,7 @@ controller:
     cost_function: 'quadratic-boundary' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
   cem:
     SEED: "None"
-    dt: 0.02                              # sec
+    dt: 0.02                              # secSSSSS
     mpc_horizon: 1.0                      # sec
     cem_outer_it: 5                    #how many outer iterations to use
     cem_rollouts: 80          #how many rollouts per outer cem iteration
@@ -84,7 +84,7 @@ controller:
     SEED: "None"                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
-    num_rollouts: 3500                      # Number of Monte Carlo samples
+    num_rollouts: 800                      # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet

@@ -32,7 +32,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     rng_data_generator = Generator(SFC64(seed))
 
-    Expname = 'Exp-mppi-tf-swingup-nn-A'
+    Expname = 'Exp-mppi-tf-swingup-nn-B'
     #csv = './adaptive_test/Experiment.csv'
     if record_path is None:
         record_path = config_CartPole["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
