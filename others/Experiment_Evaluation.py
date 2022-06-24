@@ -74,12 +74,12 @@ def data_idx(list):
 """Enter name of experiment and relevant data"""
 ######################################################################################################
 # %% extract all data from all experiments
-Expname = 'Exp-mppi-tf-swingup-nn-B'
-isSwingup = True #is it a swingup experiment?
+Expname = 'Exp-mppi-tf-jump-nn-D'
+isSwingup = False #is it a swingup experiment?
 clipExpNum = True #do you want to show all experiments or only a subset?
 ExpClipNum = 100 #how many do you want to show?
 CherryPick = True #Cherry pick a single experiment to plot?
-CherryPickNum = 15 #which one?
+CherryPickNum = 2 #which one?
 
 
 #create paths and directorys
@@ -308,8 +308,8 @@ ax62.set_ylabel('Angle (deg)')
 ax62.set_xlabel('Time (s)')
 # plt.title('Angles')
 plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., angle_idx],0,1)*180/np.pi)
-plt.axhline(y = 0, color = 'darkorange')
-# plt.axhline(y = -20, color = 'darkorange')
+plt.axhline(y = 20, color = 'darkorange')
+plt.axhline(y = -20, color = 'darkorange')
 plt.ylim(-np.pi*paf, np.pi*paf)
 plt.yticks([-180, -90, 0, 90, 180])
 plt.savefig(savepath+'rapport1.svg', bbox_inches='tight',dpi = 200)

@@ -32,7 +32,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     rng_data_generator = Generator(SFC64(seed))
 
-    Expname = 'Exp-mppi-tf-swingup-nn-B'
+    Expname = 'Exp-mppi-tf-jump-nn-D'
     #csv = './adaptive_test/Experiment.csv'
     if record_path is None:
         record_path = config_CartPole["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
@@ -45,7 +45,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     # User defined simulation settings
     ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
     # How many experiments will be generated
-    number_of_experiments = 80
+    number_of_experiments = 10
 
     ###### Train/Val/Test split - only matters if you run it in ML Pipeline mode
     frac_train = 0.8
@@ -60,7 +60,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     ###### CartPole settings
     ### Length of each experiment in s:
-    length_of_experiment_DataGen = 7
+    length_of_experiment_DataGen = 30
 
     ### Controller which should be used in generated experiment:
     controller_DataGen = 'mppi-tf'
@@ -95,7 +95,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     ### List of target positions, can be None to simulate with random targets
     #turning_points_DataGen = None
     # Example:
-    turning_points_DataGen = [0.0]#, 0.1, -0.1, -0.15, 0.15, 0.0]
+    turning_points_DataGen = [0.0, 0.1, -0.1, -0.15, 0.15, 0.0]
 
     ### Show popup window in the end with summary of experiment?
     show_summary_plots = False
@@ -134,7 +134,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
             csv += "/Experiment"
 
         start_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0, 1.0)
-        initial_state = [0.0, 0.0, np.pi, 0.0]
+        initial_state = [0.0, 0.0, 0.0, 0.0]
         # initial_state = [start_random_target_position_at_DataGen, None, None, None]
         # initial_state = [0.0, None, 0.0, None]
         if initial_state[0] is None:

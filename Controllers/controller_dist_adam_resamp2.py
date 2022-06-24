@@ -1,3 +1,5 @@
+import importlib
+
 import scipy
 import numpy as np
 from numpy.random import SFC64, Generator
@@ -27,8 +29,8 @@ config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 #import cost function parts from folder according to config file
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
-cost_function_cmd = 'from others.cost_functions.'+cost_function+' import cost'
-exec(cost_function_cmd)
+cost_function_cmd = 'others.cost_functions.'+cost_function
+cost = getattr(importlib.import_module(cost_function_cmd), "cost")
 
 #basic params
 dt = config["controller"]["dist-adam-resamp2"]["dt"]
