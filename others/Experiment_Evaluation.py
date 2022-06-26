@@ -74,11 +74,11 @@ def data_idx(list):
 """Enter name of experiment and relevant data"""
 ######################################################################################################
 # %% extract all data from all experiments
-Expname = 'Exp-mppi-tf-jump-nn-D'
-isSwingup = False #is it a swingup experiment?
+Expname = 'Exp-mppi-optimize-swingup-nn-A'
+isSwingup = True #is it a swingup experiment?
 clipExpNum = True #do you want to show all experiments or only a subset?
 ExpClipNum = 100 #how many do you want to show?
-CherryPick = True #Cherry pick a single experiment to plot?
+CherryPick = False #Cherry pick a single experiment to plot?
 CherryPickNum = 2 #which one?
 
 
