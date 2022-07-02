@@ -48,19 +48,6 @@ controller:
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     optim_steps: 10
-  dist-adam-resamp:
-    resamp_per: "None"
-    stdev_min: 0.5
-    LR: 0.004
-    adam_beta_1: 0.3    #default: 0.9
-    adam_beta_2: 0.95  #default: 0.999
-    adam_epsilon: 1e-07 #default: 1e-07
-    cem_best_k: 5
-    num_rollouts: 20
-    SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
-    warmup: False
-    interpolation_step: 10
-    cem_outer_it: 15
   dist-adam-resamp2:
     SEED: "None"
     dt: 0.02
