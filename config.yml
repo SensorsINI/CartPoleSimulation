@@ -1,6 +1,6 @@
 controller:
   general:
-    cost_function: 'quadratic-boundary' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
+    cost_function: 'quadratic-boundary-grad' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
   cem:
     SEED: "None"
     dt: 0.02                              # secSSSSS
@@ -54,19 +54,39 @@ controller:
     mpc_horizon: 1.0
     predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet", "EulerTF"]
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  #DOES NOT WORK YET!!! Applies only if predictor_type is NeuralNet
-    resamp_per: 1
-    sample_stdev: 0.5
-    LR: 0.002
-    adam_beta_1: 0.4    #default: 0.9
-    adam_beta_2: 0.8 #default: 0.999
-    adam_epsilon: 1e-07 #default: 1e-07
-    opt_keep_k: 5
-    num_rollouts: 20
+    resamp_per: 1                         # determines after how many steps the control plans are resamples
+    sample_stdev: 0.5                     #sampling variance of control action
+    LR: 0.002                             #learning rate parameter fro adam
+    adam_beta_1: 0.4    #default: 0.9      adam hyperparameter
+    adam_beta_2: 0.8 #default: 0.999       adam hyperparameter
+    adam_epsilon: 1e-07 #default: 1e-07    adam hyperparameter. consult https://ruder.io/optimizing-gradient-descent/ for information
+    opt_keep_k: 5                          #how many plans should be kept for warmstarting when resampling, has to be smaller or equal num_rollouts, set equal num_rollouts for degenerate case without any resampling
+    num_rollouts: 20                      # number of parallel optimizations
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
-    warmup: True
-    interpolation_step: 10
-    outer_its: 20
-    gradmax_clip: 250
+    warmup: True                          #whether or not we warmstart the controller. If true, first iteration will do mpc_horizon/dt*outer_its optimizations
+    interpolation_step: 10                #interpolation stepsize when sampling
+    outer_its: 20                         #number of optimization iterations
+    gradmax_clip: 250                     #maximal gradient entry to be kept, is ||gradient||_inf <= gradmax_clip
+  mppi-var:
+    SEED: "None"
+    dt: 0.02                              # sec
+    mpc_horizon: 1.0                      # sec
+    num_rollouts: 400                     # Number of Monte Carlo samples
+    SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
+    interpolation_step: 10                #interpolation stepsize when sampling
+    cc_weight: 1.0
+    predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet", "EulerTF"]
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  #DOES NOT WORK YET!!! Applies only if predictor_type is NeuralNet
+    R: 1.0                                # How much to punish Q
+    # mc stands for mathematical correct, as this controller uses the formula from the paper
+    LBD_mc: 10.0                          # Cost parameter lambda
+    SQRTRHOINV_mc: [0.002]                # Sampling variance
+    NU_mc: 20.0                           # Exploration variance
+    GAMMA: 1.00                           # Future cost discount
+    LR: 1000                             # Learning rate for adaption of variance, !!! Set to 0 to retrieve a mppi version in accordance with mppi paper
+    STDEV_min: 0.01                        # Maximal variance for sampling
+    STDEV_max: 10                       # Minimal sampling variance for sampling
+    max_grad_norm: 100000                    # max norm of gradient such that ||gradient||_2
   mppi:
     SEED: "None"                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
@@ -85,11 +105,8 @@ controller:
     control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
-    LBD_mc: 10.0
     NU: 1000.0                            # Exploration variance
-    NU_mc: 20.0                              # Exploration variance for mathematical correct version
-    SQRTRHOINV: [0.02]
-    SQRTRHOINV_mc: [0.002]                      # Sampling variance
+    SQRTRHOINV: [0.02]                    # Sampling variance
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     LOGGING: False                        # Collect and show detailed insights into the controller's behavior

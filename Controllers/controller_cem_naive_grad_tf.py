@@ -1,3 +1,6 @@
+#Controller equivalent to the cem+grad controller from Bharadhwaj et al 2020
+#
+
 import scipy
 import numpy as np
 from numpy.random import SFC64, Generator

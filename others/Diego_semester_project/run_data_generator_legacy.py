@@ -20,7 +20,7 @@ from numpy.random import SFC64, Generator
 # use('macOSX')
 
 import yaml, os
-config_CartPole = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
+config_CartPole = yaml.load(open('../../config.yml'), Loader=yaml.FullLoader)
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
@@ -74,8 +74,8 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     os.makedirs(savepath, exist_ok=True)
     shutil.copy('others/cost_functions/' + cost_function_file, savepath)
     shutil.copy('Controllers/' + 'controller_'+ctrl_file, savepath)
-    shutil.copy('config.yml', savepath)
-    shutil.copy('config_data_gen.yml', savepath)
+    shutil.copy('../../config.yml', savepath)
+    shutil.copy('../../config_data_gen.yml', savepath)
 
 
     ### Randomly placed target points/s
