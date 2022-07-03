@@ -60,17 +60,26 @@ class next_state_predictor_ODE_tf():
 
 
 class predictor_output_augmentation_tf:
-    def __init__(self, net_info, disable_individual_compilation=False):
-        self.net_output_indices = {key: value for value, key in enumerate(net_info.outputs)}
+    def __init__(self, net_info, disable_individual_compilation=False, differential_network=False):
+
+        self.differential_network = differential_network
+        if differential_network:
+            DIFF_NET_STATE_VARIABLES = [x[2:] for x in net_info.outputs]
+            outputs = DIFF_NET_STATE_VARIABLES
+        else:
+            outputs = net_info.outputs
+
+        self.net_output_indices = {key: value for value, key in enumerate(outputs)}
         indices_augmentation = []
         features_augmentation = []
-        if 'angle' not in net_info.outputs:
+
+        if 'angle' not in outputs:
             indices_augmentation.append(STATE_INDICES['angle'])
             features_augmentation.append('angle')
-        if 'angle_sin' not in net_info.outputs and 'angle' in net_info.outputs:
+        if 'angle_sin' not in outputs and 'angle' in outputs:
             indices_augmentation.append(STATE_INDICES['angle_sin'])
             features_augmentation.append('angle_sin')
-        if 'angle_cos' not in net_info.outputs and 'angle' in net_info.outputs:
+        if 'angle_cos' not in outputs and 'angle' in outputs:
             indices_augmentation.append(STATE_INDICES['angle_cos'])
             features_augmentation.append('angle_cos')
 
@@ -78,11 +87,11 @@ class predictor_output_augmentation_tf:
         self.features_augmentation = features_augmentation
         self.augmentation_len = len(self.indices_augmentation)
 
-        if 'angle' in net_info.outputs:
+        if 'angle' in outputs:
             self.index_angle = tf.convert_to_tensor(self.net_output_indices['angle'])
-        if 'angle_sin' in net_info.outputs:
+        if 'angle_sin' in outputs:
             self.index_angle_sin = tf.convert_to_tensor(self.net_output_indices['angle_sin'])
-        if 'angle_cos' in net_info.outputs:
+        if 'angle_cos' in outputs:
             self.index_angle_cos = tf.convert_to_tensor(self.net_output_indices['angle_cos'])
 
         if disable_individual_compilation:
