@@ -99,7 +99,7 @@ def uncorr_cost(s_hor ,u, target_position, u_prev, delta_u):
     unc_cost = unc_cost + phi(s_hor, target_position)
     return unc_cost
 
-
+#mppi averaging of trajectories
 def reward_weighted_average(S, delta_u):
     rho = tf.math.reduce_min(S)
     exp_s = tf.exp(-1.0/LBD * (S-rho))
@@ -107,10 +107,11 @@ def reward_weighted_average(S, delta_u):
     b = tf.math.reduce_sum(exp_s[:,tf.newaxis]*delta_u, axis = 0, keepdims=True)/a
     return b
 
+#initialize the pertubations
 def inizialize_pertubation(random_gen, nuvec ):
     delta_u = random_gen.normal([num_rollouts, num_valid_vals], dtype=tf.float32) * nuvec*SQRTRHODTINV
     if SAMPLING_TYPE == "interpolated":
-        delta_u = tf.matmul(delta_u, interp_mat)
+        delta_u = tf.matmul(delta_u, interp_mat) #here interpolation is simply a multiplication with a matrix
     return delta_u
 
 
@@ -123,30 +124,38 @@ class controller_mppi_var(template_controller):
         if SEED == "None":
             SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)
         self.rng_cem = tf.random.Generator.from_seed(SEED)
+        #set up nominal u
         self.u_nom = tf.zeros([1,mppi_samples], dtype=tf.float32)
+        #set up vector of variances to be optimized
         self.nuvec = np.math.sqrt(NU)*tf.ones([1, num_valid_vals])
         self.nuvec = tf.Variable(self.nuvec)
         self.u = 0.0
 
     @tf.function(jit_compile=True)
-    def predict_and_cost(self, s, target_position, u_nom, random_gen, u_old, nuvec):
-        # generate random input sequence and clip to control limits
+    def do_step(self, s, target_position, u_nom, random_gen, u_old, nuvec):
+        #start gradient tape
         with tf.GradientTape(watch_accessed_variables=False) as tape:
-            tape.watch(nuvec)
-            delta_u = inizialize_pertubation(random_gen, nuvec)
+            tape.watch(nuvec) #watch variances on tape
+            delta_u = inizialize_pertubation(random_gen, nuvec) #initialize pertubations
+            #build real input and clip, preserving gradient
             u_run = tf.tile(u_nom, [num_rollouts, 1])+delta_u
             u_run = tfp.math.clip_by_value_preserve_gradient(u_run, -1.0, 1.0)
+            #rollout and cost
             rollout_trajectory = predictor.predict_tf(s, u_run[:, :, tf.newaxis])
             unc_cost = uncorr_cost(rollout_trajectory, u_run, target_position, u_old, delta_u)
             mean_uncost = tf.math.reduce_mean(unc_cost)
+            #retrieve gradient
             dc_ds = tape.gradient(mean_uncost, nuvec)
             dc_ds = tf.clip_by_norm(dc_ds, max_grad_norm,axes = [1])
+        #correct cost of mppi
         cor_cost = mppi_correction_cost(u_run, delta_u, nuvec)
         cor_cost = tf.math.reduce_sum(cor_cost, axis=1)
         traj_cost = unc_cost + cor_cost
+        #build optimal input
         u_nom = tf.clip_by_value(u_nom + reward_weighted_average(traj_cost, delta_u), -1.0, 1.0)
         u = u_nom[0, 0]
         u_nom = tf.concat([u_nom[:, 1:], tf.constant(0.0, shape=[1, 1])], -1)
+        #adapt variance
         new_nuvec = nuvec-mppi_lr*dc_ds
         new_nuvec = tf.clip_by_value(new_nuvec, stdev_min, stdev_max)
         return u, u_nom, new_nuvec
@@ -156,11 +165,11 @@ class controller_mppi_var(template_controller):
         s = np.tile(s, tf.constant([num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
-        self.u, self.u_nom, new_nuvec = self.predict_and_cost(s, target_position, self.u_nom, self.rng_cem, self.u, self.nuvec)
+        self.u, self.u_nom, new_nuvec = self.do_step(s, target_position, self.u_nom, self.rng_cem, self.u, self.nuvec)
         self.nuvec.assign(new_nuvec)
-        # print("eyo here i go")
         return self.u.numpy()
 
+    #reset to initial values
     def controller_reset(self):
         self.u_nom = tf.zeros([1, mppi_samples], dtype=tf.float32)
         self.nuvec.assign(np.math.sqrt(NU)*tf.ones([1, num_valid_vals]))
