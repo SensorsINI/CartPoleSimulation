@@ -22,7 +22,7 @@ from CartPole.cartpole_jacobian import cartpole_jacobian
 import yaml
 
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
-from SI_Toolkit.Predictors.predictor_ODE_tf_pure import predictor_ODE_tf_pure
+from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
 
 #load constants from config file
@@ -67,7 +67,7 @@ predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
 
 """Define Predictor"""
 if predictor_type == "EulerTF":
-    predictor = predictor_ODE_tf_pure(horizon=cem_samples, dt=dt, intermediate_steps=1)
+    predictor = predictor_ODE_tf(horizon=cem_samples, dt=dt, intermediate_steps=1, disable_individual_compilation=True)
 elif predictor_type == "Euler":
     predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
 elif predictor_type == "NeuralNet":
