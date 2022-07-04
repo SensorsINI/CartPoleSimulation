@@ -25,7 +25,7 @@ import os
 class random_experiment_setter:
     def __init__(self):
 
-        config = yaml.load(open('config_data_gen.yml'), Loader=yaml.FullLoader)
+        config = yaml.load(open('CartPoleSimulation/config_data_gen.yml'), Loader=yaml.FullLoader)
 
         self.length_of_experiment = config["length_of_experiment"]
 
@@ -155,7 +155,7 @@ def generate_random_initial_state(init_state_stub, init_limits, rng=None):
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
-    config = yaml.load(open('config_data_gen.yml'), Loader=yaml.FullLoader)
+    config = yaml.load(open('CartPoleSimulation/config_data_gen.yml'), Loader=yaml.FullLoader)
 
     if record_path is None:
         record_path = config["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]

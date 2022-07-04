@@ -9,8 +9,8 @@ testing:
      'positionD',
      ]
   control_inputs: ['Q']   # Indicates which inputs to network are control_input, TODO: Not sure how it would work with multiple inputs
-  PATH_TO_NN: './SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Models/'  # Path where the neural network models are stored
-  PATH_TO_TEST_FILE: './SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Recordings/Test/'
+  PATH_TO_NN: './SI_Toolkit_ASF/Experiments/GP-experiment/Models/'  # Path where the neural network models are stored
+  PATH_TO_TEST_FILE: './SI_Toolkit_ASF/Experiments/GP-experiment/Recordings/Test/'
   TEST_LEN: 'max'
   MAX_HORIZON: 50  # Indicates prediction horizon for testing
   START_IDX: 0  # Indicates from which point data from test file should be taken

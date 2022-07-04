@@ -14,7 +14,7 @@ from CartPole.cartpole_model import u_max, s0
 from CartPole.cartpole_jacobian import cartpole_jacobian
 
 import yaml
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
 Q = np.diag(config["controller"]["lqr"]["Q"])
 R = config["controller"]["lqr"]["R"]
 

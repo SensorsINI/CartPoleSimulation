@@ -7,13 +7,13 @@ except:
 import numpy as np
 
 # Import functions from PyQt6 module (creating GUI)
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QVBoxLayout,
     QLabel,
     QWidget,
     QSlider,
 )
-from PyQt6.QtCore import QThreadPool, QTimer, Qt
+from PyQt5.QtCore import QThreadPool, QTimer, Qt
 
 import CartPole.noise_adder as noise_settings
 
