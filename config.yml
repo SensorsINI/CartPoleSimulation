@@ -1,6 +1,6 @@
 controller:
   general:
-    cost_function: 'quadratic-boundary' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
+    cost_function: 'quadratic-boundary-grad' #from 'quadratic-boundary', 'quadratic-boundary-nonconvex', 'default'
   cem:
     SEED: "None"
     dt: 0.02                              # secSSSSS

@@ -1,3 +1,5 @@
+#file to evaluate experiment data
+
 import csv
 import re
 import numpy as np
@@ -78,23 +80,23 @@ Expname = 'Exp-mppi-optimize-swingup-nn-A'
 isSwingup = True #is it a swingup experiment?
 clipExpNum = True #do you want to show all experiments or only a subset?
 ExpClipNum = 100 #how many do you want to show?
-CherryPick = False #Cherry pick a single experiment to plot?
+CherryPick = False #Cherry pick a single experiment to evaluate?
 CherryPickNum = 2 #which one?
 
 
 #create paths and directorys
-path = 'Experiment_Recordings/'+Expname+'*.csv'
-savepath = 'Experiment_Setups/'+Expname+'/'
+path = 'Experiment_Recordings/'+Expname+'*.csv' #save path of recording
+savepath = 'Experiment_Setups/'+Expname+'/' #directory for experiment plots
 os.makedirs(savepath, exist_ok = True)
 
-
+#find all relevant files
 files = glob.glob(path)
 print("{} experiments total".format(len(files)))
 
 """ ***********************************
     Start of import procedure
     ***********************************"""
-
+#import all data
 all_data = []
 exp_tick_length = 0
 for file in files:
@@ -108,7 +110,7 @@ for file in files:
     all_data.append(lines[ds + 1:])
     if len(lines[ds + 1:]) > exp_tick_length:
         exp_tick_length = len(lines[ds + 1:])
-#%%
+#%% #weed out to short experiments
 for experiment in all_data:
     if len(experiment) < exp_tick_length:
         all_data.remove(experiment)
@@ -119,6 +121,7 @@ if CherryPick:
     all_data = all_data[CherryPickNum:CherryPickNum+1]
 
 #%%
+#extract experiment info
 beginning = re.compile('#.*:\s*')
 second = re.compile('\s*s\Z')
 exp_info = []
@@ -135,6 +138,7 @@ param_idx = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 for idx in param_idx:
     exp_info.append(float(beginning.sub('', lines[idx][0])))
 
+#set up some variables that describe the experiment
 data_legend = lines[ds]
 time_idx = data_legend.index('time')
 position_idx = data_legend.index('position')
@@ -183,8 +187,8 @@ costs, dd_cost, ep_cost, cc_cost, ccrc_cost = stage_cost(S, Q, target_pos, Q[0, 
     Evaluate different measures here!!!
     ***********************************"""
 
-
-ravg = runnig_avg(costs, 20)
+# cost parts
+ravg = runnig_avg(costs, 20) #running cost over a window
 avg_cost = tf.math.reduce_mean(costs)
 avg_dd = tf.math.reduce_mean(dd_cost)
 avg_ep = tf.math.reduce_mean(ep_cost)
@@ -194,8 +198,10 @@ avg_cost_per = tf.math.reduce_mean(costs, axis = 1)
 print(avg_cost.numpy())
 
 #%%
+#mean running cost
 ravg_mean = tf.math.reduce_mean(ravg, axis = 0)
 
+#for swingup extract swingup time and succesful swingups
 if isSwingup:
     swingup_time = swingup_time_calc(S, target_pos, TrackHalfLength)
     successful_swingups = swingup_time < 5.0
@@ -213,6 +219,7 @@ if isSwingup:
     print("Mean swingup time: {}".format(swingup_mean))
 
 #%%
+#plot cost
 figHist1, axHist1 = plt.subplots(1,1, num='running cost', figsize = (16,12))
 n, bins, edges = axHist1.hist(avg_cost_per.numpy(), bins = 10, ec='black')
 plt.xticks(bins)
@@ -225,14 +232,16 @@ plt.savefig(savepath+'avg_cost_histo.png', bbox_inches='tight',dpi = 200)
 data = all_data[0]
 paf = 1.1
 
+#plot all relevant things for a single experiment
 fig1, ax1 = plt.subplots(4, 1, num='Example plot', figsize = (16,12))
-
+#angle plot
 ax1 = plt.subplot(4, 1, 1)
 plt.plot(data[:, time_idx], data[:,angle_idx])
 plt.axhline(y = 0.34, color = 'r')
 plt.axhline(y = -0.34, color = 'r')
 plt.ylim(-np.pi*paf, np.pi*paf)
 
+#
 ax1 = plt.subplot(4, 1, 2)
 plt.plot(data[:, time_idx], data[:, position_idx])
 plt.ylim(-exp_info[TrackHalfLength_idx]*paf, exp_info[TrackHalfLength_idx]*paf)
@@ -250,9 +259,9 @@ plt.locator_params(axis='y', numticks=4)
 # plt.locator_params(axis='y', numticks=4)
 
 plt.savefig(savepath+'example_plot.png', bbox_inches='tight',dpi = 200)
+#end of example plot
 
-
-#%%
+#%% plot all angles at once
 fig2, ax2 = plt.subplots(1, 1, num='Only angles', figsize = (16,12))
 plt.title('Angles')
 plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., angle_idx],0,1))
@@ -262,7 +271,7 @@ plt.ylim(-np.pi*paf, np.pi*paf)
 plt.savefig(savepath+'Angles.png', bbox_inches='tight',dpi = 200)
 
 
-#%%
+#%% plot all positions
 fig3, ax3 = plt.subplots(1, 1, num='Only position', figsize = (16,12))
 plt.title('Positions')
 plt.plot(all_data[0,:, time_idx], np.swapaxes(all_data[..., position_idx],0,1))
@@ -272,7 +281,7 @@ plt.ylim(-exp_info[TrackHalfLength_idx]*paf, exp_info[TrackHalfLength_idx]*paf)
 plt.savefig(savepath+'Positions.png', bbox_inches='tight',dpi = 200)
 
 
-#%%
+#%% plot all motor powers
 fig4, ax4 = plt.subplots(1, 1, num='Only mot power', figsize = (16,12))
 plt.title('Motor Powers')
 plt.plot(all_data[0,:,time_idx], np.swapaxes(all_data[...,u_idx],0,1))
@@ -283,7 +292,7 @@ plt.savefig(savepath+'Motor_power.png', bbox_inches='tight',dpi = 200)
 
 
 
-#%%
+#%% plot averaged cost over time
 fig5, ax5 = plt.subplots(1, 1, num='Averaged cost', figsize = (16,12))
 plt.title('Averaged cost')
 plt.semilogy(all_data[0,:,time_idx], tf.math.reduce_mean(costs, axis = 0))
@@ -291,7 +300,7 @@ plt.savefig(savepath+'Avg_cost.png', bbox_inches='tight',dpi = 200)
 
 
 
-#%%
+#%% first report plot: position and angles
 fig6, ax6 = plt.subplots(2, 1, num='Rap. plot 1', figsize = (16,12))
 ax61 = plt.subplot(2,1,1)
 ax61.set_ylabel('Position (m)')
@@ -315,7 +324,7 @@ plt.yticks([-180, -90, 0, 90, 180])
 plt.savefig(savepath+'rapport1.svg', bbox_inches='tight',dpi = 200)
 
 
-#%%
+#%% second report plot, positions and motorpower
 fig7, ax7 = plt.subplots(2, 1, num='Rap. plot 2', figsize = (16,12))
 ax71 = plt.subplot(2,1,1)
 ax71.set_ylabel('Position (m)')

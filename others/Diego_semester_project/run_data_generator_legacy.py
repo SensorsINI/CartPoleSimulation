@@ -66,16 +66,20 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     controller_DataGen = 'mppi-optimize'
     # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
 
+    """" This is the interesting part where i set up the directory and copy all relevant information"""
     ### Setup directory with data for exp
+    #get cost function
     cost_function = config_CartPole["controller"]["general"]["cost_function"]
     cost_function_file = cost_function.replace('-', '_') + ".py"
     ctrl_file = controller_DataGen.replace('-', '_') + ".py"
+    #setup experiment folder
     savepath = 'Experiment_Setups/' + Expname + '/'
     os.makedirs(savepath, exist_ok=True)
-    shutil.copy('others/cost_functions/' + cost_function_file, savepath)
-    shutil.copy('Controllers/' + 'controller_'+ctrl_file, savepath)
-    shutil.copy('../../config.yml', savepath)
-    shutil.copy('../../config_data_gen.yml', savepath)
+    #copy files
+    shutil.copy('others/cost_functions/' + cost_function_file, savepath) #copy cost function python file
+    shutil.copy('Controllers/' + 'controller_'+ctrl_file, savepath) #copy controller python file
+    shutil.copy('../../config.yml', savepath) #copy config file
+    shutil.copy('../../config_data_gen.yml', savepath) #copy config_data_gen file
 
 
     ### Randomly placed target points/s
