@@ -18,6 +18,7 @@ import yaml
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
+from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
 
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
@@ -39,6 +40,7 @@ num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 cc_weight = config["controller"]["mppi"]["cc_weight"]
 
 NET_NAME = config["controller"]["mppi"]["NET_NAME"]
+GP_NAME = config["controller"]["mppi"]["GP_NAME"]
 predictor_type = config["controller"]["mppi"]["predictor_type"]
 
 mppi_samples = int(mppi_horizon / dt)  # Number of steps in MPC horizon
@@ -75,6 +77,8 @@ elif predictor_type == "NeuralNet":
     predictor_single_trajectory = predictor_autoregressive_tf(
         horizon=mppi_samples, batch_size=1, net_name=NET_NAME, disable_individual_compilation=True
     )
+elif predictor_type == "GP":
+    predictor = predictor_autoregressive_GP(model_name=GP_NAME, horizon=mppi_samples, num_rollouts=num_rollouts)
 
 GET_ROLLOUTS_FROM_MPPI = False
 
