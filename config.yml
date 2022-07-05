@@ -80,7 +80,7 @@ controller:
     R: 1.0                                # How much to punish Q
     # mc stands for mathematical correct, as this controller uses the formula from the paper
     LBD_mc: 10.0                          # Cost parameter lambda
-    SQRTRHOINV_mc: [0.002]                # Sampling variance
+    SQRTRHOINV_mc: 0.002                  # Sampling variance
     NU_mc: 20.0                           # Exploration variance
     GAMMA: 1.00                           # Future cost discount
     LR: 1000                             # Learning rate for adaption of variance, !!! Set to 0 to retrieve a mppi version in accordance with mppi paper
@@ -106,7 +106,7 @@ controller:
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
     NU: 1000.0                            # Exploration variance
-    SQRTRHOINV: [0.02]                    # Sampling variance
+    SQRTRHOINV: 0.02                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     LOGGING: False                        # Collect and show detailed insights into the controller's behavior
@@ -188,6 +188,7 @@ cartpole:
     sigma_position: 0.0005
     sigma_angleD: 0.075 # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
     sigma_positionD: 0.005
+  num_control_inputs: 1
 
 
 data_generator:

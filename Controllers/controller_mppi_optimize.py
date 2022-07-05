@@ -18,10 +18,13 @@ import yaml
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
+from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
 
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+
+num_control_inputs = config["cartpole"]["num_control_inputs"]
 
 #import cost function parts from folder according to config file
 cost_function = config["controller"]["general"]["cost_function"]
@@ -75,7 +78,7 @@ elif predictor_type == "NeuralNet":
 
 #mppi correction for importance sampling
 def mppi_correction_cost(u, delta_u):
-    return cc_weight * (0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2))
+    return tf.reduce_sum(cc_weight * (0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)), axis=2)
 
 #total cost of the trajectory
 def mppi_cost(s_hor ,u, target_position, u_prev, delta_u):
@@ -93,7 +96,7 @@ def reward_weighted_average(S, delta_u):
     rho = tf.math.reduce_min(S)
     exp_s = tf.exp(-1.0/LBD * (S-rho))
     a = tf.math.reduce_sum(exp_s)
-    b = tf.math.reduce_sum(exp_s[:,tf.newaxis]*delta_u, axis = 0, keepdims=True)/a
+    b = tf.math.reduce_sum(exp_s[:,tf.newaxis,tf.newaxis]*delta_u, axis=0, keepdims=True)/a
     return b
 
 #initialize pertubation
@@ -101,15 +104,15 @@ def inizialize_pertubation(random_gen, stdev = SQRTRHODTINV, sampling_type = SAM
     #if interpolation on, interpolate with method from tensor flow probability
     if sampling_type == "interpolated":
         step = 10
-        range_stop = int(tf.math.ceil(mppi_samples / step)*step) + 1
+        range_stop = int(tf.math.ceil(mppi_samples / step) * step) + 1
         t = tf.range(range_stop, delta = step)
         t_interp = tf.cast(tf.range(range_stop), tf.float32)
-        delta_u = random_gen.normal([num_rollouts, t.shape[0]], dtype=tf.float32) * stdev
-        interp = tfp.math.interp_regular_1d_grid(t_interp, t_interp[0], t_interp[-1], delta_u)
-        delta_u = interp[:,:mppi_samples]
+        delta_u = random_gen.normal([num_rollouts, t.shape[0], num_control_inputs], dtype=tf.float32) * stdev
+        interp = tfp.math.interp_regular_1d_grid(t_interp, t_interp[0], t_interp[-1], delta_u, axis=1)
+        delta_u = interp[:,:mppi_samples,:]
     else:
         #otherwise i.i.d. generation
-        delta_u = random_gen.normal([num_rollouts, mppi_samples], dtype=tf.float32) * stdev
+        delta_u = random_gen.normal([num_rollouts, mppi_samples, num_control_inputs], dtype=tf.float32) * stdev
     return delta_u
 
 
@@ -124,43 +127,43 @@ class controller_mppi_optimize(template_controller):
         self.rng_cem = tf.random.Generator.from_seed(SEED)
 
         #Setup prototype control sequence
-        self.Q = tf.zeros([1,mppi_samples], dtype=tf.float32)
+        self.Q = tf.zeros([1,mppi_samples,num_control_inputs], dtype=tf.float32)
         self.Q = tf.Variable(self.Q)
         self.u = 0.0
         #setup adam optimizer
         self.opt = tf.keras.optimizers.Adam(learning_rate=cem_LR, beta_1=adam_beta_1, beta_2=adam_beta_2,
                                             epsilon=adam_epsilon)
 
-    @tf.function(jit_compile=True)
+    @Compile
     def mppi_prior(self, s, target_position, u_nom, random_gen, u_old):
         # generate random input sequence and clip to control limits
         delta_u = inizialize_pertubation(random_gen)
-        u_run = tf.tile(u_nom, [num_rollouts, 1])+delta_u
+        u_run = tf.tile(u_nom, [num_rollouts, 1, 1]) + delta_u
         u_run = tf.clip_by_value(u_run, -1.0, 1.0)
         #predict trajectories
-        rollout_trajectory = predictor.predict_tf(s, u_run[:, :, tf.newaxis])
+        rollout_trajectory = predictor.predict_tf(s, u_run)
         #rollout cost
         traj_cost = mppi_cost(rollout_trajectory, u_run, target_position, u_old, delta_u)
         #retrive control sequence via path integral
         u_nom = tf.clip_by_value(u_nom + reward_weighted_average(traj_cost, delta_u), -1.0, 1.0)
         return u_nom
 
-    @tf.function(jit_compile=True)
+    @Compile
     def grad_step(self, s, target_position, Q, opt):
         #do a gradient descent step
         #setup gradient tape
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(Q)
             #rollout trajectory and retrive cost
-            rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
+            rollout_trajectory = predictor.predict_tf(s, Q)
             traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
         #retrieve gradient of cost w.r.t. input sequence
         dc_dQ = tape.gradient(traj_cost, Q)
         #modify gradients: makes sure biggest entry of each gradient is at most "gradmax_clip". (For this controller only one sequence
-        dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ), axis=1) #find max gradient for every sequence
-        mask = (dc_dQ_max > gradmax_clip)[:, tf.newaxis] #generate binary mask
+        dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ), axis=1, keepdims=True) #find max gradient for every sequence
+        mask = (dc_dQ_max > gradmax_clip) #generate binary mask
         invmask = tf.logical_not(mask)
-        dc_dQ_prc = ((dc_dQ / dc_dQ_max[:, tf.newaxis]) * tf.cast(mask, tf.float32) * gradmax_clip + dc_dQ * tf.cast(
+        dc_dQ_prc = ((dc_dQ / dc_dQ_max) * tf.cast(mask, tf.float32) * gradmax_clip + dc_dQ * tf.cast(
             invmask, tf.float32)) #modify gradients
         #use optimizer to applay gradients and retrieve next set of input sequences
         opt.apply_gradients(zip([dc_dQ_prc], [Q]))
@@ -184,17 +187,16 @@ class controller_mppi_optimize(template_controller):
             Q_opt = self.grad_step(s, target_position, self.Q, self.opt)
             self.Q.assign(Q_opt)
 
-
-        self.u = self.Q[0, 0]
-        self.Q.assign(tf.concat([self.Q[:, 1:], tf.zeros([1,1])], -1)) #shift and initialize new input with 0
+        self.u = self.Q[0, 0, :]
+        self.Q.assign(tf.concat([self.Q[:, 1:, :], tf.zeros([1,1,num_control_inputs])], axis=1)) #shift and initialize new input with 0
         #reset adam optimizer
         adam_weights = self.opt.get_weights()
         self.opt.set_weights([tf.zeros_like(el) for el in adam_weights])
-        return self.u.numpy()
+        return np.squeeze(self.u.numpy())
 
     def controller_reset(self):
         #reset prototype control sequence
-        self.Q.assign(tf.zeros([1, mppi_samples], dtype=tf.float32))
+        self.Q.assign(tf.zeros([1, mppi_samples, num_control_inputs], dtype=tf.float32))
         self.u = 0.0
         #reset adam optimizer
         adam_weights = self.opt.get_weights()

@@ -17,9 +17,12 @@ import yaml
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
+from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+
+num_control_inputs = config["cartpole"]["num_control_inputs"]
 
 #import cost function parts from folder according to config file
 cost_function = config["controller"]["general"]["cost_function"]
@@ -63,15 +66,15 @@ class controller_cem_tf(template_controller):
             SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)
         self.rng_cem = Generator(SFC64(SEED))
 
-        self.dist_mue = np.zeros([1,cem_samples])
-        self.dist_var = 0.5*np.ones([1,cem_samples])
+        self.dist_mue = np.zeros([1,cem_samples,num_control_inputs])
+        self.dist_var = 0.5*np.ones([1,cem_samples,num_control_inputs])
         self.stdev = np.sqrt(self.dist_var)
         self.u = 0
 
-    @tf.function(jit_compile=True)
+    @Compile
     def predict_and_cost(self, s, Q, target_position):
         # rollout trajectories and retrieve cost
-        rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
+        rollout_trajectory = predictor.predict_tf(s, Q)
         traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
         return traj_cost, rollout_trajectory
 
@@ -81,8 +84,8 @@ class controller_cem_tf(template_controller):
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         for _ in range(0,cem_outer_it):
             #generate random input sequence and clip to control limits
-            Q = np.tile(self.dist_mue,(num_rollouts,1))+ np.multiply(self.rng_cem.standard_normal(
-                size=(num_rollouts, cem_samples), dtype=np.float32),self.stdev)
+            Q = np.tile(self.dist_mue,(num_rollouts,1,1)) + np.multiply(self.rng_cem.standard_normal(
+                size=(num_rollouts, cem_samples, num_control_inputs), dtype=np.float32), self.stdev)
             Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
 
             Q = tf.convert_to_tensor(Q, dtype=tf.float32)
@@ -93,22 +96,22 @@ class controller_cem_tf(template_controller):
             Q = Q.numpy()
             #sort the costs and find best k costs
             sorted_cost = np.argsort(traj_cost.numpy())
-            best_idx = sorted_cost[0:cem_best_k]
-            elite_Q = Q[best_idx,:]
+            best_idx = sorted_cost[:cem_best_k]
+            elite_Q = Q[best_idx,:,:]
             #update the distribution for next inner loop
-            self.dist_mue = np.mean(elite_Q,axis = 0)
-            self.stdev = np.std(elite_Q,axis=0)
+            self.dist_mue = np.mean(elite_Q, axis=0, keepdims=True)
+            self.stdev = np.std(elite_Q, axis=0, keepdims=True)
 
         #after all inner loops, clip std min, so enough is explored and shove all the values down by one for next control input
         self.stdev = np.clip(self.stdev, cem_stdev_min, None)
-        self.stdev = np.append(self.stdev[1:], np.sqrt(0.5)).astype(np.float32)
-        self.u = self.dist_mue[0]
-        self.dist_mue = np.append(self.dist_mue[1:], 0).astype(np.float32)
+        self.stdev = np.append(self.stdev[:,1:,:], np.sqrt(0.5)*np.ones((1,1,num_control_inputs)), axis=1).astype(np.float32)
+        self.u = np.squeeze(self.dist_mue[0,0,:])
+        self.dist_mue = np.append(self.dist_mue[:,1:,:], np.zeros((1,1,num_control_inputs)), axis=1).astype(np.float32)
         return self.u
 
     def controller_reset(self):
-        self.dist_mue = np.zeros([1, cem_samples])
-        self.dist_var = 0.5 * np.ones([1, cem_samples])
+        self.dist_mue = np.zeros([1, cem_samples, num_control_inputs])
+        self.dist_var = 0.5 * np.ones([1, cem_samples, num_control_inputs])
         self.stdev = np.sqrt(self.dist_var)
 
 

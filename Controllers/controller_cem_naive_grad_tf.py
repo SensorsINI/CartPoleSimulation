@@ -20,9 +20,12 @@ import yaml
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
+from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+
+num_control_inputs = config["cartpole"]["num_control_inputs"]
 
 #import cost function parts from folder according to config file
 cost_function = config["controller"]["general"]["cost_function"]
@@ -71,34 +74,34 @@ class controller_cem_naive_grad_tf(template_controller):
             SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)
         self.rng_cem = tf.random.Generator.from_seed(SEED)
 
-        self.dist_mue = tf.zeros([1,cem_samples], dtype=tf.float32)
-        self.dist_var = 0.5*tf.ones([1,cem_samples], dtype=tf.float32)
+        self.dist_mue = tf.zeros([1,cem_samples,num_control_inputs], dtype=tf.float32)
+        self.dist_var = 0.5*tf.ones([1,cem_samples,num_control_inputs], dtype=tf.float32)
         self.stdev = tf.sqrt(self.dist_var)
         self.u = 0.0
 
-    @tf.function(jit_compile=True)
+    @Compile
     def predict_and_cost(self, s, target_position, rng_cem, dist_mue, stdev):
         # generate random input sequence and clip to control limits
-        Q = tf.tile(dist_mue, [num_rollouts, 1]) + rng_cem.normal(
-            [num_rollouts, cem_samples], dtype=tf.float32) * stdev
+        Q = tf.tile(dist_mue, [num_rollouts, 1, 1]) + rng_cem.normal(
+            [num_rollouts, cem_samples, num_control_inputs], dtype=tf.float32) * stdev
         Q = tf.clip_by_value(Q, -1.0, 1.0)
         # rollout the trajectories and record gradient
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(Q)
-            rollout_trajectory = predictor.predict_tf(s, Q[:, :, tf.newaxis])
+            rollout_trajectory = predictor.predict_tf(s, Q)
             traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
         # retrieve gradient
         dc_dQ = tape.gradient(traj_cost, Q)
-        dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ), axis = 1)
+        dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ), axis=1, keepdims=True)
         # modify gradients: makes sure biggest entry of each gradient is at most "gradmax_clip".
-        mask = (dc_dQ_max > gradmax_clip)[:,tf.newaxis]
+        mask = (dc_dQ_max > gradmax_clip)
         invmask = tf.logical_not(mask)
-        Q_update = (gradmax_clip* (dc_dQ/dc_dQ_max[:,tf.newaxis])*tf.cast(mask,tf.float32) + dc_dQ*tf.cast(invmask,tf.float32))
+        Q_update = (gradmax_clip* (dc_dQ/dc_dQ_max)*tf.cast(mask,tf.float32) + dc_dQ*tf.cast(invmask,tf.float32))
         # update Q with gradient descent step
         Qn = Q-cem_LR*Q_update
         Qn = tf.clip_by_value(Qn,-1,1)
         #rollout all trajectories a last time
-        rollout_trajectory = predictor.predict_tf(s, Qn[:, :, tf.newaxis])
+        rollout_trajectory = predictor.predict_tf(s, Qn)
         traj_cost = cost(rollout_trajectory, Qn, target_position, self.u)
 
         # sort the costs and find best k costs
@@ -124,15 +127,15 @@ class controller_cem_naive_grad_tf(template_controller):
         #after all inner loops, clip std min, so enough is explored
         #and shove all the values down by one for next control input
         self.stdev = tf.clip_by_value(self.stdev, cem_stdev_min, 10.0)
-        self.stdev = tf.concat([self.stdev[:, 1:], tf.sqrt(0.5)[tf.newaxis, tf.newaxis]], -1)
-        self.u = self.dist_mue[0,0]
-        self.dist_mue = tf.concat([self.dist_mue[:, 1:], tf.constant(0.0, shape = [1,1])], -1)
+        self.stdev = tf.concat([self.stdev[:, 1:, :], tf.sqrt(0.5)*tf.ones(shape=(1,1,num_control_inputs))], axis=1)
+        self.u = tf.squeeze(self.dist_mue[0,0,:])
+        self.dist_mue = tf.concat([self.dist_mue[:, 1:, :], tf.constant(0.0, shape=(1,1,num_control_inputs))], axis=1)
         return self.u.numpy()
 
     def controller_reset(self):
         #reset controller initial distribution
-        self.dist_mue = tf.zeros([1, cem_samples])
-        self.dist_var = 0.5 * tf.ones([1, cem_samples])
+        self.dist_mue = tf.zeros([1, cem_samples, num_control_inputs])
+        self.dist_var = 0.5 * tf.ones([1, cem_samples, num_control_inputs])
         self.stdev = tf.sqrt(self.dist_var)
 
 
