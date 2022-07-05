@@ -32,7 +32,7 @@ def E_pot_cost(angle):
 
 #actuation cost
 def CC_cost(u):
-    return R * (u ** 2)
+    return R * tf.reduce_sum(u ** 2, axis=2)
 
 #final stage cost
 def phi(s, target_position):
@@ -64,8 +64,8 @@ def phi(s, target_position):
 #cost of changeing control to fast
 def control_change_rate_cost(u, u_prev):
     """Compute penalty of control jerk, i.e. difference to previous control input"""
-    u_prev_vec = tf.concat((tf.ones((u.shape[0],1))*u_prev,u[:,:-1]),axis=-1)
-    return (u - u_prev_vec) ** 2
+    u_prev_vec = tf.concat((tf.ones((u.shape[0],1,u.shape[2]))*u_prev,u[:,:-1,:]),axis=1)
+    return tf.reduce_sum((u - u_prev_vec) ** 2, axis=2)
 
 #all stage costs together
 def q(s,u,target_position, u_prev):
