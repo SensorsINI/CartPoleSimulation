@@ -20,10 +20,10 @@ from others.p_globals import (
 # region Imports needed to create layout of the window in __init__ method
 
 # Import functions from PyQt6 module (creating GUI)
-from PyQt5.QtWidgets import QMainWindow, QRadioButton, QApplication, QSlider, QVBoxLayout, \
+from PyQt6.QtWidgets import QMainWindow, QRadioButton, QApplication, QSlider, QVBoxLayout, \
     QHBoxLayout, QLabel, QPushButton, QWidget, QCheckBox, \
     QLineEdit, QMessageBox, QComboBox, QButtonGroup, QFrame
-from PyQt5.QtCore import QThreadPool, QTimer, Qt
+from PyQt6.QtCore import QThreadPool, QTimer, Qt
 # The main drawing functionalities are implemented in CartPole Class
 # Some more functions needed for interaction of matplotlib with PyQt6
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas

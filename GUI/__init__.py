@@ -8,8 +8,8 @@ You can either run this script as main, or import run_gui() function wherever yo
 import sys
 
 # Import functions from PyQt6 module (creating GUI)
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QIcon
 # Import custom made elements of GUI
 from GUI._CartPoleGUI_MainWindow import MainWindow
 
