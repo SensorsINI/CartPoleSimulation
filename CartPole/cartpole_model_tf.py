@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from typing import Union
 
 import numpy as np
 import tensorflow as tf
@@ -8,6 +7,7 @@ from others.globals_and_utils import create_rng
 from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, g, k, m, u_max,
                               v_max)
+from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
@@ -177,11 +177,13 @@ def cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD
 
     return angle_next, angleD_next, position_next, positionD_next
 
-# @tf.function(jit_compile=True)
+
+@Compile
 def euler_step_tf(state, stateD, t_step):
     return state + stateD * t_step
 
-# @tf.function(jit_compile=True)
+
+@Compile
 def cartpole_integration_tf(angle, angleD, angleDD, position, positionD, positionDD, t_step, ):
     angle_next = euler_step_tf(angle, angleD, t_step)
     angleD_next = euler_step_tf(angleD, angleDD, t_step)

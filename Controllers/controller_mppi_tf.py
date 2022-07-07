@@ -21,7 +21,7 @@ from Controllers.template_controller import template_controller
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-num_control_inputs = 1  # specific to a system
+num_control_inputs = config["cartpole"]["num_control_inputs"]  # specific to a system
 
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
@@ -42,7 +42,7 @@ mppi_samples = int(mppi_horizon / dt)  # Number of steps in MPC horizon
 R = tf.convert_to_tensor(config["controller"]["mppi"]["R"])
 LBD = config["controller"]["mppi"]["LBD"]
 NU = tf.convert_to_tensor(config["controller"]["mppi"]["NU"])
-SQRTRHODTINV = tf.convert_to_tensor(config["controller"]["mppi"]["SQRTRHOINV"]) * tf.convert_to_tensor((1 / np.math.sqrt(dt)))
+SQRTRHODTINV = tf.convert_to_tensor(config["controller"]["mppi"]["SQRTRHOINV"] * (1 / np.math.sqrt(dt)))
 GAMMA = config["controller"]["mppi"]["GAMMA"]
 SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
 
@@ -85,7 +85,7 @@ def check_dimensions_s(s):
 
 #mppi correction
 def mppi_correction_cost(u, delta_u):
-    return tf.math.reduce_sum(cc_weight * (0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)), axis=-1)
+    return tf.math.reduce_sum(cc_weight * (0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)), axis=2)
 
 #total cost of the trajectory
 def cost(s_hor ,u, target, u_prev, delta_u):
@@ -152,7 +152,7 @@ class controller_mppi_tf(template_controller):
     def predict_and_cost(self, s, target, u_nom, random_gen, u_old):
         s = tf.tile(s, tf.constant([num_rollouts, 1]))
         # generate random input sequence and clip to control limits
-        u_nom = tf.concat([u_nom[:, 1:, :], u_nom[:, -1, tf.newaxis, :]], axis=1)
+        u_nom = tf.concat([u_nom[:, 1:, :], u_nom[:, -1:, :]], axis=1)
         delta_u = inizialize_pertubation(random_gen)
         u_run = tf.tile(u_nom, [num_rollouts, 1, 1])+delta_u
         u_run = tf.clip_by_value(u_run, clip_control_input_low, clip_control_input_high)
@@ -189,7 +189,7 @@ class controller_mppi_tf(template_controller):
         if GET_OPTIMAL_TRAJECTORY:
             self.optimal_trajectory = self.predict_optimal_trajectory(s, self.u_nom).numpy()
 
-        return self.u.numpy()
+        return tf.squeeze(self.u).numpy()
 
     def controller_reset(self):
         self.u_nom = tf.zeros([1, mppi_samples, num_control_inputs], dtype=tf.float32)
