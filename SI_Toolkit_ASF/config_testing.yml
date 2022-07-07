@@ -13,5 +13,5 @@ testing:
   PATH_TO_TEST_FILE: './SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Recordings/Test/'
   TEST_LEN: 'max'
   DECIMATION: 1
-  MAX_HORIZON: 30  # Indicates prediction horizon for testing
+  MAX_HORIZON: 50  # Indicates prediction horizon for testing
   START_IDX: 0  # Indicates from which point data from test file should be taken
