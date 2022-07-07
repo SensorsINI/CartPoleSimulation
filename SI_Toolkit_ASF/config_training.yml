@@ -2,7 +2,7 @@ modeling:
   NET_NAME: 'GRU-32H1-32H2'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'GP-experiment/'
+  path_to_experiment: 'Pretrained-RNN-1/'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
 
 training_default:
@@ -19,13 +19,14 @@ training_default:
   # For training of RNN imitating MPC:
   # inputs = ['position', 'positionD', 'angle', 'angleD', 'target_position']
   # outputs = ['Q']
-  EPOCHS: 5
+  EPOCHS: 10
   BATCH_SIZE: 16
   SEED: 1873
   LR: 1.0e-2
-  WASH_OUT_LEN: 10
-  POST_WASH_OUT_LEN: 20
+  WASH_OUT_LEN: 10  # needs to be set to 0 for GP training
+  POST_WASH_OUT_LEN: 20  # needs to be set to 1 for GP training
   ON_FLY_DATA_GENERATION: False
+  SHIFT_LABELS: 1
   NORMALIZE: True
   SHIFT_LABELS: 1  # for k, as a label to row i is taken row i+k
 
