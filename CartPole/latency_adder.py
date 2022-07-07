@@ -1,7 +1,4 @@
 import numpy as np
-from numpy.random import SFC64, Generator
-
-from datetime import datetime
 
 from CartPole.state_utilities import STATE_VARIABLES, \
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX

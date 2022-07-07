@@ -1,5 +1,5 @@
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
-SEED: 1  # If not assign random seed based on datetime is used
+SEED: 1  # If "None", random seed based on datetime is used
 length_of_experiment: 100  # Length of each experiment in s:
 controller: 'lqr'  # name of the controller to be used - does not matter for Cartpole Gym TODO: CHECK!
 split: [0.81, 0.19]  # Train/Val/(Test) split - only matters if you run it in ML Pipeline mode

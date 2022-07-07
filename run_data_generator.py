@@ -1,26 +1,25 @@
-from CartPole import CartPole
-from CartPole.cartpole_model import create_cartpole_state, TrackHalfLength
-from others.p_globals import TrackHalfLength
-
-from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
-
-import os
-from time import sleep
-import timeit
-from datetime import datetime
 import cProfile
-from pstats import Stats, SortKey
+import os
+import timeit
+from pstats import SortKey, Stats
+from time import sleep
 
 import numpy as np
-from numpy.random import SFC64, Generator
+import yaml
+
+from CartPole import CartPole
+from CartPole.cartpole_model import TrackHalfLength, create_cartpole_state
+from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
+                                      ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
+from others.globals_and_utils import create_rng
+from others.p_globals import TrackHalfLength
+
 # Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
 # On other OS you have to chose a different interactive backend.
 # from matplotlib import use
 # # use('TkAgg')
 # use('macOSX')
 
-import yaml
-import os
 
 class random_experiment_setter:
     def __init__(self):
@@ -57,8 +56,7 @@ class random_experiment_setter:
         self.turning_points = config["turning_points"]["turning_points"]
         self.turning_points_period = config["turning_points"]["turning_points_period"]
 
-        self.seed = config["SEED"]
-        self.rng = Generator(SFC64(self.seed))
+        self.rng = create_rng(self.__class__.__name__, config["SEED"])
         
     def set(self, CartPoleInstance):
         
@@ -113,13 +111,9 @@ class random_experiment_setter:
 
         return CartPoleInstance # ready to run a random experiment
 
-def generate_random_initial_state(init_state_stub, init_limits, rng=None):
+def generate_random_initial_state(init_state_stub, init_limits, rng):
 
     position_init_limits, positionD_init_limits, angle_init_limits, angleD_init_limits = init_limits
-
-    # If rng is None, create new, unpredictable random number generator
-    if rng is None:
-        rng = Generator(SFC64())
 
     initial_state_post = create_cartpole_state()
 

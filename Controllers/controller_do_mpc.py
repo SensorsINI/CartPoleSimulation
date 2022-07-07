@@ -1,15 +1,16 @@
 """do-mpc controller"""
 
-import do_mpc
-import numpy as np
-
-from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import Q2u, cartpole_ode_namespace
-from CartPole.state_utilities import cartpole_state_vector_to_namespace
-
 from types import SimpleNamespace
 
+import do_mpc
+import numpy as np
 import yaml
+from CartPole.cartpole_model import Q2u, cartpole_ode_namespace
+from CartPole.state_utilities import cartpole_state_vector_to_namespace
+from others.globals_and_utils import create_rng
+
+from Controllers.template_controller import template_controller
+
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 dt_mpc_simulation = config["controller"]["do_mpc"]["dt_mpc_simulation"]
@@ -78,12 +79,10 @@ class controller_do_mpc(template_controller):
         cost_angle_sin = np.sin(s.angle)**2
         cost_angle = (s.angle/np.pi)**2
 
-
         self.model.set_expression('cost_positionD', cost_positionD)
         self.model.set_expression('cost_angleD', cost_angleD)
         self.model.set_expression('cost_angle', cost_angle)
         self.model.set_expression('cost_position', cost_position)
-
 
         self.model.setup()
 
@@ -105,11 +104,12 @@ class controller_do_mpc(template_controller):
         # self.mpc.set_param(nlpsol_opts={'ipopt.linear_solver': 'mumps'})
         self.mpc.set_param(nlpsol_opts = {'ipopt.linear_solver': 'MA57'})
 
+        self.rng = create_rng(self.__class__.__name__, config["controller"]["do_mpc"]["SEED"])
         # # Standard version
         lterm = (
-                l_angle * (1+p_angle*np.random.uniform(-1.0, 1.0)) * self.model.aux['cost_angle']
-                + l_position * (1+p_position*np.random.uniform(-1.0, 1.0)) * cost_position
-                + l_positionD * (1+p_positionD*np.random.uniform(-1.0, 1.0)) * self.model.aux['cost_positionD']
+                l_angle * (1+p_angle*self.rng.uniform(-1.0, 1.0)) * self.model.aux['cost_angle']
+                + l_position * (1+p_position*self.rng.uniform(-1.0, 1.0)) * cost_position
+                + l_positionD * (1+p_positionD*self.rng.uniform(-1.0, 1.0)) * self.model.aux['cost_positionD']
                  )
         # mterm = 400.0 * self.model.aux['E_kin_cart']
         mterm = 0.0 * self.model.aux['cost_positionD']
@@ -170,4 +170,4 @@ class controller_do_mpc(template_controller):
 
         Q = self.mpc.make_step(self.x0)
 
-        return Q.item()*(1+p_Q*np.random.uniform(-1.0, 1.0))
+        return Q.item()*(1+p_Q*self.rng.uniform(-1.0, 1.0))

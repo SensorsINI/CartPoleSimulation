@@ -1,19 +1,17 @@
 """mpc controller"""
 
-import scipy.optimize
-import numpy as np
-
-from CartPole.state_utilities import create_cartpole_state, \
-    cartpole_state_indices_to_varnames, \
-    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX
-from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
-
-from Controllers.controller_lqr import controller_lqr
-
 import matplotlib.pyplot as plt
 import numpy as np
-
+import scipy.optimize
 import yaml
+from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
+                                      ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
+                                      cartpole_state_indices_to_varnames,
+                                      create_cartpole_state)
+from Controllers.controller_lqr import controller_lqr
+from others.globals_and_utils import create_rng
+from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
+
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 predictor = predictor_ODE
@@ -67,6 +65,8 @@ class controller_custom_mpc_scipy:
         self.predictor_time = []
         self.nfun = []
 
+        self.rng = create_rng(self.__class__.__name__, config["controller"]["custom_mpc_scipy"]["SEED"])
+
         # I do the norm and unnorm unnecessarilly!
         # You need only to scale once!
         """
@@ -79,7 +79,7 @@ class controller_custom_mpc_scipy:
         self.target_position = 0.0
 
         self.Q_hat = np.zeros(self.horizon)  # MPC prediction of future control inputs
-        self.Q_hat0 = np.random.normal(0.0, 0.1 ,self.horizon)  # initial guess for future control inputs to be predicted
+        self.Q_hat0 = self.rng.normal(0.0, 0.1 ,self.horizon)  # initial guess for future control inputs to be predicted
         self.Q_previous = 0.0
 
         self.angle_cost = lambda angle: angle ** 2
@@ -157,7 +157,7 @@ class controller_custom_mpc_scipy:
             #                                        minimizer_kwargs={ "method": method,"bounds":self.Q_bounds })
             # self.Q_hat0 = solution.x
 
-            # self.Q_hat0 = np.clip(self.Q_hat0*(1+0.01*np.random.uniform(-1.0,1.0)), -1, 1)
+            # self.Q_hat0 = np.clip(self.Q_hat0*(1+0.01*self.rng.uniform(-1.0,1.0)), -1, 1)
             solution = scipy.optimize.minimize(self.cost_function, self.Q_hat0,
                                                bounds=self.Q_bounds, method=method,
                                                options={'ftol': ftol})
@@ -167,7 +167,7 @@ class controller_custom_mpc_scipy:
             # Compose new initial guess
             self.Q_previous = Q0 = self.Q_hat[0]
             # self.Q_hat0 = np.hstack((self.Q_hat[1:], self.Q_hat[-1]))
-            self.Q_hat0 = self.Q_hat + np.random.normal(0.0, 0.01, self.horizon)
+            self.Q_hat0 = self.Q_hat + self.rng.normal(0.0, 0.01, self.horizon)
             # self.plot_prediction()
         else:
             Q0 = self.lqr_controller.step(s, target_position)

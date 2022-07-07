@@ -9,48 +9,35 @@ Based on Williams, Aldrich, Theodorou (2015)
 # # # use('TkAgg')
 # use('macOSX')
 
-import copy
-
-from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength,
-)
-
-import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-from datetime import datetime
-
-from CartPole._CartPole_mathematical_helpers import (
-    conditional_decorator,
-    wrap_angle_rad_inplace,
-)
+from CartPole._CartPole_mathematical_helpers import (conditional_decorator,
+                                                     wrap_angle_rad_inplace)
 from CartPole.cartpole_model import TrackHalfLength
-from CartPole.state_utilities import (
-    ANGLE_COS_IDX,
-    ANGLE_IDX,
-    ANGLED_IDX,
-    ANGLE_SIN_IDX,
-    POSITION_IDX,
-    POSITIOND_IDX,
-    STATE_VARIABLES,
-    STATE_INDICES,
-    create_cartpole_state,
-)
+from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
+                                      ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
+                                      STATE_INDICES, STATE_VARIABLES,
+                                      create_cartpole_state)
 from matplotlib.widgets import Slider
 from numba import jit
-from numpy.random import SFC64, Generator
+from others.globals_and_utils import create_rng
+from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
+                              controlBias, controlDisturbance, g, k, m, u_max,
+                              v_max)
+from scipy.interpolate import interp1d
+from SI_Toolkit.Predictors.predictor_autoregressive_tf import \
+    predictor_autoregressive_tf
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
-from scipy.interpolate import interp1d
-from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
-# from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
-# from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
 
 from Controllers.template_controller import template_controller
 
-from others.p_globals import L
+# from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
+# from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
+
+
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
@@ -91,7 +78,7 @@ gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = gui_ccrc = np.zeros(1, dtype=np.f
 R = config["controller"]["mppi"]["R"]
 LBD = config["controller"]["mppi"]["LBD"]
 NU = config["controller"]["mppi"]["NU"]
-SQRTRHODTINV = config["controller"]["mppi"]["SQRTRHOINV"] * (1 / np.math.sqrt(dt))
+SQRTRHODTINV = float(np.asarray(config["controller"]["mppi"]["SQRTRHOINV"])) * (1 / np.math.sqrt(dt))
 GAMMA = config["controller"]["mppi"]["GAMMA"]
 SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
 
@@ -365,10 +352,8 @@ class controller_mppi(template_controller):
 
         """Random number generator"""
         SEED = config["controller"]["mppi"]["SEED"]
-        if SEED == "None":
-            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
-        self.rng_mppi = Generator(SFC64(SEED))
-        self.rng_mppi_rnn = Generator(SFC64(SEED*2)) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
+        self.rng_mppi = create_rng(self.__class__.__name__, SEED)
+        self.rng_mppi_rnn = create_rng(self.__class__.__name__, SEED if SEED=="None" else SEED*2) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
 
 
         global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
@@ -566,7 +551,7 @@ class controller_mppi(template_controller):
         # if self.control_enabled is True:
         #     Q = self.u[0]
         # else:
-        #     Q = np.random.uniform(-1.0, 1.0)
+        #     Q = self.rng_mppi.uniform(-1.0, 1.0)
 
         # Add noise on top of the calculated Q value to better explore state space
         Q = np.float32(Q * (1 + p_Q * self.rng_mppi.uniform(-1.0, 1.0)))

@@ -2,7 +2,7 @@ controller:
   general:
     cost_function: 'quadratic-boundary-grad' # from 'quadratic-boundary', 'quadratic-boundary-grad', 'quadratic-boundary-nonconvex', 'default'
   cem:
-    SEED: "None"
+    SEED: "None"                          # If "None", random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     cem_outer_it: 5                    #how many outer iterations to use
@@ -15,7 +15,7 @@ controller:
     cem_best_k: 4
     cem_LR: 0.1
   cem-naive-grad:
-    SEED: "None"
+    SEED: "None"                          # If "None", random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     cem_outer_it: 5                    #how many outer iterations to use
@@ -29,7 +29,7 @@ controller:
     cem_LR: 0.001
     gradmax_clip: 10
   mppi-optimize:
-    SEED: "None"
+    SEED: "None"                          # If "None", random seed based on datetime is used
     LR: 0.02
     adam_beta_1: 0.4    #default: 0.9
     adam_beta_2: 0.8  #default: 0.999
@@ -49,7 +49,7 @@ controller:
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     optim_steps: 10
   dist-adam-resamp2:
-    SEED: "None"
+    SEED: "None"                          # If "None", random seed based on datetime is used
     dt: 0.02
     mpc_horizon: 1.0
     predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet", "EulerTF"]
@@ -68,7 +68,7 @@ controller:
     outer_its: 20                         #number of optimization iterations
     gradmax_clip: 250                     #maximal gradient entry to be kept, is ||gradient||_inf <= gradmax_clip
   mppi-var:
-    SEED: "None"
+    SEED: "None"                          # If "None", random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 400                     # Number of Monte Carlo samples
@@ -88,7 +88,7 @@ controller:
     STDEV_max: 10                       # Minimal sampling variance for sampling
     max_grad_norm: 100000                    # max norm of gradient such that ||gradient||_2
   mppi:
-    SEED: "None"                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
+    SEED: "None"                          # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 3500                      # Number of Monte Carlo samples
@@ -111,8 +111,9 @@ controller:
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     LOGGING: False                        # Collect and show detailed insights into the controller's behavior
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
-    CLIP_CONTROL_INPUT: [1.0]            # How to clip control input, symmetric
+    CLIP_CONTROL_INPUT: [1.0]             # How to clip control input, symmetric
   custom_mpc_scipy:
+    SEED: "None"                          # If "None", random seed based on datetime is used
     DT: 0.1
     # method: 'L-BFGS-B'
     method: 'SLSQP'
@@ -133,6 +134,7 @@ controller:
     dt_mpc_simulation: 0.02  # s
     mpc_horizon: 50
   do_mpc:
+    SEED: "None"                          # If "None", random seed based on datetime is used
     dt_mpc_simulation: 0.02  # s
     mpc_horizon: 50
     # Perturbation factors:
@@ -147,9 +149,9 @@ controller:
     l_position: 1.0
     l_positionD: 0.1
   lqr:
+    SEED: "None"  # Seed for rng, for lqr only, put "None" to set random seed (do it when you generate data for training!)
     Q: [10.0, 1.0, 1.0, 1.0]
     R: 10.0
-    SEED: 'None'                            # Seed for rng, for lqr only, put "None" to set random seed (do it when you generate data for training!)
     control_noise: 1.0
   pid:
     P_angle: 9.0

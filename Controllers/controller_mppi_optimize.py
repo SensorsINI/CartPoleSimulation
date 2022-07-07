@@ -1,16 +1,13 @@
-import scipy
+from importlib import import_module
+from operator import attrgetter
 import numpy as np
-from numpy.random import SFC64, Generator
-from datetime import datetime
-from numba import jit, prange
 import tensorflow as tf
 import tensorflow_probability as tfp
 
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import TrackHalfLength
 
 from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
-from CartPole.cartpole_model import u_max, s0
+from CartPole.cartpole_model import s0
 from CartPole.cartpole_jacobian import cartpole_jacobian
 
 import yaml
@@ -19,6 +16,8 @@ from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
+
+from others.globals_and_utils import create_rng
 
 
 #load constants from config file
@@ -29,8 +28,8 @@ num_control_inputs = config["cartpole"]["num_control_inputs"]
 #import cost function parts from folder according to config file
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
-cost_function_cmd = 'from others.cost_functions.'+cost_function+' import q, phi, cost'
-exec(cost_function_cmd)
+cost_function_module = import_module(f"others.cost_functions.{cost_function}")
+q, phi, cost = attrgetter("q", "phi", "cost")(cost_function_module)
 
 #cost funciton params
 cc_weight = config["controller"]["mppi-optimize"]["cc_weight"]
@@ -121,10 +120,7 @@ def inizialize_pertubation(random_gen, stdev = SQRTRHODTINV, sampling_type = SAM
 class controller_mppi_optimize(template_controller):
     def __init__(self):
         #First configure random sampler
-        SEED = config["controller"]["mppi-optimize"]["SEED"]
-        if SEED == "None":
-            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)
-        self.rng_cem = tf.random.Generator.from_seed(SEED)
+        self.rng_cem = create_rng(self.__class__.__name__, config["controller"]["mppi-optimize"]["SEED"], use_tf=True)
 
         #Setup prototype control sequence
         self.Q = tf.zeros([1,mppi_samples,num_control_inputs], dtype=tf.float32)

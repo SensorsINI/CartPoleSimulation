@@ -8,7 +8,6 @@ from run_data_generator import random_experiment_setter
 import math
 import numpy as np
 import yaml
-from datetime import datetime
 
 from typing import Optional, Union
 

@@ -1,12 +1,14 @@
 tensorflow
 
 GitPython
+gym
 imageio
 matplotlib
 numba
 numpy
 pandas
 pip
+pygame
 PyYAML
 scikit-learn
 scipy
@@ -21,3 +23,6 @@ tensorflow-probability
 do-mpc==4.1.1
 casadi
 nni
+
+./SI_Toolkit
+./SI_Toolkit_ASF/GlobalPackage/
