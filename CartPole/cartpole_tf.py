@@ -4,6 +4,8 @@ from CartPole.cartpole_model_tf import _cartpole_ode, euler_step_tf, edge_bounce
 from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, \
     STATE_INDICES
 
+from SI_Toolkit.TF.TF_Functions.Compile import Compile
+
 from others.p_globals import (
     k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
 )
@@ -36,7 +38,7 @@ _cartpole_ode_tf = _cartpole_ode
 edge_bounce_tf = edge_bounce
 
 
-# @tf.function(jit_compile=True)
+@Compile
 def wrap_angle_rad(sin, cos):
     return tf.math.atan2(sin, cos)
 
@@ -48,7 +50,7 @@ cartpole_ode_tf = cartpole_ode
 edge_bounce_wrapper_tf = edge_bounce_wrapper
 
 
-# @tf.function(jit_compile=True)
+@Compile
 def edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L=L):
     angle_bounced = tf.TensorArray(tf.float32, size=tf.size(angle), dynamic_size=False)
     angleD_bounced = tf.TensorArray(tf.float32, size=tf.size(angleD), dynamic_size=False)
@@ -72,7 +74,7 @@ def edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L
     return angle_bounced_tensor, angleD_bounced_tensor, position_bounced_tensor, positionD_bounced_tensor
 
 
-# @tf.function(jit_compile=True)
+@Compile
 def Q2u_tf(Q):
     """
     Converts dimensionless motor power [-1,1] to a physical force acting on a cart.
@@ -101,6 +103,7 @@ def Q2u_tf(Q):
 #                               tf.TensorSpec(shape=[], dtype=tf.float32), tf.TensorSpec(shape=[], dtype=tf.float32),
 #                               tf.TensorSpec(shape=[], dtype=tf.float32), tf.TensorSpec(shape=[], dtype=tf.float32),
 #                               tf.TensorSpec(shape=[], dtype=tf.float32), tf.TensorSpec(shape=[], dtype=tf.float32)])
+@Compile
 def _cartpole_fine_integration_tf(angle, angleD,
                                   angle_cos, angle_sin,
                                   position, positionD,
@@ -132,7 +135,7 @@ def _cartpole_fine_integration_tf(angle, angleD,
     return angle, angleD, position, positionD, angle_cos, angle_sin
 
 
-# @tf.function(jit_compile=True)
+@Compile
 def cartpole_fine_integration_tf(s, u, t_step, intermediate_steps,
                                  k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
     #print('test 5')
