@@ -1,3 +1,5 @@
+from importlib import import_module
+from operator import attrgetter
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -24,8 +26,8 @@ num_control_inputs = config["cartpole"]["num_control_inputs"]
 
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
-cost_function_cmd = 'from others.cost_functions.'+cost_function+' import q, phi'
-exec(cost_function_cmd)
+cost_function_module = import_module(f"others.cost_functions.{cost_function}")
+q, phi = attrgetter("q", "phi")(cost_function_module)
 
 dt = config["controller"]["mppi-var"]["dt"]
 mppi_horizon = config["controller"]["mppi-var"]["mpc_horizon"]

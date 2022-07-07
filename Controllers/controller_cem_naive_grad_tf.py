@@ -1,6 +1,8 @@
 #Controller equivalent to the cem+grad controller from Bharadhwaj et al 2020
 #
 
+from importlib import import_module
+from operator import attrgetter
 import numpy as np
 import tensorflow as tf
 
@@ -26,8 +28,8 @@ num_control_inputs = config["cartpole"]["num_control_inputs"]
 #import cost function parts from folder according to config file
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
-cost_function_cmd = 'from others.cost_functions.'+cost_function+' import cost'
-exec(cost_function_cmd)
+cost_function_module = import_module(f"others.cost_functions.{cost_function}")
+cost = attrgetter("cost")(cost_function_module)
 
 #cem params
 dt = config["controller"]["cem-naive-grad"]["dt"]
