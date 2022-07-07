@@ -1,4 +1,5 @@
 import tensorflow as tf
+import math
 
 from CartPole.cartpole_model import TrackHalfLength
 
@@ -10,16 +11,17 @@ import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 dd_weight = config["controller"]["mppi"]["dd_weight"]
-cc_weight = tf.convert_to_tensor(config["controller"]["mppi"]["cc_weight"])
+cc_weight = config["controller"]["mppi"]["cc_weight"]
 ep_weight = config["controller"]["mppi"]["ep_weight"]
-R = config["controller"]["mppi"]["R"]
+R = config["controller"]["cem"]["cem_R"]
 
-ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
+cem_outer_it = config["controller"]["cem"]["cem_outer_it"]
+ccrc_weight = config["controller"]["cem"]["cem_ccrc_weight"]
 
 #cost for distance from track edge
 def distance_difference_cost(position, target_position):
     """Compute penalty for distance of cart to the target position"""
-    return ((position - target_position) / (2.0 * TrackHalfLength)) ** 2 + tf.cast(
+    return ((position - target_position) / (2.0 * TrackHalfLength)) ** 2 - 0.15*(tf.cos(4*2*math.pi*(position-target_position)/(2.0*TrackHalfLength))-1.0) + tf.cast(
         tf.abs(position) > 0.95 * TrackHalfLength
     , tf.float32) * 1e9*((tf.abs(position) - 0.95*TrackHalfLength)/(0.05*TrackHalfLength))**2  # Soft constraint: Do not crash into border
 
@@ -62,7 +64,7 @@ def phi(s, target_position):
 #cost of changeing control to fast
 def control_change_rate_cost(u, u_prev):
     """Compute penalty of control jerk, i.e. difference to previous control input"""
-    u_prev_vec = tf.concat((tf.ones((u.shape[0], 1, u.shape[2]))*u_prev,u[:,:-1,:]),axis=1)
+    u_prev_vec = tf.concat((tf.ones((u.shape[0],1,u.shape[2]))*u_prev,u[:,:-1,:]),axis=1)
     return tf.reduce_sum((u - u_prev_vec) ** 2, axis=2)
 
 #all stage costs together

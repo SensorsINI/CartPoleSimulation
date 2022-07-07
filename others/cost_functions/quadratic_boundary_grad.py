@@ -62,7 +62,7 @@ def phi(s, target_position):
 #cost of changeing control to fast
 def control_change_rate_cost(u, u_prev):
     """Compute penalty of control jerk, i.e. difference to previous control input"""
-    u_prev_vec = tf.concat((tf.ones((u.shape[0], 1, u.shape[2]))*u_prev,u[:,:-1,:]),axis=1)
+    u_prev_vec = tf.concat((tf.ones((u.shape[0],1,u.shape[2]))*u_prev,u[:,:-1,:]),axis=1)
     return tf.reduce_sum((u - u_prev_vec) ** 2, axis=2)
 
 #all stage costs together
@@ -75,6 +75,16 @@ def q(s,u,target_position, u_prev):
     ccrc = ccrc_weight * control_change_rate_cost(u,u_prev)
     stage_cost = dd+ep+cc+ccrc
     return stage_cost
+
+def q_debug(s,u,target_position, u_prev):
+    dd = dd_weight * distance_difference_cost(
+        s[:, :, POSITION_IDX], target_position
+    )
+    ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX])
+    cc = cc_weight * CC_cost(u)
+    ccrc = ccrc_weight * control_change_rate_cost(u,u_prev)
+    stage_cost = dd+ep+cc+ccrc
+    return stage_cost, dd, ep, cc, ccrc
 
 #total cost of the trajectory
 def cost(s_hor ,u,target_position,u_prev):
