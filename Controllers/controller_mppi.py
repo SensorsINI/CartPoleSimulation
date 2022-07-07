@@ -9,7 +9,6 @@ Based on Williams, Aldrich, Theodorou (2015)
 # # # use('TkAgg')
 # use('macOSX')
 
-from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np

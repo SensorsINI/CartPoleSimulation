@@ -1,19 +1,13 @@
 #Controller equivalent to the cem+grad controller from Bharadhwaj et al 2020
 #
 
-import scipy
 import numpy as np
-from numpy.random import SFC64, Generator
-from datetime import datetime
-from numba import jit, prange
 import tensorflow as tf
 
 from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import TrackHalfLength
 
 from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
-from CartPole.cartpole_model import u_max, s0
-from CartPole.cartpole_jacobian import cartpole_jacobian
+from CartPole.cartpole_model import s0
 
 import yaml
 
@@ -21,6 +15,8 @@ from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
+
+from others.globals_and_utils import create_rng
 
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
@@ -69,10 +65,7 @@ elif predictor_type == "NeuralNet":
 class controller_cem_naive_grad_tf(template_controller):
     def __init__(self):
         #First configure random sampler
-        SEED = config["controller"]["cem-naive-grad"]["SEED"]
-        if SEED == "None":
-            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)
-        self.rng_cem = tf.random.Generator.from_seed(SEED)
+        self.rng_cem = create_rng(self.__class__.__name__, config["controller"]["cem-naive-grad"]["SEED"], use_tf=True)
 
         self.dist_mue = tf.zeros([1,cem_samples,num_control_inputs], dtype=tf.float32)
         self.dist_var = 0.5*tf.ones([1,cem_samples,num_control_inputs], dtype=tf.float32)
