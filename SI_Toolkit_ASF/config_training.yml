@@ -26,7 +26,6 @@ training_default:
   WASH_OUT_LEN: 10  # needs to be set to 0 for GP training
   POST_WASH_OUT_LEN: 20  # needs to be set to 1 for GP training
   ON_FLY_DATA_GENERATION: False
-  SHIFT_LABELS: 1
   NORMALIZE: True
   SHIFT_LABELS: 1  # for k, as a label to row i is taken row i+k
 
