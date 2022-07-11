@@ -16,9 +16,6 @@ from CartPole.cartpole_jacobian import cartpole_jacobian
 import yaml
 
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
-from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
-from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
-from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
 
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
@@ -65,12 +62,14 @@ predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
 
 """Define Predictor"""
 if predictor_type == "EulerTF":
+    from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
     predictor = predictor_ODE_tf(horizon=mppi_samples, dt=dt, intermediate_steps=10, disable_individual_compilation=True)
     predictor_single_trajectory = predictor
 elif predictor_type == "Euler":
     predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
     predictor_single_trajectory = predictor
 elif predictor_type == "NeuralNet":
+    from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
     predictor = predictor_autoregressive_tf(
         horizon=mppi_samples, batch_size=num_rollouts, net_name=NET_NAME, disable_individual_compilation=True
     )
@@ -78,6 +77,7 @@ elif predictor_type == "NeuralNet":
         horizon=mppi_samples, batch_size=1, net_name=NET_NAME, disable_individual_compilation=True
     )
 elif predictor_type == "GP":
+    from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
     predictor = predictor_autoregressive_GP(model_name=GP_NAME, horizon=mppi_samples, num_rollouts=num_rollouts)
 
 GET_ROLLOUTS_FROM_MPPI = False
