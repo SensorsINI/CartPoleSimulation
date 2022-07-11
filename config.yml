@@ -95,6 +95,7 @@ controller:
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_type: "EulerTF"               # One of ["EulerTF", "GP", "NeuralNet"]
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
+    GP_NAME: 'SGP_30'  # Applies only if predictor_type is GP
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01
