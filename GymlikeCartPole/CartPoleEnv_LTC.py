@@ -8,8 +8,12 @@ from run_data_generator import random_experiment_setter
 import math
 import numpy as np
 import yaml
+import os
 
 from typing import Optional, Union
+
+from others.globals_and_utils import my_logger
+logger = my_logger(__name__)
 
 import pygame
 from pygame import gfxdraw
@@ -174,6 +178,9 @@ class CartPoleEnv_LTC(gym.Env):
 
         if self.screen is None:
             pygame.init()
+            if not pygame.display.get_init():
+                logger.warn("No display found. Using dummy display.")
+                os.environ["SDL_VIDEODRIVER"] = "dummy"
             self.screen = pygame.display.set_mode((screen_width, screen_height))
         self.surf = pygame.Surface((screen_width, screen_height))
         self.surf.fill((255, 255, 255))

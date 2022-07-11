@@ -3,6 +3,11 @@ tensorflow
 GitPython
 gym
 imageio
+engineering_notation
+derivative
+gpflow
+gym
+pygame
 matplotlib
 numba
 numpy
