@@ -7,8 +7,8 @@ controller:
     mpc_horizon: 1.0                      # sec
     cem_outer_it: 5                    #how many outer iterations to use
     cem_rollouts: 80          #how many rollouts per outer cem iteration
-    cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
-    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor type is NeuralNet
     cem_stdev_min: 0.1
     cem_R: 1
     cem_ccrc_weight: 1
@@ -20,8 +20,8 @@ controller:
     mpc_horizon: 1.0                      # sec
     cem_outer_it: 5                    #how many outer iterations to use
     cem_rollouts: 80          #how many rollouts per outer cem iteration
-    cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
-    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor type is NeuralNet
     cem_stdev_min: 0.05
     cem_R: 1
     cem_ccrc_weight: 1
@@ -38,8 +38,8 @@ controller:
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 400                     # Number of Monte Carlo samples
-    predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor type is NeuralNet
     cc_weight: 1.0
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
@@ -52,9 +52,10 @@ controller:
     SEED: "None"                          # If "None", random seed based on datetime is used
     dt: 0.02
     mpc_horizon: 1.0
-    predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet", "EulerTF"]
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  #DOES NOT WORK YET!!! Applies only if predictor_type is NeuralNet
-    resamp_per: 1                         # determines after how many steps the control plans are resamples
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    predictor_intermediate_steps: 10
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor type is NeuralNet
+    resamp_per: 1                         #determines after how many steps the control plans are resamples
     sample_stdev: 0.5                     #sampling variance of control action
     LR: 0.002                             #learning rate parameter fro adam
     adam_beta_1: 0.4    #default: 0.9      adam hyperparameter
@@ -75,27 +76,27 @@ controller:
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
     interpolation_step: 10                #interpolation stepsize when sampling
     cc_weight: 1.0
-    predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet", "EulerTF"]
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  #DOES NOT WORK YET!!! Applies only if predictor_type is NeuralNet
+    predictor_name: "predictor_ODE_tf"             # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor type is NeuralNet
     R: 1.0                                # How much to punish Q
     # mc stands for mathematical correct, as this controller uses the formula from the paper
     LBD_mc: 10.0                          # Cost parameter lambda
     SQRTRHOINV_mc: 0.002                  # Sampling variance
     NU_mc: 20.0                           # Exploration variance
     GAMMA: 1.00                           # Future cost discount
-    LR: 1000                             # Learning rate for adaption of variance, !!! Set to 0 to retrieve a mppi version in accordance with mppi paper
-    STDEV_min: 0.01                        # Maximal variance for sampling
-    STDEV_max: 10                       # Minimal sampling variance for sampling
-    max_grad_norm: 100000                    # max norm of gradient such that ||gradient||_2
+    LR: 1000                              # Learning rate for adaption of variance, !!! Set to 0 to retrieve a mppi version in accordance with mppi paper
+    STDEV_min: 0.01                       # Maximal variance for sampling
+    STDEV_max: 10                         # Minimal sampling variance for sampling
+    max_grad_norm: 100000                 # max norm of gradient such that ||gradient||_2
   mppi:
     SEED: "None"                          # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
-    num_rollouts: 3500                      # Number of Monte Carlo samples
+    num_rollouts: 3500                    # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "EulerTF"               # One of ["EulerTF", "GP", "NeuralNet"]
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
-    GP_NAME: 'SGP_30'  # Applies only if predictor_type is GP
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf", "predictor_autoregressive_GP"]
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor type is NeuralNet
+    GP_NAME: 'SGP_30'                     # Applies only if predictor type is GP
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01

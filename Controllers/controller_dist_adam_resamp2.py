@@ -1,6 +1,7 @@
 #the best working controller
 
 import importlib
+from importlib import import_module
 import numpy as np
 import tensorflow as tf
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
@@ -39,11 +40,12 @@ num_rollouts = config["controller"]["dist-adam-resamp2"]["num_rollouts"]
 outer_its = config["controller"]["dist-adam-resamp2"]["outer_its"]
 samp_stdev = config["controller"]["dist-adam-resamp2"]["sample_stdev"]
 cem_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
+intermediate_steps = config["controller"]["dist-adam-resamp2"]["predictor_intermediate_steps"]
 
 resamp_per = config["controller"]["dist-adam-resamp2"]["resamp_per"]
 
 NET_NAME = config["controller"]["dist-adam-resamp2"]["NET_NAME"]
-predictor_type = config["controller"]["dist-adam-resamp2"]["predictor_type"]
+predictor_name = config["controller"]["dist-adam-resamp2"]["predictor_name"]
 
 SAMPLING_TYPE = config["controller"]["dist-adam-resamp2"]["SAMPLING_TYPE"]
 interpolation_step = config["controller"]["dist-adam-resamp2"]["interpolation_step"]
@@ -60,18 +62,16 @@ adam_epsilon = float(config["controller"]["dist-adam-resamp2"]["adam_epsilon"])
 gradmax_clip = config["controller"]["dist-adam-resamp2"]["gradmax_clip"]
 gradmax_clip = tf.constant(gradmax_clip, dtype = tf.float32)
 
-#create predictor
-predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
-
-"""Define Predictor"""
-if predictor_type == "EulerTF":
-    predictor = predictor_ODE_tf(horizon=cem_samples, dt=dt, intermediate_steps=1, disable_individual_compilation=True)
-elif predictor_type == "Euler":
-    predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
-elif predictor_type == "NeuralNet":
-    predictor = predictor_autoregressive_tf(
-        horizon=cem_samples, batch_size=num_rollouts, net_name=NET_NAME
-    )
+#instantiate predictor
+predictor_module = import_module(f"SI_Toolkit.Predictors.{predictor_name}")
+predictor = getattr(predictor_module, predictor_name)(
+    horizon=cem_samples,
+    dt=dt,
+    intermediate_steps=intermediate_steps,
+    disable_individual_compilation=True,
+    batch_size=num_rollouts,
+    net_name=NET_NAME,
+)
 
 #warmup setup
 first_iter_count = outer_its

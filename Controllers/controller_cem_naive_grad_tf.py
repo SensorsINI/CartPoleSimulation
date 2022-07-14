@@ -40,9 +40,10 @@ cem_outer_it = config["controller"]["cem-naive-grad"]["cem_outer_it"]
 cem_stdev_min = config["controller"]["cem-naive-grad"]["cem_stdev_min"]
 cem_best_k = config["controller"]["cem-naive-grad"]["cem_best_k"]
 cem_samples = int(cem_horizon / dt)  # Number of steps in MPC horizon
+intermediate_steps = config["controller"]["cem-naive-grad"]["predictor_intermediate_steps"]
 
 NET_NAME = config["controller"]["cem-naive-grad"]["CEM_NET_NAME"]
-predictor_type = config["controller"]["cem-naive-grad"]["cem_predictor_type"]
+predictor_name = config["controller"]["cem-naive-grad"]["predictor_name"]
 
 #optimization params
 cem_LR = config["controller"]["cem-naive-grad"]["cem_LR"]
@@ -50,18 +51,16 @@ cem_LR = tf.constant(cem_LR, dtype=tf.float32)
 gradmax_clip = config["controller"]["cem-naive-grad"]["gradmax_clip"]
 gradmax_clip = tf.constant(gradmax_clip, dtype = tf.float32)
 
-#create predictor
-predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
-
-"""Define Predictor"""
-if predictor_type == "EulerTF":
-    predictor = predictor_ODE_tf(horizon=cem_samples, dt=dt, intermediate_steps=1, disable_individual_compilation=True)
-elif predictor_type == "Euler":
-    predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
-elif predictor_type == "NeuralNet":
-    predictor = predictor_autoregressive_tf(
-        horizon=cem_samples, batch_size=num_rollouts, net_name=NET_NAME
-    )
+#instantiate predictor
+predictor_module = import_module(f"SI_Toolkit.Predictors.{predictor_name}")
+predictor = getattr(predictor_module, predictor_name)(
+    horizon=cem_samples,
+    dt=dt,
+    intermediate_steps=intermediate_steps,
+    disable_individual_compilation=True,
+    batch_size=num_rollouts,
+    net_name=NET_NAME,
+)
 
 #controller class
 class controller_cem_naive_grad_tf(template_controller):

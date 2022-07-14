@@ -41,6 +41,7 @@ dt = config["controller"]["mppi-optimize"]["dt"]
 mppi_horizon = config["controller"]["mppi-optimize"]["mpc_horizon"]
 num_rollouts = config["controller"]["mppi-optimize"]["num_rollouts"]
 mppi_samples = int(mppi_horizon / dt)  # Number of steps in MPC horizon
+intermediate_steps = config["controller"]["mppi-optimize"]["predictor_intermediate_steps"]
 
 NU = config["controller"]["mppi-optimize"]["NU"]
 SQRTRHODTINV = config["controller"]["mppi-optimize"]["SQRTRHOINV"] * (1 / np.math.sqrt(dt))
@@ -48,12 +49,11 @@ GAMMA = config["controller"]["mppi-optimize"]["GAMMA"]
 SAMPLING_TYPE = config["controller"]["mppi-optimize"]["SAMPLING_TYPE"]
 
 NET_NAME = config["controller"]["mppi-optimize"]["NET_NAME"]
-predictor_type = config["controller"]["mppi-optimize"]["predictor_type"]
-
+predictor_name = config["controller"]["mppi-optimize"]["predictor_name"]
 
 #optimization params
-cem_LR = config["controller"]["mppi-optimize"]["LR"]
-cem_LR = tf.constant(cem_LR, dtype=tf.float32)
+mppi_LR = config["controller"]["mppi-optimize"]["LR"]
+mppi_LR = tf.constant(mppi_LR, dtype=tf.float32)
 
 adam_beta_1 = config["controller"]["mppi-optimize"]["adam_beta_1"]
 adam_beta_2 = config["controller"]["mppi-optimize"]["adam_beta_2"]
@@ -62,18 +62,16 @@ gradmax_clip = config["controller"]["mppi-optimize"]["gradmax_clip"]
 gradmax_clip = tf.constant(gradmax_clip, dtype = tf.float32)
 optim_steps = config["controller"]["mppi-optimize"]["optim_steps"]
 
-#create default predictor
-predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
-
-"""Define Predictor"""
-if predictor_type == "EulerTF":
-    predictor = predictor_ODE_tf(horizon=mppi_samples, dt=dt, intermediate_steps=1, disable_individual_compilation=True)
-elif predictor_type == "Euler":
-    predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
-elif predictor_type == "NeuralNet":
-    predictor = predictor_autoregressive_tf(
-        horizon=mppi_samples, batch_size=num_rollouts, net_name=NET_NAME
-    )
+#instantiate predictor
+predictor_module = import_module(f"SI_Toolkit.Predictors.{predictor_name}")
+predictor = getattr(predictor_module, predictor_name)(
+    horizon=mppi_samples,
+    dt=dt,
+    intermediate_steps=intermediate_steps,
+    disable_individual_compilation=True,
+    batch_size=num_rollouts,
+    net_name=NET_NAME,
+)
 
 #mppi correction for importance sampling
 def mppi_correction_cost(u, delta_u):
@@ -120,14 +118,14 @@ def inizialize_pertubation(random_gen, stdev = SQRTRHODTINV, sampling_type = SAM
 class controller_mppi_optimize(template_controller):
     def __init__(self):
         #First configure random sampler
-        self.rng_cem = create_rng(self.__class__.__name__, config["controller"]["mppi-optimize"]["SEED"], use_tf=True)
+        self.rng_mppi = create_rng(self.__class__.__name__, config["controller"]["mppi-optimize"]["SEED"], use_tf=True)
 
         #Setup prototype control sequence
         self.Q = tf.zeros([1,mppi_samples,num_control_inputs], dtype=tf.float32)
         self.Q = tf.Variable(self.Q)
         self.u = 0.0
         #setup adam optimizer
-        self.opt = tf.keras.optimizers.Adam(learning_rate=cem_LR, beta_1=adam_beta_1, beta_2=adam_beta_2,
+        self.opt = tf.keras.optimizers.Adam(learning_rate=mppi_LR, beta_1=adam_beta_1, beta_2=adam_beta_2,
                                             epsilon=adam_epsilon)
 
     @Compile
@@ -175,7 +173,7 @@ class controller_mppi_optimize(template_controller):
         target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 
         #first retrieve suboptimal control sequence with mppi
-        Q_mppi = self.mppi_prior(s, target_position, self.Q, self.rng_cem, self.u)
+        Q_mppi = self.mppi_prior(s, target_position, self.Q, self.rng_mppi, self.u)
         self.Q.assign(Q_mppi)
 
         #optimize control sequence with gradient based optimization

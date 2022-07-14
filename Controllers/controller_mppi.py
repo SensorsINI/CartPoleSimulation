@@ -10,6 +10,7 @@ Based on Williams, Aldrich, Theodorou (2015)
 # use('macOSX')
 
 
+from importlib import import_module
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
@@ -34,10 +35,6 @@ from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 
 from Controllers.template_controller import template_controller
 
-# from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
-# from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
-
-
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
@@ -53,7 +50,8 @@ mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 update_every = config["controller"]["mppi"]["update_every"]
-predictor_type = config["controller"]["mppi"]["predictor_type"]
+predictor_name = config["controller"]["mppi"]["predictor_name"]
+intermediate_steps = config["controller"]["mppi"]["predictor_intermediate_steps"]
 
 WASH_OUT_LEN = config["controller"]["mppi"]["WASH_OUT_LEN"]
 
@@ -152,17 +150,16 @@ def penalize_deviation(cc, u):
     return cc
 
 
-"""Define Predictor"""
-if predictor_type == "EulerTF":
-    predictor = predictor_ODE_tf(horizon=mpc_samples, dt=dt, intermediate_steps=10)
-elif predictor_type == "Euler":
-    predictor = predictor_ODE(horizon=mpc_samples, dt=dt, intermediate_steps=10)
-elif predictor_type == "NeuralNet":
-    predictor = predictor_autoregressive_tf(
-        horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
-    )
-# elif predictor_type == "GP":
-#     predictor = predictor_autoregressive_GP(horizon=mpc_samples)
+#instantiate predictor
+predictor_module = import_module(f"SI_Toolkit.Predictors.{predictor_name}")
+predictor = getattr(predictor_module, predictor_name)(
+    horizon=mpc_samples,
+    dt=dt,
+    intermediate_steps=intermediate_steps,
+    disable_individual_compilation=True,
+    batch_size=num_rollouts,
+    net_name=NET_NAME,
+)
 
 predictor_ground_truth = predictor_ODE(
     horizon=mpc_samples, dt=dt, intermediate_steps=10

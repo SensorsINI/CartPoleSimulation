@@ -36,24 +36,21 @@ cem_outer_it = config["controller"]["cem"]["cem_outer_it"]
 cem_stdev_min = config["controller"]["cem"]["cem_stdev_min"]
 cem_best_k = config["controller"]["cem"]["cem_best_k"]
 cem_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
+intermediate_steps = config["controller"]["cem"]["predictor_intermediate_steps"]
 
 NET_NAME = config["controller"]["cem"]["CEM_NET_NAME"]
-predictor_type = config["controller"]["cem"]["cem_predictor_type"]
+predictor_name = config["controller"]["cem"]["predictor_name"]
 
-
-#create predictor
-predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
-
-"""Define Predictor"""
-if predictor_type == "EulerTF":
-    predictor = predictor_ODE_tf(horizon=cem_samples, dt=dt, intermediate_steps=1, disable_individual_compilation=True)
-elif predictor_type == "Euler":
-    predictor = predictor_ODE(horizon=cem_samples, dt=dt, intermediate_steps=10)
-elif predictor_type == "NeuralNet":
-    predictor = predictor_autoregressive_tf(
-        horizon=cem_samples, batch_size=num_rollouts, net_name=NET_NAME
-    )
-
+#instantiate predictor
+predictor_module = import_module(f"SI_Toolkit.Predictors.{predictor_name}")
+predictor = getattr(predictor_module, predictor_name)(
+    horizon=cem_samples,
+    dt=dt,
+    intermediate_steps=intermediate_steps,
+    disable_individual_compilation=True,
+    batch_size=num_rollouts,
+    net_name=NET_NAME,
+)
 
 #cem class
 class controller_cem_tf(template_controller):

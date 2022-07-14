@@ -38,9 +38,10 @@ interpolation_step = config["controller"]["mppi-var"]["interpolation_step"]
 cc_weight = config["controller"]["mppi-var"]["cc_weight"]
 
 NET_NAME = config["controller"]["mppi-var"]["NET_NAME"]
-predictor_type = config["controller"]["mppi-var"]["predictor_type"]
+predictor_name = config["controller"]["mppi-var"]["predictor_name"]
 
 mppi_samples = int(mppi_horizon / dt)  # Number of steps in MPC horizon
+intermediate_steps = config["controller"]["mppi-var"]["predictor_intermediate_steps"]
 
 R = config["controller"]["mppi-var"]["R"]
 LBD = config["controller"]["mppi-var"]["LBD_mc"]
@@ -53,18 +54,17 @@ stdev_min = config["controller"]["mppi-var"]["STDEV_min"]
 stdev_max = config["controller"]["mppi-var"]["STDEV_max"]
 max_grad_norm = config["controller"]["mppi-var"]["max_grad_norm"]
 
-#create predictor
-predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
 
-"""Define Predictor"""
-if predictor_type == "EulerTF":
-    predictor = predictor_ODE_tf(horizon=mppi_samples, dt=dt, intermediate_steps=1, disable_individual_compilation=True)
-elif predictor_type == "Euler":
-    predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
-elif predictor_type == "NeuralNet":
-    predictor = predictor_autoregressive_tf(
-        horizon=mppi_samples, batch_size=num_rollouts, net_name=NET_NAME
-    )
+#instantiate predictor
+predictor_module = import_module(f"SI_Toolkit.Predictors.{predictor_name}")
+predictor = getattr(predictor_module, predictor_name)(
+    horizon=mppi_samples,
+    dt=dt,
+    intermediate_steps=intermediate_steps,
+    disable_individual_compilation=True,
+    batch_size=num_rollouts,
+    net_name=NET_NAME,
+)
 
 
 #setup interpolation matrix
@@ -121,7 +121,7 @@ def inizialize_pertubation(random_gen, nuvec):
 class controller_mppi_var(template_controller):
     def __init__(self):
         #First configure random sampler
-        self.rng_cem = create_rng(self.__class__.__name__, config["controller"]["mppi-var"]["SEED"], use_tf=True)
+        self.rng_mppi = create_rng(self.__class__.__name__, config["controller"]["mppi-var"]["SEED"], use_tf=True)
         #set up nominal u
         self.u_nom = tf.zeros([1,mppi_samples,num_control_inputs], dtype=tf.float32)
         #set up vector of variances to be optimized
@@ -163,7 +163,7 @@ class controller_mppi_var(template_controller):
         s = np.tile(s, tf.constant([num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
-        self.u, self.u_nom, new_nuvec = self.do_step(s, target_position, self.u_nom, self.rng_cem, self.u, self.nuvec)
+        self.u, self.u_nom, new_nuvec = self.do_step(s, target_position, self.u_nom, self.rng_mppi, self.u, self.nuvec)
         self.nuvec.assign(new_nuvec)
         return tf.squeeze(self.u).numpy()
 

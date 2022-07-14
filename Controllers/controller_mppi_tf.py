@@ -36,9 +36,10 @@ cc_weight = config["controller"]["mppi"]["cc_weight"]
 
 NET_NAME = config["controller"]["mppi"]["NET_NAME"]
 GP_NAME = config["controller"]["mppi"]["GP_NAME"]
-predictor_type = config["controller"]["mppi"]["predictor_type"]
-
+predictor_name = config["controller"]["mppi"]["predictor_name"]
 mppi_samples = int(mppi_horizon / dt)  # Number of steps in MPC horizon
+
+intermediate_steps = config["controller"]["mppi"]["predictor_intermediate_steps"]
 
 R = tf.convert_to_tensor(config["controller"]["mppi"]["R"])
 LBD = config["controller"]["mppi"]["LBD"]
@@ -55,32 +56,32 @@ else:
     clip_control_input_high = tf.constant(clip_control_input, dtype=tf.float32)
     clip_control_input_low = -clip_control_input_high
 
-#create predictor
-predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
+#instantiate predictor
+predictor_module = import_module(f"SI_Toolkit.Predictors.{predictor_name}")
+predictor = getattr(predictor_module, predictor_name)(
+    horizon=mppi_samples,
+    dt=dt,
+    intermediate_steps=intermediate_steps,
+    disable_individual_compilation=True,
+    batch_size=num_rollouts,
+    net_name=NET_NAME,
+)
+if predictor_name == "predictor_autoregressive_tf":
+    predictor_single_trajectory = getattr(predictor_module, predictor_name)(
+    horizon=mppi_samples,
+    dt=dt,
+    intermediate_steps=intermediate_steps,
+    disable_individual_compilation=True,
+    batch_size=1,
+    net_name=NET_NAME,
+)
+else:
+    predictor_single_trajectory = predictor
 
-"""Define Predictor"""
-if predictor_type == "EulerTF":
-    from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
-    predictor = predictor_ODE_tf(horizon=mppi_samples, dt=dt, intermediate_steps=10, disable_individual_compilation=True)
-    predictor_single_trajectory = predictor
-elif predictor_type == "Euler":
-    predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
-    predictor_single_trajectory = predictor
-elif predictor_type == "NeuralNet":
-    from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
-    predictor = predictor_autoregressive_tf(
-        horizon=mppi_samples, batch_size=num_rollouts, net_name=NET_NAME, disable_individual_compilation=True
-    )
-    predictor_single_trajectory = predictor_autoregressive_tf(
-        horizon=mppi_samples, batch_size=1, net_name=NET_NAME, disable_individual_compilation=True
-    )
-elif predictor_type == "GP":
-    from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
-    predictor = predictor_autoregressive_GP(model_name=GP_NAME, horizon=mppi_samples, num_rollouts=num_rollouts)
 
 GET_ROLLOUTS_FROM_MPPI = False
-
 GET_OPTIMAL_TRAJECTORY = False
+
 
 def check_dimensions_s(s):
     # Make sure the input is at least 2d
@@ -89,9 +90,11 @@ def check_dimensions_s(s):
 
     return s
 
+
 #mppi correction
 def mppi_correction_cost(u, delta_u):
     return tf.math.reduce_sum(cc_weight * (0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)), axis=2)
+
 
 #total cost of the trajectory
 def cost(s_hor ,u, target, u_prev, delta_u):
@@ -127,7 +130,7 @@ def inizialize_pertubation(random_gen, stdev = SQRTRHODTINV, sampling_type = SAM
 class controller_mppi_tf(template_controller):
     def __init__(self):
         #First configure random sampler
-        self.rng_cem = create_rng(self.__class__.__name__, config["controller"]["mppi"]["SEED"], use_tf=True)
+        self.rng_mppi = create_rng(self.__class__.__name__, config["controller"]["mppi"]["SEED"], use_tf=True)
 
         self.u_nom = tf.zeros([1, mppi_samples, num_control_inputs], dtype=tf.float32)
         self.u = tf.convert_to_tensor([0.0], dtype=tf.float32)
@@ -138,7 +141,7 @@ class controller_mppi_tf(template_controller):
         self.optimal_trajectory = None
 
         # Defining function - the compiled part must not have if-else statements with changing output dimensions
-        if predictor_type == 'NeuralNet':
+        if predictor_name == 'predictor_autoregressive_tf':
             self.update_internal_state = self.update_internal_state_of_RNN
         else:
             self.update_internal_state = lambda s, u_nom: ...
@@ -176,7 +179,7 @@ class controller_mppi_tf(template_controller):
     @Compile
     def predict_optimal_trajectory(self, s, u_nom):
         optimal_trajectory = predictor_single_trajectory.predict_tf(s, u_nom)
-        if predictor_type ==  'NeuralNet':
+        if predictor_name ==  'predictor_autoregressive_tf':
             predictor_single_trajectory.update_internal_state_tf(s=s, Q0=u_nom[:, :1, :])
         return optimal_trajectory
 
@@ -186,7 +189,7 @@ class controller_mppi_tf(template_controller):
         s = check_dimensions_s(s)
         target = tf.convert_to_tensor(target, dtype=tf.float32)
 
-        self.u, self.u_nom, rollout_trajectory, traj_cost = self.predict_and_cost(s, target, self.u_nom, self.rng_cem,
+        self.u, self.u_nom, rollout_trajectory, traj_cost = self.predict_and_cost(s, target, self.u_nom, self.rng_mppi,
                                                                                   self.u)
         if GET_ROLLOUTS_FROM_MPPI:
             self.rollout_trajectory = rollout_trajectory.numpy()
