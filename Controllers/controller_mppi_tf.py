@@ -140,6 +140,9 @@ class controller_mppi_tf(template_controller):
         self.rollout_trajectory = None
         self.traj_cost = None
 
+        self.horizon = config["controller"]["mppi"]["mpc_horizon"]
+        self.num_rollouts = config["controller"]["mppi"]["num_rollouts"]
+
         self.optimal_trajectory = None
 
         # Defining function - the compiled part must not have if-else statements with changing output dimensions
