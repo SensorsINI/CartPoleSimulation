@@ -189,13 +189,13 @@ class controller_mppi_tf(template_controller):
         return optimal_trajectory
 
     #step function to find control
-    def step(self, s: np.ndarray, target: np.ndarray, time=None):
+    def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         s = check_dimensions_s(s)
-        target = tf.convert_to_tensor(target, dtype=tf.float32)
+        target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 
-        self.u, self.u_nom, rollout_trajectory, traj_cost = self.predict_and_cost(s, target, self.u_nom, self.rng_cem,
-                                                                                  self.u)
+        self.u, self.u_nom, rollout_trajectory, traj_cost = self.predict_and_cost(s, target_position, self.u_nom, self.rng_cem,
+                                                            self.u)
         if GET_ROLLOUTS_FROM_MPPI:
             self.rollout_trajectory = rollout_trajectory.numpy()
             self.traj_cost = traj_cost.numpy()
