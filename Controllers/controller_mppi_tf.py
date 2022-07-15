@@ -1,14 +1,13 @@
 from importlib import import_module
-from operator import attrgetter
 from typing import Union
 
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-from others.globals_and_utils import create_rng
+from ..others.globals_and_utils import create_rng
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
-from Controllers.template_controller import template_controller
+from .template_controller import template_controller
 
 
 class controller_mppi_tf(template_controller):
