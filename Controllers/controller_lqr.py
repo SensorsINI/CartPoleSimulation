@@ -5,7 +5,6 @@ It assumes that the input relation is u = Q*u_max (no fancy motor model) !
 
 import numpy as np
 import scipy
-import yaml
 from CartPole.cartpole_jacobian import cartpole_jacobian
 from CartPole.cartpole_model import s0, u_max
 from CartPole.state_utilities import (ANGLE_IDX, ANGLED_IDX, POSITION_IDX,
@@ -14,14 +13,9 @@ from others.globals_and_utils import create_rng
 
 from Controllers.template_controller import template_controller
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
-Q = np.diag(config["controller"]["lqr"]["Q"])
-R = config["controller"]["lqr"]["R"]
-
-p_Q = config["controller"]["lqr"]["control_noise"]
 
 class controller_lqr(template_controller):
-    def __init__(self, environment):
+    def __init__(self, environment, seed: int, Q: "list[float]", R: "list[float]", control_noise: float, **kwargs):
         # From https://github.com/markwmuller/controlpy/blob/master/controlpy/synthesis.py#L8
         """Solve the continuous time LQR controller for a continuous time system.
 
@@ -38,10 +32,10 @@ class controller_lqr(template_controller):
         The optimal input is then computed as:
          input: u = -K*x
         """
+        self.p_Q = control_noise
         # ref Bertsekas, p.151
 
-        SEED = config["controller"]["lqr"]["SEED"]
-        self.rng_lqr = create_rng(self.__class__.__name__, SEED if SEED=="None" else SEED*2)
+        self.rng_lqr = create_rng(self.__class__.__name__, seed if seed=="None" else seed*2)
 
         # Calculate Jacobian around equilibrium
         # Set point around which the Jacobian should be linearized
@@ -58,7 +52,7 @@ class controller_lqr(template_controller):
         B = np.reshape(jacobian[:, -1], newshape=(4, 1)) * u_max
 
         # Cost matrices for LQR controller
-        self.Q = Q  # How much to punish x, v, theta, omega
+        self.Q = np.diag(Q) # How much to punish x, v, theta, omega
         self.R = R  # How much to punish Q
 
         # first, try to solve the ricatti equation
@@ -86,7 +80,7 @@ class controller_lqr(template_controller):
 
         Q = np.dot(-self.K, state).item()
 
-        Q = np.float32(Q * (1 + p_Q * self.rng_lqr.uniform(-1.0, 1.0)))
+        Q = np.float32(Q * (1 + self.p_Q * self.rng_lqr.uniform(-1.0, 1.0)))
         # Q = self.rng_lqr.uniform(-1.0, 1.0)
 
         # Clip Q

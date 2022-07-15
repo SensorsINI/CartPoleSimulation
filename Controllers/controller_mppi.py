@@ -10,6 +10,8 @@ Based on Williams, Aldrich, Theodorou (2015)
 # use('macOSX')
 
 
+from importlib import import_module
+
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
@@ -27,17 +29,9 @@ from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, g, k, m, u_max,
                               v_max)
 from scipy.interpolate import interp1d
-from SI_Toolkit.Predictors.predictor_autoregressive_tf import \
-    predictor_autoregressive_tf
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
-from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 
 from Controllers.template_controller import template_controller
-
-# from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
-# from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
-
-
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
@@ -53,7 +47,8 @@ mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 update_every = config["controller"]["mppi"]["update_every"]
-predictor_type = config["controller"]["mppi"]["predictor_type"]
+predictor_name = config["controller"]["mppi"]["predictor_name"]
+intermediate_steps = config["controller"]["mppi"]["predictor_intermediate_steps"]
 
 WASH_OUT_LEN = config["controller"]["mppi"]["WASH_OUT_LEN"]
 
@@ -152,17 +147,16 @@ def penalize_deviation(cc, u):
     return cc
 
 
-"""Define Predictor"""
-if predictor_type == "EulerTF":
-    predictor = predictor_ODE_tf(horizon=mpc_samples, dt=dt, intermediate_steps=10)
-elif predictor_type == "Euler":
-    predictor = predictor_ODE(horizon=mpc_samples, dt=dt, intermediate_steps=10)
-elif predictor_type == "NeuralNet":
-    predictor = predictor_autoregressive_tf(
-        horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
-    )
-# elif predictor_type == "GP":
-#     predictor = predictor_autoregressive_GP(horizon=mpc_samples)
+#instantiate predictor
+predictor_module = import_module(f"SI_Toolkit.Predictors.{predictor_name}")
+predictor = getattr(predictor_module, predictor_name)(
+    horizon=mpc_samples,
+    dt=dt,
+    intermediate_steps=intermediate_steps,
+    disable_individual_compilation=True,
+    batch_size=num_rollouts,
+    net_name=NET_NAME,
+)
 
 predictor_ground_truth = predictor_ODE(
     horizon=mpc_samples, dt=dt, intermediate_steps=10
@@ -348,12 +342,11 @@ class controller_mppi(template_controller):
     :type template_controller: abc.ABC
     """
 
-    def __init__(self, environment):
-
+    def __init__(self, environment, **kwargs):
         """Random number generator"""
-        SEED = config["controller"]["mppi"]["SEED"]
-        self.rng_mppi = create_rng(self.__class__.__name__, SEED)
-        self.rng_mppi_rnn = create_rng(self.__class__.__name__, SEED if SEED=="None" else SEED*2) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
+        seed = config["controller"]["mppi"]["seed"]
+        self.rng_mppi = create_rng(self.__class__.__name__, seed)
+        self.rng_mppi_rnn = create_rng(self.__class__.__name__, seed if seed=="None" else seed*2) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
 
 
         global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
@@ -383,9 +376,8 @@ class controller_mppi(template_controller):
         self.warm_up_countdown = self.wash_out_len
         try:
             from Controllers.controller_lqr import controller_lqr
-
             self.auxiliary_controller_available = True
-            self.auxiliary_controller = controller_lqr(environment)
+            self.auxiliary_controller = controller_lqr(environment, **config["controller"]["lqr"])
         except ModuleNotFoundError:
             self.auxiliary_controller_available = False
             self.auxiliary_controller = None
@@ -507,9 +499,9 @@ class controller_mppi(template_controller):
 
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
-                if predictor_type == "Euler":
+                if predictor_name == "predictor_ODE":
                     rollout_trajectory = predictor.predict(np.copy(self.s), self.u[:, np.newaxis])
-                elif predictor_type == "NeuralNet" or predictor_type == 'EulerTF' or predictor_type == "GP":
+                elif predictor_name in ["predictor_autoregressive_tf", 'predictor_ODE_tf', "predictor_autoregressive_GP"]:
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     # FIXME: Problaby you can reduce it!
 
@@ -526,7 +518,7 @@ class controller_mppi(template_controller):
             self.warm_up_countdown > 0
             and self.auxiliary_controller_available
             and (NET_TYPE == "GRU" or NET_TYPE == "LSTM" or NET_TYPE == "RNN")
-            and predictor_type == "NeuralNet"
+            and predictor_name == "predictor_autoregressive_tf"
         ):
             self.warm_up_countdown -= 1
             if abs(s[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small

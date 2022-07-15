@@ -20,7 +20,7 @@ import yaml, os
 config_CartPole = yaml.load(open('../../config.yml'), Loader=yaml.FullLoader)
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
-    seed = config_CartPole["data_generator"]["SEED"]
+    seed = config_CartPole["data_generator"]["seed"]
 
     reset_seed_for_each_experiment = False
 
@@ -59,7 +59,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     """" This is the interesting part where i set up the directory and copy all relevant information"""
     ### Setup directory with data for exp
     #get cost function
-    cost_function = config_CartPole["controller"]["general"]["cost_function"]
+    cost_function = config_CartPole["cartpole"]["cost_function"]
     cost_function_file = cost_function.replace('-', '_') + ".py"
     ctrl_file = controller_DataGen.replace('-', '_') + ".py"
     #setup experiment folder

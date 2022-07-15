@@ -1,7 +1,6 @@
-import numpy as np
-
 from abc import ABC, abstractmethod
 
+import numpy as np
 
 """
 For a controller to be found and imported by CartPoleGUI/DataGenerator it must:
@@ -16,7 +15,7 @@ See the provided examples of controllers to gain more insight.
 
 
 class template_controller(ABC):
-    def __init__(self, environment):
+    def __init__(self, environment, **kwargs):
         self.env_mock = environment
     
     @abstractmethod
