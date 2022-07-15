@@ -56,7 +56,7 @@ def cartpole_integration(s, dt):
 
 
 class controller_do_mpc_discrete(template_controller):
-    def __init__(self,
+    def __init__(self, environment,
                  position_init=0.0,
                  positionD_init=0.0,
                  angle_init=0.0,
@@ -153,11 +153,13 @@ class controller_do_mpc_discrete(template_controller):
 
         self.mpc.set_initial_guess()
 
+        super().__init__(environment)
+
     def tvp_fun(self, t_ind):
         return self.tvp_template
 
 
-    def step(self, s, target_position, time=None):
+    def step(self, s, time=None):
 
         s = cartpole_state_vector_to_namespace(s)
 
@@ -167,7 +169,7 @@ class controller_do_mpc_discrete(template_controller):
         self.x0['s.angle'] = s.angle
         self.x0['s.angleD'] = s.angleD
 
-        self.tvp_template['_tvp', :, 'target_position'] = target_position
+        self.tvp_template['_tvp', :, 'target_position'] = self.env_mock.target_position
 
         Q = self.mpc.make_step(self.x0)
 

@@ -1,14 +1,7 @@
-from importlib import import_module
-from operator import attrgetter
-
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 import yaml
-from CartPole.cartpole_model import TrackHalfLength, s0, u_max
-from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
-                                      ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
-                                      create_cartpole_state)
 from others.globals_and_utils import create_rng
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import \
     predictor_autoregressive_tf
@@ -22,11 +15,6 @@ from Controllers.template_controller import template_controller
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 num_control_inputs = config["cartpole"]["num_control_inputs"]  # specific to a system
-
-cost_function = config["controller"]["general"]["cost_function"]
-cost_function = cost_function.replace('-', '_')
-cost_function_module = import_module(f"others.cost_functions.{cost_function}")
-q, phi = attrgetter("q", "phi")(cost_function_module)
 
 dt = config["controller"]["mppi"]["dt"]
 mppi_horizon = config["controller"]["mppi"]["mpc_horizon"]
@@ -67,7 +55,8 @@ elif predictor_type == "Euler":
     predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
     predictor_single_trajectory = predictor
 elif predictor_type == "NeuralNet":
-    from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
+    from SI_Toolkit.Predictors.predictor_autoregressive_tf import \
+        predictor_autoregressive_tf
     predictor = predictor_autoregressive_tf(
         horizon=mppi_samples, batch_size=num_rollouts, net_name=NET_NAME, disable_individual_compilation=True
     )
@@ -75,7 +64,8 @@ elif predictor_type == "NeuralNet":
         horizon=mppi_samples, batch_size=1, net_name=NET_NAME, disable_individual_compilation=True
     )
 elif predictor_type == "GP":
-    from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
+    from SI_Toolkit.Predictors.predictor_autoregressive_GP import \
+        predictor_autoregressive_GP
     predictor = predictor_autoregressive_GP(model_name=GP_NAME, horizon=mppi_samples, num_rollouts=num_rollouts)
 
 GET_ROLLOUTS_FROM_MPPI = False
@@ -88,19 +78,6 @@ def check_dimensions_s(s):
         s = s[tf.newaxis, :]
 
     return s
-
-#mppi correction
-def mppi_correction_cost(u, delta_u):
-    return tf.math.reduce_sum(cc_weight * (0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)), axis=2)
-
-#total cost of the trajectory
-def cost(s_hor ,u, target, u_prev, delta_u):
-    stage_cost = q(s_hor[:,1:,:],u,target, u_prev)
-    stage_cost = stage_cost + mppi_correction_cost(u, delta_u)
-    total_cost = tf.math.reduce_sum(stage_cost,axis=1)
-    total_cost = total_cost + phi(s_hor, target)
-    return total_cost
-
 
 def reward_weighted_average(S, delta_u):
     rho = tf.math.reduce_min(S)
@@ -125,7 +102,7 @@ def inizialize_pertubation(random_gen, stdev = SQRTRHODTINV, sampling_type = SAM
 
 
 class controller_mppi_tf(template_controller):
-    def __init__(self):
+    def __init__(self, environment):
         #First configure random sampler
         self.rng_cem = create_rng(self.__class__.__name__, config["controller"]["mppi"]["SEED"], use_tf=True)
 
@@ -147,7 +124,21 @@ class controller_mppi_tf(template_controller):
             self.mppi_output = self.return_all
         else:
             self.mppi_output = self.return_restricted
+        
+        super().__init__(environment)
+    
+    #mppi correction
+    def mppi_correction_cost(self, u, delta_u):
+        return tf.math.reduce_sum(cc_weight * (0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)), axis=2)
 
+    #total cost of the trajectory
+    def get_mppi_trajectory_cost(self, s_hor ,u, u_prev, delta_u):
+        stage_cost = self.env_mock.cost_functions.get_stage_cost(s_hor[:,1:,:],u, u_prev)
+        stage_cost = stage_cost + self.mppi_correction_cost(u, delta_u)
+        total_cost = tf.math.reduce_sum(stage_cost,axis=1)
+        total_cost = total_cost + self.env_mock.cost_functions.get_terminal_cost(s_hor)
+        return total_cost
+    
     def return_all(self, u, u_nom, rollout_trajectory, traj_cost):
         return u, u_nom, rollout_trajectory, traj_cost
 
@@ -155,7 +146,7 @@ class controller_mppi_tf(template_controller):
         return u, u_nom, None, None
 
     @Compile
-    def predict_and_cost(self, s, target, u_nom, random_gen, u_old):
+    def predict_and_cost(self, s, u_nom, random_gen, u_old):
         s = tf.tile(s, tf.constant([num_rollouts, 1]))
         # generate random input sequence and clip to control limits
         u_nom = tf.concat([u_nom[:, 1:, :], u_nom[:, -1:, :]], axis=1)
@@ -163,7 +154,7 @@ class controller_mppi_tf(template_controller):
         u_run = tf.tile(u_nom, [num_rollouts, 1, 1])+delta_u
         u_run = tf.clip_by_value(u_run, clip_control_input_low, clip_control_input_high)
         rollout_trajectory = predictor.predict_tf(s, u_run)
-        traj_cost = cost(rollout_trajectory, u_run, target, u_old, delta_u)
+        traj_cost = self.get_mppi_trajectory_cost(rollout_trajectory, u_run, u_old, delta_u)
         u_nom = tf.clip_by_value(u_nom + reward_weighted_average(traj_cost, delta_u), clip_control_input_low, clip_control_input_high)
         u = u_nom[0, 0, :]
         self.update_internal_state(s, u_nom)
@@ -181,12 +172,11 @@ class controller_mppi_tf(template_controller):
         return optimal_trajectory
 
     #step function to find control
-    def step(self, s: np.ndarray, target: np.ndarray, time=None):
+    def step(self, s: np.ndarray, time=None):
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         s = check_dimensions_s(s)
-        target = tf.convert_to_tensor(target, dtype=tf.float32)
 
-        self.u, self.u_nom, rollout_trajectory, traj_cost = self.predict_and_cost(s, target, self.u_nom, self.rng_cem,
+        self.u, self.u_nom, rollout_trajectory, traj_cost = self.predict_and_cost(s, self.u_nom, self.rng_cem,
                                                                                   self.u)
         if GET_ROLLOUTS_FROM_MPPI:
             self.rollout_trajectory = rollout_trajectory.numpy()
@@ -206,9 +196,13 @@ class controller_mppi_tf(template_controller):
 
 if __name__ == '__main__':
     ctrl = controller_mppi_tf()
-
-
     import timeit
+
+    from CartPole.cartpole_model import TrackHalfLength, s0, u_max
+    from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX,
+                                          ANGLE_SIN_IDX, ANGLED_IDX,
+                                          POSITION_IDX, POSITIOND_IDX,
+                                          create_cartpole_state)
 
     s0 = create_cartpole_state()
     # Set non-zero input
@@ -219,8 +213,8 @@ if __name__ == '__main__':
     s[ANGLED_IDX] = 0.237
     u = -0.24
 
-    ctrl.step(s0, 0.0)
-    f_to_measure = 'ctrl.step(s0,0.0)'
+    ctrl.step(s0)
+    f_to_measure = 'ctrl.step(s0)'
     number = 1  # Gives the number of times each timeit call executes the function which we want to measure
     repeat_timeit = 1000  # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)

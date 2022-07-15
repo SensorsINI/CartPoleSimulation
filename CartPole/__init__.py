@@ -230,6 +230,10 @@ class CartPole:
         self.set_controller('manual-stabilization')
         # endregion
 
+        # region Set cost function module
+        self.set_cost_functions()
+        # endregion
+
     # region 1. Methods related to dynamic evolution of CartPole system
 
     # This method changes the internal state of the CartPole
@@ -438,7 +442,7 @@ class CartPole:
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s_with_noise_and_latency, self.target_position, self.time)
+                self.Q = self.controller.step(self.s_with_noise_and_latency, self.time)
 
             self.dt_controller_steps_counter = 0
 
@@ -882,7 +886,7 @@ class CartPole:
             controller_full_name = 'controller_' + self.controller_name.replace('-', '_')
             path_import = PATH_TO_CONTROLLERS[2:].replace('/', '.').replace(r'\\', '.')
             Controller = getattr(import_module(path_import + controller_full_name), controller_full_name)
-            self.controller = Controller()
+            self.controller = Controller(self)
 
         # Set the maximal allowed value of the slider - relevant only for GUI
         if self.controller_name == 'manual-stabilization':
@@ -896,6 +900,11 @@ class CartPole:
         self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, target_position=self.target_position, reset_dict_history=True)
 
         return True
+
+    def set_cost_functions(self):
+        cost_function_name = config['cartpole']['cost_function'].replace('-', '_')
+        cost_function_module = import_module(f"others.cost_functions.{cost_function_name}")
+        self.cost_functions = getattr(cost_function_module, cost_function_name)(self)
 
     # This method resets the internal state of the CartPole instance
     # The starting state (for t = 0) may be
@@ -955,7 +964,7 @@ class CartPole:
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s, self.target_position, self.time)
+                self.Q = self.controller.step(self.s, self.time)
 
             self.u = Q2u(self.Q)  # Calculate CURRENT control input
             self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)  # Calculate CURRENT second derivatives

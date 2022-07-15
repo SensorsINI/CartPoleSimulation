@@ -188,8 +188,6 @@ def trajectory_rollouts(
     :type delta_u: np.ndarray
     :param u_prev: Array with nominal inputs from previous iteration. Used to compute cost of control change
     :type u_prev: np.ndarray
-    :param target_position: Target position where the cart should move to
-    :type target_position: np.float32
 
     :return: S_tilde_k - Array filled with a cost for each rollout trajectory
     """
@@ -198,12 +196,12 @@ def trajectory_rollouts(
     s_horizon = predictor.predict(initial_state, (u + delta_u)[..., np.newaxis])[:, :, : len(STATE_INDICES)]
 
     # Compute stage costs
-    cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
+    cost_increment, dd, ep, ekp, ekc, cc, ccrc = get_stage_cost(
         s_horizon[:, 1:, :], u, delta_u, u_prev, target_position
     )
     S_tilde_k = np.sum(cost_increment, axis=1)
     # Compute terminal cost
-    S_tilde_k += phi(s_horizon, target_position)
+    S_tilde_k += get_terminal_cost(s_horizon, target_position)
 
     # Pass costs to GUI popup window
     global gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc, gui_ccrc
@@ -231,7 +229,7 @@ def trajectory_rollouts(
     return S_tilde_k
 
 
-def q(
+def get_stage_cost(
     s: np.ndarray,
     u: np.ndarray,
     delta_u: np.ndarray,
@@ -268,9 +266,11 @@ def q(
     cc = cc_weight * (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
-    ccrc = ccrc_weight * control_change_rate_cost(u + delta_u, u_prev).astype(
-        np.float32
-    )
+    ccrc = 0
+    if u_prev is not None:
+        ccrc = ccrc_weight * control_change_rate_cost(u + delta_u, u_prev).astype(
+            np.float32
+        )
     # rterm = 1.0e4 * np.sum((delta_u[:,1:] - delta_u[:,:-1]) ** 2, axis=1, keepdims=True)
 
     # Penalize if control deviation is outside constraint set.
@@ -282,7 +282,7 @@ def q(
 
 
 @jit(nopython=True, cache=True, fastmath=True)
-def phi(s: np.ndarray, target_position: np.float32) -> np.ndarray:
+def get_terminal_cost(s: np.ndarray, target_position: np.float32) -> np.ndarray:
     """Calculate terminal cost of a set of trajectories
 
     Williams et al use an indicator function type of terminal cost in
@@ -348,7 +348,7 @@ class controller_mppi(template_controller):
     :type template_controller: abc.ABC
     """
 
-    def __init__(self):
+    def __init__(self, environment):
 
         """Random number generator"""
         SEED = config["controller"]["mppi"]["SEED"]
@@ -385,12 +385,14 @@ class controller_mppi(template_controller):
             from Controllers.controller_lqr import controller_lqr
 
             self.auxiliary_controller_available = True
-            self.auxiliary_controller = controller_lqr()
+            self.auxiliary_controller = controller_lqr(environment)
         except ModuleNotFoundError:
             self.auxiliary_controller_available = False
             self.auxiliary_controller = None
 
         self.auxiliary_controller_available = False
+        
+        super().__init__(environment)
 
     def initialize_perturbations(
         self, stdev: float = 1.0, sampling_type: str = None
@@ -454,13 +456,11 @@ class controller_mppi(template_controller):
 
         return delta_u
 
-    def step(self, s: np.ndarray, target_position: np.float64, time=None):
+    def step(self, s: np.ndarray, time=None):
         """Perform controller step
 
         :param s: State passed to controller after system has evolved for one step
         :type s: np.ndarray
-        :param target_position: Target position where the cart should move to
-        :type target_position: np.float64
         :param time: Time in seconds that has passed in the current experiment, defaults to None
         :type time: float, optional
         :return: A normed control value in the range [-1.0, 1.0]
@@ -468,7 +468,6 @@ class controller_mppi(template_controller):
         """
 
         self.s = s
-        self.target_position = np.float32(target_position)
 
         self.iteration += 1
 
@@ -495,7 +494,7 @@ class controller_mppi(template_controller):
                 self.u,
                 self.delta_u,
                 self.u_prev,
-                self.target_position,
+                self.env_mock.target_position,
             )
 
             # Update inputs with weighted perturbations
@@ -521,7 +520,7 @@ class controller_mppi(template_controller):
 
         if LOGGING:
             LOGS.get("trajectory").append(np.copy(self.s))
-            LOGS.get("target_trajectory").append(np.copy(target_position))
+            LOGS.get("target_trajectory").append(np.copy(self.env_mock.target_position))
 
         if (
             self.warm_up_countdown > 0
@@ -531,7 +530,7 @@ class controller_mppi(template_controller):
         ):
             self.warm_up_countdown -= 1
             if abs(s[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small
-                Q = self.auxiliary_controller.step(s, target_position)
+                Q = self.auxiliary_controller.step(s)
             else:
                 Q = self.rng_mppi_rnn.uniform(-1, 1)  # Apply random input to let RNN "feel" the system behaviour
         else:
@@ -541,7 +540,7 @@ class controller_mppi(template_controller):
         # It stops controller when Pole is well stabilized (starting inputing random input)
         # And re-enables it when angle exceedes 90 deg.
         # if (abs(self.s[[ANGLE_IDX]]) < 0.01
-        #     and abs(self.s[[POSITION_IDX]]-self.target_position < 0.02)
+        #     and abs(self.s[[POSITION_IDX]]-self.env_mock.target_position < 0.02)
         #         and abs(self.s[[ANGLED_IDX]]) < 0.1
         #             and abs(self.s[[POSITIOND_IDX]]) < 0.05):
         #     self.control_enabled = False

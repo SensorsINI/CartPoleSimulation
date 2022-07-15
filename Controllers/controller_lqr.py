@@ -21,7 +21,7 @@ R = config["controller"]["lqr"]["R"]
 p_Q = config["controller"]["lqr"]["control_noise"]
 
 class controller_lqr(template_controller):
-    def __init__(self):
+    def __init__(self, environment):
         # From https://github.com/markwmuller/controlpy/blob/master/controlpy/synthesis.py#L8
         """Solve the continuous time LQR controller for a continuous time system.
 
@@ -78,10 +78,11 @@ class controller_lqr(template_controller):
         self.X = X
         self.eigVals = eigVals
 
-    def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
+        super().__init__(environment)
 
+    def step(self, s: np.ndarray, time=None):
         state = np.array(
-            [[s[POSITION_IDX] - target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
+            [[s[POSITION_IDX] - self.env_mock.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
 
         Q = np.dot(-self.K, state).item()
 

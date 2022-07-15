@@ -1,12 +1,7 @@
-from importlib import import_module
-from operator import attrgetter
 import numpy as np
 import tensorflow as tf
 
 from Controllers.template_controller import template_controller
-
-from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
-from CartPole.cartpole_model import s0
 
 import yaml
 
@@ -21,12 +16,6 @@ from others.globals_and_utils import create_rng
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 num_control_inputs = config["cartpole"]["num_control_inputs"]
-
-#import cost function parts from folder according to config file
-cost_function = config["controller"]["general"]["cost_function"]
-cost_function = cost_function.replace('-', '_')
-cost_function_module = import_module(f"others.cost_functions.{cost_function}")
-q, phi, cost = attrgetter("q", "phi", "cost")(cost_function_module)
 
 #cem params
 dt = config["controller"]["cem"]["dt"]
@@ -57,7 +46,7 @@ elif predictor_type == "NeuralNet":
 
 #cem class
 class controller_cem_tf(template_controller):
-    def __init__(self):
+    def __init__(self, environment):
         #First configure random sampler
         self.rng_cem = create_rng(self.__class__.__name__, config["controller"]["cem"]["SEED"])
 
@@ -66,15 +55,17 @@ class controller_cem_tf(template_controller):
         self.stdev = np.sqrt(self.dist_var)
         self.u = 0
 
+        super().__init__(environment)
+
     @Compile
-    def predict_and_cost(self, s, Q, target_position):
+    def predict_and_cost(self, s, Q):
         # rollout trajectories and retrieve cost
         rollout_trajectory = predictor.predict_tf(s, Q)
-        traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
+        traj_cost = self.env_mock.cost_functions.get_trajectory_cost(rollout_trajectory, Q, self.u)
         return traj_cost, rollout_trajectory
 
     #step function to find control
-    def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
+    def step(self, s: np.ndarray, time=None):
         s = np.tile(s, tf.constant([num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         for _ in range(0,cem_outer_it):
@@ -84,10 +75,9 @@ class controller_cem_tf(template_controller):
             Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
 
             Q = tf.convert_to_tensor(Q, dtype=tf.float32)
-            target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 
             #rollout the trajectories and get cost
-            traj_cost, rollout_trajectory = self.predict_and_cost(s, Q, target_position)
+            traj_cost, rollout_trajectory = self.predict_and_cost(s, Q)
             Q = Q.numpy()
             #sort the costs and find best k costs
             sorted_cost = np.argsort(traj_cost.numpy())
@@ -114,9 +104,8 @@ class controller_cem_tf(template_controller):
 # speed test, which is activated if script is run directly and not as module
 if __name__ == '__main__':
     ctrl = controller_cem_tf()
-
-
     import timeit
+    from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
 
     s0 = create_cartpole_state()
     # Set non-zero input
@@ -127,8 +116,8 @@ if __name__ == '__main__':
     s[ANGLED_IDX] = 0.237
     u = -0.24
 
-    ctrl.step(s0, 0.0)
-    f_to_measure = 'ctrl.step(s0,0.0)'
+    ctrl.step(s0)
+    f_to_measure = 'ctrl.step(s0)'
     number = 1  # Gives the number of times each timeit call executes the function which we want to measure
     repeat_timeit = 100  # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)

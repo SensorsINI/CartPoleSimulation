@@ -1,35 +1,22 @@
 #Controller equivalent to the cem+grad controller from Bharadhwaj et al 2020
 #
 
-from importlib import import_module
-from operator import attrgetter
 import numpy as np
 import tensorflow as tf
-
-from Controllers.template_controller import template_controller
-
-from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
-from CartPole.cartpole_model import s0
-
 import yaml
-
+from others.globals_and_utils import create_rng
+from SI_Toolkit.Predictors.predictor_autoregressive_tf import \
+    predictor_autoregressive_tf
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
-from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
-from others.globals_and_utils import create_rng
+from Controllers.template_controller import template_controller
 
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 num_control_inputs = config["cartpole"]["num_control_inputs"]
-
-#import cost function parts from folder according to config file
-cost_function = config["controller"]["general"]["cost_function"]
-cost_function = cost_function.replace('-', '_')
-cost_function_module = import_module(f"others.cost_functions.{cost_function}")
-cost = attrgetter("cost")(cost_function_module)
 
 #cem params
 dt = config["controller"]["cem-naive-grad"]["dt"]
@@ -65,7 +52,7 @@ elif predictor_type == "NeuralNet":
 
 #controller class
 class controller_cem_naive_grad_tf(template_controller):
-    def __init__(self):
+    def __init__(self, environment):
         #First configure random sampler
         self.rng_cem = create_rng(self.__class__.__name__, config["controller"]["cem-naive-grad"]["SEED"], use_tf=True)
 
@@ -74,8 +61,10 @@ class controller_cem_naive_grad_tf(template_controller):
         self.stdev = tf.sqrt(self.dist_var)
         self.u = 0.0
 
+        super().__init__(environment)
+
     @Compile
-    def predict_and_cost(self, s, target_position, rng_cem, dist_mue, stdev):
+    def predict_and_cost(self, s, rng_cem, dist_mue, stdev):
         # generate random input sequence and clip to control limits
         Q = tf.tile(dist_mue, [num_rollouts, 1, 1]) + rng_cem.normal(
             [num_rollouts, cem_samples, num_control_inputs], dtype=tf.float32) * stdev
@@ -84,7 +73,7 @@ class controller_cem_naive_grad_tf(template_controller):
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(Q)
             rollout_trajectory = predictor.predict_tf(s, Q)
-            traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
+            traj_cost = self.env_mock.cost_functions.get_trajectory_cost(rollout_trajectory, Q, self.u)
         # retrieve gradient
         dc_dQ = tape.gradient(traj_cost, Q)
         dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ), axis=1, keepdims=True)
@@ -97,7 +86,7 @@ class controller_cem_naive_grad_tf(template_controller):
         Qn = tf.clip_by_value(Qn,-1,1)
         #rollout all trajectories a last time
         rollout_trajectory = predictor.predict_tf(s, Qn)
-        traj_cost = cost(rollout_trajectory, Qn, target_position, self.u)
+        traj_cost = self.env_mock.cost_functions.get_trajectory_cost(rollout_trajectory, Qn, self.u)
 
         # sort the costs and find best k costs
         sorted_cost = tf.argsort(traj_cost)
@@ -109,15 +98,14 @@ class controller_cem_naive_grad_tf(template_controller):
         return self.dist_mue, self.stdev
 
     #step function to find control
-    def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
+    def step(self, s: np.ndarray, time=None):
         # tile s and convert inputs to tensor
         s = np.tile(s, tf.constant([num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
-        target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 
         #cem steps updating distribution
         for _ in range(0,cem_outer_it):
-            self.dist_mue, self.stdev = self.predict_and_cost(s, target_position, self.rng_cem, self.dist_mue, self.stdev)
+            self.dist_mue, self.stdev = self.predict_and_cost(s, self.rng_cem, self.dist_mue, self.stdev)
 
         #after all inner loops, clip std min, so enough is explored
         #and shove all the values down by one for next control input
@@ -138,10 +126,12 @@ class controller_cem_naive_grad_tf(template_controller):
 # speed test, which is activated if script is run directly and not as module
 if __name__ == '__main__':
     ctrl = controller_cem_naive_grad_tf()
-
-
     import timeit
-
+    from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX,
+                                          ANGLE_SIN_IDX, ANGLED_IDX,
+                                          POSITION_IDX, POSITIOND_IDX,
+                                          create_cartpole_state)
+    
     s0 = create_cartpole_state()
     # Set non-zero input
     s = s0
@@ -151,8 +141,8 @@ if __name__ == '__main__':
     s[ANGLED_IDX] = 0.237
     u = -0.24
 
-    ctrl.step(s0, 0.0)
-    f_to_measure = 'ctrl.step(s0,0.0)'
+    ctrl.step(s0)
+    f_to_measure = 'ctrl.step(s0)'
     number = 1  # Gives the number of times each timeit call executes the function which we want to measure
     repeat_timeit = 100  # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)

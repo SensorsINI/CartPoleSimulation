@@ -1,33 +1,20 @@
-from importlib import import_module
-from operator import attrgetter
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-
-from Controllers.template_controller import template_controller
-
-from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
-from CartPole.cartpole_model import s0
-
 import yaml
-
+from others.globals_and_utils import create_rng
+from SI_Toolkit.Predictors.predictor_autoregressive_tf import \
+    predictor_autoregressive_tf
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
-from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
-from others.globals_and_utils import create_rng
-
+from Controllers.template_controller import template_controller
 
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 num_control_inputs = config["cartpole"]["num_control_inputs"]
-
-cost_function = config["controller"]["general"]["cost_function"]
-cost_function = cost_function.replace('-', '_')
-cost_function_module = import_module(f"others.cost_functions.{cost_function}")
-q, phi = attrgetter("q", "phi")(cost_function_module)
 
 dt = config["controller"]["mppi-var"]["dt"]
 mppi_horizon = config["controller"]["mppi-var"]["mpc_horizon"]
@@ -92,14 +79,6 @@ def mppi_correction_cost(u, delta_u, nuvec):
         nudiv = nuvec
     return tf.reduce_sum(cc_weight * (0.5 * (1 - 1.0 / nudiv**2) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)), axis=2)
 
-#total cost of the trajectory
-def uncorr_cost(s_hor ,u, target_position, u_prev, delta_u):
-    stage_cost = q(s_hor[:,1:,:],u,target_position, u_prev)
-    stage_cost = stage_cost
-    unc_cost = tf.math.reduce_sum(stage_cost,axis=1)
-    unc_cost = unc_cost + phi(s_hor, target_position)
-    return unc_cost
-
 #mppi averaging of trajectories
 def reward_weighted_average(S, delta_u):
     rho = tf.math.reduce_min(S)
@@ -119,7 +98,7 @@ def inizialize_pertubation(random_gen, nuvec):
 
 #controller class
 class controller_mppi_var(template_controller):
-    def __init__(self):
+    def __init__(self, environment):
         #First configure random sampler
         self.rng_cem = create_rng(self.__class__.__name__, config["controller"]["mppi-var"]["SEED"], use_tf=True)
         #set up nominal u
@@ -129,8 +108,10 @@ class controller_mppi_var(template_controller):
         self.nuvec = tf.Variable(self.nuvec)
         self.u = 0.0
 
+        super().__init__(environment)
+
     @Compile
-    def do_step(self, s, target_position, u_nom, random_gen, u_old, nuvec):
+    def do_step(self, s, u_nom, random_gen, u_old, nuvec):
         #start gradient tape
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(nuvec) #watch variances on tape
@@ -140,7 +121,7 @@ class controller_mppi_var(template_controller):
             u_run = tfp.math.clip_by_value_preserve_gradient(u_run, -1.0, 1.0)
             #rollout and cost
             rollout_trajectory = predictor.predict_tf(s, u_run)
-            unc_cost = uncorr_cost(rollout_trajectory, u_run, target_position, u_old, delta_u)
+            unc_cost = self.env_mock.cost_functions.get_trajectory_cost(rollout_trajectory, u_run, u_old)
             mean_uncost = tf.math.reduce_mean(unc_cost)
             #retrieve gradient
             dc_ds = tape.gradient(mean_uncost, nuvec)
@@ -159,11 +140,10 @@ class controller_mppi_var(template_controller):
         return u, u_nom, new_nuvec
 
     #step function to find control
-    def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
+    def step(self, s: np.ndarray, time=None):
         s = np.tile(s, tf.constant([num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
-        target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
-        self.u, self.u_nom, new_nuvec = self.do_step(s, target_position, self.u_nom, self.rng_cem, self.u, self.nuvec)
+        self.u, self.u_nom, new_nuvec = self.do_step(s, self.u_nom, self.rng_cem, self.u, self.nuvec)
         self.nuvec.assign(new_nuvec)
         return tf.squeeze(self.u).numpy()
 
@@ -178,9 +158,13 @@ class controller_mppi_var(template_controller):
 
 if __name__ == '__main__':
     ctrl = controller_mppi_var()
-
-
     import timeit
+
+    from CartPole.cartpole_model import s0
+    from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX,
+                                          ANGLE_SIN_IDX, ANGLED_IDX,
+                                          POSITION_IDX, POSITIOND_IDX,
+                                          create_cartpole_state)
 
     s0 = create_cartpole_state()
     # Set non-zero input
@@ -191,8 +175,8 @@ if __name__ == '__main__':
     s[ANGLED_IDX] = 0.237
     u = -0.24
 
-    ctrl.step(s0, 0.0)
-    f_to_measure = 'ctrl.step(s0,0.0)'
+    ctrl.step(s0)
+    f_to_measure = 'ctrl.step(s0)'
     number = 1  # Gives the number of times each timeit call executes the function which we want to measure
     repeat_timeit = 1000  # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)

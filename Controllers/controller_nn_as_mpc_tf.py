@@ -24,7 +24,7 @@ PATH_TO_MODELS = config['controller']['nn_as_mpc_tf']['PATH_TO_MODELS']
 
 
 class controller_nn_as_mpc_tf(template_controller):
-    def __init__(self, batch_size=1):
+    def __init__(self, environment, batch_size=1):
 
         a = SimpleNamespace()
         self.batch_size = batch_size  # It makes sense only for testing (Brunton plot for Q) of not rnn networks to make bigger batch, this is not implemented
@@ -51,6 +51,8 @@ class controller_nn_as_mpc_tf(template_controller):
             self.evaluate_net = self.evaluate_net_f.get_concrete_function(net_input=net_input_type)
         except:
             self.evaluate_net = self.evaluate_net_f
+
+        super().__init__(environment)
 
     def step(self, s, target_position, time=None):
 

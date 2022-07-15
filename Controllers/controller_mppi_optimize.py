@@ -6,10 +6,6 @@ import tensorflow_probability as tfp
 
 from Controllers.template_controller import template_controller
 
-from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
-from CartPole.cartpole_model import s0
-from CartPole.cartpole_jacobian import cartpole_jacobian
-
 import yaml
 
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
@@ -24,12 +20,6 @@ from others.globals_and_utils import create_rng
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 num_control_inputs = config["cartpole"]["num_control_inputs"]
-
-#import cost function parts from folder according to config file
-cost_function = config["controller"]["general"]["cost_function"]
-cost_function = cost_function.replace('-', '_')
-cost_function_module = import_module(f"others.cost_functions.{cost_function}")
-q, phi, cost = attrgetter("q", "phi", "cost")(cost_function_module)
 
 #cost funciton params
 cc_weight = config["controller"]["mppi-optimize"]["cc_weight"]
@@ -75,20 +65,6 @@ elif predictor_type == "NeuralNet":
         horizon=mppi_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
 
-#mppi correction for importance sampling
-def mppi_correction_cost(u, delta_u):
-    return tf.reduce_sum(cc_weight * (0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)), axis=2)
-
-#total cost of the trajectory
-def mppi_cost(s_hor ,u, target_position, u_prev, delta_u):
-    #stage costs
-    stage_cost = q(s_hor[:,1:,:],u,target_position, u_prev)
-    stage_cost = stage_cost + mppi_correction_cost(u, delta_u)
-    #reduce alonge rollouts and add final cost
-    total_cost = tf.math.reduce_sum(stage_cost,axis=1)
-    total_cost = total_cost + phi(s_hor, target_position)
-    return total_cost
-
 #path integral approximation: sum deltaU's weighted with exponential funciton of trajectory costs
 #according to mppi theory
 def reward_weighted_average(S, delta_u):
@@ -118,7 +94,7 @@ def inizialize_pertubation(random_gen, stdev = SQRTRHODTINV, sampling_type = SAM
 
 #controller class
 class controller_mppi_optimize(template_controller):
-    def __init__(self):
+    def __init__(self, environment):
         #First configure random sampler
         self.rng_cem = create_rng(self.__class__.__name__, config["controller"]["mppi-optimize"]["SEED"], use_tf=True)
 
@@ -130,8 +106,24 @@ class controller_mppi_optimize(template_controller):
         self.opt = tf.keras.optimizers.Adam(learning_rate=cem_LR, beta_1=adam_beta_1, beta_2=adam_beta_2,
                                             epsilon=adam_epsilon)
 
+        super().__init__(environment)
+    
+    #mppi correction for importance sampling
+    def mppi_correction_cost(self, u, delta_u):
+        return tf.reduce_sum(cc_weight * (0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)), axis=2)
+
+    #total cost of the trajectory
+    def get_mppi_trajectory_cost(self, s_hor ,u, u_prev, delta_u):
+        #stage costs
+        stage_cost = self.env_mock.cost_functions.get_stage_cost(s_hor[:,1:,:],u, u_prev)
+        stage_cost = stage_cost + self.mppi_correction_cost(u, delta_u)
+        #reduce alonge rollouts and add final cost
+        total_cost = tf.math.reduce_sum(stage_cost,axis=1)
+        total_cost = total_cost + self.env_mock.cost_functions.get_terminal_cost(s_hor)
+        return total_cost
+
     @Compile
-    def mppi_prior(self, s, target_position, u_nom, random_gen, u_old):
+    def mppi_prior(self, s, u_nom, random_gen, u_old):
         # generate random input sequence and clip to control limits
         delta_u = inizialize_pertubation(random_gen)
         u_run = tf.tile(u_nom, [num_rollouts, 1, 1]) + delta_u
@@ -139,20 +131,20 @@ class controller_mppi_optimize(template_controller):
         #predict trajectories
         rollout_trajectory = predictor.predict_tf(s, u_run)
         #rollout cost
-        traj_cost = mppi_cost(rollout_trajectory, u_run, target_position, u_old, delta_u)
+        traj_cost = self.get_mppi_trajectory_cost(rollout_trajectory, u_run, u_old, delta_u)
         #retrive control sequence via path integral
         u_nom = tf.clip_by_value(u_nom + reward_weighted_average(traj_cost, delta_u), -1.0, 1.0)
         return u_nom
 
     @Compile
-    def grad_step(self, s, target_position, Q, opt):
+    def grad_step(self, s, Q, opt):
         #do a gradient descent step
         #setup gradient tape
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(Q)
             #rollout trajectory and retrive cost
             rollout_trajectory = predictor.predict_tf(s, Q)
-            traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
+            traj_cost = self.env_mock.cost_functions.get_trajectory_cost(rollout_trajectory, Q, self.u)
         #retrieve gradient of cost w.r.t. input sequence
         dc_dQ = tape.gradient(traj_cost, Q)
         #modify gradients: makes sure biggest entry of each gradient is at most "gradmax_clip". (For this controller only one sequence
@@ -168,19 +160,18 @@ class controller_mppi_optimize(template_controller):
         return Qn
 
     #step function to find control
-    def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
+    def step(self, s: np.ndarray, time=None):
         # tile inital state and convert inputs to tensorflow tensors
         s = np.tile(s, tf.constant([num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
-        target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 
         #first retrieve suboptimal control sequence with mppi
-        Q_mppi = self.mppi_prior(s, target_position, self.Q, self.rng_cem, self.u)
+        Q_mppi = self.mppi_prior(s, self.Q, self.rng_cem, self.u)
         self.Q.assign(Q_mppi)
 
         #optimize control sequence with gradient based optimization
         for _ in range(optim_steps):
-            Q_opt = self.grad_step(s, target_position, self.Q, self.opt)
+            Q_opt = self.grad_step(s, self.Q, self.opt)
             self.Q.assign(Q_opt)
 
         self.u = self.Q[0, 0, :]
@@ -203,9 +194,8 @@ class controller_mppi_optimize(template_controller):
 # speed test, which is activated if script is run directly and not as module
 if __name__ == '__main__':
     ctrl = controller_mppi_optimize()
-
-
     import timeit
+    from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
 
     s0 = create_cartpole_state()
     # Set non-zero input
@@ -216,8 +206,8 @@ if __name__ == '__main__':
     s[ANGLED_IDX] = 0.237
     u = -0.24
 
-    ctrl.step(s0, 0.0)
-    f_to_measure = 'ctrl.step(s0,0.0)'
+    ctrl.step(s0)
+    f_to_measure = 'ctrl.step(s0)'
     number = 1  # Gives the number of times each timeit call executes the function which we want to measure
     repeat_timeit = 1000  # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)

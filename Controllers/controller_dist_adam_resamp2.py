@@ -1,36 +1,23 @@
 #the best working controller
 
 import importlib
+
 import numpy as np
 import tensorflow as tf
-from SI_Toolkit.TF.TF_Functions.Compile import Compile
-
-
-from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import TrackHalfLength
-
-from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
-from CartPole.cartpole_model import s0
-from CartPole.cartpole_jacobian import cartpole_jacobian
-
 import yaml
-
+from others.globals_and_utils import create_rng
+from SI_Toolkit.Predictors.predictor_autoregressive_tf import \
+    predictor_autoregressive_tf
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
-from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
+from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
-from others.globals_and_utils import create_rng
+from Controllers.template_controller import template_controller
 
 #load constants from config file
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 num_control_inputs = config["cartpole"]["num_control_inputs"]
-
-#import cost function parts from folder according to config file
-cost_function = config["controller"]["general"]["cost_function"]
-cost_function = cost_function.replace('-', '_')
-cost_function_cmd = 'others.cost_functions.'+cost_function
-cost = getattr(importlib.import_module(cost_function_cmd), "cost")
 
 #basic params
 dt = config["controller"]["dist-adam-resamp2"]["dt"]
@@ -100,7 +87,7 @@ else:
 
 #cem class
 class controller_dist_adam_resamp2(template_controller):
-    def __init__(self):
+    def __init__(self, environment):
         #First configure random sampler
         self.rng_cem = create_rng(self.__class__.__name__, config["controller"]["dist-adam-resamp2"]["SEED"], use_tf=True)
 
@@ -119,6 +106,8 @@ class controller_dist_adam_resamp2(template_controller):
         self.opt = tf.keras.optimizers.Adam(learning_rate=cem_LR, beta_1 = adam_beta_1, beta_2 = adam_beta_2, epsilon = adam_epsilon)
         self.bestQ = None
 
+        super().__init__(environment)
+
     @Compile
     def sample_actions(self, rng_gen, batchsize):
         #sample actions
@@ -130,12 +119,12 @@ class controller_dist_adam_resamp2(template_controller):
         return Qn
 
     @Compile
-    def grad_step(self, s, target_position, Q, opt):
+    def grad_step(self, s, Q, opt):
         # rollout trajectories and retrieve cost
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(Q)
             rollout_trajectory = predictor.predict_tf(s, Q)
-            traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
+            traj_cost = self.env_mock.cost_functions.get_trajectory_cost(rollout_trajectory, Q, self.u)
         #retrieve gradient of cost w.r.t. input sequence
         dc_dQ = tape.gradient(traj_cost, Q)
         # modify gradients: makes sure biggest entry of each gradient is at most "gradmax_clip".
@@ -150,10 +139,10 @@ class controller_dist_adam_resamp2(template_controller):
         return Qn
 
     @Compile
-    def get_action(self, s, target_position, Q):
+    def get_action(self, s, Q):
         # Rollout trajectories and retrieve cost
         rollout_trajectory = predictor.predict_tf(s, Q)
-        traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
+        traj_cost = self.env_mock.cost_functions.get_trajectory_cost(rollout_trajectory, Q, self.u)
         # sort the costs and find best k costs
         sorted_cost = tf.argsort(traj_cost)
         best_idx = sorted_cost[0:opt_keep_k]
@@ -174,11 +163,10 @@ class controller_dist_adam_resamp2(template_controller):
         return u, dist_mue, dist_std, Qn, best_idx
 
     #step function to find control
-    def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
+    def step(self, s: np.ndarray, time=None):
         # tile inital state and convert inputs to tensorflow tensors
         s = np.tile(s, tf.constant([num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
-        target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 
         #warm start setup
         if self.count == 0:
@@ -187,11 +175,11 @@ class controller_dist_adam_resamp2(template_controller):
             iters = outer_its
         #optimize control sequences with gradient based optimization
         for _ in range(0, iters):
-            Qn = self.grad_step(s, target_position, self.Q, self.opt)
+            Qn = self.grad_step(s, self.Q, self.opt)
             self.Q.assign(Qn)
 
         #retrieve optimal input and prepare warmstart
-        self.u, self.dist_mue, self.stdev, Qn, self.bestQ = self.get_action(s, target_position, self.Q)
+        self.u, self.dist_mue, self.stdev, Qn, self.bestQ = self.get_action(s, self.Q)
 
         #modify adam optimizers. The optimizer optimizes all rolled out trajectories at once
         #and keeps weights for all these, which need to get modified.
@@ -240,9 +228,12 @@ class controller_dist_adam_resamp2(template_controller):
 # speed test which is activated if script is run directly and not as module
 if __name__ == '__main__':
     ctrl = controller_dist_adam_resamp2()
-
-
     import timeit
+
+    from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX,
+                                          ANGLE_SIN_IDX, ANGLED_IDX,
+                                          POSITION_IDX, POSITIOND_IDX,
+                                          create_cartpole_state)
 
     s0 = create_cartpole_state()
     # Set non-zero input
@@ -253,8 +244,8 @@ if __name__ == '__main__':
     s[ANGLED_IDX] = 0.237
     u = -0.24
 
-    ctrl.step(s0, 0.0)
-    f_to_measure = 'ctrl.step(s0,0.0)'
+    ctrl.step(s0)
+    f_to_measure = 'ctrl.step(s0)'
     number = 1  # Gives the number of times each timeit call executes the function which we want to measure
     repeat_timeit = 100  # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)
