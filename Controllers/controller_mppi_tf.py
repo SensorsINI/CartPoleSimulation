@@ -104,11 +104,11 @@ class controller_mppi_tf(template_controller):
         return tf.math.reduce_sum(self.cc_weight * (0.5 * (1 - 1.0 / self.NU) * self.R * (delta_u ** 2) + self.R * u * delta_u + 0.5 * self.R * (u ** 2)), axis=2)
 
     #total cost of the trajectory
-    def cost(self, s_hor ,u, target, u_prev, delta_u):
-        stage_cost = self.q(s_hor[:,1:,:],u,target, u_prev)
+    def get_mppi_trajectory_cost(self, s_hor ,u, u_prev, delta_u):
+        stage_cost = self.env_mock.cost_functions.get_stage_cost(s_hor[:,1:,:],u, u_prev)
         stage_cost = stage_cost + self.mppi_correction_cost(u, delta_u)
         total_cost = tf.math.reduce_sum(stage_cost,axis=1)
-        total_cost = total_cost + self.phi(s_hor, target)
+        total_cost = total_cost + self.env_mock.cost_functions.get_terminal_cost(s_hor)
         return total_cost
 
     def reward_weighted_average(self, S, delta_u):
@@ -134,7 +134,7 @@ class controller_mppi_tf(template_controller):
         return delta_u
 
     @Compile
-    def predict_and_cost(self, s, target, u_nom, random_gen, u_old):
+    def predict_and_cost(self, s, u_nom, random_gen, u_old):
         s = tf.tile(s, tf.constant([self.num_rollouts, 1]))
         # generate random input sequence and clip to control limits
         u_nom = tf.concat([u_nom[:, 1:, :], u_nom[:, -1:, :]], axis=1)
@@ -142,7 +142,7 @@ class controller_mppi_tf(template_controller):
         u_run = tf.tile(u_nom, [self.num_rollouts, 1, 1])+delta_u
         u_run = tf.clip_by_value(u_run, self.clip_control_input_low, self.clip_control_input_high)
         rollout_trajectory = self.predictor.predict_tf(s, u_run)
-        traj_cost = self.cost(rollout_trajectory, u_run, target, u_old, delta_u)
+        traj_cost = self.get_mppi_trajectory_cost(rollout_trajectory, u_run, u_old, delta_u)
         u_nom = tf.clip_by_value(u_nom + self.reward_weighted_average(traj_cost, delta_u), self.clip_control_input_low, self.clip_control_input_high)
         u = u_nom[0, 0, :]
         self.update_internal_state(s, u_nom)
@@ -163,9 +163,8 @@ class controller_mppi_tf(template_controller):
     def step(self, s: np.ndarray, time=None):
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         s = self.check_dimensions_s(s)
-        target = tf.convert_to_tensor(target, dtype=tf.float32)
 
-        self.u, self.u_nom, rollout_trajectory, traj_cost, u_run = self.predict_and_cost(s, target, self.u_nom, self.rng_mppi,
+        self.u, self.u_nom, rollout_trajectory, traj_cost, u_run = self.predict_and_cost(s, self.u_nom, self.rng_mppi,
                                                                                   self.u)
         self.Q, self.J = u_run.numpy(), traj_cost.numpy()
 
