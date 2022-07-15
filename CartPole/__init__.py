@@ -79,7 +79,7 @@ PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_R
 class CartPole:
 
     def __init__(self, initial_state=s0, path_to_experiment_recordings=None):
-        self.rng_CartPole = create_rng(self.__class__.__name__, config["cartpole"]["SEED"])
+        self.rng_CartPole = create_rng(self.__class__.__name__, config["cartpole"]["seed"])
 
         if path_to_experiment_recordings is None:
             self.path_to_experiment_recordings = PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT
@@ -882,7 +882,7 @@ class CartPole:
             controller_full_name = 'controller_' + self.controller_name.replace('-', '_')
             path_import = PATH_TO_CONTROLLERS[2:].replace('/', '.').replace(r'\\', '.')
             Controller = getattr(import_module(path_import + controller_full_name), controller_full_name)
-            self.controller = Controller()
+            self.controller = Controller(**{**config["controller"][self.controller_name], **config["controller"]["general"], **{"num_control_inputs": config["cartpole"]["num_control_inputs"]}})
 
         # Set the maximal allowed value of the slider - relevant only for GUI
         if self.controller_name == 'manual-stabilization':

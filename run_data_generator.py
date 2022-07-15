@@ -56,7 +56,7 @@ class random_experiment_setter:
         self.turning_points = config["turning_points"]["turning_points"]
         self.turning_points_period = config["turning_points"]["turning_points_period"]
 
-        self.rng = create_rng(self.__class__.__name__, config["SEED"])
+        self.rng = create_rng(self.__class__.__name__, config["seed"])
         
     def set(self, CartPoleInstance):
         

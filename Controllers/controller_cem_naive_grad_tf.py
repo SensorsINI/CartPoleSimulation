@@ -11,122 +11,121 @@ from Controllers.template_controller import template_controller
 from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
 from CartPole.cartpole_model import s0
 
-import yaml
-
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
 from others.globals_and_utils import create_rng
 
-#load constants from config file
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
-
-num_control_inputs = config["cartpole"]["num_control_inputs"]
-
-#import cost function parts from folder according to config file
-cost_function = config["controller"]["general"]["cost_function"]
-cost_function = cost_function.replace('-', '_')
-cost_function_module = import_module(f"others.cost_functions.{cost_function}")
-cost = attrgetter("cost")(cost_function_module)
-
-#cem params
-dt = config["controller"]["cem-naive-grad"]["dt"]
-cem_horizon = config["controller"]["cem-naive-grad"]["mpc_horizon"]
-num_rollouts = config["controller"]["cem-naive-grad"]["cem_rollouts"]
-cem_outer_it = config["controller"]["cem-naive-grad"]["cem_outer_it"]
-
-cem_stdev_min = config["controller"]["cem-naive-grad"]["cem_stdev_min"]
-cem_best_k = config["controller"]["cem-naive-grad"]["cem_best_k"]
-cem_samples = int(cem_horizon / dt)  # Number of steps in MPC horizon
-intermediate_steps = config["controller"]["cem-naive-grad"]["predictor_intermediate_steps"]
-
-NET_NAME = config["controller"]["cem-naive-grad"]["CEM_NET_NAME"]
-predictor_name = config["controller"]["cem-naive-grad"]["predictor_name"]
-
-#optimization params
-cem_LR = config["controller"]["cem-naive-grad"]["cem_LR"]
-cem_LR = tf.constant(cem_LR, dtype=tf.float32)
-gradmax_clip = config["controller"]["cem-naive-grad"]["gradmax_clip"]
-gradmax_clip = tf.constant(gradmax_clip, dtype = tf.float32)
-
-#instantiate predictor
-predictor_module = import_module(f"SI_Toolkit.Predictors.{predictor_name}")
-predictor = getattr(predictor_module, predictor_name)(
-    horizon=cem_samples,
-    dt=dt,
-    intermediate_steps=intermediate_steps,
-    disable_individual_compilation=True,
-    batch_size=num_rollouts,
-    net_name=NET_NAME,
-)
 
 #controller class
 class controller_cem_naive_grad_tf(template_controller):
-    def __init__(self):
-        #First configure random sampler
-        self.rng_cem = create_rng(self.__class__.__name__, config["controller"]["cem-naive-grad"]["SEED"], use_tf=True)
+    def __init__(self, seed: int, num_control_inputs: int, cost_function: str, dt: float, mpc_horizon: float, cem_outer_it: int, cem_rollouts: int, predictor_name: str, predictor_intermediate_steps: int, CEM_NET_NAME: str, cem_stdev_min: float, cem_R: int, cem_ccrc_weight: float, cem_best_k: int, cem_LR: float, gradmax_clip: float, **kwargs):
+        # First configure random sampler
+        self.rng_cem = create_rng(self.__class__.__name__, seed, use_tf=True)
 
-        self.dist_mue = tf.zeros([1,cem_samples,num_control_inputs], dtype=tf.float32)
-        self.dist_var = 0.5*tf.ones([1,cem_samples,num_control_inputs], dtype=tf.float32)
+        # Parametrization
+        self.num_control_inputs = num_control_inputs
+
+        # import cost function parts from folder
+        self.cost_function = cost_function
+        self.cost_function = self.cost_function.replace('-', '_')
+        self.cost_function_module = import_module(f"others.cost_functions.{self.cost_function}")
+        self.cost = attrgetter("cost")(self.cost_function_module)
+
+        #cem params
+        self.cem_horizon = mpc_horizon
+        self.num_rollouts = cem_rollouts
+        self.cem_outer_it = cem_outer_it
+
+        self.cem_stdev_min = cem_stdev_min
+        self.cem_best_k = cem_best_k
+        self.cem_samples = int(self.cem_horizon / dt)  # Number of steps in MPC horizon
+        self.intermediate_steps = predictor_intermediate_steps
+
+        self.NET_NAME = CEM_NET_NAME
+        self.predictor_name = predictor_name
+
+        #optimization params
+        self.cem_LR = cem_LR
+        self.cem_LR = tf.constant(self.cem_LR, dtype=tf.float32)
+        self.gradmax_clip = gradmax_clip
+        self.gradmax_clip = tf.constant(self.gradmax_clip, dtype = tf.float32)
+
+        #instantiate predictor
+        self.predictor_module = import_module(f"SI_Toolkit.Predictors.{self.predictor_name}")
+        self.predictor = getattr(self.predictor_module, self.predictor_name)(
+            horizon=self.cem_samples,
+            dt=dt,
+            intermediate_steps=self.intermediate_steps,
+            disable_individual_compilation=True,
+            batch_size=self.num_rollouts,
+            net_name=self.NET_NAME,
+        )
+
+        # Initialization
+        self.dist_mue = tf.zeros([1,self.cem_samples,self.num_control_inputs], dtype=tf.float32)
+        self.dist_var = 0.5*tf.ones([1,self.cem_samples,self.num_control_inputs], dtype=tf.float32)
         self.stdev = tf.sqrt(self.dist_var)
         self.u = 0.0
 
     @Compile
     def predict_and_cost(self, s, target_position, rng_cem, dist_mue, stdev):
         # generate random input sequence and clip to control limits
-        Q = tf.tile(dist_mue, [num_rollouts, 1, 1]) + rng_cem.normal(
-            [num_rollouts, cem_samples, num_control_inputs], dtype=tf.float32) * stdev
+        Q = tf.tile(dist_mue, [self.num_rollouts, 1, 1]) + rng_cem.normal(
+            [self.num_rollouts, self.cem_samples, self.num_control_inputs], dtype=tf.float32) * stdev
         Q = tf.clip_by_value(Q, -1.0, 1.0)
         # rollout the trajectories and record gradient
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(Q)
-            rollout_trajectory = predictor.predict_tf(s, Q)
-            traj_cost = cost(rollout_trajectory, Q, target_position, self.u)
+            rollout_trajectory = self.predictor.predict_tf(s, Q)
+            traj_cost = self.cost(rollout_trajectory, Q, target_position, self.u)
         # retrieve gradient
         dc_dQ = tape.gradient(traj_cost, Q)
         dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ), axis=1, keepdims=True)
         # modify gradients: makes sure biggest entry of each gradient is at most "gradmax_clip".
-        mask = (dc_dQ_max > gradmax_clip)
+        mask = (dc_dQ_max > self.gradmax_clip)
         invmask = tf.logical_not(mask)
-        Q_update = (gradmax_clip* (dc_dQ/dc_dQ_max)*tf.cast(mask,tf.float32) + dc_dQ*tf.cast(invmask,tf.float32))
+        Q_update = (self.gradmax_clip* (dc_dQ/dc_dQ_max)*tf.cast(mask,tf.float32) + dc_dQ*tf.cast(invmask,tf.float32))
         # update Q with gradient descent step
-        Qn = Q-cem_LR*Q_update
+        Qn = Q-self.cem_LR*Q_update
         Qn = tf.clip_by_value(Qn,-1,1)
         #rollout all trajectories a last time
-        rollout_trajectory = predictor.predict_tf(s, Qn)
-        traj_cost = cost(rollout_trajectory, Qn, target_position, self.u)
+        rollout_trajectory = self.predictor.predict_tf(s, Qn)
+        traj_cost = self.cost(rollout_trajectory, Qn, target_position, self.u)
 
         # sort the costs and find best k costs
         sorted_cost = tf.argsort(traj_cost)
-        best_idx = sorted_cost[0:cem_best_k]
+        best_idx = sorted_cost[0:self.cem_best_k]
         elite_Q = tf.gather(Qn, best_idx, axis=0)
         # update the distribution for next inner loop
         self.dist_mue = tf.math.reduce_mean(elite_Q, axis=0, keepdims=True)
         self.stdev = tf.math.reduce_std(elite_Q, axis=0, keepdims=True)
-        return self.dist_mue, self.stdev
+        return self.dist_mue, self.stdev, Q, traj_cost
 
     #step function to find control
     def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
         # tile s and convert inputs to tensor
-        s = np.tile(s, tf.constant([num_rollouts, 1]))
+        s = np.tile(s, tf.constant([self.num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 
         #cem steps updating distribution
-        for _ in range(0,cem_outer_it):
-            self.dist_mue, self.stdev = self.predict_and_cost(s, target_position, self.rng_cem, self.dist_mue, self.stdev)
+        for _ in range(0,self.cem_outer_it):
+            self.dist_mue, self.stdev, Q, J = self.predict_and_cost(s, target_position, self.rng_cem, self.dist_mue, self.stdev)
+        
+        self.Q, self.J = Q.numpy(), J.numpy()
 
         #after all inner loops, clip std min, so enough is explored
         #and shove all the values down by one for next control input
-        self.stdev = tf.clip_by_value(self.stdev, cem_stdev_min, 10.0)
-        self.stdev = tf.concat([self.stdev[:, 1:, :], tf.sqrt(0.5)*tf.ones(shape=(1,1,num_control_inputs))], axis=1)
+        self.stdev = tf.clip_by_value(self.stdev, self.cem_stdev_min, 10.0)
+        self.stdev = tf.concat([self.stdev[:, 1:, :], tf.sqrt(0.5)*tf.ones(shape=(1,1,self.num_control_inputs))], axis=1)
         self.u = tf.squeeze(self.dist_mue[0,0,:])
-        self.dist_mue = tf.concat([self.dist_mue[:, 1:, :], tf.constant(0.0, shape=(1,1,num_control_inputs))], axis=1)
+        self.dist_mue = tf.concat([self.dist_mue[:, 1:, :], tf.constant(0.0, shape=(1,1,self.num_control_inputs))], axis=1)
         return self.u.numpy()
 
     def controller_reset(self):
         #reset controller initial distribution
-        self.dist_mue = tf.zeros([1, cem_samples, num_control_inputs])
-        self.dist_var = 0.5 * tf.ones([1, cem_samples, num_control_inputs])
+        self.dist_mue = tf.zeros([1, self.cem_samples, self.num_control_inputs])
+        self.dist_var = 0.5 * tf.ones([1, self.cem_samples, self.num_control_inputs])
         self.stdev = tf.sqrt(self.dist_var)
 
 

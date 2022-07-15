@@ -16,8 +16,7 @@ See the provided examples of controllers to gain more insight.
 
 
 class template_controller(ABC):
-
-    def __init__(self):
+    def __init__(**kwargs):
         pass
     
     @abstractmethod

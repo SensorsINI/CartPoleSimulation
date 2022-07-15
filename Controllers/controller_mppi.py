@@ -29,6 +29,8 @@ from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
                               v_max)
 from scipy.interpolate import interp1d
 
+from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
+
 from Controllers.template_controller import template_controller
 
 
@@ -341,12 +343,12 @@ class controller_mppi(template_controller):
     :type template_controller: abc.ABC
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
 
         """Random number generator"""
-        SEED = config["controller"]["mppi"]["SEED"]
-        self.rng_mppi = create_rng(self.__class__.__name__, SEED)
-        self.rng_mppi_rnn = create_rng(self.__class__.__name__, SEED if SEED=="None" else SEED*2) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
+        seed = config["controller"]["mppi"]["seed"]
+        self.rng_mppi = create_rng(self.__class__.__name__, seed)
+        self.rng_mppi_rnn = create_rng(self.__class__.__name__, seed if seed=="None" else seed*2) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
 
 
         global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
@@ -376,9 +378,8 @@ class controller_mppi(template_controller):
         self.warm_up_countdown = self.wash_out_len
         try:
             from Controllers.controller_lqr import controller_lqr
-
             self.auxiliary_controller_available = True
-            self.auxiliary_controller = controller_lqr()
+            self.auxiliary_controller = controller_lqr(**config["controller"]["lqr"])
         except ModuleNotFoundError:
             self.auxiliary_controller_available = False
             self.auxiliary_controller = None

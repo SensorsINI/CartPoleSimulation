@@ -28,7 +28,7 @@ controlDisturbance = tf.convert_to_tensor(controlDisturbance)
 controlBias = tf.convert_to_tensor(controlBias)
 TrackHalfLength = tf.convert_to_tensor(TrackHalfLength)
 
-rng = create_rng(__name__, config["cartpole"]["SEED"])
+rng = create_rng(__name__, config["cartpole"]["seed"])
 
 ###
 # FIXME: Currently tf predictor is not modeling edge bounce!

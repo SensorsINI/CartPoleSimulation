@@ -16,8 +16,8 @@ import casadi
 import yaml
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-dt_mpc_simulation = config["controller"]["do_mpc_discrete"]["dt_mpc_simulation"]
-mpc_horizon = config["controller"]["do_mpc_discrete"]["mpc_horizon"]
+dt_mpc_simulation = config["controller"]["do-mpc-discrete"]["dt_mpc_simulation"]
+mpc_horizon = config["controller"]["do-mpc-discrete"]["mpc_horizon"]
 
 
 def mpc_next_state(s, u, dt):

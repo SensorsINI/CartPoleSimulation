@@ -1,5 +1,3 @@
-import yaml
-
 import tensorflow as tf
 import numpy as np
 
@@ -17,21 +15,14 @@ except ModuleNotFoundError:
 from SI_Toolkit.TF.TF_Functions.Initialization import get_net, get_norm_info_for_net
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
-
-NET_NAME = config['controller']['nn_as_mpc_tf']['net_name']
-PATH_TO_MODELS = config['controller']['nn_as_mpc_tf']['PATH_TO_MODELS']
-
 
 class controller_nn_as_mpc_tf(template_controller):
-    def __init__(self, batch_size=1):
-
+    def __init__(self, net_name: str, PATH_TO_MODELS: str, batch_size=1, **kwargs):
         a = SimpleNamespace()
         self.batch_size = batch_size  # It makes sense only for testing (Brunton plot for Q) of not rnn networks to make bigger batch, this is not implemented
 
         a.path_to_models = PATH_TO_MODELS
-
-        a.net_name = NET_NAME
+        a.net_name = net_name
 
         # Create a copy of the network suitable for inference (stateful and with sequence length one)
         self.net, self.net_info = \

@@ -20,7 +20,7 @@ import yaml, os
 config_CartPole = yaml.load(open('../../config.yml'), Loader=yaml.FullLoader)
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
-    seed = config_CartPole["data_generator"]["SEED"]
+    seed = config_CartPole["data_generator"]["seed"]
 
     reset_seed_for_each_experiment = False
 

@@ -9,12 +9,6 @@ from CartPole.state_utilities import cartpole_state_vector_to_namespace
 
 from types import SimpleNamespace
 
-import yaml
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
-
-dt_mpc_simulation = config["controller"]["do_mpc_discrete"]["dt_mpc_simulation"]
-mpc_horizon = config["controller"]["do_mpc_discrete"]["mpc_horizon"]
-
 
 def mpc_next_state(s, u, dt):
     """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
@@ -57,16 +51,18 @@ def cartpole_integration(s, dt):
 
 class controller_do_mpc_discrete(template_controller):
     def __init__(self,
+                 dt_mpc_simulation: float,
+                 mpc_horizon: float,
                  position_init=0.0,
                  positionD_init=0.0,
                  angle_init=0.0,
                  angleD_init=0.0,
+                 **kwargs,
                  ):
 
         """
         Get configured do-mpc modules:
         """
-
         # Container for the state of the cart
         s = SimpleNamespace()
 
