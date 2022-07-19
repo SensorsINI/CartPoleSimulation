@@ -7,7 +7,7 @@ import tensorflow as tf
 from others.globals_and_utils import create_rng
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
-from Controllers.template_controller import template_controller
+from Controllers import template_controller
 
 
 #cem class
@@ -143,8 +143,8 @@ class controller_dist_adam_resamp2(template_controller):
 
         #retrieve optimal input and warmstart for next iteration
         u = tf.squeeze(elite_Q[0, 0, :])
-        dist_mue = tf.concat([dist_mue[:, 1:, :], tf.zeros([1, 1, self.num_control_inputs])], axis=1)
-        Qn = tf.concat([Q[:, 1:, :], Q[:, -1:, :]], axis=1)
+        dist_mue = tf.concat([dist_mue[:, :-1, :], tf.zeros([1, 1, self.num_control_inputs])], axis=1)
+        Qn = tf.concat([Q[:, :-1, :], Q[:, -1:, :]], axis=1)
         return u, dist_mue, dist_std, Qn, best_idx, traj_cost
 
     #step function to find control

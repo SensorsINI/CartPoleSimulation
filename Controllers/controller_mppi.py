@@ -31,7 +31,7 @@ from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
 from scipy.interpolate import interp1d
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 
-from Controllers.template_controller import template_controller
+from Controllers import template_controller
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 

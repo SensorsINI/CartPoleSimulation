@@ -6,7 +6,7 @@ import tensorflow_probability as tfp
 from others.globals_and_utils import create_rng
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
-from Controllers.template_controller import template_controller
+from Controllers import template_controller
 
 
 #controller class

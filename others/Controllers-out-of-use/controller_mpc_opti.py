@@ -1,6 +1,6 @@
 """mpc controller"""
 
-from Controllers.template_controller import template_controller
+from Controllers import template_controller
 from CartPole.cartpole_model import TrackHalfLength, s0, Q2u
 from CartPole.cartpole_numba import cartpole_ode_numba
 from others.p_globals import v_max
