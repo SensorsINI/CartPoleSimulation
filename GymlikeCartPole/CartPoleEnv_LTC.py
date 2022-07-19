@@ -90,7 +90,7 @@ class CartPoleEnv_LTC(gym.Env):
 
         self.step_termination_and_reward()
 
-        return self.state, self.CartPoleInstance.target_position, self.reward, self.done, {}
+        return self.state, self.reward, self.done, {"target": self.CartPoleInstance.target_position}
 
     def step_physics(self):
 
