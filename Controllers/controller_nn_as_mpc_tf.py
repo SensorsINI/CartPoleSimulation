@@ -7,7 +7,7 @@ from Controllers import template_controller
 from SI_Toolkit.load_and_normalize import normalize_numpy_array
 
 try:
-    from SI_Toolkit_ASF_global.predictors_customization import STATE_VARIABLES, STATE_INDICES, \
+    from SI_Toolkit_ASF.predictors_customization import STATE_VARIABLES, STATE_INDICES, \
         CONTROL_INPUTS, augment_predictor_output
 except ModuleNotFoundError:
     print('SI_Toolkit_ASF not yet created')
