@@ -7,7 +7,7 @@ import yaml
 
 
 #load constants from config file
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
 
 dd_weight = config["controller"]["mppi"]["dd_weight"]
 cc_weight = tf.convert_to_tensor(config["controller"]["mppi"]["cc_weight"])
