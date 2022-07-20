@@ -8,7 +8,7 @@ from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
 
 class next_state_predictor_ODE():
 
-    def __init__(self, dt, intermediate_steps):
+    def __init__(self, dt, intermediate_steps, batch_size, **kwargs):
         self.s = create_cartpole_state()
 
         self.intermediate_steps = intermediate_steps

@@ -37,7 +37,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="SI_Toolkit_ASF_global",
+    name="SI_Toolkit_ASF",
     version="0.0.1",
     author="Sensors Group",
     author_email="marcin.p.paluch@gmail.com",
