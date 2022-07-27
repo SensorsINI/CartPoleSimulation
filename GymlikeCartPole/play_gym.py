@@ -1,4 +1,5 @@
 from importlib import import_module
+import os
 import yaml
 from GymlikeCartPole.CartPoleEnv_LTC import CartPoleEnv_LTC
 from time import sleep
@@ -12,7 +13,7 @@ controller_full_name = f"controller-{controller_name}".replace("-", "_")
 
 Controller = getattr(import_module(f"Controllers.{controller_full_name}"), controller_full_name)
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "config.yml"), "r"), Loader=yaml.FullLoader)
 
 from others.globals_and_utils import my_logger
 logger = my_logger(__name__)

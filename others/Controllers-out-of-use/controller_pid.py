@@ -3,6 +3,7 @@ This is a linear-quadratic regulator
 It assumes that the input relation is u = Q*u_max (no fancy motor model) !
 """
 
+import os
 import scipy
 import numpy as np
 
@@ -12,7 +13,7 @@ from CartPole.cartpole_model import u_max, s0
 from CartPole.cartpole_jacobian import cartpole_jacobian
 
 import yaml
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
 
 class controller_pid(template_controller):
     def __init__(self):

@@ -24,7 +24,7 @@ from others.p_globals import TrackHalfLength
 class random_experiment_setter:
     def __init__(self):
 
-        config = yaml.load(open('config_data_gen.yml'), Loader=yaml.FullLoader)
+        config = yaml.load(open(os.path.join(os.path.dirname(__file__), "config_data_gen.yml"), "r"), Loader=yaml.FullLoader)
 
         self.length_of_experiment = config["length_of_experiment"]
 

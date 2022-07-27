@@ -1,3 +1,4 @@
+import os
 import tensorflow as tf
 import math
 
@@ -16,7 +17,7 @@ import yaml
 
 
 # load constants from config file
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
 
 dd_weight = config["controller"]["mppi"]["dd_weight"]
 cc_weight = config["controller"]["mppi"]["cc_weight"]

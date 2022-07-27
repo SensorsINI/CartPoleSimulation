@@ -1,5 +1,6 @@
 """mpc controller"""
 
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize
@@ -12,7 +13,7 @@ from Controllers.controller_lqr import controller_lqr
 from others.globals_and_utils import create_rng
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
 
 predictor = predictor_ODE
 # WARNING: if using RNN to provide CartPole model to MPC

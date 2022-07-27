@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import yaml
 from others.globals_and_utils import create_rng
@@ -40,7 +41,7 @@ sigma_Q = 0.1
 # sigma_angleD = _noise_derivative(dt_derivative)*sigma_angle
 # sigma_positionD = _noise_derivative(dt_derivative)*sigma_position
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "config.yml"), "r"), Loader=yaml.FullLoader)
 
 sigma_angle = config["cartpole"]["noise"]["sigma_angle"]
 sigma_position = config["cartpole"]["noise"]["sigma_position"]

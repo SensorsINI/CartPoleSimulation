@@ -71,7 +71,7 @@ rc('font', **font)
 
 # endregion
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "config.yml"), "r"), Loader=yaml.FullLoader)
 PATH_TO_CONTROLLERS = config["cartpole"]["PATH_TO_CONTROLLERS"]
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 

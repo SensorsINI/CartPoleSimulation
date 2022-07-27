@@ -1,3 +1,4 @@
+import os
 import tensorflow as tf
 import yaml
 from others.globals_and_utils import create_rng
@@ -13,7 +14,7 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
                                       STATE_INDICES)
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "config.yml"), "r"), Loader=yaml.FullLoader)
 
 k = tf.convert_to_tensor(k)
 M = tf.convert_to_tensor(M)
