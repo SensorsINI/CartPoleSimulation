@@ -4,6 +4,7 @@ from importlib import import_module
 
 import numpy as np
 import tensorflow as tf
+from Environments import EnvironmentBatched
 from others.globals_and_utils import create_rng
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
@@ -12,10 +13,14 @@ from Controllers import template_controller
 
 #cem class
 class controller_dist_adam_resamp2(template_controller):
-    def __init__(self, environment, seed: int, num_control_inputs: int, dt: float, mpc_horizon: float, num_rollouts: int, outer_its: int, sample_stdev: float, resamp_per: int, predictor_name: str, predictor_intermediate_steps: int, NET_NAME: str, SAMPLING_TYPE: str, interpolation_step: int, warmup: bool, cem_LR: float, opt_keep_k: int, gradmax_clip: float, adam_beta_1: float, adam_beta_2: float, adam_epsilon: float, **kwargs):
+    def __init__(self, environment: EnvironmentBatched, seed: int, num_control_inputs: int, dt: float, mpc_horizon: float, num_rollouts: int, outer_its: int, sample_stdev: float, resamp_per: int, predictor_name: str, predictor_intermediate_steps: int, NET_NAME: str, SAMPLING_TYPE: str, interpolation_step: int, warmup: bool, cem_LR: float, opt_keep_k: int, gradmax_clip: float, rtol: float, adam_beta_1: float, adam_beta_2: float, adam_epsilon: float, **kwargs):
         #First configure random sampler
         self.rng_cem = create_rng(self.__class__.__name__, seed, use_tf=True)
 
+        super().__init__(environment)
+        self.action_low = tf.convert_to_tensor(self.env_mock.action_space.low)
+        self.action_high = tf.convert_to_tensor(self.env_mock.action_space.high)
+        
         # Parametrization
         self.num_control_inputs = num_control_inputs
 
@@ -23,7 +28,7 @@ class controller_dist_adam_resamp2(template_controller):
         self.mpc_horizon = mpc_horizon
         self.num_rollouts = num_rollouts
         self.outer_its = outer_its
-        self.samp_stdev = sample_stdev
+        self.sample_stdev = sample_stdev
         self.cem_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
         self.intermediate_steps = predictor_intermediate_steps
 
@@ -42,6 +47,7 @@ class controller_dist_adam_resamp2(template_controller):
         self.cem_LR = tf.constant(cem_LR, dtype=tf.float32)
 
         self.gradmax_clip = tf.constant(gradmax_clip, dtype = tf.float32)
+        self.rtol = rtol
 
         #instantiate predictor
         predictor_module = import_module(f"SI_Toolkit.Predictors.{predictor_name}")
@@ -78,7 +84,7 @@ class controller_dist_adam_resamp2(template_controller):
 
         #setup sampling distribution
         self.dist_mue = tf.zeros([1,self.cem_samples,self.num_control_inputs], dtype=tf.float32)
-        self.dist_var = 0.5*tf.ones([1,self.cem_samples,self.num_control_inputs], dtype=tf.float32)
+        self.dist_var = self.sample_stdev*tf.ones([1,self.cem_samples,self.num_control_inputs], dtype=tf.float32)
         self.stdev = tf.sqrt(self.dist_var)
         self.u = 0.0
 
@@ -91,14 +97,12 @@ class controller_dist_adam_resamp2(template_controller):
         self.opt = tf.keras.optimizers.Adam(learning_rate=cem_LR, beta_1 = adam_beta_1, beta_2 = adam_beta_2, epsilon = adam_epsilon)
         self.bestQ = None
 
-        super().__init__(environment)
-
     @Compile
     def sample_actions(self, rng_gen, batchsize):
         #sample actions
         Qn = rng_gen.normal(
-            [batchsize, self.num_valid_vals, self.num_control_inputs], dtype=tf.float32) * self.samp_stdev
-        Qn = tf.clip_by_value(Qn, -1.0, 1.0)
+            [batchsize, self.num_valid_vals, self.num_control_inputs], dtype=tf.float32) * self.sample_stdev
+        Qn = tf.clip_by_value(Qn, self.action_low, self.action_high)
         if self.SAMPLING_TYPE == "interpolated":
             Qn = tf.transpose(tf.matmul(tf.transpose(Qn, perm=(2,0,1)), tf.transpose(self.interp_mat, perm=(2,0,1))), perm=(1,2,0))
         return Qn
@@ -112,16 +116,12 @@ class controller_dist_adam_resamp2(template_controller):
             traj_cost = self.env_mock.cost_functions.get_trajectory_cost(rollout_trajectory, Q, self.u)
         #retrieve gradient of cost w.r.t. input sequence
         dc_dQ = tape.gradient(traj_cost, Q)
-        # modify gradients: makes sure biggest entry of each gradient is at most "gradmax_clip".
-        dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ), axis=1, keepdims=True) #find max gradient for every sequence
-        mask = (dc_dQ_max > self.gradmax_clip) #generate binary mask
-        invmask = tf.logical_not(mask)
-        dc_dQ_prc = ((dc_dQ/dc_dQ_max)*tf.cast(mask,tf.float32)*self.gradmax_clip + dc_dQ*tf.cast(invmask,tf.float32)) #modify gradients
+        dc_dQ_prc = tf.clip_by_norm(dc_dQ, self.gradmax_clip, axes=[1, 2])
         # use optimizer to applay gradients and retrieve next set of input sequences
         opt.apply_gradients(zip([dc_dQ_prc], [Q]))
         # clip
-        Qn = tf.clip_by_value(Q,-1,1)
-        return Qn
+        Qn = tf.clip_by_value(Q, self.action_low, self.action_high)
+        return Qn, traj_cost
 
     @Compile
     def get_action(self, s, Q):
@@ -137,8 +137,8 @@ class controller_dist_adam_resamp2(template_controller):
         #get distribution of kept trajectories. This is actually unnecessary for this controller, might be incorparated into another one tho
         dist_mue = tf.math.reduce_mean(elite_Q, axis=0, keepdims=True)
         dist_std = tf.math.reduce_std(elite_Q, axis=0, keepdims=True)
-        dist_std = tf.clip_by_value(dist_std, self.samp_stdev, 10.0)
-        dist_std = tf.concat([dist_std[:, 1:, :], tf.sqrt(0.5)*tf.ones(shape=[1,1,self.num_control_inputs])], axis=1)
+        dist_std = tf.clip_by_value(dist_std, self.sample_stdev, 10.0)
+        dist_std = tf.concat([dist_std[:, 1:, :], tf.sqrt(self.sample_stdev)*tf.ones(shape=[1,1,self.num_control_inputs])], axis=1)
         #end of unnecessary part
 
         #retrieve optimal input and warmstart for next iteration
@@ -158,10 +158,19 @@ class controller_dist_adam_resamp2(template_controller):
             iters = self.first_iter_count
         else:
             iters = self.outer_its
+        
         #optimize control sequences with gradient based optimization
+        prev_cost = 0
         for _ in range(0, iters):
-            Qn = self.grad_step(s, self.Q_tf, self.opt)
+            Qn, traj_cost = self.grad_step(s, self.Q_tf, self.opt)
             self.Q_tf.assign(Qn)
+
+            # Check for convergence of optimization
+            traj_cost = traj_cost.numpy()
+            if np.mean(np.abs((traj_cost - prev_cost) / (prev_cost + self.rtol))) < self.rtol:
+                # Assume that we have converged sufficiently
+                break
+            prev_cost = traj_cost.copy()
 
         #retrieve optimal input and prepare warmstart
         self.u, self.dist_mue, self.stdev, Qn, self.bestQ, J = self.get_action(s, self.Q_tf)
@@ -198,7 +207,7 @@ class controller_dist_adam_resamp2(template_controller):
 
     def controller_reset(self):
         self.dist_mue = tf.zeros([1, self.cem_samples, self.num_control_inputs])
-        self.dist_var = 0.5 * tf.ones([1, self.cem_samples, self.num_control_inputs])
+        self.dist_var = self.sample_stdev * tf.ones([1, self.cem_samples, self.num_control_inputs])
         self.stdev = tf.sqrt(self.dist_var)
         #sample new initial guesses for trajectories
         Qn = self.sample_actions(self.rng_cem, self.num_rollouts)

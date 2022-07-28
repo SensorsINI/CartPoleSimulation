@@ -203,6 +203,12 @@ def create_rng(id: str, seed: str, use_tf: bool=False):
         return Generator(SFC64(seed=seed))
 
 
+class MockSpace:
+    def __init__(self, low, high, shape=None, dtype=np.float32) -> None:
+        self.low, self.high, self.shape = low, high, shape
+        self.dtype = dtype
+
+
 timers = {}
 times = {}
 class Timer:

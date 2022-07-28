@@ -385,6 +385,8 @@ class controller_mppi(template_controller):
         self.auxiliary_controller_available = False
         
         super().__init__(environment)
+        self.action_low = self.env_mock.action_space.low
+        self.action_high = self.env_mock.action_space.high
 
     def initialize_perturbations(
         self, stdev: float = 1.0, sampling_type: str = None
@@ -547,7 +549,7 @@ class controller_mppi(template_controller):
         # Add noise on top of the calculated Q value to better explore state space
         Q = np.float32(Q * (1 + p_Q * self.rng_mppi.uniform(-1.0, 1.0)))
         # Clip inputs to allowed range
-        Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
+        Q = np.clip(Q, self.action_low, self.action_high, dtype=np.float32)
 
         # Preserve current series of inputs
         self.u_prev = np.copy(self.u)

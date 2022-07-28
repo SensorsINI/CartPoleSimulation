@@ -20,7 +20,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import yaml
-from others.globals_and_utils import create_rng
+from others.globals_and_utils import MockSpace, create_rng
 from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
                               g, k, m, u_max, v_max)
@@ -99,6 +99,8 @@ class CartPole:
         self.u = 0.0  # Physical force acting on the cart
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
         self.target_position = 0.0
+
+        self.action_space = MockSpace(-1.0, 1.0)
 
         self.latency = config["cartpole"]["latency"]
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency)

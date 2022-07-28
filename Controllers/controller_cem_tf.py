@@ -46,6 +46,8 @@ class controller_cem_tf(template_controller):
         self.u = 0
 
         super().__init__(environment)
+        self.action_low = self.env_mock.action_space.low
+        self.action_high = self.env_mock.action_space.high
 
     @Compile
     def predict_and_cost(self, s, Q):
@@ -62,7 +64,7 @@ class controller_cem_tf(template_controller):
             #generate random input sequence and clip to control limits
             Q = np.tile(self.dist_mue,(self.num_rollouts,1,1)) + np.multiply(self.rng_cem.standard_normal(
                 size=(self.num_rollouts, self.cem_samples, self.num_control_inputs), dtype=np.float32), self.stdev)
-            Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
+            Q = np.clip(Q, self.action_low, self.action_high, dtype=np.float32)
 
             Q = tf.convert_to_tensor(Q, dtype=tf.float32)
 

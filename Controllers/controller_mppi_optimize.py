@@ -61,6 +61,8 @@ class controller_mppi_optimize(template_controller):
                                             epsilon=adam_epsilon)
 
         super().__init__(environment)
+        self.action_low = tf.convert_to_tensor(self.env_mock.action_space.low)
+        self.action_high = tf.convert_to_tensor(self.env_mock.action_space.high)
 
     
 
@@ -110,13 +112,13 @@ class controller_mppi_optimize(template_controller):
         # generate random input sequence and clip to control limits
         delta_u = self.inizialize_pertubation(random_gen)
         u_run = tf.tile(u_nom, [self.num_rollouts, 1, 1]) + delta_u
-        u_run = tf.clip_by_value(u_run, -1.0, 1.0)
+        u_run = tf.clip_by_value(u_run, self.action_low, self.action_high)
         #predict trajectories
         rollout_trajectory = self.predictor.predict_tf(s, u_run)
         #rollout cost
         traj_cost = self.get_mppi_trajectory_cost(rollout_trajectory, u_run, u_old, delta_u)
         #retrive control sequence via path integral
-        u_nom = tf.clip_by_value(u_nom + self.reward_weighted_average(traj_cost, delta_u), -1.0, 1.0)
+        u_nom = tf.clip_by_value(u_nom + self.reward_weighted_average(traj_cost, delta_u), self.action_low, self.action_high)
         return u_nom
 
     @Compile
@@ -139,7 +141,7 @@ class controller_mppi_optimize(template_controller):
         #use optimizer to applay gradients and retrieve next set of input sequences
         opt.apply_gradients(zip([dc_dQ_prc], [Q]))
         #clip
-        Qn = tf.clip_by_value(Q, -1, 1)
+        Qn = tf.clip_by_value(Q, self.action_low, self.action_high)
         return Qn, traj_cost
 
     #step function to find control

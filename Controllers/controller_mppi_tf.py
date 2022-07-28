@@ -11,7 +11,9 @@ from Controllers import template_controller
 
 
 class controller_mppi_tf(template_controller):
-    def __init__(self, environment, seed: int, num_control_inputs: int, cc_weight: float, R: float, LBD: float, mpc_horizon: float, num_rollouts: int, dt: float, predictor_intermediate_steps: int, NU: float, SQRTRHOINV: float, GAMMA: float, SAMPLING_TYPE: str, NET_NAME: str, predictor_name: str, clip_control_input: Union["list[float]", "list[list[float]]"], **kwargs):
+    def __init__(self, environment, seed: int, num_control_inputs: int, cc_weight: float, R: float, LBD: float, mpc_horizon: float, num_rollouts: int, dt: float, predictor_intermediate_steps: int, NU: float, SQRTRHOINV: float, GAMMA: float, SAMPLING_TYPE: str, NET_NAME: str, predictor_name: str, **kwargs):
+        super().__init__(environment)
+        
         #First configure random sampler
         self.rng_mppi = create_rng(self.__class__.__name__, seed, use_tf=True)
 
@@ -32,13 +34,9 @@ class controller_mppi_tf(template_controller):
         self.SQRTRHODTINV = tf.convert_to_tensor(SQRTRHOINV * (1 / np.math.sqrt(dt)))
         self.GAMMA = GAMMA
         self.SAMPLING_TYPE = SAMPLING_TYPE
-
-        if isinstance(clip_control_input[0], list):
-            self.clip_control_input_low = tf.constant(clip_control_input[0], dtype=tf.float32)
-            self.clip_control_input_high = tf.constant(clip_control_input[1], dtype=tf.float32)
-        else:
-            self.clip_control_input_high = tf.constant(clip_control_input, dtype=tf.float32)
-            self.clip_control_input_low = -self.clip_control_input_high
+        
+        self.clip_control_input_low = self.env_mock.action_space.low
+        self.clip_control_input_high = self.env_mock.action_space.high
 
         #instantiate predictor
         predictor_module = import_module(f"SI_Toolkit.Predictors.{predictor_name}")
@@ -84,8 +82,6 @@ class controller_mppi_tf(template_controller):
         else:
             self.mppi_output = self.return_restricted
         
-        super().__init__(environment)
-
     def return_all(self, u, u_nom, rollout_trajectory, traj_cost, u_run):
         return u, u_nom, rollout_trajectory, traj_cost, u_run
 

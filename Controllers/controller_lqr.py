@@ -32,6 +32,10 @@ class controller_lqr(template_controller):
         The optimal input is then computed as:
          input: u = -K*x
         """
+        super().__init__(environment)
+        self.action_low = self.env_mock.action_space.low
+        self.action_high = self.env_mock.action_space.high
+        
         self.p_Q = control_noise
         # ref Bertsekas, p.151
 
@@ -72,15 +76,13 @@ class controller_lqr(template_controller):
         self.X = X
         self.eigVals = eigVals
 
-        super().__init__(environment)
-
     def step(self, s: np.ndarray, time=None):
         state = np.array(
             [[s[POSITION_IDX] - self.env_mock.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
 
         Q = np.dot(-self.K, state).item()
 
-        Q = np.float32(Q * (1 + self.p_Q * self.rng_lqr.uniform(-1.0, 1.0)))
+        Q = np.float32(Q * (1 + self.p_Q * self.rng_lqr.uniform(self.action_low, self.action_high)))
         # Q = self.rng_lqr.uniform(-1.0, 1.0)
 
         # Clip Q

@@ -57,13 +57,15 @@ class controller_cem_naive_grad_tf(template_controller):
         self.u = 0.0
 
         super().__init__(environment)
+        self.action_low = tf.convert_to_tensor(self.env_mock.action_space.low)
+        self.action_high = tf.convert_to_tensor(self.env_mock.action_space.high)
 
     @Compile
     def predict_and_cost(self, s, rng_cem, dist_mue, stdev):
         # generate random input sequence and clip to control limits
         Q = tf.tile(dist_mue, [self.num_rollouts, 1, 1]) + rng_cem.normal(
             [self.num_rollouts, self.cem_samples, self.num_control_inputs], dtype=tf.float32) * stdev
-        Q = tf.clip_by_value(Q, -1.0, 1.0)
+        Q = tf.clip_by_value(Q, self.action_low, self.action_high)
         # rollout the trajectories and record gradient
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(Q)
@@ -71,14 +73,11 @@ class controller_cem_naive_grad_tf(template_controller):
             traj_cost = self.env_mock.cost_functions.get_trajectory_cost(rollout_trajectory, Q, self.u)
         # retrieve gradient
         dc_dQ = tape.gradient(traj_cost, Q)
-        dc_dQ_max = tf.math.reduce_max(tf.abs(dc_dQ), axis=1, keepdims=True)
-        # modify gradients: makes sure biggest entry of each gradient is at most "gradmax_clip".
-        mask = (dc_dQ_max > self.gradmax_clip)
-        invmask = tf.logical_not(mask)
-        Q_update = (self.gradmax_clip* (dc_dQ/dc_dQ_max)*tf.cast(mask,tf.float32) + dc_dQ*tf.cast(invmask,tf.float32))
+        # modify gradients: makes sure norm of each gradient is at most "gradmax_clip".
+        Q_update = tf.clip_by_norm(dc_dQ, self.gradmax_clip, axes=[1, 2])
         # update Q with gradient descent step
         Qn = Q-self.cem_LR*Q_update
-        Qn = tf.clip_by_value(Qn,-1,1)
+        Qn = tf.clip_by_value(Qn, self.action_low, self.action_high)
         #rollout all trajectories a last time
         rollout_trajectory = self.predictor.predict_tf(s, Qn)
         traj_cost = self.env_mock.cost_functions.get_trajectory_cost(rollout_trajectory, Qn, self.u)
@@ -90,7 +89,7 @@ class controller_cem_naive_grad_tf(template_controller):
         # update the distribution for next inner loop
         self.dist_mue = tf.math.reduce_mean(elite_Q, axis=0, keepdims=True)
         self.stdev = tf.math.reduce_std(elite_Q, axis=0, keepdims=True)
-        return self.dist_mue, self.stdev, Q, traj_cost
+        return self.dist_mue, self.stdev, Qn, traj_cost
 
     #step function to find control
     def step(self, s: np.ndarray, time=None):

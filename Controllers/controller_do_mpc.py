@@ -31,6 +31,9 @@ class controller_do_mpc(template_controller):
         angleD_init=0.0,    
         **kwargs,
     ):
+        super().__init__(environment)
+        self.action_low = self.env_mock.action_space.low
+        self.action_high = self.env_mock.action_space.high
         """
         Get configured do-mpc modules:
         """
@@ -122,8 +125,8 @@ class controller_do_mpc(template_controller):
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
 
 
-        self.mpc.bounds['lower', '_u', 'Q'] = -1.0
-        self.mpc.bounds['upper', '_u', 'Q'] = 1.0
+        self.mpc.bounds['lower', '_u', 'Q'] = self.action_low
+        self.mpc.bounds['upper', '_u', 'Q'] = self.action_high
 
         self.tvp_template = self.mpc.get_tvp_template()
 
@@ -144,8 +147,6 @@ class controller_do_mpc(template_controller):
         self.mpc.x0 = self.x0
 
         self.mpc.set_initial_guess()
-
-        super().__init__(environment)
 
     def tvp_fun(self, t_ind):
         return self.tvp_template

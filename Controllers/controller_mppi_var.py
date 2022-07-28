@@ -78,6 +78,8 @@ class controller_mppi_var(template_controller):
         self.u = 0.0
         
         super().__init__(environment)
+        self.action_low = tf.convert_to_tensor(self.env_mock.action_space.low)
+        self.action_high = tf.convert_to_tensor(self.env_mock.action_space.high)
     
     #mppi correction
     def mppi_correction_cost(self, u, delta_u, nuvec):
@@ -110,7 +112,7 @@ class controller_mppi_var(template_controller):
             delta_u = self.inizialize_pertubation(random_gen, nuvec) #initialize pertubations
             #build real input and clip, preserving gradient
             u_run = tf.tile(u_nom, [self.num_rollouts, 1, 1]) + delta_u
-            u_run = tfp.math.clip_by_value_preserve_gradient(u_run, -1.0, 1.0)
+            u_run = tfp.math.clip_by_value_preserve_gradient(u_run, self.action_low, self.action_high)
             #rollout and cost
             rollout_trajectory = self.predictor.predict_tf(s, u_run)
             unc_cost = self.env_mock.cost_functions.get_trajectory_cost(rollout_trajectory, u_run, u_old)
@@ -123,7 +125,7 @@ class controller_mppi_var(template_controller):
         cor_cost = tf.math.reduce_sum(cor_cost, axis=1)
         traj_cost = unc_cost + cor_cost
         #build optimal input
-        u_nom = tf.clip_by_value(u_nom + self.reward_weighted_average(traj_cost, delta_u), -1.0, 1.0)
+        u_nom = tf.clip_by_value(u_nom + self.reward_weighted_average(traj_cost, delta_u), self.action_low, self.action_high)
         u = u_nom[0, 0, :]
         u_nom = tf.concat([u_nom[:, 1:, :], tf.constant(0.0, shape=[1, 1, self.num_control_inputs])], axis=1)
         #adapt variance
