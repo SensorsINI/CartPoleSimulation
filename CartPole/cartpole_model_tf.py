@@ -66,7 +66,7 @@ The 0-angle state is always defined as pole in upright position. This currently 
 s0 = create_cartpole_state()
 
 
-def _cartpole_ode (ca, sa, angleD, positionD, u,
+def _cartpole_ode(ca, sa, angleD, positionD, u,
                       k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
 
     """
@@ -170,7 +170,7 @@ def euler_step(state, stateD, t_step):
     return state + stateD * t_step
 
 
-def cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD, t_step, ):
+def cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD, t_step):
     angle_next = euler_step(angle, angleD, t_step)
     angleD_next = euler_step(angleD, angleDD, t_step)
     position_next = euler_step(position, positionD, t_step)
@@ -185,7 +185,7 @@ def euler_step_tf(state, stateD, t_step):
 
 
 @Compile
-def cartpole_integration_tf(angle, angleD, angleDD, position, positionD, positionDD, t_step, ):
+def cartpole_integration_tf(angle, angleD, angleDD, position, positionD, positionDD, t_step):
     angle_next = euler_step_tf(angle, angleD, t_step)
     angleD_next = euler_step_tf(angleD, angleDD, t_step)
     position_next = euler_step_tf(position, positionD, t_step)
