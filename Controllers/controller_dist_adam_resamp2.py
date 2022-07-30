@@ -145,7 +145,7 @@ class controller_dist_adam_resamp2(template_controller):
         u = tf.squeeze(elite_Q[0, 0, :])
         dist_mue = tf.concat([dist_mue[:, 1:, :], tf.zeros([1, 1, self.num_control_inputs])], axis=1)
         Qn = tf.concat([Q[:, 1:, :], Q[:, -1:, :]], axis=1)
-        return u, dist_mue, dist_std, Qn, best_idx, traj_cost
+        return u, dist_mue, dist_std, Qn, best_idx, traj_cost, rollout_trajectory
 
     #step function to find control
     def step(self, s: np.ndarray, time=None):
@@ -173,10 +173,11 @@ class controller_dist_adam_resamp2(template_controller):
             prev_cost = traj_cost.copy()
 
         #retrieve optimal input and prepare warmstart
-        self.u, self.dist_mue, self.stdev, Qn, self.bestQ, J = self.get_action(s, self.Q_tf)
+        self.u, self.dist_mue, self.stdev, Qn, self.bestQ, J, rollout_trajectory = self.get_action(s, self.Q_tf)
         
         self.u_logged = self.u
         self.Q_logged, self.J_logged = self.Q_tf.numpy(), J.numpy()
+        self.rollout_trajectories_logged = rollout_trajectory.numpy()
 
         #modify adam optimizers. The optimizer optimizes all rolled out trajectories at once
         #and keeps weights for all these, which need to get modified.

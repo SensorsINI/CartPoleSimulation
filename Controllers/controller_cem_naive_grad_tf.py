@@ -89,7 +89,7 @@ class controller_cem_naive_grad_tf(template_controller):
         # update the distribution for next inner loop
         self.dist_mue = tf.math.reduce_mean(elite_Q, axis=0, keepdims=True)
         self.stdev = tf.math.reduce_std(elite_Q, axis=0, keepdims=True)
-        return self.dist_mue, self.stdev, Qn, traj_cost
+        return self.dist_mue, self.stdev, Qn, traj_cost, rollout_trajectory
 
     #step function to find control
     def step(self, s: np.ndarray, time=None):
@@ -99,7 +99,7 @@ class controller_cem_naive_grad_tf(template_controller):
 
         #cem steps updating distribution
         for _ in range(0,self.cem_outer_it):
-            self.dist_mue, self.stdev, Q, J = self.predict_and_cost(s, self.rng_cem, self.dist_mue, self.stdev)
+            self.dist_mue, self.stdev, Q, J, rollout_trajectory = self.predict_and_cost(s, self.rng_cem, self.dist_mue, self.stdev)
         
         #after all inner loops, clip std min, so enough is explored
         #and shove all the values down by one for next control input
@@ -109,6 +109,7 @@ class controller_cem_naive_grad_tf(template_controller):
         self.dist_mue = tf.concat([self.dist_mue[:, 1:, :], tf.constant(0.0, shape=(1,1,self.num_control_inputs))], axis=1)
         
         self.Q_logged, self.J_logged = Q.numpy(), J.numpy()
+        self.rollout_trajectories_logged = rollout_trajectory.numpy()
         self.u_logged = self.u
         
         return self.u.numpy()

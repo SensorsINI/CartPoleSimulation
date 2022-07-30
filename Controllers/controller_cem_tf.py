@@ -70,7 +70,7 @@ class controller_cem_tf(template_controller):
 
             #rollout the trajectories and get cost
             traj_cost, rollout_trajectory = self.predict_and_cost(s, Q)
-            Q, traj_cost = Q.numpy(), traj_cost.numpy()
+            Q, traj_cost, rollout_trajectory = Q.numpy(), traj_cost.numpy(), rollout_trajectory.numpy()
             #sort the costs and find best k costs
             sorted_cost = np.argsort(traj_cost)
             best_idx = sorted_cost[:self.cem_best_k]
@@ -86,6 +86,7 @@ class controller_cem_tf(template_controller):
         self.dist_mue = np.append(self.dist_mue[:,1:,:], np.zeros((1,1,self.num_control_inputs)), axis=1).astype(np.float32)
         
         self.Q_logged, self.J_logged = Q, traj_cost
+        self.rollout_trajectories_logged = rollout_trajectory
         self.u_logged = self.u
 
         return self.u
