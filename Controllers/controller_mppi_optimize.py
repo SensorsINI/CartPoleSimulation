@@ -160,7 +160,10 @@ class controller_mppi_optimize(template_controller):
             self.Q_opt.assign(Q_opt)
 
         self.u = self.Q_opt[0, 0, :]
-        self.Q, self.J = self.Q_opt.numpy(), traj_cost.numpy()
+
+        self.u_logged = self.u
+        self.Q_logged, self.J_logged = self.Q_opt.numpy(), traj_cost.numpy()
+        
         self.Q_opt.assign(tf.concat([self.Q_opt[:, 1:, :], tf.zeros([1,1,self.num_control_inputs])], axis=1)) #shift and initialize new input with 0
         #reset adam optimizer
         adam_weights = self.opt.get_weights()

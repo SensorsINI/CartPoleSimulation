@@ -82,9 +82,12 @@ class controller_cem_tf(template_controller):
         #after all inner loops, clip std min, so enough is explored and shove all the values down by one for next control input
         self.stdev = np.clip(self.stdev, self.cem_stdev_min, None)
         self.stdev = np.append(self.stdev[:,1:,:], np.sqrt(0.5)*np.ones((1,1,self.num_control_inputs)), axis=1).astype(np.float32)
-        self.Q, self.J = Q, traj_cost
         self.u = np.squeeze(self.dist_mue[0,0,:])
         self.dist_mue = np.append(self.dist_mue[:,1:,:], np.zeros((1,1,self.num_control_inputs)), axis=1).astype(np.float32)
+        
+        self.Q_logged, self.J_logged = Q, traj_cost
+        self.u_logged = self.u
+
         return self.u
 
     def controller_reset(self):

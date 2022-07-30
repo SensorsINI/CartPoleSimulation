@@ -174,7 +174,9 @@ class controller_dist_adam_resamp2(template_controller):
 
         #retrieve optimal input and prepare warmstart
         self.u, self.dist_mue, self.stdev, Qn, self.bestQ, J = self.get_action(s, self.Q_tf)
-        self.Q, self.J = self.Q_tf.numpy(), J.numpy()
+        
+        self.u_logged = self.u
+        self.Q_logged, self.J_logged = self.Q_tf.numpy(), J.numpy()
 
         #modify adam optimizers. The optimizer optimizes all rolled out trajectories at once
         #and keeps weights for all these, which need to get modified.

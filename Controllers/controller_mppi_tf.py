@@ -159,9 +159,10 @@ class controller_mppi_tf(template_controller):
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         s = self.check_dimensions_s(s)
 
-        self.u, self.u_nom, rollout_trajectory, traj_cost, u_run = self.predict_and_cost(s, self.u_nom, self.rng_mppi,
-                                                                                  self.u)
-        self.Q, self.J = u_run.numpy(), traj_cost.numpy()
+        self.u, self.u_nom, rollout_trajectory, traj_cost, u_run = self.predict_and_cost(s, self.u_nom, self.rng_mppi, self.u)
+        
+        self.u_logged = self.u
+        self.Q_logged, self.J_logged = u_run.numpy(), traj_cost.numpy()
 
         if self.get_rollouts_from_mppi:
             self.rollout_trajectory = rollout_trajectory.numpy()

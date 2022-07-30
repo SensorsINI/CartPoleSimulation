@@ -101,14 +101,16 @@ class controller_cem_naive_grad_tf(template_controller):
         for _ in range(0,self.cem_outer_it):
             self.dist_mue, self.stdev, Q, J = self.predict_and_cost(s, self.rng_cem, self.dist_mue, self.stdev)
         
-        self.Q, self.J = Q.numpy(), J.numpy()
-
         #after all inner loops, clip std min, so enough is explored
         #and shove all the values down by one for next control input
         self.stdev = tf.clip_by_value(self.stdev, self.cem_stdev_min, 10.0)
         self.stdev = tf.concat([self.stdev[:, 1:, :], tf.sqrt(0.5)*tf.ones(shape=(1,1,self.num_control_inputs))], axis=1)
         self.u = tf.squeeze(self.dist_mue[0,0,:])
         self.dist_mue = tf.concat([self.dist_mue[:, 1:, :], tf.constant(0.0, shape=(1,1,self.num_control_inputs))], axis=1)
+        
+        self.Q_logged, self.J_logged = Q.numpy(), J.numpy()
+        self.u_logged = self.u
+        
         return self.u.numpy()
 
     def controller_reset(self):

@@ -138,7 +138,10 @@ class controller_mppi_var(template_controller):
         s = np.tile(s, tf.constant([self.num_rollouts, 1]))
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         self.u, self.u_nom, new_nuvec, u_run, traj_cost = self.do_step(s, self.u_nom, self.rng_mppi, self.u, self.nuvec)
-        self.Q, self.J = u_run.numpy(), traj_cost.numpy()
+        
+        self.u_logged = self.u
+        self.Q_logged, self.J_logged = u_run.numpy(), traj_cost.numpy()
+        
         self.nuvec.assign(new_nuvec)
         return tf.squeeze(self.u).numpy()
 
