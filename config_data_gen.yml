@@ -1,18 +1,18 @@
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
 SEED: 1  # If not assign random seed based on datetime is used
-length_of_experiment: 100  # Length of each experiment in s:
-controller: 'lqr'  # name of the controller to be used - does not matter for Cartpole Gym TODO: CHECK!
-split: [0.81, 0.19]  # Train/Val/(Test) split - only matters if you run it in ML Pipeline mode
+length_of_experiment: 8  # Length of each experiment in s:
+controller: 'mppi-tf'  # name of the controller to be used - does not matter for Cartpole Gym TODO: CHECK!
+split: [0.8, 0.1]  # Train/Val/(Test) split - only matters if you run it in ML Pipeline mode
 random_initial_state:
   # Unassigned variables will be randomly initialized (see below)
-  position: 0.0
-  positionD: 0.01
-  angle: 90.0
-  angleD: 0.01
-  target_position: 0.0
+  position:
+  positionD:
+  angle:
+  angleD:
+  target_position:
   init_limits: # The initial state is randomly chosen from below range if above is not assigned
     angle: [90.0, 180.0]  # degree, 0 is up, 180 down, set the range for right half plane, same will be applied to left
-    angleD: 10.0
+    angleD: 40.0
     position: 0.5  # Fraction of TrackHalfLength to each side
     positionD: 0.01 # Fraction of TrackHalfLength to each side
 start_at_target: True  # initial target position should be equal to initial state
@@ -31,4 +31,4 @@ save_mode: 'online'  # It was intended to save memory usage, but it doesn't seem
 # Show popup window in the end with summary of experiment?
 show_summary_plots: False
 show_controller_report: False
-number_of_experiments: 10  # How many experiments will be generated
+number_of_experiments: 100  # How many experiments will be generated
