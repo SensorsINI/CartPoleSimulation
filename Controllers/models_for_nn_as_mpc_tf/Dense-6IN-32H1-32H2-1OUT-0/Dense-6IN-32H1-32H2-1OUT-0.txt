@@ -1,8 +1,8 @@
 CREATED:
-2021-11-01 at time 16:00:22
+2022-08-02 at time 14:39:22
 
 WITH GIT REVISION:
-8e6eaf0c2305afc64a2289ac8c137883460eb3d6
+62db415432ac9ade3902fec7d65cc055930efd28
 
 NET NAME:
 Dense-32H1-32H2
@@ -20,10 +20,7 @@ TYPE:
 Dense
 
 NORMALIZATION:
-./Controllers/models_for_nn_as_mpc_tf/Dense-6IN-32H1-32H2-1OUT-0/NI_2021-11-01_13-53-51.csv
-
-SAMPLING INTERVAL:
-0.01 s
+./SI_Toolkit_ASF/Experiments/Experiment-7/Models/Dense-6IN-32H1-32H2-1OUT-0/NI_2022-08-02_14-22-06.csv
 
 PARENT NET:
 Network trained from scratch
@@ -32,10 +29,10 @@ WASH OUT LENGTH:
 10
 
 TRAINING_FILES:
-./SI_Toolkit_ASF/Experiments/Imitation-lqr//Recordings/Train/
+./SI_Toolkit_ASF/Experiments/Experiment-7//Recordings/Train/
 
 VALIDATION_FILES:
-./SI_Toolkit_ASF/Experiments/Imitation-lqr//Recordings/Validate/
+./SI_Toolkit_ASF/Experiments/Experiment-7//Recordings/Validate/
 
 TEST_FILES:
-./SI_Toolkit_ASF/Experiments/Imitation-lqr//Recordings/Test/
+./SI_Toolkit_ASF/Experiments/Experiment-7//Recordings/Test/
