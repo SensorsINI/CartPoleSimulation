@@ -16,20 +16,18 @@ from CartPole.cartpole_jacobian import cartpole_jacobian
 import yaml
 
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
-from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
-from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
 
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
 #load constants from config file
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
 
 num_control_inputs = config["cartpole"]["num_control_inputs"]  # specific to a system
 
 q, phi = None, None
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
-cost_function_cmd = 'from others.cost_functions.'+cost_function+' import q, phi'
+cost_function_cmd = 'from CartPoleSimulation.others.cost_functions.'+cost_function+' import q, phi'
 exec(cost_function_cmd)
 
 dt = config["controller"]["mppi"]["dt"]
@@ -39,6 +37,7 @@ num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 cc_weight = config["controller"]["mppi"]["cc_weight"]
 
 NET_NAME = config["controller"]["mppi"]["NET_NAME"]
+GP_NAME = config["controller"]["mppi"]["GP_NAME"]
 predictor_type = config["controller"]["mppi"]["predictor_type"]
 
 mppi_samples = int(mppi_horizon / dt)  # Number of steps in MPC horizon
@@ -63,18 +62,23 @@ predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
 
 """Define Predictor"""
 if predictor_type == "EulerTF":
+    from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
     predictor = predictor_ODE_tf(horizon=mppi_samples, dt=dt, intermediate_steps=10, disable_individual_compilation=True)
     predictor_single_trajectory = predictor
 elif predictor_type == "Euler":
     predictor = predictor_ODE(horizon=mppi_samples, dt=dt, intermediate_steps=10)
     predictor_single_trajectory = predictor
 elif predictor_type == "NeuralNet":
+    from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
     predictor = predictor_autoregressive_tf(
         horizon=mppi_samples, batch_size=num_rollouts, net_name=NET_NAME, disable_individual_compilation=True
     )
     predictor_single_trajectory = predictor_autoregressive_tf(
         horizon=mppi_samples, batch_size=1, net_name=NET_NAME, disable_individual_compilation=True
     )
+elif predictor_type == "GP":
+    from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
+    predictor = predictor_autoregressive_GP(model_name=GP_NAME, horizon=mppi_samples, num_rollouts=num_rollouts)
 
 GET_ROLLOUTS_FROM_MPPI = False
 
@@ -136,6 +140,9 @@ class controller_mppi_tf(template_controller):
         self.rollout_trajectory = None
         self.traj_cost = None
 
+        self.horizon = config["controller"]["mppi"]["mpc_horizon"]
+        self.num_rollouts = config["controller"]["mppi"]["num_rollouts"]
+
         self.optimal_trajectory = None
 
         # Defining function - the compiled part must not have if-else statements with changing output dimensions
@@ -182,13 +189,13 @@ class controller_mppi_tf(template_controller):
         return optimal_trajectory
 
     #step function to find control
-    def step(self, s: np.ndarray, target: np.ndarray, time=None):
+    def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
         s = tf.convert_to_tensor(s, dtype=tf.float32)
         s = check_dimensions_s(s)
-        target = tf.convert_to_tensor(target, dtype=tf.float32)
+        target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 
-        self.u, self.u_nom, rollout_trajectory, traj_cost = self.predict_and_cost(s, target, self.u_nom, self.rng_cem,
-                                                                                  self.u)
+        self.u, self.u_nom, rollout_trajectory, traj_cost = self.predict_and_cost(s, target_position, self.u_nom, self.rng_cem,
+                                                            self.u)
         if GET_ROLLOUTS_FROM_MPPI:
             self.rollout_trajectory = rollout_trajectory.numpy()
             self.traj_cost = traj_cost.numpy()

@@ -441,7 +441,7 @@ class CartPole:
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = np.squeeze(self.controller.step(self.s_with_noise_and_latency, self.target_position, self.time))
+                self.Q = self.controller.step(self.s_with_noise_and_latency, self.target_position, self.time)
 
             self.dt_controller_steps_counter = 0
 
@@ -959,7 +959,7 @@ class CartPole:
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = np.squeeze(self.controller.step(self.s, self.target_position, self.time))
+                self.Q = self.controller.step(self.s, self.target_position, self.time)
 
             self.u = Q2u(self.Q)  # Calculate CURRENT control input
             self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)  # Calculate CURRENT second derivatives
