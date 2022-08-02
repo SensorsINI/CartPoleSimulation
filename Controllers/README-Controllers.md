@@ -33,7 +33,7 @@ List of available controllers with description:
     
     -cem-naive-grad-tf
         Same as cem, but between selecting the elite set and fitting the distribution, all input sequences in the elite
-        set are refined with a single step of gradient descent.
+        set are refined with vanilla gradient descent. Re-Implementation of Bharadhwaj, Xie, Shkurti 2020.
 
     -dist-adam-resamp2
         Initially samples a set of control sequences, then optimizes them with the adam optimizer projecting control inputs,

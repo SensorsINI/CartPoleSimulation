@@ -96,14 +96,13 @@ class controller_mppi_tf(template_controller):
 
     #mppi correction
     def mppi_correction_cost(self, u, delta_u):
-        return tf.math.reduce_sum(self.cc_weight * (0.5 * (1 - 1.0 / self.NU) * self.R * (delta_u ** 2) + self.R * u * delta_u + 0.5 * self.R * (u ** 2)), axis=2)
+        return tf.math.reduce_sum(self.cc_weight * (0.5 * (1 - 1.0 / self.NU) * self.R * (delta_u ** 2) + self.R * u * delta_u + 0.5 * self.R * (u ** 2)), axis=[1, 2])
 
     #total cost of the trajectory
     def get_mppi_trajectory_cost(self, s_hor ,u, u_prev, delta_u):
-        stage_cost = self.env_mock.cost_functions.get_stage_cost(s_hor[:,1:,:],u, u_prev)
-        stage_cost = stage_cost + self.mppi_correction_cost(u, delta_u)
-        total_cost = tf.math.reduce_sum(stage_cost,axis=1)
-        total_cost = total_cost + self.env_mock.cost_functions.get_terminal_cost(s_hor)
+        stage_cost = self.env_mock.cost_functions.get_trajectory_cost(s_hor[:,:-1,:],u, u_prev)
+        stage_cost += self.mppi_correction_cost(u, delta_u)
+        total_cost = stage_cost + self.env_mock.cost_functions.get_terminal_cost(s_hor)
         return total_cost
 
     def reward_weighted_average(self, S, delta_u):
