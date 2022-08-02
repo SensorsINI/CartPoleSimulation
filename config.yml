@@ -165,7 +165,7 @@ controller:
     net_name: 'GRU-6IN-32H1-32H2-1OUT-0'
     PATH_TO_MODELS: './Controllers/models_for_nn_as_mpc_tf/'
 cartpole:
-  SEED: 1873  # This is a seed for rng for CartPole instance class only. If "None" random seed based on datetime is used
+  SEED: None  # This is a seed for rng for CartPole instance class only. If "None" random seed based on datetime is used
   PATH_TO_CONTROLLERS: './Controllers/'  # Path where controllers are stored
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
