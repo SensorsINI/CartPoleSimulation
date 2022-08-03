@@ -886,4 +886,3 @@ class controller_mppi(template_controller):
         }
 
         self.warm_up_countdown = self.wash_out_len
-

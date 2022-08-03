@@ -195,7 +195,7 @@ controller:
     mpc_horizon: 10
   nn-as-mpc-tf:
     net_name: 'Dense-6IN-32H1-32H2-1OUT-0'
-    PATH_TO_MODELS: './Controllers/models_for_nn_as_mpc_tf/'
+    PATH_TO_MODELS: './Controller_Toolkit_ASF/models_for_nn_as_mpc_tf/'
 cartpole:
   cost_function: 'quadratic-boundary-grad' # from 'quadratic-boundary', 'quadratic-boundary-grad', 'quadratic-boundary-nonconvex', 'default'
   seed: 1873  # This is a seed for rng for CartPole instance class only. If "None" random seed based on datetime is used

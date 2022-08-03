@@ -7,7 +7,7 @@ import os
 import scipy
 import numpy as np
 
-from Controllers import template_controller
+from Control_Toolkit.Controllers import template_controller
 from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
 from CartPole.cartpole_model import u_max, s0
 from CartPole.cartpole_jacobian import cartpole_jacobian

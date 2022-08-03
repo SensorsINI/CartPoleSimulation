@@ -4,9 +4,9 @@ import yaml
 from GymlikeCartPole.CartPoleEnv_LTC import CartPoleEnv_LTC
 from time import sleep
 
-from Controllers.controller_lqr import controller_lqr
-from Controllers.controller_mppi import controller_mppi
-from Controllers.controller_mppi_tf import controller_mppi_tf
+from Control_Toolkit_ASF.Controllers.controller_lqr import controller_lqr
+from Control_Toolkit_ASF.Controllers.controller_mppi import controller_mppi
+from Control_Toolkit.Controllers.controller_mppi_tf import controller_mppi_tf
 
 controller_name = "mppi-tf"
 controller_full_name = f"controller-{controller_name}".replace("-", "_")

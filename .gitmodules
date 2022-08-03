@@ -1,3 +1,6 @@
 [submodule "SI_Toolkit"]
 	path = SI_Toolkit
 	url = https://github.com/SensorsINI/SI_Toolkit
+[submodule "Control_Toolkit"]
+	path = Control_Toolkit
+	url = https://github.com/SensorsINI/Control_Toolkit

@@ -8,7 +8,7 @@ from CartPole.cartpole_model import Q2u, cartpole_ode_namespace
 from CartPole.state_utilities import cartpole_state_vector_to_namespace
 from others.globals_and_utils import create_rng
 
-from Controllers import template_controller
+from Control_Toolkit.Controllers import template_controller
 
 
 class controller_do_mpc(template_controller):

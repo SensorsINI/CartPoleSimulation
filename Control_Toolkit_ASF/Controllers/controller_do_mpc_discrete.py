@@ -3,7 +3,7 @@
 import do_mpc
 import numpy as np
 
-from Controllers import template_controller
+from Control_Toolkit.Controllers import template_controller
 from CartPole.cartpole_model import v_max, Q2u, cartpole_ode_namespace, TrackHalfLength
 from CartPole.state_utilities import cartpole_state_vector_to_namespace
 

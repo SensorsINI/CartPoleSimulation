@@ -9,7 +9,7 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
                                       cartpole_state_indices_to_varnames,
                                       create_cartpole_state)
-from Controllers.controller_lqr import controller_lqr
+from Control_Toolkit_ASF.Controllers.controller_lqr import controller_lqr
 from others.globals_and_utils import create_rng
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 

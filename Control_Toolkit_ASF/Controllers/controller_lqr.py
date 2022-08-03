@@ -11,7 +11,7 @@ from CartPole.state_utilities import (ANGLE_IDX, ANGLED_IDX, POSITION_IDX,
                                       POSITIOND_IDX)
 from others.globals_and_utils import create_rng
 
-from Controllers import template_controller
+from Control_Toolkit.Controllers import template_controller
 
 
 class controller_lqr(template_controller):
