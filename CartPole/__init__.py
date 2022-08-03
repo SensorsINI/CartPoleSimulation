@@ -20,6 +20,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import yaml
+from Control_Toolkit.others.globals_and_utils import import_controller_by_name
 from others.globals_and_utils import MockSpace, create_rng
 from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
@@ -72,7 +73,6 @@ rc('font', **font)
 # endregion
 
 config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "config.yml"), "r"), Loader=yaml.FullLoader)
-PATH_TO_CONTROLLERS = config["cartpole"]["PATH_TO_CONTROLLERS"]
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
 
@@ -836,12 +836,12 @@ class CartPole:
 
     # region 4. Methods "Get, set, reset"
 
-    # Method returns the list of controllers available in the PATH_TO_CONTROLLERS folder
+    # Method returns the list of controllers available in the Control Toolkit or Application Specific Files
     def get_available_controller_names(self):
         """
-        Method returns the list of controllers available in the PATH_TO_CONTROLLERS folder
+        Method returns the list of controllers available in the Control Toolkit or Application Specific Files
         """
-        controller_files = glob.glob(PATH_TO_CONTROLLERS + 'controller_' + '*.py')
+        controller_files = glob.glob("./Control_Toolkit/Controllers/" + 'controller_' + '*.py') + glob.glob("./Control_Toolkit_ASF/Controllers/" + 'controller_' + '*.py')
         controller_names = ['manual-stabilization']
         controller_names.extend(np.sort(
             [os.path.basename(item)[len('controller_'):-len('.py')].replace('_', '-') for item in controller_files]
@@ -886,8 +886,7 @@ class CartPole:
             self.controller = None
         else:
             controller_full_name = 'controller_' + self.controller_name.replace('-', '_')
-            path_import = PATH_TO_CONTROLLERS[2:].replace('/', '.').replace(r'\\', '.')
-            Controller = getattr(import_module(path_import + controller_full_name), controller_full_name)
+            Controller = import_controller_by_name(controller_full_name)
             self.controller = Controller(self, **{**config["controller"][self.controller_name], **{"num_control_inputs": config["cartpole"]["num_control_inputs"]}})
 
         # Set the maximal allowed value of the slider - relevant only for GUI

@@ -3,7 +3,7 @@ import numpy as np
 
 from types import SimpleNamespace
 
-from Controllers import template_controller
+from Control_Toolkit.Controllers import template_controller
 from SI_Toolkit.load_and_normalize import normalize_numpy_array
 
 try:

@@ -23,11 +23,42 @@ controller:
     predictor_intermediate_steps: 10
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor type is NeuralNet
     cem_stdev_min: 0.05
+    cem_initial_action_stdev: 0.5
     cem_R: 1
     cem_ccrc_weight: 1
     cem_best_k: 4
     cem_LR: 0.001
     gradmax_clip: 10
+  cem-grad-bharadhwaj:
+    seed: "None"                          # If "None", random seed based on datetime is used
+    dt: 0.02                              # sec
+    mpc_horizon: 1.0                      # sec
+    CEM_NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
+    cem_LR: 0.05
+    cem_R: 1
+    cem_best_k: 4
+    cem_outer_it: 5
+    cem_rollouts: 40
+    cem_initial_action_stdev: 0.5
+    cem_stdev_min: 0.2
+    gradmax_clip: 5
+    predictor_intermediate_steps: 10
+    predictor_name: predictor_ODE_tf
+  gradient-tf:
+    seed: "None"                          # If "None", random seed based on datetime is used
+    dt: 0.02                              # sec
+    mpc_horizon: 1.0                      # sec
+    CEM_NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
+    learning_rate: 0.05
+    adam_beta_1: 0.9
+    adam_beta_2: 0.999
+    adam_epsilon: 1.0e-07
+    gradient_steps: 5
+    mpc_rollouts: 40
+    initial_action_stdev: 0.5
+    gradmax_clip: 5
+    predictor_intermediate_steps: 10
+    predictor_name: predictor_ODE_tf
   mppi-optimize:
     seed: "None"                          # If "None", random seed based on datetime is used
     mppi_LR: 0.02
@@ -62,6 +93,7 @@ controller:
     adam_beta_1: 0.4    #default: 0.9      adam hyperparameter
     adam_beta_2: 0.8 #default: 0.999       adam hyperparameter
     adam_epsilon: 1.0e-7 #default: 1.0e-7    adam hyperparameter. consult https://ruder.io/optimizing-gradient-descent/ for information
+    rtol: 1.0e-3
     opt_keep_k: 5                          #how many plans should be kept for warmstarting when resampling, has to be smaller or equal num_rollouts, set equal num_rollouts for degenerate case without any resampling
     num_rollouts: 20                      # number of parallel optimizations
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
@@ -199,7 +231,6 @@ controller:
 cartpole:
   cost_function: 'quadratic-boundary-grad' # from 'quadratic-boundary', 'quadratic-boundary-grad', 'quadratic-boundary-nonconvex', 'default'
   seed: 1873  # This is a seed for rng for CartPole instance class only. If "None" random seed based on datetime is used
-  PATH_TO_CONTROLLERS: './Controllers/'  # Path where controllers are stored
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   M: 0.230  # mass of cart, kg # Checked by Antonio

@@ -31,7 +31,7 @@ from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
 from scipy.interpolate import interp1d
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 
-from Controllers import template_controller
+from Control_Toolkit.Controllers import template_controller
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
@@ -375,7 +375,7 @@ class controller_mppi(template_controller):
         self.wash_out_len = WASH_OUT_LEN
         self.warm_up_countdown = self.wash_out_len
         try:
-            from Controllers.controller_lqr import controller_lqr
+            from Control_Toolkit_ASF.Controllers.controller_lqr import controller_lqr
             self.auxiliary_controller_available = True
             self.auxiliary_controller = controller_lqr(environment, **config["controller"]["lqr"])
         except ModuleNotFoundError:

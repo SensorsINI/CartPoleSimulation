@@ -58,7 +58,7 @@ class random_experiment_setter:
 
         self.rng = create_rng(self.__class__.__name__, config["seed"])
         
-    def set(self, CartPoleInstance):
+    def set(self, CartPoleInstance: CartPole):
         
         # set initial_state
 
