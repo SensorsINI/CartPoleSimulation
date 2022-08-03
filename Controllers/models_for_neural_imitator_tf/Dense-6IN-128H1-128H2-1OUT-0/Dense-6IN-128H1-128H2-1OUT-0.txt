@@ -1,0 +1,38 @@
+CREATED:
+2022-04-19 at time 15:52:27
+
+WITH GIT REVISION:
+unknown
+
+NET NAME:
+Dense-128H1-128H2
+
+NET FULL NAME:
+Dense-6IN-128H1-128H2-1OUT-0
+
+INPUTS:
+angleD, angle_cos, angle_sin, position, positionD, target_position
+
+OUTPUTS:
+Q
+
+TYPE:
+Dense
+
+NORMALIZATION:
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/NeuralImitatorPretrain/Models/Dense-6IN-128H1-128H2-1OUT-0/NI_2022-04-19_15-47-51.csv
+
+PARENT NET:
+Network trained from scratch
+
+WASH OUT LENGTH:
+1
+
+TRAINING_FILES:
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/NeuralImitatorPretrain//Recordings/Train/
+
+VALIDATION_FILES:
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/NeuralImitatorPretrain//Recordings/Validate/
+
+TEST_FILES:
+./SI_Toolkit_ApplicationSpecificFiles/Experiments/NeuralImitatorPretrain//Recordings/Test/
