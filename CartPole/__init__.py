@@ -9,7 +9,6 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 # Import module to save history of the simulation as csv file
 import csv
 # To detect the latest csv file
-import glob
 from importlib import import_module
 # Import module to interact with OS
 import os
@@ -20,7 +19,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import yaml
-from Control_Toolkit.others.globals_and_utils import import_controller_by_name
+from Control_Toolkit.others.globals_and_utils import get_available_controller_names, import_controller_by_name
 from others.globals_and_utils import MockSpace, create_rng
 from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
@@ -141,7 +140,7 @@ class CartPole:
         self.controller = None  # Placeholder for the currently used controller function
         self.controller_name = ''  # Placeholder for the currently used controller name
         self.controller_idx = None  # Placeholder for the currently used controller index
-        self.controller_names = self.get_available_controller_names()  # list of controllers available in controllers folder
+        self.controller_names = get_available_controller_names()  # list of controllers available in controllers folder
         # endregion
 
         # region Variables for generating experiments with random target trace
@@ -835,19 +834,6 @@ class CartPole:
     # endregion
 
     # region 4. Methods "Get, set, reset"
-
-    # Method returns the list of controllers available in the Control Toolkit or Application Specific Files
-    def get_available_controller_names(self):
-        """
-        Method returns the list of controllers available in the Control Toolkit or Application Specific Files
-        """
-        controller_files = glob.glob("./Control_Toolkit/Controllers/" + 'controller_' + '*.py') + glob.glob("./Control_Toolkit_ASF/Controllers/" + 'controller_' + '*.py')
-        controller_names = ['manual-stabilization']
-        controller_names.extend(np.sort(
-            [os.path.basename(item)[len('controller_'):-len('.py')].replace('_', '-') for item in controller_files]
-        ))
-
-        return controller_names
 
     # Set the controller of CartPole
     def set_controller(self, controller_name=None, controller_idx=None):
