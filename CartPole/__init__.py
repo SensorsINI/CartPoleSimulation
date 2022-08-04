@@ -19,7 +19,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import yaml
-from Control_Toolkit.others.globals_and_utils import get_controller
+from Control_Toolkit.others.globals_and_utils import get_available_controller_names, get_controller
 from others.globals_and_utils import MockSpace, create_rng
 from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
