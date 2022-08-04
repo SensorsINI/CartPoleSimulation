@@ -20,7 +20,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import yaml
-from Control_Toolkit.others.globals_and_utils import import_controller_by_name
+from Control_Toolkit.others.globals_and_utils import get_controller
 from others.globals_and_utils import MockSpace, create_rng
 from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
@@ -851,42 +851,11 @@ class CartPole:
 
     # Set the controller of CartPole
     def set_controller(self, controller_name=None, controller_idx=None):
-        """
-        The method sets a new controller as the current controller of the CartPole instance.
-        The controller may be indicated either by its name
-        or by the index on the controller list (see get_available_controller_names method).
-        """
-
-        # Check if the proper information was provided: either controller_name or controller_idx
-        if (controller_name is None) and (controller_idx is None):
-            raise ValueError('You have to specify either controller_name or controller_idx to set a new controller.'
-                             'You have specified none of the two.')
-        elif (controller_name is not None) and (controller_idx is not None):
-            raise ValueError('You have to specify either controller_name or controller_idx to set a new controller.'
-                             'You have specified both.')
-        else:
-            pass
-
-        # If controller name provided get controller index and vice versa
-        if (controller_name is not None):
-            try:
-                controller_idx = self.controller_names.index(controller_name)
-            except ValueError:
-                print('{} is not in list. \n In list are: {}'.format(controller_name, self.controller_names))
-                return False
-        else:
-            controller_name = self.controller_names[controller_idx]
-
-        # save controller name and index to variables in the CartPole namespace
-        self.controller_name = controller_name
-        self.controller_idx = controller_idx
-
-        # Load controller
-        if self.controller_name == 'manual-stabilization':
+        Controller = get_controller(controller_name=controller_name, controller_idx=controller_idx)
+        self.controller_name, self.controller_idx = controller_name, controller_idx
+        if Controller is None:
             self.controller = None
         else:
-            controller_full_name = 'controller_' + self.controller_name.replace('-', '_')
-            Controller = import_controller_by_name(controller_full_name)
             self.controller = Controller(self, **{**config["controller"][self.controller_name], **{"num_control_inputs": config["cartpole"]["num_control_inputs"]}})
 
         # Set the maximal allowed value of the slider - relevant only for GUI
