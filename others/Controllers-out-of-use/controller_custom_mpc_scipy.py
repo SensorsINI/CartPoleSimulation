@@ -18,7 +18,7 @@ config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "con
 predictor = predictor_ODE
 # WARNING: if using RNN to provide CartPole model to MPC
 # make sure that it is trained to predict future states with this timestep
-DT = config['controller']['custom_mpc_scipy']['DT']
+dt = config['controller']['custom_mpc_scipy']['dt']
 
 # method = 'L-BFGS-B'
 method = config['controller']['custom_mpc_scipy']['method']
@@ -60,7 +60,7 @@ class controller_custom_mpc_scipy:
 
         self.horizon = mpc_horizon
 
-        self.Predictor = predictor(horizon=self.horizon, dt=DT)
+        self.Predictor = predictor(horizon=self.horizon, dt=dt)
 
         self.rnn_eval_time = []
         self.predictor_time = []

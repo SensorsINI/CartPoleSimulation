@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 
 
 
-DT = 0.1 # This is DT fed into predictor at initialization - meaning may differ between predictors
+dt = 0.1 # This is dt fed into predictor at initialization - meaning may differ between predictors
 downsampling = 1
 horizon = 2 // downsampling
 start_at = 0
@@ -26,8 +26,8 @@ autoregres_at_after_start = 20
 N_predictions = 10
 prediction_denorm=False
 
-tested_predictor_1 = predictor_autoregressive_tf(horizon=horizon, dt=DT)
-tested_predictor_2 = predictor_ODE(horizon=horizon, dt=DT)
+tested_predictor_1 = predictor_autoregressive_tf(horizon=horizon, dt=dt)
+tested_predictor_2 = predictor_ODE(horizon=horizon, dt=dt)
 
 try:
     normalization_info = tested_predictor_1.normalization_info
@@ -114,7 +114,7 @@ for i in tqdm(range(N_predictions)):
     # fig3 = pd_plotter_compare_2(df_plot.iloc[autoregres_at_after_start + i:autoregres_at_after_start + i + horizon + 1],
     #                             dfs=[predictions_1[i], predictions_2[i]], names=['rnn', 'equations'], y_name=feature_to_plot,
     #                             colors=['blue', 'darkgreen'],
-    #                             idx_range=[0, horizon + 1], dt=DT, title= '', marker='o')
+    #                             idx_range=[0, horizon + 1], dt=dt, title= '', marker='o')
 
 ground_truth_error = max_error_1.copy()
 for col in ground_truth_error.columns:

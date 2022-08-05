@@ -41,9 +41,6 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
 
 # region Imported modules
 
-
-
-
 try:
     # Use gitpython to get a current revision number and use it in description of experimental data
     from git import Repo
@@ -102,7 +99,7 @@ class CartPole:
         self.action_space = MockSpace(-1.0, 1.0)
 
         self.latency = config["cartpole"]["latency"]
-        self.LatencyAdderInstance = LatencyAdder(latency=self.latency)
+        self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
         self.NoiseAdderInstance = NoiseAdder()
         self.s_with_noise_and_latency = np.copy(self.s)
 
@@ -140,7 +137,7 @@ class CartPole:
         self.controller = None  # Placeholder for the currently used controller function
         self.controller_name = ''  # Placeholder for the currently used controller name
         self.controller_idx = None  # Placeholder for the currently used controller index
-        self.controller_names = get_available_controller_names()  # list of controllers available in controllers folder
+        self.controller_names = get_available_controller_names("./Driver")  # list of controllers available in controllers folder
         # endregion
 
         # region Variables for generating experiments with random target trace

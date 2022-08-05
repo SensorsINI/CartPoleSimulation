@@ -16,7 +16,7 @@ class controller_do_mpc(template_controller):
         self,
         environment,
         seed: int,
-        dt_mpc_simulation: float,
+        dt: float,
         mpc_horizon: float,
         p_Q: float,
         p_position: float,
@@ -86,7 +86,7 @@ class controller_do_mpc(template_controller):
 
         setup_mpc = {
             'n_horizon': mpc_horizon,
-            't_step': dt_mpc_simulation,
+            't_step': dt,
             'n_robust': 0,
             'store_full_solution': False,
             'store_lagr_multiplier': False,
