@@ -91,17 +91,17 @@ controller:
     SEED: "None"                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 0.7                      # sec
-    num_rollouts: 3500                      # Number of Monte Carlo samples
+    num_rollouts: 2000                      # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_type: "EulerTF"               # One of ["EulerTF", "NeuralNet", "GP"]
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-1'  # Applies only if predictor_type is NeuralNet
     GP_NAME: 'SGP_10'  # Applies only if predictor_type is GP
     dd_weight: 2000.0
-    ep_weight: 2200.0
+    ep_weight: 3000.0
     ekp_weight: 0.0
     ekc_weight: 0.0
-    cc_weight: 1.0
-    ccrc_weight: 1.0
+    cc_weight: 0.0
+    ccrc_weight: 0.0
     cost_noise: 0.0                       # Noise on stage cost weights by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0 othewise
     control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
     R: 1.0                                # How much to punish Q
@@ -174,7 +174,7 @@ cartpole:
   L: "0.395/2.0"  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi
   u_max: 2.62  # max force produced by the motor, N # Checked by Marcin
   M_fric: 4.77  # cart friction on track, N/m/s # Checked by Marcin
-  J_fric: 2.5e-4  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
+  J_fric: 8e-4  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
   v_max: 0.8  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented in model, but needed for MPC
   cart_length: 4.4e-2  # m, checked by Marcin&Asude
   usable_track_length: 44.0e-2  # m, checked by Marcin&Asude
