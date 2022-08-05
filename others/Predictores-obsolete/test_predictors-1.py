@@ -13,7 +13,7 @@ from SI_Toolkit.Predictors.predictor_autoregressive_tf import (
 
 tested_predictor = predictor_autoregressive_tf
 
-DT = 0.1 # This is DT fed into predictor at initialization - meaning may differ between predictors
+dt = 0.1 # This is dt fed into predictor at initialization - meaning may differ between predictors
 downsampling = 1
 horizon = 10 // downsampling
 start_at = 20
@@ -33,7 +33,7 @@ pd_plotter_simple(df, 'time', feature_to_plot, idx_range=[0, autoregres_at_after
                   vline=df.loc[df.index[autoregres_at_after_start], 'time'], marker='o',
                   title='Ground truth (warm-up + prediction region)')
 
-predictor = tested_predictor(horizon=horizon, dt=DT)
+predictor = tested_predictor(horizon=horizon, dt=dt)
 # predictor = tested_predictor(horizon=horizon*5, dt=0.02) # To get ground truth
 
 # In fact the block of code for this controller does nothing
@@ -62,11 +62,11 @@ for i in range(number_of_repetitions):
 t3 = timeit.default_timer()
 
 fig1 = pd_plotter_simple(df, y_name=feature_to_plot,
-                         idx_range=[autoregres_at_after_start, autoregres_at_after_start + horizon + 1], dt=DT,
+                         idx_range=[autoregres_at_after_start, autoregres_at_after_start + horizon + 1], dt=dt,
                          title='Ground truth (zoom on prediction region)')
 
 fig2 = pd_plotter_simple(prediction, y_name=feature_to_plot, idx_range=[0, horizon + 1], color='red',
-                         dt=DT, title='Prediction')
+                         dt=dt, title='Prediction')
 
 # fig2 = pd_plotter_simple(prediction, y_name=feature_to_plot, idx_range=[0, horizon*5 + 1], color='red',
 #                          dt=0.02) # To get ground truth

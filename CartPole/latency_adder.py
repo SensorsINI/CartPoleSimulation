@@ -5,12 +5,12 @@ from CartPole.state_utilities import STATE_VARIABLES, \
 
 from tqdm import trange
 
-MAX_LATENCY_LEN = 50  # Total size of latency buffer.
+MAX_LATENCY_LEN = 200  # Total size of latency buffer.
 
 class LatencyAdder():
     def __init__(self,
-                 latency=0.0,
-                 dt_sampling=0.002,
+                 latency: float,
+                 dt_sampling: float,
                  ):
 
         self.dt_sampling = dt_sampling

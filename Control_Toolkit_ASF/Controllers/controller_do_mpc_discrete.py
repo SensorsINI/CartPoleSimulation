@@ -53,7 +53,7 @@ class controller_do_mpc_discrete(template_controller):
     def __init__(
         self,
         environment,
-        dt_mpc_simulation: float,
+        dt: float,
         mpc_horizon: float,
         position_init=0.0,
         positionD_init=0.0,
@@ -83,7 +83,7 @@ class controller_do_mpc_discrete(template_controller):
 
         target_position = self.model.set_variable('_tvp', 'target_position')
 
-        s_next = mpc_next_state(s, Q2u(Q), dt=dt_mpc_simulation)
+        s_next = mpc_next_state(s, Q2u(Q), dt=dt)
 
         self.model.set_rhs('s.position', s_next.position)
         self.model.set_rhs('s.angle', s_next.angle)
@@ -109,7 +109,7 @@ class controller_do_mpc_discrete(template_controller):
 
         setup_mpc = {
             'n_horizon': mpc_horizon,
-            't_step': dt_mpc_simulation,
+            't_step': dt,
             'n_robust': 0,
             'store_full_solution': False,
             'store_lagr_multiplier': False,

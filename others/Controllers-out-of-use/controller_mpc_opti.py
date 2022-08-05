@@ -17,7 +17,7 @@ import casadi
 import yaml
 config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
 
-dt_mpc_simulation = config["controller"]["do-mpc-discrete"]["dt_mpc_simulation"]
+dt = config["controller"]["do-mpc-discrete"]["dt"]
 mpc_horizon = config["controller"]["do-mpc-discrete"]["mpc_horizon"]
 
 
@@ -73,7 +73,7 @@ class controller_mpc_opti(template_controller):
         self.target_position = 0.0
 
         self.mpc_horizon = mpc_horizon
-        self.dt = dt_mpc_simulation
+        self.dt = dt
 
         self.yp_hat = np.zeros(self.mpc_horizon, dtype=object)  # MPC prediction of future states
         self.Q_hat = np.zeros(self.mpc_horizon)  # MPC prediction of future control inputs

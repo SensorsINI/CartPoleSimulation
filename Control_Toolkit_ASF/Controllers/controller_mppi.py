@@ -11,6 +11,7 @@ Based on Williams, Aldrich, Theodorou (2015)
 
 
 from importlib import import_module
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -33,7 +34,7 @@ from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 
 from Control_Toolkit.Controllers import template_controller
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
 
 NET_NAME = config["controller"]["mppi"]["NET_NAME"]
 try:
