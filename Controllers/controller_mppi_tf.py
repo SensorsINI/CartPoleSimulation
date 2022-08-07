@@ -20,7 +20,10 @@ from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
 #load constants from config file
-config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
+try:
+    config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
+except FileNotFoundError:
+    config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 num_control_inputs = config["cartpole"]["num_control_inputs"]  # specific to a system
 
