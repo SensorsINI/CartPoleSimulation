@@ -31,10 +31,18 @@ q, phi = None, None
 q_rev, phi_rev = None, None
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
-cost_function_cmd = 'from CartPoleSimulation.others.cost_functions.'+cost_function+' import q, phi'
-exec(cost_function_cmd)
-cost_rev_function_cmd = 'from CartPoleSimulation.others.cost_functions.'+cost_function+'_rev'+' import q_rev, phi_rev'
-exec(cost_rev_function_cmd)
+
+try:
+    cost_function_cmd = 'from CartPoleSimulation.others.cost_functions.'+cost_function+' import q, phi'
+    exec(cost_function_cmd)
+    cost_rev_function_cmd = 'from CartPoleSimulation.others.cost_functions.'+cost_function+'_rev'+' import q_rev, phi_rev'
+    exec(cost_rev_function_cmd)
+except ModuleNotFoundError:
+    cost_function_cmd = 'from others.cost_functions.'+cost_function+' import q, phi'
+    exec(cost_function_cmd)
+    cost_rev_function_cmd = 'from others.cost_functions.'+cost_function+'_rev'+' import q_rev, phi_rev'
+    exec(cost_rev_function_cmd)
+
 
 dt = config["controller"]["mppi"]["dt"]
 mppi_horizon = config["controller"]["mppi"]["mpc_horizon"]
