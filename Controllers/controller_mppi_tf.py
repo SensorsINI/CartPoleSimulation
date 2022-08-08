@@ -28,10 +28,13 @@ except FileNotFoundError:
 num_control_inputs = config["cartpole"]["num_control_inputs"]  # specific to a system
 
 q, phi = None, None
+q_rev, phi_rev = None, None
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
 cost_function_cmd = 'from CartPoleSimulation.others.cost_functions.'+cost_function+' import q, phi'
 exec(cost_function_cmd)
+cost_rev_function_cmd = 'from CartPoleSimulation.others.cost_functions.'+cost_function+'_rev'+' import q_rev, phi_rev'
+exec(cost_rev_function_cmd)
 
 dt = config["controller"]["mppi"]["dt"]
 mppi_horizon = config["controller"]["mppi"]["mpc_horizon"]
@@ -107,6 +110,14 @@ def cost(s_hor ,u, target, u_prev, delta_u):
     return total_cost
 
 
+#total cost of the trajectory
+def cost_rev(s_hor ,u, target, u_prev, delta_u):
+    stage_cost = q_rev(s_hor[:,1:,:],u,target, u_prev)
+    stage_cost = stage_cost + mppi_correction_cost(u, delta_u)
+    total_cost = tf.math.reduce_sum(stage_cost,axis=1)
+    total_cost = total_cost + phi_rev(s_hor, target)
+    return total_cost
+
 def reward_weighted_average(S, delta_u):
     rho = tf.math.reduce_min(S)
     exp_s = tf.exp(-1.0/LBD * (S-rho))
@@ -159,6 +170,8 @@ class controller_mppi_tf(template_controller):
         else:
             self.mppi_output = self.return_restricted
 
+        self.rev = False
+
     def return_all(self, u, u_nom, rollout_trajectory, traj_cost):
         return u, u_nom, rollout_trajectory, traj_cost
 
@@ -175,6 +188,21 @@ class controller_mppi_tf(template_controller):
         u_run = tf.clip_by_value(u_run, clip_control_input_low, clip_control_input_high)
         rollout_trajectory = predictor.predict_tf(s, u_run)
         traj_cost = cost(rollout_trajectory, u_run, target, u_old, delta_u)
+        u_nom = tf.clip_by_value(u_nom + reward_weighted_average(traj_cost, delta_u), clip_control_input_low, clip_control_input_high)
+        u = u_nom[0, 0, :]
+        self.update_internal_state(s, u_nom)
+        return self.mppi_output(u, u_nom, rollout_trajectory, traj_cost)
+
+    @Compile
+    def predict_and_cost_rev(self, s, target, u_nom, random_gen, u_old):
+        s = tf.tile(s, tf.constant([num_rollouts, 1]))
+        # generate random input sequence and clip to control limits
+        u_nom = tf.concat([u_nom[:, 1:, :], u_nom[:, -1:, :]], axis=1)
+        delta_u = inizialize_pertubation(random_gen)
+        u_run = tf.tile(u_nom, [num_rollouts, 1, 1])+delta_u
+        u_run = tf.clip_by_value(u_run, clip_control_input_low, clip_control_input_high)
+        rollout_trajectory = predictor.predict_tf(s, u_run)
+        traj_cost = cost_rev(rollout_trajectory, u_run, target, u_old, delta_u)
         u_nom = tf.clip_by_value(u_nom + reward_weighted_average(traj_cost, delta_u), clip_control_input_low, clip_control_input_high)
         u = u_nom[0, 0, :]
         self.update_internal_state(s, u_nom)
@@ -197,8 +225,12 @@ class controller_mppi_tf(template_controller):
         s = check_dimensions_s(s)
         target_position = tf.convert_to_tensor(target_position, dtype=tf.float32)
 
-        self.u, self.u_nom, rollout_trajectory, traj_cost = self.predict_and_cost(s, target_position, self.u_nom, self.rng_cem,
-                                                            self.u)
+        if self.rev:
+            self.u, self.u_nom, rollout_trajectory, traj_cost = self.predict_and_cost_rev(s, target_position, self.u_nom, self.rng_cem,
+                                                                self.u)
+        else:
+            self.u, self.u_nom, rollout_trajectory, traj_cost = self.predict_and_cost(s, target_position, self.u_nom, self.rng_cem,
+                                                                self.u)
         if GET_ROLLOUTS_FROM_MPPI:
             self.rollout_trajectory = rollout_trajectory.numpy()
             self.traj_cost = traj_cost.numpy()
