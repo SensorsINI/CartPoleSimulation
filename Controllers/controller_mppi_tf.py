@@ -20,15 +20,23 @@ from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
 #load constants from config file
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+try:
+    config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
+except FileNotFoundError:
+    config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 num_control_inputs = config["cartpole"]["num_control_inputs"]  # specific to a system
 
 q, phi = None, None
 cost_function = config["controller"]["general"]["cost_function"]
 cost_function = cost_function.replace('-', '_')
-cost_function_cmd = 'from others.cost_functions.'+cost_function+' import q, phi'
-exec(cost_function_cmd)
+
+try:
+    cost_function_cmd = 'from CartPoleSimulation.others.cost_functions.'+cost_function+' import q, phi'
+    exec(cost_function_cmd)
+except ModuleNotFoundError:
+    cost_function_cmd = 'from others.cost_functions.'+cost_function+' import q, phi'
+    exec(cost_function_cmd)
 
 dt = config["controller"]["mppi"]["dt"]
 mppi_horizon = config["controller"]["mppi"]["mpc_horizon"]

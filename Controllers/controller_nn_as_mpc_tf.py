@@ -17,7 +17,10 @@ except ModuleNotFoundError:
 from SI_Toolkit.TF.TF_Functions.Initialization import get_net, get_norm_info_for_net
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+try:
+    config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
+except FileNotFoundError:
+    config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 NET_NAME = config['controller']['nn_as_mpc_tf']['net_name']
 PATH_TO_MODELS = config['controller']['nn_as_mpc_tf']['PATH_TO_MODELS']

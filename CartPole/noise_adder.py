@@ -44,7 +44,10 @@ sigma_Q = 0.1
 # sigma_angleD = _noise_derivative(dt_derivative)*sigma_angle
 # sigma_positionD = _noise_derivative(dt_derivative)*sigma_position
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+try:
+    config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
+except FileNotFoundError:
+    config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 sigma_angle = config["cartpole"]["noise"]["sigma_angle"]
 sigma_position = config["cartpole"]["noise"]["sigma_position"]
