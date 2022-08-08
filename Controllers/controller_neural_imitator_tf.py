@@ -17,13 +17,16 @@ except ModuleNotFoundError:
 from SI_Toolkit.TF.TF_Functions.Initialization import get_net, get_norm_info_for_net
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+try:
+    config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
+except FileNotFoundError:
+    config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-NET_NAME = config['controller']['nn_as_mpc_tf']['net_name']
-PATH_TO_MODELS = config['controller']['nn_as_mpc_tf']['PATH_TO_MODELS']
+NET_NAME = config['controller']['neural_imitator_tf']['net_name']
+PATH_TO_MODELS = config['controller']['neural_imitator_tf']['PATH_TO_MODELS']
 
 
-class controller_nn_as_mpc_tf(template_controller):
+class controller_neural_imitator_tf(template_controller):
     def __init__(self, batch_size=1):
 
         a = SimpleNamespace()

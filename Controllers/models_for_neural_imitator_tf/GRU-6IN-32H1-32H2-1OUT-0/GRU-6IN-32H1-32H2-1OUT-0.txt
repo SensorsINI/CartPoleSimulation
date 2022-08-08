@@ -1,0 +1,40 @@
+# CPS!!!
+
+CREATED:
+2022-08-02 at time 14:48:17
+
+WITH GIT REVISION:
+62db415432ac9ade3902fec7d65cc055930efd28
+
+NET NAME:
+GRU-32H1-32H2
+
+NET FULL NAME:
+GRU-6IN-32H1-32H2-1OUT-0
+
+INPUTS:
+angleD, angle_cos, angle_sin, position, positionD, target_position
+
+OUTPUTS:
+Q
+
+TYPE:
+GRU
+
+NORMALIZATION:
+./SI_Toolkit_ASF/Experiments/Experiment-7/Models/GRU-6IN-32H1-32H2-1OUT-0/NI_2022-08-02_14-22-06.csv
+
+PARENT NET:
+Network trained from scratch
+
+WASH OUT LENGTH:
+10
+
+TRAINING_FILES:
+./SI_Toolkit_ASF/Experiments/Experiment-7//Recordings/Train/
+
+VALIDATION_FILES:
+./SI_Toolkit_ASF/Experiments/Experiment-7//Recordings/Validate/
+
+TEST_FILES:
+./SI_Toolkit_ASF/Experiments/Experiment-7//Recordings/Test/
