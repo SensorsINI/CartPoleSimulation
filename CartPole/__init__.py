@@ -95,6 +95,7 @@ class CartPole:
         self.u = 0.0  # Physical force acting on the cart
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
         self.target_position = 0.0
+        self.target_equilibrium = 1.0  # Up is 1.0, Down is -1.0
 
         self.action_space = MockSpace(-1.0, 1.0)
 

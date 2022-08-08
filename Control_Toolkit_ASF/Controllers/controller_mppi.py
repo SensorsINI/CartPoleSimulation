@@ -34,7 +34,7 @@ from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 
 from Control_Toolkit.Controllers import template_controller
 
-config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
+config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
 
 NET_NAME = config["controller"]["mppi"]["NET_NAME"]
 try:
@@ -489,7 +489,7 @@ class controller_mppi(template_controller):
                 self.u,
                 self.delta_u,
                 self.u_prev,
-                self.env_mock.target_position,
+                self.env_mock.CartPoleInstance.target_position,
             )
 
             # Update inputs with weighted perturbations

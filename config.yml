@@ -231,6 +231,8 @@ controller:
     PATH_TO_MODELS: './Controller_Toolkit_ASF/models_for_nn_as_mpc_tf/'
 cartpole:
   cost_function: 'quadratic-boundary-grad' # from 'quadratic-boundary', 'quadratic-boundary-grad', 'quadratic-boundary-nonconvex', 'default'
+  actuator_noise: 0.0  # TODO: There already exists a noise entry
+  mode: stabilization
   seed: 1873  # This is a seed for rng for CartPole instance class only. If null random seed based on datetime is used
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
