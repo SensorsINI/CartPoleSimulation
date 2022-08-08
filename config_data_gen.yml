@@ -16,7 +16,7 @@ random_initial_state:
     position: 0.5  # Fraction of TrackHalfLength to each side
     positionD: 0.01 # Fraction of TrackHalfLength to each side
 start_at_target: True  # initial target position should be equal to initial state
-track_fraction_usable_for_target_position: 0.9  # Set the max for smoothly interpolated random target position to avoid bumping into track ends.
+track_fraction_usable_for_target_position: 0.8  # Set the max for smoothly interpolated random target position to avoid bumping into track ends.
 target_position_end: ~  # value OR not assigned - random value is taken
 dt:
   simulation: 0.002  # simulation timestep, s
