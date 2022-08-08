@@ -7,7 +7,7 @@ controller:
     cem_rollouts: 80          #how many rollouts per outer cem iteration
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 10
-    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor type is NeuralNet
+    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
     cem_stdev_min: 0.1
     cem_R: 1
     cem_ccrc_weight: 1
@@ -21,7 +21,7 @@ controller:
     cem_rollouts: 80          #how many rollouts per outer cem iteration
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 10
-    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor type is NeuralNet
+    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
     cem_stdev_min: 0.05
     cem_initial_action_stdev: 0.5
     cem_R: 1
@@ -71,7 +71,7 @@ controller:
     num_rollouts: 400                     # Number of Monte Carlo samples
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 10
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor type is NeuralNet
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor name is predictor_autoregressive_tf
     cc_weight: 1.0
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
@@ -86,7 +86,7 @@ controller:
     mpc_horizon: 1.0
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 10
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor type is NeuralNet
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor name is predictor_autoregressive_tf
     resamp_per: 1                         #determines after how many steps the control plans are resamples
     sample_stdev: 0.5                     #sampling variance of control action
     cem_LR: 0.002                         #learning rate parameter for adam
@@ -111,7 +111,7 @@ controller:
     cc_weight: 1.0
     predictor_name: "predictor_ODE_tf"             # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 10
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor type is NeuralNet
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor name is predictor_autoregressive_tf
     R: 1.0                                # How much to punish Q
     # mc stands for mathematical correct, as this controller uses the formula from the paper
     LBD_mc: 10.0                          # Cost parameter lambda
@@ -130,8 +130,8 @@ controller:
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf", "predictor_autoregressive_GP"]
     predictor_intermediate_steps: 10
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor type is NeuralNet
-    GP_NAME: 'SGP_30'                     # Applies only if predictor type is GP
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor name is predictor_autoregressive_tf
+    GP_NAME: 'SGP_30'                     # Applies only if predictor name is GP
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01
@@ -156,8 +156,8 @@ controller:
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf", "predictor_autoregressive_GP"]
     predictor_intermediate_steps: 10
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor type is NeuralNet
-    GP_NAME: 'SGP_30'                     # Applies only if predictor type is GP
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor name is predictor_autoregressive_tf
+    GP_NAME: 'SGP_30'                     # Applies only if predictor name is GP
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01

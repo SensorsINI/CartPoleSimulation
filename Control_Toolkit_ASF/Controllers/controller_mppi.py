@@ -467,7 +467,7 @@ class controller_mppi(template_controller):
         self.iteration += 1
 
         # Adjust horizon if changed in GUI while running
-        # FIXME: For this to work with NeuralNet predictor we need to build a setter,
+        # FIXME: For this to work with predictor_autoregressive_tf predictor we need to build a setter,
         #  which also reinitialize arrays which size depends on horizon
         predictor.horizon = mpc_samples
         if mpc_samples != self.u.size:
