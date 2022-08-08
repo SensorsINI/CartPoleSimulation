@@ -41,7 +41,7 @@ if __name__ == '__main__':
     predictor = predictor_autoregressive_tf(horizon=horizon, batch_size=batch_size,
                                             net_name='LSTM-6IN-8H1-4H2-16H3-5OUT-0')
 
-    rng = create_rng(__name__, "None")
+    rng = create_rng(__name__, None)
     initial_state = rng.random(size=(batch_size, 6))
     # initial_state = rng.random(size=(1, 6))
     Q = np.float32(rng.random(size=(batch_size, horizon, len(CONTROL_INPUTS))))

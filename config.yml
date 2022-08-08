@@ -1,6 +1,6 @@
 controller:
   cem-tf:
-    seed: "None"                          # If "None", random seed based on datetime is used
+    seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     cem_outer_it: 5                    #how many outer iterations to use
@@ -14,7 +14,7 @@ controller:
     cem_best_k: 4
     cem_LR: 0.1
   cem-naive-grad-tf:
-    seed: "None"                          # If "None", random seed based on datetime is used
+    seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     cem_outer_it: 5                    #how many outer iterations to use
@@ -30,7 +30,7 @@ controller:
     cem_LR: 0.001
     gradmax_clip: 10
   cem-grad-bharadhwaj:
-    seed: "None"                          # If "None", random seed based on datetime is used
+    seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     CEM_NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
@@ -45,7 +45,7 @@ controller:
     predictor_intermediate_steps: 10
     predictor_name: predictor_ODE_tf
   gradient-tf:
-    seed: "None"                          # If "None", random seed based on datetime is used
+    seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     CEM_NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
@@ -60,7 +60,7 @@ controller:
     predictor_intermediate_steps: 10
     predictor_name: predictor_ODE_tf
   mppi-optimize:
-    seed: "None"                          # If "None", random seed based on datetime is used
+    seed: null                          # If null, random seed based on datetime is used
     mppi_LR: 0.02
     adam_beta_1: 0.4                      #default: 0.9
     adam_beta_2: 0.8                      #default: 0.999
@@ -81,7 +81,7 @@ controller:
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     optim_steps: 10
   dist-adam-resamp2:
-    seed: "None"                          # If "None", random seed based on datetime is used
+    seed: null                          # If null, random seed based on datetime is used
     dt: 0.02
     mpc_horizon: 1.0
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
@@ -102,7 +102,7 @@ controller:
     outer_its: 20                         #number of optimization iterations
     gradmax_clip: 250                     #maximal gradient entry to be kept, is ||gradient||_inf <= gradmax_clip
   mppi-var:
-    seed: "None"                          # If "None", random seed based on datetime is used
+    seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 400                     # Number of Monte Carlo samples
@@ -123,7 +123,7 @@ controller:
     STDEV_max: 10                         # Minimal sampling variance for sampling
     max_grad_norm: 100000                 # max norm of gradient such that ||gradient||_2
   mppi:
-    seed: "None"                          # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
+    seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 3500                    # Number of Monte Carlo samples
@@ -149,7 +149,7 @@ controller:
     LOGGING: False                        # Collect and show detailed insights into the controller's behavior
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
   mppi-tf:
-    seed: "None"                          # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
+    seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 3500                    # Number of Monte Carlo samples
@@ -175,7 +175,7 @@ controller:
     LOGGING: False                        # Collect and show detailed insights into the controller's behavior
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
   custom-mpc-scipy:
-    seed: "None"                          # If "None", random seed based on datetime is used
+    seed: null                          # If null, random seed based on datetime is used
     dt: 0.1
     # method: 'L-BFGS-B'
     method: 'SLSQP'
@@ -196,7 +196,7 @@ controller:
     dt: 0.02  # s
     mpc_horizon: 50
   do-mpc:
-    seed: "None"                          # If "None", random seed based on datetime is used
+    seed: null                          # If null, random seed based on datetime is used
     dt: 0.02  # s
     mpc_horizon: 50
     # Perturbation factors:
@@ -211,7 +211,7 @@ controller:
     l_position: 1.0
     l_positionD: 0.1
   lqr:
-    seed: "None"  # Seed for rng, for lqr only, put "None" to set random seed (do it when you generate data for training!)
+    seed: null  # Seed for rng, for lqr only, put null to set random seed (do it when you generate data for training!)
     Q: [10.0, 1.0, 1.0, 1.0]
     R: 10.0
     control_noise: 1.0
@@ -230,7 +230,7 @@ controller:
     PATH_TO_MODELS: './Controller_Toolkit_ASF/models_for_nn_as_mpc_tf/'
 cartpole:
   cost_function: 'quadratic-boundary-grad' # from 'quadratic-boundary', 'quadratic-boundary-grad', 'quadratic-boundary-nonconvex', 'default'
-  seed: 1873  # This is a seed for rng for CartPole instance class only. If "None" random seed based on datetime is used
+  seed: 1873  # This is a seed for rng for CartPole instance class only. If null random seed based on datetime is used
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   M: 0.230  # mass of cart, kg # Checked by Antonio
@@ -256,4 +256,4 @@ cartpole:
 
 
 data_generator:
-  seed: 1  # If "None" random seed based on datetime is used
+  seed: 1  # If null random seed based on datetime is used

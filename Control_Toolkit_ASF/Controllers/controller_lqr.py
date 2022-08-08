@@ -15,7 +15,7 @@ from Control_Toolkit.Controllers import template_controller
 
 
 class controller_lqr(template_controller):
-    def __init__(self, environment, seed: int, Q: "list[float]", R: "list[float]", control_noise: float, **kwargs):
+    def __init__(self, environment, seed: int, Q: "list[float]", R: "list[float]", **kwargs):
         # From https://github.com/markwmuller/controlpy/blob/master/controlpy/synthesis.py#L8
         """Solve the continuous time LQR controller for a continuous time system.
 
@@ -36,10 +36,10 @@ class controller_lqr(template_controller):
         self.action_low = self.env_mock.action_space.low
         self.action_high = self.env_mock.action_space.high
         
-        self.p_Q = control_noise
+        self.p_Q = environment.config["actuator_noise"]
         # ref Bertsekas, p.151
 
-        self.rng_lqr = create_rng(self.__class__.__name__, seed if seed=="None" else seed*2)
+        self.rng_lqr = create_rng(self.__class__.__name__, seed if seed==None else seed*2)
 
         # Calculate Jacobian around equilibrium
         # Set point around which the Jacobian should be linearized

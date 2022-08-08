@@ -62,7 +62,7 @@ cc_weight = config["controller"]["mppi"]["cc_weight"]
 ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
 
 """Perturbation factor"""
-p_Q = config["controller"]["mppi"]["control_noise"]
+p_Q = config["cartpole"]["actuator_noise"]
 dd_noise = ep_noise = ekp_noise = ekc_noise = cc_noise = config["controller"]["mppi"][
     "cost_noise"
 ]
@@ -347,7 +347,7 @@ class controller_mppi(template_controller):
         """Random number generator"""
         seed = config["controller"]["mppi"]["seed"]
         self.rng_mppi = create_rng(self.__class__.__name__, seed)
-        self.rng_mppi_rnn = create_rng(self.__class__.__name__, seed if seed=="None" else seed*2) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
+        self.rng_mppi_rnn = create_rng(self.__class__.__name__, seed if seed==None else seed*2) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
 
 
         global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight

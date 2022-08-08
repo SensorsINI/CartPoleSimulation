@@ -193,7 +193,7 @@ log=my_logger(__name__)
 
 
 def create_rng(id: str, seed: str, use_tf: bool=False):
-    if seed == "None":
+    if seed == None:
         log.info(f"{id}: No random seed specified. Seeding with datetime.")
         seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)  # Fully random
     
