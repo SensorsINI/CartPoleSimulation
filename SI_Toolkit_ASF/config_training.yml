@@ -2,7 +2,7 @@ modeling:
   NET_NAME: 'GRU-32H1-32H2'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Experiment-8/'
+  path_to_experiment: 'Pretrained-RNN-1/'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
 
 training_default:
@@ -16,11 +16,11 @@ training_default:
   # For training open loop dynamics model:
   # inputs = ['position', 'positionD', 'angle_sin', 'angle_cos', 'angleD']
   # outputs = inputs_list
-  # For training of RNN imitating MPC:
+  # For training of a network imitating MPC:
   control_inputs: []
   state_inputs: ['position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_position']
   outputs:  ['Q']
-  EPOCHS: 50
+  EPOCHS: 15
   BATCH_SIZE: 32
   SEED: 1873
   LR: 1.0e-2
