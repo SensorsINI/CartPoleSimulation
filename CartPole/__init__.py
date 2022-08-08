@@ -144,7 +144,7 @@ class CartPole:
         self.controller = None  # Placeholder for the currently used controller function
         self.controller_name = ''  # Placeholder for the currently used controller name
         self.controller_idx = None  # Placeholder for the currently used controller index
-        self.controller_names = get_available_controller_names("./Driver")  # list of controllers available in controllers folder
+        self.controller_names = get_available_controller_names()  # list of controllers available in controllers folder
         # endregion
 
         # region Variables for generating experiments with random target trace
