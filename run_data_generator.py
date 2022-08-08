@@ -25,10 +25,7 @@ import os
 class random_experiment_setter:
     def __init__(self):
 
-        try:
-            config = yaml.load(open('CartPoleSimulation/config_data_gen.yml'), Loader=yaml.FullLoader)
-        except FileNotFoundError:
-            config = yaml.load(open('config_data_gen.yml'), Loader=yaml.FullLoader)
+        config = yaml.load(open('config_data_gen.yml'), Loader=yaml.FullLoader)
 
         self.length_of_experiment = config["length_of_experiment"]
 

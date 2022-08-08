@@ -6,11 +6,8 @@ from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, AN
 import yaml
 
 
-#load constants from config file\
-try:
-    config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
-except FileNotFoundError:
-    config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+#load constants from config file
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 dd_weight = config["controller"]["mppi"]["dd_weight"]
 cc_weight = tf.convert_to_tensor(config["controller"]["mppi"]["cc_weight"])
