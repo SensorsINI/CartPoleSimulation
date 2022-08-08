@@ -163,7 +163,7 @@ controller:
     dt_mpc_simulation: 0.2  # s
     mpc_horizon: 10
   neural_imitator_tf:
-    net_name: 'Dense-6IN-128H1-128H2-1OUT-2'
+    net_name: 'GRU-6IN-32H1-32H2-1OUT-0'
     PATH_TO_MODELS: './Controllers/models_for_neural_imitator_tf/'
 cartpole:
   SEED: None  # This is a seed for rng for CartPole instance class only. If "None" random seed based on datetime is used
