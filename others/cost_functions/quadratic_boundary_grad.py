@@ -15,6 +15,7 @@ except FileNotFoundError:
 dd_weight = config["controller"]["mppi"]["dd_weight"]
 cc_weight = tf.convert_to_tensor(config["controller"]["mppi"]["cc_weight"])
 ep_weight = config["controller"]["mppi"]["ep_weight"]
+ekp_weight = config["controller"]["mppi"]["ekp_weight"]
 R = config["controller"]["mppi"]["R"]
 
 ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
@@ -30,6 +31,10 @@ def distance_difference_cost(position, target_position):
 def E_pot_cost(angle):
     """Compute penalty for not balancing pole upright (penalize large angles)"""
     return 0.25 * (1.0 - tf.cos(angle)) ** 2
+
+def E_kin_cost(angleD):
+    """Compute penalty for not balancing pole upright (penalize large angles)"""
+    return angleD ** 2
 
 #actuation cost
 def CC_cost(u):
@@ -74,9 +79,10 @@ def q(s,u,target_position, u_prev):
         s[:, :, POSITION_IDX], target_position
     )
     ep = ep_weight * E_pot_cost(s[:, :, ANGLE_IDX])
+    ekp = ekp_weight * E_kin_cost(s[:, :, ANGLED_IDX])
     cc = cc_weight * CC_cost(u)
     ccrc = ccrc_weight * control_change_rate_cost(u,u_prev)
-    stage_cost = dd+ep+cc+ccrc
+    stage_cost = dd+ep+ekp+cc+ccrc
     return stage_cost
 
 def q_debug(s,u,target_position, u_prev):
