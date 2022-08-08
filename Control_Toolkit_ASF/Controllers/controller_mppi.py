@@ -9,32 +9,50 @@ Based on Williams, Aldrich, Theodorou (2015)
 # # # use('TkAgg')
 # use('macOSX')
 
+import copy
 
-from importlib import import_module
+from others.p_globals import (
+    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength,
+)
+
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-from CartPole._CartPole_mathematical_helpers import (conditional_decorator,
-                                                     wrap_angle_rad_inplace)
+from datetime import datetime
+
+from CartPole._CartPole_mathematical_helpers import (
+    conditional_decorator,
+    wrap_angle_rad_inplace,
+)
 from CartPole.cartpole_model import TrackHalfLength
-from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
-                                      ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
-                                      STATE_INDICES, STATE_VARIABLES,
-                                      create_cartpole_state)
+from CartPole.state_utilities import (
+    ANGLE_COS_IDX,
+    ANGLE_IDX,
+    ANGLED_IDX,
+    ANGLE_SIN_IDX,
+    POSITION_IDX,
+    POSITIOND_IDX,
+    STATE_VARIABLES,
+    STATE_INDICES,
+    create_cartpole_state,
+)
 from matplotlib.widgets import Slider
 from numba import jit
-from others.globals_and_utils import create_rng
-from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
-                              controlBias, controlDisturbance, g, k, m, u_max,
-                              v_max)
-from scipy.interpolate import interp1d
+from numpy.random import SFC64, Generator
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
+from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
+from scipy.interpolate import interp1d
+from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
+# from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
+# from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
 
-from Control_Toolkit.Controllers import template_controller
+from Controllers.template_controller import template_controller
 
-config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
+from others.p_globals import L
+
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 NET_NAME = config["controller"]["mppi"]["NET_NAME"]
 try:
@@ -48,8 +66,7 @@ mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 update_every = config["controller"]["mppi"]["update_every"]
-predictor_name = config["controller"]["mppi"]["predictor_name"]
-intermediate_steps = config["controller"]["mppi"]["predictor_intermediate_steps"]
+predictor_type = config["controller"]["mppi"]["predictor_type"]
 
 WASH_OUT_LEN = config["controller"]["mppi"]["WASH_OUT_LEN"]
 
@@ -62,7 +79,7 @@ cc_weight = config["controller"]["mppi"]["cc_weight"]
 ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
 
 """Perturbation factor"""
-p_Q = config["cartpole"]["actuator_noise"]
+p_Q = config["controller"]["mppi"]["control_noise"]
 dd_noise = ep_noise = ekp_noise = ekc_noise = cc_noise = config["controller"]["mppi"][
     "cost_noise"
 ]
@@ -74,7 +91,7 @@ gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = gui_ccrc = np.zeros(1, dtype=np.f
 R = config["controller"]["mppi"]["R"]
 LBD = config["controller"]["mppi"]["LBD"]
 NU = config["controller"]["mppi"]["NU"]
-SQRTRHODTINV = float(np.asarray(config["controller"]["mppi"]["SQRTRHOINV"])) * (1 / np.math.sqrt(dt))
+SQRTRHODTINV = config["controller"]["mppi"]["SQRTRHOINV"] * (1 / np.math.sqrt(dt))
 GAMMA = config["controller"]["mppi"]["GAMMA"]
 SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
 
@@ -148,16 +165,17 @@ def penalize_deviation(cc, u):
     return cc
 
 
-#instantiate predictor
-predictor_module = import_module(f"SI_Toolkit.Predictors.{predictor_name}")
-predictor = getattr(predictor_module, predictor_name)(
-    horizon=mpc_samples,
-    dt=dt,
-    intermediate_steps=intermediate_steps,
-    disable_individual_compilation=True,
-    batch_size=num_rollouts,
-    net_name=NET_NAME,
-)
+"""Define Predictor"""
+if predictor_type == "EulerTF":
+    predictor = predictor_ODE_tf(horizon=mpc_samples, dt=dt, intermediate_steps=10)
+elif predictor_type == "Euler":
+    predictor = predictor_ODE(horizon=mpc_samples, dt=dt, intermediate_steps=10)
+elif predictor_type == "NeuralNet":
+    predictor = predictor_autoregressive_tf(
+        horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
+    )
+# elif predictor_type == "GP":
+#     predictor = predictor_autoregressive_GP(horizon=mpc_samples)
 
 predictor_ground_truth = predictor_ODE(
     horizon=mpc_samples, dt=dt, intermediate_steps=10
@@ -183,6 +201,8 @@ def trajectory_rollouts(
     :type delta_u: np.ndarray
     :param u_prev: Array with nominal inputs from previous iteration. Used to compute cost of control change
     :type u_prev: np.ndarray
+    :param target_position: Target position where the cart should move to
+    :type target_position: np.float32
 
     :return: S_tilde_k - Array filled with a cost for each rollout trajectory
     """
@@ -191,12 +211,12 @@ def trajectory_rollouts(
     s_horizon = predictor.predict(initial_state, (u + delta_u)[..., np.newaxis])[:, :, : len(STATE_INDICES)]
 
     # Compute stage costs
-    cost_increment, dd, ep, ekp, ekc, cc, ccrc = get_stage_cost(
+    cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
         s_horizon[:, 1:, :], u, delta_u, u_prev, target_position
     )
     S_tilde_k = np.sum(cost_increment, axis=1)
     # Compute terminal cost
-    S_tilde_k += get_terminal_cost(s_horizon, target_position)
+    S_tilde_k += phi(s_horizon, target_position)
 
     # Pass costs to GUI popup window
     global gui_dd, gui_ep, gui_ekp, gui_ekc, gui_cc, gui_ccrc
@@ -224,7 +244,7 @@ def trajectory_rollouts(
     return S_tilde_k
 
 
-def get_stage_cost(
+def q(
     s: np.ndarray,
     u: np.ndarray,
     delta_u: np.ndarray,
@@ -261,11 +281,9 @@ def get_stage_cost(
     cc = cc_weight * (
         0.5 * (1 - 1.0 / NU) * R * (delta_u ** 2) + R * u * delta_u + 0.5 * R * (u ** 2)
     )
-    ccrc = 0
-    if u_prev is not None:
-        ccrc = ccrc_weight * control_change_rate_cost(u + delta_u, u_prev).astype(
-            np.float32
-        )
+    ccrc = ccrc_weight * control_change_rate_cost(u + delta_u, u_prev).astype(
+        np.float32
+    )
     # rterm = 1.0e4 * np.sum((delta_u[:,1:] - delta_u[:,:-1]) ** 2, axis=1, keepdims=True)
 
     # Penalize if control deviation is outside constraint set.
@@ -277,7 +295,7 @@ def get_stage_cost(
 
 
 @jit(nopython=True, cache=True, fastmath=True)
-def get_terminal_cost(s: np.ndarray, target_position: np.float32) -> np.ndarray:
+def phi(s: np.ndarray, target_position: np.float32) -> np.ndarray:
     """Calculate terminal cost of a set of trajectories
 
     Williams et al use an indicator function type of terminal cost in
@@ -343,11 +361,14 @@ class controller_mppi(template_controller):
     :type template_controller: abc.ABC
     """
 
-    def __init__(self, environment, **kwargs):
+    def __init__(self):
+
         """Random number generator"""
-        seed = config["controller"]["mppi"]["seed"]
-        self.rng_mppi = create_rng(self.__class__.__name__, seed)
-        self.rng_mppi_rnn = create_rng(self.__class__.__name__, seed if seed==None else seed*2) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
+        SEED = config["controller"]["mppi"]["SEED"]
+        if SEED == "None":
+            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
+        self.rng_mppi = Generator(SFC64(SEED))
+        self.rng_mppi_rnn = Generator(SFC64(SEED*2)) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
 
 
         global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
@@ -376,18 +397,15 @@ class controller_mppi(template_controller):
         self.wash_out_len = WASH_OUT_LEN
         self.warm_up_countdown = self.wash_out_len
         try:
-            from Control_Toolkit_ASF.Controllers.controller_lqr import controller_lqr
+            from Controllers.controller_lqr import controller_lqr
+
             self.auxiliary_controller_available = True
-            self.auxiliary_controller = controller_lqr(environment, **config["controller"]["lqr"])
+            self.auxiliary_controller = controller_lqr()
         except ModuleNotFoundError:
             self.auxiliary_controller_available = False
             self.auxiliary_controller = None
 
         self.auxiliary_controller_available = False
-        
-        super().__init__(environment)
-        self.action_low = self.env_mock.action_space.low
-        self.action_high = self.env_mock.action_space.high
 
     def initialize_perturbations(
         self, stdev: float = 1.0, sampling_type: str = None
@@ -451,11 +469,13 @@ class controller_mppi(template_controller):
 
         return delta_u
 
-    def step(self, s: np.ndarray, time=None):
+    def step(self, s: np.ndarray, target_position: np.float64, time=None):
         """Perform controller step
 
         :param s: State passed to controller after system has evolved for one step
         :type s: np.ndarray
+        :param target_position: Target position where the cart should move to
+        :type target_position: np.float64
         :param time: Time in seconds that has passed in the current experiment, defaults to None
         :type time: float, optional
         :return: A normed control value in the range [-1.0, 1.0]
@@ -463,11 +483,12 @@ class controller_mppi(template_controller):
         """
 
         self.s = s
+        self.target_position = np.float32(target_position)
 
         self.iteration += 1
 
         # Adjust horizon if changed in GUI while running
-        # FIXME: For this to work with predictor_autoregressive_tf predictor we need to build a setter,
+        # FIXME: For this to work with NeuralNet predictor we need to build a setter,
         #  which also reinitialize arrays which size depends on horizon
         predictor.horizon = mpc_samples
         if mpc_samples != self.u.size:
@@ -489,7 +510,7 @@ class controller_mppi(template_controller):
                 self.u,
                 self.delta_u,
                 self.u_prev,
-                self.env_mock.CartPoleInstance.target_position,
+                self.target_position,
             )
 
             # Update inputs with weighted perturbations
@@ -502,9 +523,9 @@ class controller_mppi(template_controller):
 
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
-                if predictor_name == "predictor_ODE":
+                if predictor_type == "Euler":
                     rollout_trajectory = predictor.predict(np.copy(self.s), self.u[:, np.newaxis])
-                elif predictor_name in ["predictor_autoregressive_tf", 'predictor_ODE_tf', "predictor_autoregressive_GP"]:
+                elif predictor_type == "NeuralNet" or predictor_type == 'EulerTF' or predictor_type == "GP":
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     # FIXME: Problaby you can reduce it!
 
@@ -515,17 +536,17 @@ class controller_mppi(template_controller):
 
         if LOGGING:
             LOGS.get("trajectory").append(np.copy(self.s))
-            LOGS.get("target_trajectory").append(np.copy(self.env_mock.target_position))
+            LOGS.get("target_trajectory").append(np.copy(target_position))
 
         if (
             self.warm_up_countdown > 0
             and self.auxiliary_controller_available
             and (NET_TYPE == "GRU" or NET_TYPE == "LSTM" or NET_TYPE == "RNN")
-            and predictor_name == "predictor_autoregressive_tf"
+            and predictor_type == "NeuralNet"
         ):
             self.warm_up_countdown -= 1
             if abs(s[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small
-                Q = self.auxiliary_controller.step(s)
+                Q = self.auxiliary_controller.step(s, target_position)
             else:
                 Q = self.rng_mppi_rnn.uniform(-1, 1)  # Apply random input to let RNN "feel" the system behaviour
         else:
@@ -535,7 +556,7 @@ class controller_mppi(template_controller):
         # It stops controller when Pole is well stabilized (starting inputing random input)
         # And re-enables it when angle exceedes 90 deg.
         # if (abs(self.s[[ANGLE_IDX]]) < 0.01
-        #     and abs(self.s[[POSITION_IDX]]-self.env_mock.target_position < 0.02)
+        #     and abs(self.s[[POSITION_IDX]]-self.target_position < 0.02)
         #         and abs(self.s[[ANGLED_IDX]]) < 0.1
         #             and abs(self.s[[POSITIOND_IDX]]) < 0.05):
         #     self.control_enabled = False
@@ -545,12 +566,12 @@ class controller_mppi(template_controller):
         # if self.control_enabled is True:
         #     Q = self.u[0]
         # else:
-        #     Q = self.rng_mppi.uniform(-1.0, 1.0)
+        #     Q = np.random.uniform(-1.0, 1.0)
 
         # Add noise on top of the calculated Q value to better explore state space
         Q = np.float32(Q * (1 + p_Q * self.rng_mppi.uniform(-1.0, 1.0)))
         # Clip inputs to allowed range
-        Q = np.clip(Q, self.action_low, self.action_high, dtype=np.float32)
+        Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
 
         # Preserve current series of inputs
         self.u_prev = np.copy(self.u)
@@ -887,3 +908,4 @@ class controller_mppi(template_controller):
         }
 
         self.warm_up_countdown = self.wash_out_len
+

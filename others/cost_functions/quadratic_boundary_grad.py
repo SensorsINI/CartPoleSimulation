@@ -15,12 +15,16 @@ from CartPole.state_utilities import (
 import yaml
 
 
-# load constants from config file
-config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
+#load constants from config file\
+try:
+    config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
+except FileNotFoundError:
+    config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 dd_weight = config["controller"]["mppi"]["dd_weight"]
 cc_weight = tf.convert_to_tensor(config["controller"]["mppi"]["cc_weight"])
 ep_weight = config["controller"]["mppi"]["ep_weight"]
+ekp_weight = config["controller"]["mppi"]["ekp_weight"]
 R = config["controller"]["mppi"]["R"]
 
 ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
@@ -45,6 +49,10 @@ class quadratic_boundary_grad:
     def E_pot_cost(self, angle):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
         return 0.25 * (1.0 - tf.cos(angle)) ** 2
+    
+    def E_kin_cost(self, angleD):
+        """Compute penalty for not balancing pole upright (penalize large angles)"""
+        return angleD ** 2
 
     # actuation cost
     def CC_cost(self, u):
@@ -69,7 +77,7 @@ class quadratic_boundary_grad:
         terminal_cost = 10000 * tf.cast(
             (tf.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
             | (
-                tf.abs(terminal_states[:, POSITION_IDX] - self.env_mock.target_position)
+                tf.abs(terminal_states[:, POSITION_IDX] - self.env_mock.CartPoleInstance.target_position)
                 > 0.1 * TrackHalfLength
             ),
             tf.float32,
@@ -90,11 +98,10 @@ class quadratic_boundary_grad:
             s[:, :, POSITION_IDX]
         )
         ep = ep_weight * self.E_pot_cost(s[:, :, ANGLE_IDX])
+        ekp = ekp_weight * self.E_kin_cost(s[:, :, ANGLED_IDX])
         cc = cc_weight * self.CC_cost(u)
-        ccrc = 0
-        if u_prev is not None:
-            ccrc = ccrc_weight * self.control_change_rate_cost(u, u_prev)
-        stage_cost = dd + ep + cc + ccrc
+        ccrc = ccrc_weight * self.control_change_rate_cost(u, u_prev)
+        stage_cost = dd + ep + ekp + cc + ccrc
         return stage_cost
 
     def q_debug(self, s, u, u_prev):

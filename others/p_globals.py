@@ -2,8 +2,11 @@ from types import SimpleNamespace
 from numpy import float32
 import numpy as np
 import yaml
-import os
-config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "config.yml"), "r"), Loader=yaml.FullLoader)
+
+try:
+    config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
+except FileNotFoundError:
+    config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
 # Parameters of the CartPole
 P_GLOBALS = SimpleNamespace()  # "p" like parameters

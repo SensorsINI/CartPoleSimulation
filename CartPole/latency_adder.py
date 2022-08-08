@@ -74,6 +74,8 @@ class LatencyAdder():
     def set_latency(self, latency):
         self.latency = latency
         self.latency_len = latency/self.dt_sampling
+        if self.latency_len > MAX_LATENCY_LEN:
+            raise ValueError ('Not possible to add so much latency!')
         self.latency_len_int = int(self.latency_len)
         self.latency_len_fraction = self.latency_len-self.latency_len_int
         self.max_latency = MAX_LATENCY_LEN*self.dt_sampling

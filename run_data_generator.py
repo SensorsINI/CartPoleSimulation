@@ -24,7 +24,10 @@ from others.p_globals import TrackHalfLength
 class random_experiment_setter:
     def __init__(self):
 
-        config = yaml.load(open(os.path.join(os.path.dirname(__file__), "config_data_gen.yml"), "r"), Loader=yaml.FullLoader)
+        try:
+            config = yaml.load(open('CartPoleSimulation/config_data_gen.yml'), Loader=yaml.FullLoader)
+        except FileNotFoundError:
+            config = yaml.load(open('config_data_gen.yml'), Loader=yaml.FullLoader)
 
         self.length_of_experiment = config["length_of_experiment"]
 
@@ -123,7 +126,7 @@ def generate_random_initial_state(init_state_stub, init_limits, rng):
     else:
         initial_state_post[POSITION_IDX] = init_state_stub[POSITION_IDX]
 
-    if np.isnan(init_state_stub[1]):
+    if np.isnan(init_state_stub[POSITIOND_IDX]):
         initial_state_post[POSITIOND_IDX] = rng.uniform(low=-1.0, high=1.0) * TrackHalfLength * positionD_init_limits
     else:
         initial_state_post[POSITIOND_IDX] = init_state_stub[POSITIOND_IDX]
