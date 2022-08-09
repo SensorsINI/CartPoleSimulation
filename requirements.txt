@@ -31,4 +31,3 @@ casadi
 nni
 
 ./SI_Toolkit
-./.SI_Toolkit_ASF/GlobalPackage/

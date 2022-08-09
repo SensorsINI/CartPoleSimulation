@@ -66,7 +66,7 @@ mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
 mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
 num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 update_every = config["controller"]["mppi"]["update_every"]
-predictor_type = config["controller"]["mppi"]["predictor_type"]
+predictor_name = config["controller"]["mppi"]["predictor_name"]
 
 WASH_OUT_LEN = config["controller"]["mppi"]["WASH_OUT_LEN"]
 
@@ -166,15 +166,15 @@ def penalize_deviation(cc, u):
 
 
 """Define Predictor"""
-if predictor_type == "EulerTF":
+if predictor_name == "predictor_ODE_tf":
     predictor = predictor_ODE_tf(horizon=mpc_samples, dt=dt, intermediate_steps=10)
-elif predictor_type == "Euler":
+elif predictor_name == "predictor_ODE":
     predictor = predictor_ODE(horizon=mpc_samples, dt=dt, intermediate_steps=10)
-elif predictor_type == "NeuralNet":
+elif predictor_name == "predictor_autoregressive_tf":
     predictor = predictor_autoregressive_tf(
         horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
     )
-# elif predictor_type == "GP":
+# elif predictor_name == "predictor_autoregressive_GP":
 #     predictor = predictor_autoregressive_GP(horizon=mpc_samples)
 
 predictor_ground_truth = predictor_ODE(
@@ -523,9 +523,9 @@ class controller_mppi(template_controller):
 
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
                 # Compute one rollout of shape (mpc_samples + 1) x s.size
-                if predictor_type == "Euler":
+                if predictor_name == "predictor_ODE":
                     rollout_trajectory = predictor.predict(np.copy(self.s), self.u[:, np.newaxis])
-                elif predictor_type == "NeuralNet" or predictor_type == 'EulerTF' or predictor_type == "GP":
+                elif predictor_name in ["predictor_autoregressive_tf", "predictor_ODE_tf", "predictor_autoregressive_GP"]:
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     # FIXME: Problaby you can reduce it!
 
@@ -542,7 +542,7 @@ class controller_mppi(template_controller):
             self.warm_up_countdown > 0
             and self.auxiliary_controller_available
             and (NET_TYPE == "GRU" or NET_TYPE == "LSTM" or NET_TYPE == "RNN")
-            and predictor_type == "NeuralNet"
+            and predictor_name == "predictor_autoregressive_tf"
         ):
             self.warm_up_countdown -= 1
             if abs(s[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small
