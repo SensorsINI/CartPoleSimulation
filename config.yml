@@ -2,9 +2,9 @@ controller:
   cem-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
-    mpc_horizon: 1.0                      # sec
+    mpc_horizon: 0.7                      # sec
     cem_outer_it: 5                    #how many outer iterations to use
-    cem_rollouts: 80          #how many rollouts per outer cem iteration
+    num_rollouts: 80          #how many rollouts per outer cem iteration
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 10
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
@@ -18,7 +18,7 @@ controller:
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     cem_outer_it: 5                    #how many outer iterations to use
-    cem_rollouts: 80          #how many rollouts per outer cem iteration
+    num_rollouts: 80          #how many rollouts per outer cem iteration
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 10
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
@@ -38,7 +38,7 @@ controller:
     cem_R: 1
     cem_best_k: 4
     cem_outer_it: 5
-    cem_rollouts: 40
+    num_rollouts: 40
     cem_initial_action_stdev: 0.5
     cem_stdev_min: 0.2
     gradmax_clip: 5
@@ -158,12 +158,6 @@ controller:
     predictor_intermediate_steps: 10
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor name is predictor_autoregressive_tf
     GP_NAME: 'SGP_30'                     # Applies only if predictor name is GP
-    dd_weight: 2000.0
-    ep_weight: 15000.0
-    ekp_weight: 15.0
-    ekc_weight: 0.0
-    cc_weight: 0.0
-    ccrc_weight: 0.0
     cost_noise: 0.0                       # Noise on stage cost weights by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0 othewise
     control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
     R: 1.0                                # How much to punish Q
@@ -256,6 +250,12 @@ cartpole:
     sigma_angleD: 0.075 # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
     sigma_positionD: 0.005
   num_control_inputs: 1
+  dd_weight: 2000.0
+  ep_weight: 15000.0
+  ekp_weight: 15.0
+  ekc_weight: 0.0
+  cc_weight: 0.0
+  ccrc_weight: 0.0
 
 
 data_generator:
