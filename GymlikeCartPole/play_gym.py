@@ -1,8 +1,6 @@
-import os
 from time import sleep
 
-import yaml
-from others.globals_and_utils import my_logger
+from others.globals_and_utils import load_config, my_logger
 from Control_Toolkit.others.globals_and_utils import import_controller_by_name
 
 from GymlikeCartPole.CartPoleEnv_LTC import CartPoleEnv_LTC
@@ -11,7 +9,7 @@ controller_name = "mppi-tf"
 controller_full_name = f"controller-{controller_name}".replace("-", "_")
 Controller = import_controller_by_name(controller_full_name)
 
-config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "config.yml"), "r"), Loader=yaml.FullLoader)
+config = load_config("config.yml")
 
 logger = my_logger(__name__)
 

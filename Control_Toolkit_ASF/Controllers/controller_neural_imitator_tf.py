@@ -1,5 +1,3 @@
-import yaml
-
 import tensorflow as tf
 import numpy as np
 
@@ -8,20 +6,18 @@ from types import SimpleNamespace
 from Control_Toolkit.Controllers import template_controller
 from SI_Toolkit.load_and_normalize import normalize_numpy_array
 
+from others.globals_and_utils import load_config
+
 try:
-    from SI_Toolkit_ASF.predictors_customization import STATE_VARIABLES, STATE_INDICES, \
-        CONTROL_INPUTS, augment_predictor_output
+    from SI_Toolkit_ASF.predictors_customization import STATE_INDICES, \
+        CONTROL_INPUTS
 except ModuleNotFoundError:
     print('SI_Toolkit_ASF not yet created')
 
 from SI_Toolkit.TF.TF_Functions.Initialization import get_net, get_norm_info_for_net
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
-try:
-    config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
-except FileNotFoundError:
-    config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
-
+config = load_config("config.yml")
 NET_NAME = config['controller']['neural-imitator-tf']['net_name']
 PATH_TO_MODELS = config['controller']['neural-imitator-tf']['PATH_TO_MODELS']
 

@@ -3,17 +3,13 @@ This is a linear-quadratic regulator
 It assumes that the input relation is u = Q*u_max (no fancy motor model) !
 """
 
-import os
-import scipy
 import numpy as np
 
 from Control_Toolkit.Controllers import template_controller
-from CartPole.state_utilities import create_cartpole_state, cartpole_state_varname_to_index
-from CartPole.cartpole_model import u_max, s0
-from CartPole.cartpole_jacobian import cartpole_jacobian
+from CartPole.state_utilities import cartpole_state_varname_to_index
+from others.globals_and_utils import load_config
 
-import yaml
-config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
+config = load_config("config.yml")
 
 class controller_pid(template_controller):
     def __init__(self):

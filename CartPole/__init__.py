@@ -19,10 +19,9 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-import yaml
 from Control_Toolkit.others.environment import EnvironmentBatched, NumpyLibrary, TensorFlowLibrary
 from Control_Toolkit.others.globals_and_utils import get_available_controller_names, get_controller
-from others.globals_and_utils import MockSpace, create_rng
+from others.globals_and_utils import MockSpace, create_rng, load_config
 from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
                               g, k, m, u_max, v_max)
@@ -72,11 +71,7 @@ rc('font', **font)
 
 import yaml
 
-try:
-    config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
-except FileNotFoundError:
-    config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
-
+config = load_config("config.yml")
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
 

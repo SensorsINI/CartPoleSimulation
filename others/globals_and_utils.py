@@ -7,6 +7,7 @@ import math
 import os
 import time
 from datetime import datetime
+import yaml
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0' # all TF messages
 
@@ -201,6 +202,19 @@ def create_rng(id: str, seed: str, use_tf: bool=False):
         return tf.random.Generator.from_seed(seed=seed)
     else:
         return Generator(SFC64(seed=seed))
+
+
+def load_config(filename: str) -> dict:
+    """Try loading config from yaml if os.getcwd() is one level above CartPoleSimulation. This would be the case if CartPoleSimulation is added as Git Submodule in another repository. If not found, load from the current os path.
+
+    :param filename: e.g. 'config.yml'
+    :type filename: str
+    """
+    try:
+        config = yaml.load(open(os.path.join("CartPoleSimulation", filename), "r"), Loader=yaml.FullLoader)
+    except FileNotFoundError:
+        config = yaml.load(open(filename), Loader=yaml.FullLoader)
+    return config
 
 
 class MockSpace:

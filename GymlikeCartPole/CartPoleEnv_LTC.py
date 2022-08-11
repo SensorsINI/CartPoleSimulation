@@ -7,14 +7,11 @@ from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
 from others.p_globals import TrackHalfLength
 from run_data_generator import random_experiment_setter
 
-import math
 import numpy as np
-import yaml
-import os
 
 from typing import Optional, Tuple, Union
 
-from others.globals_and_utils import my_logger
+from others.globals_and_utils import load_config, my_logger
 logger = my_logger(__name__)
 
 # FIXME: Set reset properly
@@ -24,7 +21,7 @@ logger = my_logger(__name__)
 # TODO: saving the episode after finished
 # TODO: Make rendering with GUI/matplotlib animation, including also target position
 
-config = yaml.load(open(os.path.join(os.path.dirname(__file__), "config_gym.yml"), "r"), Loader=yaml.FullLoader)
+config = load_config("config_gym.yml")
 length_of_episode = config["length_of_episode"]
 mode = config["mode"]
 

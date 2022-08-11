@@ -1,28 +1,19 @@
-import os
-import sys
 import tensorflow as tf
 
 from CartPole.cartpole_model import TrackHalfLength
 
 from CartPole.state_utilities import (
     ANGLE_IDX,
-    ANGLE_SIN_IDX,
-    ANGLE_COS_IDX,
     ANGLED_IDX,
     POSITION_IDX,
-    POSITIOND_IDX,
-    create_cartpole_state,
 )
-import yaml
 
 from others.cost_functions.CartPole.cost_function import cartpole_cost_function
+from others.globals_and_utils import load_config
 
 
-#load constants from config file\
-try:
-    config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
-except FileNotFoundError:
-    config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+#load constants from config file
+config = load_config("config.yml")
 
 dd_weight = config["controller"]["mppi"]["dd_weight"]
 cc_weight = tf.convert_to_tensor(config["controller"]["mppi"]["cc_weight"])

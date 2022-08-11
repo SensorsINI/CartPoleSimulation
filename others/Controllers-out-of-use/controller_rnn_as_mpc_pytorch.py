@@ -1,14 +1,14 @@
 
-import scipy
-import numpy as np
 import pandas as pd
 from Modeling.Pytorch.utilis_rnn import *
 
 from Control_Toolkit.Controllers import template_controller
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
 
-import yaml, os
-config = yaml.load(open(os.path.join('SI_Toolkit_ASF', 'config.yml'), 'r'), Loader=yaml.FullLoader)
+import os
+
+from others.globals_and_utils import load_config
+config = load_config(os.path.join("SI_Toolkit_ASF", "config.yml"))
 
 RNN_FULL_NAME = 'GRU-6IN-64H1-64H2-5OUT-0'
 INPUTS_LIST = config['modeling']['PyTorch']['INPUTS_LIST']

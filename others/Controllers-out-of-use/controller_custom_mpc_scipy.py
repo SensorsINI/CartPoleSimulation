@@ -1,19 +1,17 @@
 """mpc controller"""
 
-import os
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize
-import yaml
-from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
+from CartPole.state_utilities import (ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
                                       cartpole_state_indices_to_varnames,
                                       create_cartpole_state)
 from Control_Toolkit_ASF.Controllers.controller_lqr import controller_lqr
-from others.globals_and_utils import create_rng
+from others.globals_and_utils import create_rng, load_config
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 
-config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
+config = load_config("config.yml")
 
 predictor = predictor_ODE
 # WARNING: if using RNN to provide CartPole model to MPC

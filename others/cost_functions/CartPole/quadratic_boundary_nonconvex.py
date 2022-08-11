@@ -1,4 +1,3 @@
-import os
 import tensorflow as tf
 import math
 
@@ -6,20 +5,15 @@ from CartPole.cartpole_model import TrackHalfLength
 
 from CartPole.state_utilities import (
     ANGLE_IDX,
-    ANGLE_SIN_IDX,
-    ANGLE_COS_IDX,
-    ANGLED_IDX,
     POSITION_IDX,
-    POSITIOND_IDX,
-    create_cartpole_state,
 )
-import yaml
 
 from others.cost_functions.CartPole.cost_function import cartpole_cost_function
+from others.globals_and_utils import load_config
 
 
 # load constants from config file
-config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
+config = load_config("config.yml")
 
 dd_weight = config["controller"]["mppi"]["dd_weight"]
 cc_weight = config["controller"]["mppi"]["cc_weight"]

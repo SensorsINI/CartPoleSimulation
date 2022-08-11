@@ -1,6 +1,6 @@
 from CartPole import CartPole
 from CartPole.cartpole_model import create_cartpole_state, TrackHalfLength
-from others.globals_and_utils import create_rng
+from others.globals_and_utils import create_rng, load_config
 from others.p_globals import TrackHalfLength
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
@@ -16,8 +16,9 @@ import numpy as np
 # # use('TkAgg')
 # use('macOSX')
 
-import yaml, os
-config_CartPole = yaml.load(open('../../config.yml'), Loader=yaml.FullLoader)
+import os
+config_CartPole = load_config("config.yml")
+
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     seed = config_CartPole["data_generator"]["seed"]

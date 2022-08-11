@@ -1,17 +1,14 @@
-import cProfile
 import os
 import timeit
-from pstats import SortKey, Stats
 from time import sleep
 
 import numpy as np
-import yaml
 
 from CartPole import CartPole
 from CartPole.cartpole_model import TrackHalfLength, create_cartpole_state
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
-from others.globals_and_utils import create_rng
+from others.globals_and_utils import create_rng, load_config
 from others.p_globals import TrackHalfLength
 
 # Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
@@ -23,11 +20,7 @@ from others.p_globals import TrackHalfLength
 
 class random_experiment_setter:
     def __init__(self):
-
-        try:
-            config = yaml.load(open('CartPoleSimulation/config_data_gen.yml'), Loader=yaml.FullLoader)
-        except FileNotFoundError:
-            config = yaml.load(open('config_data_gen.yml'), Loader=yaml.FullLoader)
+        config = load_config("config_data_gen.yml")
 
         self.length_of_experiment = config["length_of_experiment"]
 
@@ -151,8 +144,7 @@ def generate_random_initial_state(init_state_stub, init_limits, rng):
     return initial_state_post
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
-
-    config = yaml.load(open('config_data_gen.yml'), Loader=yaml.FullLoader)
+    config = load_config("config_data_gen.yml")
 
     if record_path is None:
         record_path = config["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]

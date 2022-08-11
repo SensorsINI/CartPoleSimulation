@@ -1,7 +1,5 @@
-import os
 import tensorflow as tf
-import yaml
-from others.globals_and_utils import create_rng
+from others.globals_and_utils import create_rng, load_config
 from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, g, k, m, u_max,
                               v_max)
@@ -9,12 +7,11 @@ from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
 from CartPole.cartpole_model_tf import (_cartpole_ode, cartpole_integration_tf,
                                         cartpole_ode, edge_bounce,
-                                        edge_bounce_wrapper, euler_step_tf)
+                                        edge_bounce_wrapper)
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
-                                      ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
-                                      STATE_INDICES)
+                                      ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 
-config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "config.yml"), "r"), Loader=yaml.FullLoader)
+config = load_config("config.yml")
 
 k = tf.convert_to_tensor(k)
 M = tf.convert_to_tensor(M)

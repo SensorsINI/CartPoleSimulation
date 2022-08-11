@@ -1,9 +1,9 @@
 """mpc controller"""
 
-import os
 from Control_Toolkit.Controllers import template_controller
-from CartPole.cartpole_model import TrackHalfLength, s0, Q2u
+from CartPole.cartpole_model import TrackHalfLength, Q2u
 from CartPole.cartpole_numba import cartpole_ode_numba
+from others.globals_and_utils import load_config
 from others.p_globals import v_max
 from CartPole.state_utilities import create_cartpole_state, \
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
@@ -14,9 +14,7 @@ import numpy as np
 import casadi
 
 
-import yaml
-config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
-
+config = load_config("config.yml")
 dt = config["controller"]["do-mpc-discrete"]["dt"]
 mpc_horizon = config["controller"]["do-mpc-discrete"]["mpc_horizon"]
 
