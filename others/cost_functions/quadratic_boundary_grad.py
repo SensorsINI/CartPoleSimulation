@@ -77,7 +77,7 @@ class quadratic_boundary_grad:
         terminal_cost = 10000 * tf.cast(
             (tf.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
             | (
-                tf.abs(terminal_states[:, POSITION_IDX] - self.env_mock.CartPoleInstance.target_position)
+                tf.abs(terminal_states[:, POSITION_IDX] - self.env_mock.target_position)
                 > 0.1 * TrackHalfLength
             ),
             tf.float32,

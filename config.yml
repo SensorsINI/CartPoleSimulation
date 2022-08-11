@@ -158,6 +158,7 @@ controller:
     predictor_intermediate_steps: 10
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor name is predictor_autoregressive_tf
     GP_NAME: 'SGP_30'                     # Applies only if predictor name is GP
+    cc_weight: 1.0
     cost_noise: 0.0                       # Noise on stage cost weights by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0 othewise
     control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
     R: 1.0                                # How much to punish Q
@@ -250,12 +251,6 @@ cartpole:
     sigma_angleD: 0.075 # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
     sigma_positionD: 0.005
   num_control_inputs: 1
-  dd_weight: 2000.0
-  ep_weight: 15000.0
-  ekp_weight: 15.0
-  ekc_weight: 0.0
-  cc_weight: 0.0
-  ccrc_weight: 0.0
 
 
 data_generator:

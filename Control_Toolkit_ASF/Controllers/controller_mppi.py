@@ -48,7 +48,7 @@ from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregr
 # from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
 # from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
 
-from Controllers.template_controller import template_controller
+from Control_Toolkit.Controllers import template_controller
 
 from others.p_globals import L
 
@@ -364,11 +364,11 @@ class controller_mppi(template_controller):
     def __init__(self):
 
         """Random number generator"""
-        SEED = config["controller"]["mppi"]["SEED"]
-        if SEED == "None":
-            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
-        self.rng_mppi = Generator(SFC64(SEED))
-        self.rng_mppi_rnn = Generator(SFC64(SEED*2)) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
+        seed = config["controller"]["mppi"]["seed"]
+        if seed == "None":
+            seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
+        self.rng_mppi = Generator(SFC64(seed))
+        self.rng_mppi_rnn = Generator(SFC64(seed*2)) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
 
 
         global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
