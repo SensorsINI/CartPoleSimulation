@@ -1,19 +1,18 @@
 import gym
+from gym.core import ObsType
+from gym.utils.renderer import Renderer
 from CartPole import CartPole
 from CartPole.cartpole_model import ANGLE_IDX, POSITION_IDX
 from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
 from others.p_globals import TrackHalfLength
 from run_data_generator import random_experiment_setter
 
-import math
 import numpy as np
-import yaml
-from datetime import datetime
 
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
-import pygame
-from pygame import gfxdraw
+from others.globals_and_utils import load_config, my_logger
+logger = my_logger(__name__)
 
 # FIXME: Set reset properly
 # FIXME: set random position - pregenerate
@@ -22,20 +21,20 @@ from pygame import gfxdraw
 # TODO: saving the episode after finished
 # TODO: Make rendering with GUI/matplotlib animation, including also target position
 
-
-config = yaml.load(open("GymlikeCartPole/config_gym.yml", "r"), Loader=yaml.FullLoader)
+config = load_config("config_gym.yml")
 length_of_episode = config["length_of_episode"]
 mode = config["mode"]
 
 
 class CartPoleEnv_LTC(gym.Env):
-    metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 50}
+    metadata = {"render_modes": ["human", "rgb_array", "single_rgb_array"], "video.frames_per_second": 50, "render_fps": 50}
 
     def __init__(self):
 
         self.CartPoleInstance = CartPole()
         self.RES = random_experiment_setter()
         self.mode = mode
+        self.renderer = Renderer(self.render_mode, self._render)
 
         self.intermediate_steps = int(self.RES.dt_controller_update/self.RES.dt_simulation)
 
@@ -87,7 +86,8 @@ class CartPoleEnv_LTC(gym.Env):
 
         self.step_termination_and_reward()
 
-        return self.state, self.CartPoleInstance.target_position, self.reward, self.done, {}
+        self.renderer.render_step()
+        return self.state, self.reward, self.done, {"target": self.CartPoleInstance.target_position}
 
     def step_physics(self):
 
@@ -124,27 +124,8 @@ class CartPoleEnv_LTC(gym.Env):
                 #             or self.state[ANGLE_IDX] > self.theta_threshold_stabilization_radians
                 self.done = bool(self.done)
 
-            reached_final_time = bool(self.CartPoleInstance.time >= self.CartPoleInstance.length_of_experiment)
-
-            if not self.done:
-                if reached_final_time:
-                    self.done = True
-                    self.reward = 10.0
-                else:
-                    self.reward = 1.0
-            elif self.steps_beyond_done is None:
-                # Pole just fell!
-                self.steps_beyond_done = 0
-                self.reward = 1.0
-            else:
-                if self.steps_beyond_done == 0:
-                    gym.logger.warn("""
-            You are calling 'step()' even though this environment has already returned
-            done = True. You should always call 'reset()' once you receive 'done = True'
-            Any further steps are undefined behavior.
-                            """)
-                self.steps_beyond_done += 1
-                self.reward = 0.0
+            self.reward = self.get_reward(self.state, self.action)
+            self.done = self.is_done(self.state)
 
         elif self.mode == 'follow target position':
             raise NotImplementedError  # TODO What is a suitable reward&termination condition for following target position?
@@ -153,13 +134,65 @@ class CartPoleEnv_LTC(gym.Env):
         else:
             raise ValueError('Unknown mode (definition of the task)')
 
-    def reset(self):
+    def get_reward(self, state, action):
+        reached_final_time = bool(self.CartPoleInstance.time >= self.CartPoleInstance.length_of_experiment)
+
+        if not self.is_done(state):
+            if reached_final_time:
+                reward = 10.0
+            else:
+                reward = 1.0
+        elif self.steps_beyond_done is None:
+            reward = 1.0
+        else:
+            reward = 0.0
+        
+        return reward
+    
+    def is_done(self, state):
+        reached_final_time = bool(self.CartPoleInstance.time >= self.CartPoleInstance.length_of_experiment)
+        if reached_final_time:
+            done = True
+        else:
+            done = False
+            
+        if self.steps_beyond_done is None:
+            # Pole just fell!
+            self.steps_beyond_done = 0
+        else:
+            if self.steps_beyond_done == 0:
+                gym.logger.warn("""
+        You are calling 'step()' even though this environment has already returned
+        done = True. You should always call 'reset()' once you receive 'done = True'
+        Any further steps are undefined behavior.
+                        """)
+            self.steps_beyond_done += 1
+        
+        return done
+
+    def reset(self, state, seed: Optional[int] = None, return_info: bool = False, options: Optional[dict] = None) -> Union[ObsType, Tuple[ObsType, dict]]:
         self.CartPoleInstance = self.RES.set(self.CartPoleInstance)
         self.state = self.CartPoleInstance.s
         self.target = self.CartPoleInstance.target_position
         self.done = False
 
+        self.steps_beyond_done = None
+
+        if return_info:
+            return tuple((self.state, {}))
+        return self.state
+
     def render(self, mode="human"):
+        if self.render_mode is not None:
+            return self.renderer.get_renders()
+        else:
+            return self._render(mode)
+
+    def _render(self, mode="human"):
+        assert mode in self.metadata["render_modes"]
+        import pygame
+        from pygame import gfxdraw
+        
         screen_width = 1200
         screen_height = 800
 
@@ -172,10 +205,15 @@ class CartPoleEnv_LTC(gym.Env):
 
         if self.state is None:
             return None
-
+        
         if self.screen is None:
             pygame.init()
-            self.screen = pygame.display.set_mode((screen_width, screen_height))
+            if mode == "human":
+                pygame.display.init()
+                self.screen = pygame.display.set_mode((screen_width, screen_height))
+            else:  # mode in {"rgb_array", "single_rgb_array"}
+                self.screen = pygame.Surface((screen_width, screen_height))
+
         self.surf = pygame.Surface((screen_width, screen_height))
         self.surf.fill((255, 255, 255))
 
@@ -225,7 +263,7 @@ class CartPoleEnv_LTC(gym.Env):
         if mode == "human":
             pygame.display.flip()
 
-        if mode == "rgb_array":
+        if mode in {"rgb_array", "single_rgb_array"}:
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.screen)), axes=(1, 0, 2)
             )
@@ -234,5 +272,8 @@ class CartPoleEnv_LTC(gym.Env):
 
     def close(self):
         if self.screen is not None:
+            import pygame
+
+            pygame.display.quit()
             pygame.quit()
             self.isopen = False

@@ -1,5 +1,6 @@
 from CartPole import CartPole
 from CartPole.cartpole_model import create_cartpole_state, TrackHalfLength
+from others.globals_and_utils import create_rng, load_config
 from others.p_globals import TrackHalfLength
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
@@ -7,40 +8,30 @@ import os
 import shutil
 from time import sleep
 import timeit
-from datetime import datetime
-import cProfile
-from pstats import Stats, SortKey
 
 import numpy as np
-from numpy.random import SFC64, Generator
 # Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
 # On other OS you have to chose a different interactive backend.
 # from matplotlib import use
 # # use('TkAgg')
 # use('macOSX')
 
-import yaml, os
-config_CartPole = yaml.load(open('../../config.yml'), Loader=yaml.FullLoader)
+import os
+config_CartPole = load_config("config.yml")
+
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
-
-    seed = config_CartPole["data_generator"]["SEED"]
-    if seed == "None":
-        seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0*7.0)  # Fully random
+    seed = config_CartPole["data_generator"]["seed"]
 
     reset_seed_for_each_experiment = False
 
-    rng_data_generator = Generator(SFC64(seed))
+    rng_data_generator = create_rng(__name__, seed)
 
     Expname = 'Exp-mppi-optimize-swingup-nn-A'
     #csv = './adaptive_test/Experiment.csv'
     if record_path is None:
         record_path = config_CartPole["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
         csv = record_path + '/'+Expname
-
-
-
-
 
     # User defined simulation settings
     ############ CHANGE THESE PARAMETERS AS YOU LIKE ############
@@ -69,7 +60,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     """" This is the interesting part where i set up the directory and copy all relevant information"""
     ### Setup directory with data for exp
     #get cost function
-    cost_function = config_CartPole["controller"]["general"]["cost_function"]
+    cost_function = config_CartPole["cartpole"]["cost_function"]
     cost_function_file = cost_function.replace('-', '_') + ".py"
     ctrl_file = controller_DataGen.replace('-', '_') + ".py"
     #setup experiment folder
@@ -113,7 +104,8 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
         # Take care - the seed will be the same as every experiment!
         if reset_seed_for_each_experiment:
-            rng_data_generator = Generator(SFC64(seed))
+            rng_data_generator = create_rng(__name__, seed)
+
 
         ### Where the target positions of the random experiment start and end
         end_random_target_position_at_DataGen = used_track_fraction * TrackHalfLength * rng_data_generator.uniform(-1.0,

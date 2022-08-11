@@ -1,19 +1,16 @@
 import numpy as np
-from numpy.random import SFC64, Generator
-
-from datetime import datetime
 
 from CartPole.state_utilities import STATE_VARIABLES, \
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
 from tqdm import trange
 
-MAX_LATENCY_LEN = 50  # Total size of latency buffer.
+MAX_LATENCY_LEN = 200  # Total size of latency buffer.
 
 class LatencyAdder():
     def __init__(self,
-                 latency=0.0,
-                 dt_sampling=0.002,
+                 latency: float,
+                 dt_sampling: float,
                  ):
 
         self.dt_sampling = dt_sampling

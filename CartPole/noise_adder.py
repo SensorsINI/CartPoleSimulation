@@ -1,16 +1,10 @@
 import numpy as np
-from numpy.random import SFC64, Generator
-
-from datetime import datetime
-
-from CartPole.state_utilities import STATE_VARIABLES, \
-    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
-
+from others.globals_and_utils import create_rng, load_config
 from tqdm import trange
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
-
-import yaml
+from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
+                                      ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 
 
 def _noise_iir_factor(smoothing_factor):
@@ -44,10 +38,7 @@ sigma_Q = 0.1
 # sigma_angleD = _noise_derivative(dt_derivative)*sigma_angle
 # sigma_positionD = _noise_derivative(dt_derivative)*sigma_position
 
-try:
-    config = yaml.load(open("CartPoleSimulation/config.yml", "r"), Loader=yaml.FullLoader)
-except FileNotFoundError:
-    config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = load_config("config.yml")
 
 sigma_angle = config["cartpole"]["noise"]["sigma_angle"]
 sigma_position = config["cartpole"]["noise"]["sigma_position"]
@@ -62,8 +53,7 @@ class NoiseAdder:
 
         global sigma_angle, sigma_position, sigma_angleD, sigma_positionD
 
-        SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 77.0)
-        self.rng_noise_adder = Generator(SFC64(SEED))
+        self.rng_noise_adder = create_rng(self.__class__.__name__, config["cartpole"]["seed"])
 
         self.noise_mode = NOISE_MODE
 

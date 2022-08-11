@@ -11,14 +11,14 @@ from SI_Toolkit.Predictors.predictor_autoregressive_tf import (
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 
 
-DT = 0.1 # This is DT fed into predictor at initialization - meaning may differ between predictors
+dt = 0.1 # This is dt fed into predictor at initialization - meaning may differ between predictors
 downsampling = 1
 horizon = 50 // downsampling
 start_at = 20+320
 autoregres_at_after_start = 50
 
-tested_predictor_1 = predictor_autoregressive_tf(horizon=horizon, dt=DT)
-tested_predictor_2 = predictor_ODE(horizon=horizon, dt=DT)
+tested_predictor_1 = predictor_autoregressive_tf(horizon=horizon, dt=dt)
+tested_predictor_2 = predictor_ODE(horizon=horizon, dt=dt)
 
 # datafile = glob.glob('./data/validate/' + '*.csv')[0]
 datafile = glob.glob('./Experiment_Recordings/Test/' + '*.csv')[0]
@@ -42,4 +42,4 @@ predictions_2 = get_predictions(tested_predictor_2, df, autoregres_at_after_star
 fig3 = pd_plotter_compare_2(df.iloc[autoregres_at_after_start:autoregres_at_after_start + horizon + 1],
                             dfs=[predictions_1[0], predictions_2[0]], names=['rnn', 'equations'], y_name=feature_to_plot,
                             colors=['blue', 'darkgreen'],
-                            idx_range=[0, horizon + 1], dt=DT, title= '', marker='o')
+                            idx_range=[0, horizon + 1], dt=dt, title= '', marker='o')

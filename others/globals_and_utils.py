@@ -5,24 +5,22 @@
 import logging
 import math
 import os
-import sys
 import time
-from pathlib import Path
-from subprocess import TimeoutExpired
-import os
-from typing import Optional
+from datetime import datetime
+import yaml
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0' # all TF messages
 
-import tensorflow as tf
-
-import numpy as np
 import atexit
-from engineering_notation import EngNumber  as eng  # only from pip
-from matplotlib import pyplot as plt
-import numpy as np
 # https://stackoverflow.com/questions/35851281/python-finding-the-users-downloads-folder
 import os
+
+import numpy as np
+import tensorflow as tf
+from engineering_notation import EngNumber as eng  # only from pip
+from matplotlib import pyplot as plt
+from numpy.random import SFC64, Generator
+
 if os.name == 'nt':
     import ctypes
     from ctypes import windll, wintypes
@@ -102,6 +100,8 @@ CLASS_DICT={'nonjoker':1, 'joker':2} # class1 and class2 for classifier
 JOKER_DETECT_THRESHOLD_SCORE=.95 # minimum 'probability' threshold on joker output of CNN to trigger detection
 
 import signal
+
+
 def alarm_handler(signum, frame):
     raise TimeoutError
 def input_with_timeout(prompt, timeout=30):
@@ -191,6 +191,37 @@ def my_logger(name):
 
 
 log=my_logger(__name__)
+
+
+def create_rng(id: str, seed: str, use_tf: bool=False):
+    if seed == None:
+        log.info(f"{id}: No random seed specified. Seeding with datetime.")
+        seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)  # Fully random
+    
+    if use_tf:
+        return tf.random.Generator.from_seed(seed=seed)
+    else:
+        return Generator(SFC64(seed=seed))
+
+
+def load_config(filename: str) -> dict:
+    """Try loading config from yaml if os.getcwd() is one level above CartPoleSimulation. This would be the case if CartPoleSimulation is added as Git Submodule in another repository. If not found, load from the current os path.
+
+    :param filename: e.g. 'config.yml'
+    :type filename: str
+    """
+    try:
+        config = yaml.load(open(os.path.join("CartPoleSimulation", filename), "r"), Loader=yaml.FullLoader)
+    except FileNotFoundError:
+        config = yaml.load(open(filename), Loader=yaml.FullLoader)
+    return config
+
+
+class MockSpace:
+    def __init__(self, low, high, shape=None, dtype=np.float32) -> None:
+        self.low, self.high, self.shape = low, high, shape
+        self.dtype = dtype
+
 
 timers = {}
 times = {}

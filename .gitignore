@@ -1,3 +1,4 @@
+*env
 .DS_Store
 *__pycache__
 *.pyc
@@ -8,6 +9,11 @@
 *.pt
 *.env
 *.vscode
+build/
+dist/
+eggs/
+*.egg-info/
+*.egg
 /Modeling/SI_Toolkit/TF/NNI/NNI_Results
 
 /SI_Toolkit_ASF/Experiments/*

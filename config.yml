@@ -1,45 +1,78 @@
 controller:
-  general:
-    cost_function: 'quadratic-boundary-grad' # from 'quadratic-boundary', 'quadratic-boundary-grad', 'quadratic-boundary-nonconvex', 'default'
-  cem:
-    SEED: "None"
+  cem-tf:
+    seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
-    mpc_horizon: 1.0                      # sec
+    mpc_horizon: 0.7                      # sec
     cem_outer_it: 5                    #how many outer iterations to use
-    cem_rollouts: 80          #how many rollouts per outer cem iteration
-    cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
-    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
+    num_rollouts: 80          #how many rollouts per outer cem iteration
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    predictor_intermediate_steps: 10
+    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
     cem_stdev_min: 0.1
     cem_R: 1
     cem_ccrc_weight: 1
     cem_best_k: 4
     cem_LR: 0.1
-  cem-naive-grad:
-    SEED: "None"
+  cem-naive-grad-tf:
+    seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     cem_outer_it: 5                    #how many outer iterations to use
-    cem_rollouts: 80          #how many rollouts per outer cem iteration
-    cem_predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
-    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor_type is NeuralNet
+    num_rollouts: 80          #how many rollouts per outer cem iteration
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    predictor_intermediate_steps: 10
+    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
     cem_stdev_min: 0.05
+    cem_initial_action_stdev: 0.5
     cem_R: 1
     cem_ccrc_weight: 1
     cem_best_k: 4
     cem_LR: 0.001
     gradmax_clip: 10
-  mppi-optimize:
-    SEED: "None"
-    LR: 0.02
-    adam_beta_1: 0.4    #default: 0.9
-    adam_beta_2: 0.8  #default: 0.999
-    adam_epsilon: 1e-07 #default: 1e-07
+  cem-grad-bharadhwaj-tf:
+    seed: null                          # If null, random seed based on datetime is used
+    dt: 0.02                              # sec
+    mpc_horizon: 1.0                      # sec
+    CEM_NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
+    cem_LR: 0.05
+    cem_R: 1
+    cem_best_k: 4
+    cem_outer_it: 5
+    num_rollouts: 40
+    cem_initial_action_stdev: 0.5
+    cem_stdev_min: 0.2
+    gradmax_clip: 5
+    predictor_intermediate_steps: 10
+    predictor_name: predictor_ODE_tf
+  gradient-tf:
+    seed: null                          # If null, random seed based on datetime is used
+    dt: 0.02                              # sec
+    mpc_horizon: 1.0                      # sec
+    CEM_NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
+    learning_rate: 0.05
+    adam_beta_1: 0.9
+    adam_beta_2: 0.999
+    adam_epsilon: 1.0e-07
+    rtol: 1.0e-3
+    gradient_steps: 5
+    mpc_rollouts: 40
+    initial_action_stdev: 0.5
+    gradmax_clip: 5
+    predictor_intermediate_steps: 10
+    predictor_name: predictor_ODE_tf
+  mppi-optimize-tf:
+    seed: null                          # If null, random seed based on datetime is used
+    mppi_LR: 0.02
+    adam_beta_1: 0.4                      #default: 0.9
+    adam_beta_2: 0.8                      #default: 0.999
+    adam_epsilon: 1.0e-7                  #default: 1.0e-7
     gradmax_clip: 1000
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 400                     # Number of Monte Carlo samples
-    predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet"]
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor_type is NeuralNet
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    predictor_intermediate_steps: 10
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor name is predictor_autoregressive_tf
     cc_weight: 1.0
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
@@ -48,18 +81,20 @@ controller:
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     optim_steps: 10
-  dist-adam-resamp2:
-    SEED: "None"
+  dist-adam-resamp2-tf:
+    seed: null                          # If null, random seed based on datetime is used
     dt: 0.02
     mpc_horizon: 1.0
-    predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet", "EulerTF"]
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  #DOES NOT WORK YET!!! Applies only if predictor_type is NeuralNet
-    resamp_per: 1                         # determines after how many steps the control plans are resamples
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    predictor_intermediate_steps: 10
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor name is predictor_autoregressive_tf
+    resamp_per: 1                         #determines after how many steps the control plans are resamples
     sample_stdev: 0.5                     #sampling variance of control action
-    LR: 0.002                             #learning rate parameter fro adam
+    cem_LR: 0.002                         #learning rate parameter for adam
     adam_beta_1: 0.4    #default: 0.9      adam hyperparameter
     adam_beta_2: 0.8 #default: 0.999       adam hyperparameter
-    adam_epsilon: 1e-07 #default: 1e-07    adam hyperparameter. consult https://ruder.io/optimizing-gradient-descent/ for information
+    adam_epsilon: 1.0e-7 #default: 1.0e-7    adam hyperparameter. consult https://ruder.io/optimizing-gradient-descent/ for information
+    rtol: 1.0e-3
     opt_keep_k: 5                          #how many plans should be kept for warmstarting when resampling, has to be smaller or equal num_rollouts, set equal num_rollouts for degenerate case without any resampling
     num_rollouts: 20                      # number of parallel optimizations
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
@@ -67,41 +102,64 @@ controller:
     interpolation_step: 10                #interpolation stepsize when sampling
     outer_its: 20                         #number of optimization iterations
     gradmax_clip: 250                     #maximal gradient entry to be kept, is ||gradient||_inf <= gradmax_clip
-  mppi-var:
-    SEED: "None"
+  mppi-var-tf:
+    seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
     num_rollouts: 400                     # Number of Monte Carlo samples
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
     interpolation_step: 10                #interpolation stepsize when sampling
     cc_weight: 1.0
-    predictor_type: "EulerTF"               # One of ["Euler", "NeuralNet", "EulerTF"]  # EulerTF needs SQRTRHOINV=0.03
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  #DOES NOT WORK YET!!! Applies only if predictor_type is NeuralNet
+    predictor_name: "predictor_ODE_tf"             # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    predictor_intermediate_steps: 10
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor name is predictor_autoregressive_tf
     R: 1.0                                # How much to punish Q
     # mc stands for mathematical correct, as this controller uses the formula from the paper
     LBD_mc: 10.0                          # Cost parameter lambda
     SQRTRHOINV_mc: 0.002                  # Sampling variance
     NU_mc: 20.0                           # Exploration variance
     GAMMA: 1.00                           # Future cost discount
-    LR: 1000                             # Learning rate for adaption of variance, !!! Set to 0 to retrieve a mppi version in accordance with mppi paper
-    STDEV_min: 0.01                        # Maximal variance for sampling
-    STDEV_max: 10                       # Minimal sampling variance for sampling
-    max_grad_norm: 100000                    # max norm of gradient such that ||gradient||_2
+    LR: 1000                              # Learning rate for adaption of variance, !!! Set to 0 to retrieve a mppi version in accordance with mppi paper
+    STDEV_min: 0.01                       # Maximal variance for sampling
+    STDEV_max: 10                         # Minimal sampling variance for sampling
+    max_grad_norm: 100000                 # max norm of gradient such that ||gradient||_2
   mppi:
-    SEED: "None"                            # Seed for rng, for MPPI only, put "None" to set random seed (do it when you generate data for training!)
+    seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
+    dt: 0.02                              # sec
+    mpc_horizon: 1.0                      # sec
+    num_rollouts: 3500                    # Number of Monte Carlo samples
+    update_every: 1                       # Cost weighted update of inputs every ... steps
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf", "predictor_autoregressive_GP"]
+    predictor_intermediate_steps: 10
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor name is predictor_autoregressive_tf
+    GP_NAME: 'SGP_30'                     # Applies only if predictor name is GP
+    dd_weight: 120.0
+    ep_weight: 50000.0
+    ekp_weight: 0.01
+    ekc_weight: 5.0
+    cc_weight: 1.0
+    ccrc_weight: 1.0
+    cost_noise: 0.0                       # Noise on stage cost weights by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0 othewise
+    control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
+    R: 1.0                                # How much to punish Q
+    LBD: 100.0                            # Cost parameter lambda
+    NU: 1000.0                            # Exploration variance
+    SQRTRHOINV: 0.02                      # Sampling variance
+    GAMMA: 1.00                           # Future cost discount
+    SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
+    LOGGING: False                        # Collect and show detailed insights into the controller's behavior
+    WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
+  mppi-tf:
+    seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 0.7                      # sec
-    num_rollouts: 10000                      # Number of Monte Carlo samples
+    num_rollouts: 3500                    # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_type: "EulerTF"               # One of ["EulerTF", "NeuralNet", "GP"]
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-1'  # Applies only if predictor_type is NeuralNet
-    GP_NAME: 'SGP_10'  # Applies only if predictor_type is GP
-    dd_weight: 2000.0
-    ep_weight: 3000.0
-    ekp_weight: 15.0
-    ekc_weight: 0.0
-    cc_weight: 0.0
-    ccrc_weight: 0.0
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf", "predictor_autoregressive_GP"]
+    predictor_intermediate_steps: 10
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor name is predictor_autoregressive_tf
+    GP_NAME: 'SGP_30'                     # Applies only if predictor name is GP
+    cc_weight: 1.0
     cost_noise: 0.0                       # Noise on stage cost weights by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0 othewise
     control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
     R: 1.0                                # How much to punish Q
@@ -112,9 +170,10 @@ controller:
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     LOGGING: False                        # Collect and show detailed insights into the controller's behavior
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
-    CLIP_CONTROL_INPUT: [0.8]            # How to clip control input, symmetric
-  custom_mpc_scipy:
-    DT: 0.1
+    CLIP_CONTROL_INPUT: [1.0]             # How to clip control input, symmetric
+  custom-mpc-scipy:
+    seed: null                          # If null, random seed based on datetime is used
+    dt: 0.1
     # method: 'L-BFGS-B'
     method: 'SLSQP'
     ftol: 1.0e-8
@@ -130,11 +189,12 @@ controller:
     m2: 0.0  # angleD_cost
     m3: 0.0  # position_cost
     m4: 0.0  # positionD_cost
-  do_mpc_discrete:
-    dt_mpc_simulation: 0.02  # s
+  do-mpc-discrete:
+    dt: 0.02  # s
     mpc_horizon: 50
-  do_mpc:
-    dt_mpc_simulation: 0.02  # s
+  do-mpc:
+    seed: null                          # If null, random seed based on datetime is used
+    dt: 0.02  # s
     mpc_horizon: 50
     # Perturbation factors:
     # Change of output from optimal
@@ -148,9 +208,9 @@ controller:
     l_position: 1.0
     l_positionD: 0.1
   lqr:
+    seed: null  # Seed for rng, for lqr only, put null to set random seed (do it when you generate data for training!)
     Q: [10.0, 1.0, 1.0, 1.0]
     R: 10.0
-    SEED: 'None'                            # Seed for rng, for lqr only, put "None" to set random seed (do it when you generate data for training!)
     control_noise: 1.0
   pid:
     P_angle: 9.0
@@ -159,15 +219,20 @@ controller:
     P_position: 0.1
     I_position: 0.0
     D_position: 0.1
-  mpc_opti:
-    dt_mpc_simulation: 0.2  # s
+  mpc-opti:
+    dt: 0.2  # s
     mpc_horizon: 10
-  neural_imitator_tf:
+  neural-imitator-tf:
+    net_name: 'GRU-6IN-32H1-32H2-1OUT-0'
+    PATH_TO_MODELS: './Controllers/models_for_neural_imitator_tf/'
+  nn-as-mpc-tf:
     net_name: 'GRU-6IN-32H1-32H2-1OUT-0'
     PATH_TO_MODELS: './Controllers/models_for_neural_imitator_tf/'
 cartpole:
-  SEED: None  # This is a seed for rng for CartPole instance class only. If "None" random seed based on datetime is used
-  PATH_TO_CONTROLLERS: './Controllers/'  # Path where controllers are stored
+  cost_function: 'quadratic-boundary-grad' # from 'quadratic-boundary', 'quadratic-boundary-grad', 'quadratic-boundary-nonconvex', 'default'
+  actuator_noise: 0.0  # TODO: There already exists a noise entry
+  mode: stabilization
+  seed: 1873  # This is a seed for rng for CartPole instance class only. If null random seed based on datetime is used
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   M: 0.230  # mass of cart, kg # Checked by Antonio
@@ -193,4 +258,4 @@ cartpole:
 
 
 data_generator:
-  SEED: 1  # If "None" random seed based on datetime is used
+  seed: 1  # If null random seed based on datetime is used
