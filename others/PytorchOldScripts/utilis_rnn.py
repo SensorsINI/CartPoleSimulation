@@ -11,7 +11,7 @@ import random as rnd
 
 import copy
 
-from Modeling.Pytorch.utilis_rnn_specific import *
+from others.PytorchOldScripts.utilis_rnn_specific import *
 from SI_Toolkit.load_and_normalize import load_normalization_info, load_data, normalize_df, denormalize_df
 
 

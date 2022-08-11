@@ -12,9 +12,9 @@ import torch.utils.data.dataloader
 
 import collections
 
-from Modeling.Pytorch.utilis_rnn import *
+from others.PytorchOldScripts.utilis_rnn import *
 # Parameters of RNN
-from Modeling.Pytorch.ParseArgs import args as my_args
+from others.PytorchOldScripts.ParseArgs import args as my_args
 
 # Check if GPU is available. If yes device='cuda:0' if not device='cpu'
 device = get_device()

@@ -25,9 +25,9 @@ import torch.nn as nn
 import time
 
 # Custom functions
-from Modeling.Pytorch.utilis_rnn import *
+from others.PytorchOldScripts.utilis_rnn import *
 # Parameters of RNN
-from Modeling.Pytorch.ParseArgs import args
+from others.PytorchOldScripts.ParseArgs import args
 
 print('')
 

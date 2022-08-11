@@ -1,6 +1,6 @@
 
 import pandas as pd
-from Modeling.Pytorch.utilis_rnn import *
+from others.PytorchOldScripts.utilis_rnn import *
 
 from Control_Toolkit.Controllers import template_controller
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
