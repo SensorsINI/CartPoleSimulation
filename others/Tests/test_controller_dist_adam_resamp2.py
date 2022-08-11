@@ -1,5 +1,5 @@
 import numpy as np
-from Control_Toolkit.Controllers.controller_dist_adam_resamp2 import controller_dist_adam_resamp2
+from Control_Toolkit.Controllers.controller_dist_adam_resamp2_tf import controller_dist_adam_resamp2
 
 # speed test which is activated if script is run directly and not as module
 if __name__ == '__main__':

@@ -18,7 +18,9 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 import yaml
+from Control_Toolkit.others.environment import EnvironmentBatched, NumpyLibrary, TensorFlowLibrary
 from Control_Toolkit.others.globals_and_utils import get_available_controller_names, get_controller
 from others.globals_and_utils import MockSpace, create_rng
 from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
@@ -78,10 +80,13 @@ except FileNotFoundError:
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
 
-class CartPole:
+class CartPole(EnvironmentBatched):
+    num_states = 6
+    num_acions = 1
 
     def __init__(self, initial_state=s0, path_to_experiment_recordings=None):
-        self.rng_CartPole = create_rng(self.__class__.__name__, config["cartpole"]["seed"])
+        self.config = config["cartpole"]
+        self.rng_CartPole = create_rng(self.__class__.__name__, self.config["seed"])
 
         if path_to_experiment_recordings is None:
             self.path_to_experiment_recordings = PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT
@@ -100,12 +105,12 @@ class CartPole:
         # Variables for control input and target position.
         self.u = 0.0  # Physical force acting on the cart
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
-        self.target_position = 0.0
+        self._target_position = 0.0
         self.target_equilibrium = 1.0  # Up is 1.0, Down is -1.0
 
         self.action_space = MockSpace(-1.0, 1.0)
 
-        self.latency = config["cartpole"]["latency"]
+        self.latency = self.config["latency"]
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
         self.NoiseAdderInstance = NoiseAdder()
         self.s_with_noise_and_latency = np.copy(self.s)
@@ -238,7 +243,7 @@ class CartPole:
         # region Set cost function module
         self.set_cost_functions()
         # endregion
-
+        
     # region 1. Methods related to dynamic evolution of CartPole system
 
     # This method changes the internal state of the CartPole
@@ -322,6 +327,22 @@ class CartPole:
                 # This just fill the corresponding column in history with zeros
             else:
                 self.target_position = self.slider_value * TrackHalfLength  # Get target position from slider
+    
+    @property
+    def target_position(self):
+        return self._target_position
+
+    @property
+    def target_position_tf(self):
+        return self._target_position_tf
+    
+    @target_position.setter
+    def target_position(self, target_position):
+        self._target_position = target_position
+        if not hasattr(self, "_target_position_tf"):
+            self._target_position_tf = tf.Variable(target_position, dtype=tf.float32)
+        else:
+            self._target_position_tf.assign(target_position)
 
     def block_pole_at_90_deg(self):
         if self.stop_at_90:
@@ -841,13 +862,20 @@ class CartPole:
 
     # Set the controller of CartPole
     def set_controller(self, controller_name=None, controller_idx=None):
-        Controller = get_controller(controller_name=controller_name, controller_idx=controller_idx)
-        self.controller_name, self.controller_idx = controller_name, controller_idx
+        Controller, self.controller_name, self.controller_idx = get_controller(
+            controller_name=controller_name, controller_idx=controller_idx
+        )
         if Controller is None:
             self.controller = None
         else:
-            self.controller = Controller(self, **{**config["controller"][self.controller_name], **{"num_control_inputs": config["cartpole"]["num_control_inputs"]}})
+            self.controller = Controller(self, **{**config["controller"][self.controller_name], **{"num_control_inputs": self.config["num_control_inputs"]}})
 
+        if self.controller_name[-2:] == "tf":
+            self.set_computation_library(TensorFlowLibrary)
+        else:
+            self.set_computation_library(NumpyLibrary)
+        self.set_cost_functions()
+            
         # Set the maximal allowed value of the slider - relevant only for GUI
         if self.controller_name == 'manual-stabilization':
             self.Slider_Arrow.set_positions((0, 0), (0, 0))
@@ -862,8 +890,8 @@ class CartPole:
         return True
 
     def set_cost_functions(self):
-        cost_function_name = config['cartpole']['cost_function'].replace('-', '_')
-        cost_function_module = import_module(f"others.cost_functions.{cost_function_name}")
+        cost_function_name = self.config["cost_function"].replace("-", "_")
+        cost_function_module = import_module(f"others.cost_functions.CartPole.{cost_function_name}")
         self.cost_functions = getattr(cost_function_module, cost_function_name)(self)
 
     # This method resets the internal state of the CartPole instance

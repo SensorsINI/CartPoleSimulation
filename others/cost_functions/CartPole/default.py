@@ -14,6 +14,10 @@ from CartPole.state_utilities import (
 )
 import yaml
 
+from others.cost_functions.CartPole.cost_function import cartpole_cost_function
+
+
+
 
 # load constants from config file
 config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
@@ -21,25 +25,18 @@ config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "con
 dd_weight = config["controller"]["mppi"]["dd_weight"]
 cc_weight = tf.convert_to_tensor(config["controller"]["mppi"]["cc_weight"])
 ep_weight = config["controller"]["mppi"]["ep_weight"]
+ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
 R = config["controller"]["mppi"]["R"]
 
-ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
-
-
-class quadratic_boundary:
-    def __init__(self, environment) -> None:
-        self.env_mock = environment
-
+class default(cartpole_cost_function):
     # cost for distance from track edge
     def distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
         return (
-            (position - self.env_mock.target_position) / (2.0 * TrackHalfLength)
+            (position - self.target_position) / (2.0 * TrackHalfLength)
         ) ** 2 + tf.cast(
-            tf.abs(position) > 0.95 * TrackHalfLength, tf.float32
-        ) * 1e9 * (
-            (tf.abs(position) - 0.95 * TrackHalfLength) / (0.05 * TrackHalfLength)
-        ) ** 2  # Soft constraint: Do not crash into border
+            tf.abs(position) > 0.90 * TrackHalfLength, tf.float32
+        ) * 1.0e7  # Soft constraint: Do not crash into border
 
     # cost for difference from upright position
     def E_pot_cost(self, angle):
@@ -69,7 +66,7 @@ class quadratic_boundary:
         terminal_cost = 10000 * tf.cast(
             (tf.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
             | (
-                tf.abs(terminal_states[:, POSITION_IDX] - self.env_mock.target_position)
+                tf.abs(terminal_states[:, POSITION_IDX] - self.target_position)
                 > 0.1 * TrackHalfLength
             ),
             tf.float32,
@@ -94,7 +91,7 @@ class quadratic_boundary:
             ccrc = ccrc_weight * self.control_change_rate_cost(u, u_prev)
         stage_cost = dd + ep + cc + ccrc
         return stage_cost
-    
+
     # total cost of the trajectory
     def get_trajectory_cost(self, s_hor, u, u_prev=None):
         stage_cost = self.get_stage_cost(s_hor[:, 1:, :], u, u_prev)

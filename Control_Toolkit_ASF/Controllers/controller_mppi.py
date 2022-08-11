@@ -361,15 +361,15 @@ class controller_mppi(template_controller):
     :type template_controller: abc.ABC
     """
 
-    def __init__(self):
+    def __init__(self, environment, **kwargs):
+        super().__init__(environment)
 
         """Random number generator"""
         seed = config["controller"]["mppi"]["seed"]
-        if seed == "None":
+        if seed == None:
             seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
         self.rng_mppi = Generator(SFC64(seed))
         self.rng_mppi_rnn = Generator(SFC64(seed*2)) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
-
 
         global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
         dd_weight = dd_weight * (1 + dd_noise * self.rng_mppi.uniform(-1.0, 1.0))
@@ -469,13 +469,11 @@ class controller_mppi(template_controller):
 
         return delta_u
 
-    def step(self, s: np.ndarray, target_position: np.float64, time=None):
+    def step(self, s: np.ndarray, time=None):
         """Perform controller step
 
         :param s: State passed to controller after system has evolved for one step
         :type s: np.ndarray
-        :param target_position: Target position where the cart should move to
-        :type target_position: np.float64
         :param time: Time in seconds that has passed in the current experiment, defaults to None
         :type time: float, optional
         :return: A normed control value in the range [-1.0, 1.0]
@@ -483,7 +481,7 @@ class controller_mppi(template_controller):
         """
 
         self.s = s
-        self.target_position = np.float32(target_position)
+        self.target_position = np.float32(self.env_mock.target_position)
 
         self.iteration += 1
 
@@ -536,7 +534,7 @@ class controller_mppi(template_controller):
 
         if LOGGING:
             LOGS.get("trajectory").append(np.copy(self.s))
-            LOGS.get("target_trajectory").append(np.copy(target_position))
+            LOGS.get("target_trajectory").append(np.copy(self.target_position))
 
         if (
             self.warm_up_countdown > 0
@@ -546,7 +544,7 @@ class controller_mppi(template_controller):
         ):
             self.warm_up_countdown -= 1
             if abs(s[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small
-                Q = self.auxiliary_controller.step(s, target_position)
+                Q = self.auxiliary_controller.step(s, self.target_position)
             else:
                 Q = self.rng_mppi_rnn.uniform(-1, 1)  # Apply random input to let RNN "feel" the system behaviour
         else:

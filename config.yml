@@ -29,7 +29,7 @@ controller:
     cem_best_k: 4
     cem_LR: 0.001
     gradmax_clip: 10
-  cem-grad-bharadhwaj:
+  cem-grad-bharadhwaj-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
@@ -53,13 +53,14 @@ controller:
     adam_beta_1: 0.9
     adam_beta_2: 0.999
     adam_epsilon: 1.0e-07
+    rtol: 1.0e-3
     gradient_steps: 5
     mpc_rollouts: 40
     initial_action_stdev: 0.5
     gradmax_clip: 5
     predictor_intermediate_steps: 10
     predictor_name: predictor_ODE_tf
-  mppi-optimize:
+  mppi-optimize-tf:
     seed: null                          # If null, random seed based on datetime is used
     mppi_LR: 0.02
     adam_beta_1: 0.4                      #default: 0.9
@@ -80,7 +81,7 @@ controller:
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     optim_steps: 10
-  dist-adam-resamp2:
+  dist-adam-resamp2-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02
     mpc_horizon: 1.0
@@ -101,7 +102,7 @@ controller:
     interpolation_step: 10                #interpolation stepsize when sampling
     outer_its: 20                         #number of optimization iterations
     gradmax_clip: 250                     #maximal gradient entry to be kept, is ||gradient||_inf <= gradmax_clip
-  mppi-var:
+  mppi-var-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 1.0                      # sec
@@ -221,7 +222,10 @@ controller:
   mpc-opti:
     dt: 0.2  # s
     mpc_horizon: 10
-  neural_imitator_tf:
+  neural-imitator-tf:
+    net_name: 'GRU-6IN-32H1-32H2-1OUT-0'
+    PATH_TO_MODELS: './Controllers/models_for_neural_imitator_tf/'
+  nn-as-mpc-tf:
     net_name: 'GRU-6IN-32H1-32H2-1OUT-0'
     PATH_TO_MODELS: './Controllers/models_for_neural_imitator_tf/'
 cartpole:

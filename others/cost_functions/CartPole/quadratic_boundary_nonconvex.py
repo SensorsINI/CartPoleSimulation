@@ -1,5 +1,6 @@
 import os
 import tensorflow as tf
+import math
 
 from CartPole.cartpole_model import TrackHalfLength
 
@@ -14,28 +15,43 @@ from CartPole.state_utilities import (
 )
 import yaml
 
+from others.cost_functions.CartPole.cost_function import cartpole_cost_function
+
 
 # load constants from config file
 config = yaml.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "config.yml"), "r"), Loader=yaml.FullLoader)
 
 dd_weight = config["controller"]["mppi"]["dd_weight"]
-cc_weight = tf.convert_to_tensor(config["controller"]["mppi"]["cc_weight"])
+cc_weight = config["controller"]["mppi"]["cc_weight"]
 ep_weight = config["controller"]["mppi"]["ep_weight"]
-ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
-R = config["controller"]["mppi"]["R"]
+R = config["controller"]["cem"]["cem_R"]
 
-class default:
-    def __init__(self, environment) -> None:
-        self.env_mock = environment
+cem_outer_it = config["controller"]["cem"]["cem_outer_it"]
+ccrc_weight = config["controller"]["cem"]["cem_ccrc_weight"]
 
+
+class quadratic_boundary_nonconvex(cartpole_cost_function):
     # cost for distance from track edge
     def distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
         return (
-            (position - self.env_mock.target_position) / (2.0 * TrackHalfLength)
-        ) ** 2 + tf.cast(
-            tf.abs(position) > 0.90 * TrackHalfLength, tf.float32
-        ) * 1.0e7  # Soft constraint: Do not crash into border
+            ((position - self.target_position) / (2.0 * TrackHalfLength)) ** 2
+            - 0.15
+            * (
+                tf.cos(
+                    4
+                    * 2
+                    * math.pi
+                    * (position - self.target_position)
+                    / (2.0 * TrackHalfLength)
+                )
+                - 1.0
+            )
+            + tf.cast(tf.abs(position) > 0.95 * TrackHalfLength, tf.float32)
+            * 1e9
+            * ((tf.abs(position) - 0.95 * TrackHalfLength) / (0.05 * TrackHalfLength))
+            ** 2
+        )  # Soft constraint: Do not crash into border
 
     # cost for difference from upright position
     def E_pot_cost(self, angle):
@@ -65,7 +81,7 @@ class default:
         terminal_cost = 10000 * tf.cast(
             (tf.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
             | (
-                tf.abs(terminal_states[:, POSITION_IDX] - self.env_mock.target_position)
+                tf.abs(terminal_states[:, POSITION_IDX] - self.target_position)
                 > 0.1 * TrackHalfLength
             ),
             tf.float32,

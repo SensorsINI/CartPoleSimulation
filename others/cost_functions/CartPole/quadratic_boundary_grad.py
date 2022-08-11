@@ -1,4 +1,5 @@
 import os
+import sys
 import tensorflow as tf
 
 from CartPole.cartpole_model import TrackHalfLength
@@ -13,6 +14,8 @@ from CartPole.state_utilities import (
     create_cartpole_state,
 )
 import yaml
+
+from others.cost_functions.CartPole.cost_function import cartpole_cost_function
 
 
 #load constants from config file\
@@ -30,15 +33,12 @@ R = config["controller"]["mppi"]["R"]
 ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
 
 
-class quadratic_boundary_grad:
-    def __init__(self, environment) -> None:
-        self.env_mock = environment
-
+class quadratic_boundary_grad(cartpole_cost_function):
     # cost for distance from track edge
     def distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
         return (
-            (position - self.env_mock.target_position) / (2.0 * TrackHalfLength)
+            (position - self.target_position) / (2.0 * TrackHalfLength)
         ) ** 2 + tf.cast(
             tf.abs(position) > 0.95 * TrackHalfLength, tf.float32
         ) * 1e9 * (
@@ -77,7 +77,7 @@ class quadratic_boundary_grad:
         terminal_cost = 10000 * tf.cast(
             (tf.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
             | (
-                tf.abs(terminal_states[:, POSITION_IDX] - self.env_mock.target_position)
+                tf.abs(terminal_states[:, POSITION_IDX] - self.target_position)
                 > 0.1 * TrackHalfLength
             ),
             tf.float32,

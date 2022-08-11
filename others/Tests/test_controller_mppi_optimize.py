@@ -1,5 +1,5 @@
 import numpy as np
-from Control_Toolkit.Controllers.controller_mppi_optimize import controller_mppi_optimize
+from Control_Toolkit.Controllers.controller_mppi_optimize_tf import controller_mppi_optimize
 
 # speed test, which is activated if script is run directly and not as module
 if __name__ == '__main__':

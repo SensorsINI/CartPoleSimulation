@@ -22,12 +22,12 @@ try:
 except FileNotFoundError:
     config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-NET_NAME = config['controller']['neural_imitator_tf']['net_name']
-PATH_TO_MODELS = config['controller']['neural_imitator_tf']['PATH_TO_MODELS']
+NET_NAME = config['controller']['neural-imitator-tf']['net_name']
+PATH_TO_MODELS = config['controller']['neural-imitator-tf']['PATH_TO_MODELS']
 
 
 class controller_neural_imitator_tf(template_controller):
-    def __init__(self, batch_size=1):
+    def __init__(self, batch_size=1, **kwargs):
 
         a = SimpleNamespace()
         self.batch_size = batch_size  # It makes sense only for testing (Brunton plot for Q) of not rnn networks to make bigger batch, this is not implemented
