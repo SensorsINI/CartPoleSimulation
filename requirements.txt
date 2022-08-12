@@ -1,6 +1,3 @@
-tensorflow
-torch
-
 GitPython
 gym
 imageio
@@ -25,6 +22,9 @@ tqdm
 typing-extensions
 PyQt6
 tensorflow-probability
+
+torch
+tensorflow
 
 do-mpc==4.1.1
 casadi
