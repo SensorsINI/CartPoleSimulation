@@ -54,7 +54,7 @@ class controller_do_mpc_discrete(template_controller):
         self,
         environment,
         dt: float,
-        mpc_horizon: float,
+        mpc_horizon: int,
         position_init=0.0,
         positionD_init=0.0,
         angle_init=0.0,
@@ -108,7 +108,7 @@ class controller_do_mpc_discrete(template_controller):
         self.mpc = do_mpc.controller.MPC(self.model)
 
         setup_mpc = {
-            'n_horizon': int(mpc_horizon / dt),
+            'n_horizon': mpc_horizon,
             't_step': dt,
             'n_robust': 0,
             'store_full_solution': False,
