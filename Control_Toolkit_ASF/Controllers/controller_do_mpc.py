@@ -17,7 +17,7 @@ class controller_do_mpc(template_controller):
         environment,
         seed: int,
         dt: float,
-        mpc_horizon: float,
+        mpc_horizon: int,
         p_Q: float,
         p_position: float,
         p_positionD: float,

@@ -63,7 +63,7 @@ except AttributeError:  # Should get Attribute Error if NET_NAME is None
 """Timestep and sampling settings"""
 dt = config["controller"]["mppi"]["dt"]
 mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
-mpc_samples = int(mpc_horizon / dt)  # Number of steps in MPC horizon
+mpc_samples = mpc_horizon  # Number of steps in MPC horizon
 num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 update_every = config["controller"]["mppi"]["update_every"]
 predictor_name = config["controller"]["mppi"]["predictor_name"]

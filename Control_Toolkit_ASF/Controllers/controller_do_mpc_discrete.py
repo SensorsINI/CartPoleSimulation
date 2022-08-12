@@ -54,7 +54,7 @@ class controller_do_mpc_discrete(template_controller):
         self,
         environment,
         dt: float,
-        mpc_horizon: float,
+        mpc_horizon: int,
         position_init=0.0,
         positionD_init=0.0,
         angle_init=0.0,

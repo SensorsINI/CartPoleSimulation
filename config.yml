@@ -2,52 +2,52 @@ controller:
   cem-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
-    mpc_horizon: 0.7                      # sec
-    cem_outer_it: 5                    #how many outer iterations to use
-    num_rollouts: 80          #how many rollouts per outer cem iteration
+    mpc_horizon: 35                       # steps
+    cem_outer_it: 3                    #how many outer iterations to use
+    num_rollouts: 200          #how many rollouts per outer cem iteration
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 10
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
     cem_stdev_min: 0.1
     cem_R: 1
     cem_ccrc_weight: 1
-    cem_best_k: 4
+    cem_best_k: 40
     cem_LR: 0.1
   cem-naive-grad-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
-    mpc_horizon: 1.0                      # sec
-    cem_outer_it: 5                    #how many outer iterations to use
-    num_rollouts: 80          #how many rollouts per outer cem iteration
+    mpc_horizon: 35                       # steps
+    cem_outer_it: 1                       # how many outer iterations to use
+    num_rollouts: 200                     # how many rollouts per outer cem iteration
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 10
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
-    cem_stdev_min: 0.05
+    cem_stdev_min: 0.1
     cem_initial_action_stdev: 0.5
     cem_R: 1
     cem_ccrc_weight: 1
-    cem_best_k: 4
-    cem_LR: 0.001
+    cem_best_k: 40
+    cem_LR: 0.1
     gradmax_clip: 10
   cem-grad-bharadhwaj-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
-    mpc_horizon: 1.0                      # sec
+    mpc_horizon: 35                       # steps
     CEM_NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
     cem_LR: 0.05
     cem_R: 1
-    cem_best_k: 4
-    cem_outer_it: 5
-    num_rollouts: 40
+    cem_best_k: 40
+    cem_outer_it: 1
+    num_rollouts: 200
     cem_initial_action_stdev: 0.5
     cem_stdev_min: 0.2
     gradmax_clip: 5
-    predictor_intermediate_steps: 10
+    predictor_intermediate_steps: 1
     predictor_name: predictor_ODE_tf
   gradient-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
-    mpc_horizon: 1.0                      # sec
+    mpc_horizon: 35                       # steps
     CEM_NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
     learning_rate: 0.05
     adam_beta_1: 0.9
@@ -68,7 +68,7 @@ controller:
     adam_epsilon: 1.0e-7                  #default: 1.0e-7
     gradmax_clip: 1000
     dt: 0.02                              # sec
-    mpc_horizon: 1.0                      # sec
+    mpc_horizon: 35                       # steps
     num_rollouts: 400                     # Number of Monte Carlo samples
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 10
@@ -82,30 +82,30 @@ controller:
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     optim_steps: 10
   dist-adam-resamp2-tf:
-    seed: null                          # If null, random seed based on datetime is used
+    seed: null                            # If null, random seed based on datetime is used
     dt: 0.02
-    mpc_horizon: 1.0
+    mpc_horizon: 25                       # steps
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 10
+    predictor_intermediate_steps: 1
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor name is predictor_autoregressive_tf
     resamp_per: 1                         #determines after how many steps the control plans are resamples
     sample_stdev: 0.5                     #sampling variance of control action
-    cem_LR: 0.002                         #learning rate parameter for adam
-    adam_beta_1: 0.4    #default: 0.9      adam hyperparameter
-    adam_beta_2: 0.8 #default: 0.999       adam hyperparameter
-    adam_epsilon: 1.0e-7 #default: 1.0e-7    adam hyperparameter. consult https://ruder.io/optimizing-gradient-descent/ for information
+    cem_LR: 0.05                         #learning rate parameter for adam
+    adam_beta_1: 0.9    #default: 0.9      adam hyperparameter
+    adam_beta_2: 0.999  #default: 0.999       adam hyperparameter
+    adam_epsilon: 1.0e-8 #default: 1.0e-7    adam hyperparameter. consult https://ruder.io/optimizing-gradient-descent/ for information
     rtol: 1.0e-3
     opt_keep_k: 5                          #how many plans should be kept for warmstarting when resampling, has to be smaller or equal num_rollouts, set equal num_rollouts for degenerate case without any resampling
     num_rollouts: 20                      # number of parallel optimizations
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
-    warmup: True                          #whether or not we warmstart the controller. If true, first iteration will do mpc_horizon/dt*outer_its optimizations
-    interpolation_step: 10                #interpolation stepsize when sampling
-    outer_its: 20                         #number of optimization iterations
-    gradmax_clip: 250                     #maximal gradient entry to be kept, is ||gradient||_inf <= gradmax_clip
+    warmup: True                          #whether or not we warmstart the controller. If true, first iteration will do mpc_horizon*outer_its optimizations
+    interpolation_step: 1                #interpolation stepsize when sampling
+    outer_its: 1                         #number of optimization iterations
+    gradmax_clip: 5                     #maximal gradient entry to be kept, is ||gradient||_inf <= gradmax_clip
   mppi-var-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
-    mpc_horizon: 1.0                      # sec
+    mpc_horizon: 35                       # steps
     num_rollouts: 400                     # Number of Monte Carlo samples
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
     interpolation_step: 10                #interpolation stepsize when sampling
@@ -126,7 +126,7 @@ controller:
   mppi:
     seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
-    mpc_horizon: 1.0                      # sec
+    mpc_horizon: 35                       # steps
     num_rollouts: 3500                    # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf", "predictor_autoregressive_GP"]
@@ -152,7 +152,7 @@ controller:
   mppi-tf:
     seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
-    mpc_horizon: 0.7                      # sec
+    mpc_horizon: 35                       # steps
     num_rollouts: 3500                    # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf", "predictor_autoregressive_GP"]
@@ -177,7 +177,7 @@ controller:
     # method: 'L-BFGS-B'
     method: 'SLSQP'
     ftol: 1.0e-8
-    mpc_horizon: 10
+    mpc_horizon: 10                       # steps
     # weights
     wr: 0.001  # rterm
     l1: 100.0  # angle_cost
@@ -191,11 +191,13 @@ controller:
     m4: 0.0  # positionD_cost
   do-mpc-discrete:
     dt: 0.02  # s
-    mpc_horizon: 50
+    mpc_horizon: 50                       # steps
+    num_rollouts: 1
   do-mpc:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02  # s
-    mpc_horizon: 50
+    mpc_horizon: 50                       # steps
+    num_rollouts: 1
     # Perturbation factors:
     # Change of output from optimal
     p_Q: 0.00
@@ -221,7 +223,7 @@ controller:
     D_position: 0.1
   mpc-opti:
     dt: 0.2  # s
-    mpc_horizon: 10
+    mpc_horizon: 10                       # steps
   neural-imitator-tf:
     net_name: 'GRU-6IN-32H1-32H2-1OUT-0'
     PATH_TO_MODELS: './Controllers/models_for_neural_imitator_tf/'
@@ -255,6 +257,12 @@ cartpole:
     sigma_angleD: 0.075 # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
     sigma_positionD: 0.005
   num_control_inputs: 1
+  dd_weight: 100.0
+  ep_weight: 50000.0
+  ekp_weight: 100.0
+  ekc_weight: 5.0
+  cc_weight: 1.0
+  ccrc_weight: 1.0
 
 
 data_generator:
