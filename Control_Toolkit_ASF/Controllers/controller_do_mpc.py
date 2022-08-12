@@ -85,7 +85,7 @@ class controller_do_mpc(template_controller):
         self.mpc = do_mpc.controller.MPC(self.model)
 
         setup_mpc = {
-            'n_horizon': mpc_horizon,
+            'n_horizon': int(mpc_horizon / dt),
             't_step': dt,
             'n_robust': 0,
             'store_full_solution': False,

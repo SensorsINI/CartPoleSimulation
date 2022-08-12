@@ -1,4 +1,5 @@
 import gym
+import os
 from gym.core import ObsType
 from gym.utils.renderer import Renderer
 from CartPole import CartPole
@@ -21,7 +22,7 @@ logger = my_logger(__name__)
 # TODO: saving the episode after finished
 # TODO: Make rendering with GUI/matplotlib animation, including also target position
 
-config = load_config("config_gym.yml")
+config = load_config(os.path.join("GymlikeCartPole", "config_gym.yml"))
 length_of_episode = config["length_of_episode"]
 mode = config["mode"]
 
