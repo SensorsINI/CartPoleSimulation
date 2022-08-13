@@ -1,7 +1,8 @@
-import tensorflow as tf
 import numpy as np
 
 from types import SimpleNamespace
+
+import torch
 
 from Control_Toolkit.Controllers import template_controller
 from SI_Toolkit.load_and_normalize import normalize_numpy_array
@@ -14,14 +15,15 @@ try:
 except ModuleNotFoundError:
     print('SI_Toolkit_ASF not yet created')
 
+from SI_Toolkit.Functions.Pytorch.Network import get_device
+
 from SI_Toolkit.Functions.General.Initialization import get_net, get_norm_info_for_net
-from SI_Toolkit.Functions.TF.Compile import Compile
 
 config = load_config("config.yml")
-NET_NAME = config['controller']['neural-imitator-tf']['net_name']
-PATH_TO_MODELS = config['controller']['neural-imitator-tf']['PATH_TO_MODELS']
+NET_NAME = config['controller']['neural-imitator-pytorch']['net_name']
+PATH_TO_MODELS = config['controller']['neural-imitator-pytorch']['PATH_TO_MODELS']
 
-class controller_neural_imitator_tf(template_controller):
+class controller_neural_imitator_pytorch(template_controller):
     def __init__(self, environment, batch_size=1, **kwargs):
 
         a = SimpleNamespace()
@@ -30,24 +32,17 @@ class controller_neural_imitator_tf(template_controller):
         a.path_to_models = PATH_TO_MODELS
         a.net_name = NET_NAME
 
+        self.device = get_device()
+
         # Create a copy of the network suitable for inference (stateful and with sequence length one)
         self.net, self.net_info = \
             get_net(a, time_series_length=1,
-                    batch_size=self.batch_size, stateful=True, library='TF')
+                    batch_size=self.batch_size, stateful=True, library='Pytorch')
 
         self.normalization_info = get_norm_info_for_net(self.net_info)
 
-        # Make a prediction
-
-        self.net_initial_input_without_Q = np.zeros([len(self.net_info.inputs) - len(CONTROL_INPUTS)], dtype=np.float32)
-
-        net_input_type = tf.TensorSpec((self.batch_size, 1, len(self.net_info.inputs)), tf.float32)
-
-        # Retracing tensorflow functions
-        try:
-            self.evaluate_net = self.evaluate_net_f.get_concrete_function(net_input=net_input_type)
-        except:
-            self.evaluate_net = self.evaluate_net_f
+        self.net.reset()
+        self.net.eval()
 
         super().__init__(environment)
 
@@ -62,16 +57,10 @@ class controller_neural_imitator_tf(template_controller):
 
         net_input = np.reshape(net_input, [-1, 1, len(self.net_info.inputs)])
 
-        net_input = tf.convert_to_tensor(net_input, tf.float32)
+        net_input = torch.tensor(net_input).float().to(self.device)
 
-        net_output = self.evaluate_net(net_input)
+        net_output = self.net(net_input)
 
         Q = float(net_output)
 
         return Q
-
-    @Compile
-    def evaluate_net_f(self, net_input):
-        # print('retracing evaluate_net_f')
-        net_output = self.net(net_input)
-        return net_output
