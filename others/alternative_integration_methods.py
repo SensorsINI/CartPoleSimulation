@@ -1,5 +1,4 @@
-import tensorflow as tf
-from SI_Toolkit.TF.TF_Functions.Compile import Compile
+from SI_Toolkit.Functions.TF import Compile
 
 @Compile
 def runge_kutta(self, x, Q, h):

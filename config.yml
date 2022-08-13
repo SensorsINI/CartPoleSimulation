@@ -226,10 +226,7 @@ controller:
     mpc_horizon: 10                       # steps
   neural-imitator-tf:
     net_name: 'GRU-6IN-32H1-32H2-1OUT-0'
-    PATH_TO_MODELS: './Controllers/models_for_neural_imitator_tf/'
-  nn-as-mpc-tf:
-    net_name: 'GRU-6IN-32H1-32H2-1OUT-0'
-    PATH_TO_MODELS: './Controllers/models_for_neural_imitator_tf/'
+    PATH_TO_MODELS: './SI_Toolkit_ASF/Experiments/Experiment-NIPS-CPS/Models/'
 cartpole:
   cost_function: 'quadratic-boundary-grad' # from 'quadratic-boundary', 'quadratic-boundary-grad', 'quadratic-boundary-nonconvex', 'default'
   actuator_noise: 0.0  # TODO: There already exists a noise entry

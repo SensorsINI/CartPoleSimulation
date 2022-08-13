@@ -14,28 +14,26 @@ try:
 except ModuleNotFoundError:
     print('SI_Toolkit_ASF not yet created')
 
-from SI_Toolkit.TF.TF_Functions.Initialization import get_net, get_norm_info_for_net
-from SI_Toolkit.TF.TF_Functions.Compile import Compile
+from SI_Toolkit.Functions.General.Initialization import get_net, get_norm_info_for_net
+from SI_Toolkit.Functions.TF.Compile import Compile
 
 config = load_config("config.yml")
 NET_NAME = config['controller']['neural-imitator-tf']['net_name']
 PATH_TO_MODELS = config['controller']['neural-imitator-tf']['PATH_TO_MODELS']
 
-
 class controller_neural_imitator_tf(template_controller):
-    def __init__(self, batch_size=1, **kwargs):
+    def __init__(self, environment, batch_size=1, **kwargs):
 
         a = SimpleNamespace()
         self.batch_size = batch_size  # It makes sense only for testing (Brunton plot for Q) of not rnn networks to make bigger batch, this is not implemented
 
         a.path_to_models = PATH_TO_MODELS
-
         a.net_name = NET_NAME
 
         # Create a copy of the network suitable for inference (stateful and with sequence length one)
         self.net, self.net_info = \
             get_net(a, time_series_length=1,
-                    batch_size=self.batch_size, stateful=True)
+                    batch_size=self.batch_size, stateful=True, library='TF')
 
         self.normalization_info = get_norm_info_for_net(self.net_info)
 
@@ -51,10 +49,12 @@ class controller_neural_imitator_tf(template_controller):
         except:
             self.evaluate_net = self.evaluate_net_f
 
-    def step(self, s, target_position, time=None):
+        super().__init__(environment)
+
+    def step(self, s, time=None):
 
         net_input = s[..., [STATE_INDICES.get(key) for key in self.net_info.inputs[:-1]]]  # -1 is a fix to exclude target position
-        net_input = np.append(net_input, target_position)
+        net_input = np.append(net_input, self.env_mock.target_position)
 
         net_input = normalize_numpy_array(net_input,
                                           self.net_info.inputs,

@@ -8,14 +8,14 @@ import copy
 
 
 from SI_Toolkit.load_and_normalize import denormalize_numpy_array, normalize_numpy_array
-from SI_Toolkit.TF.TF_Functions.Network import load_internal_states, get_internal_states # Removed 10.03.2020
+from SI_Toolkit.Functions.TF.Network import load_internal_states, get_internal_states # Removed 10.03.2020
 
 from CartPole.state_utilities import STATE_INDICES
 
 # This import mus go before pyplot so also before our scripts
 from matplotlib import use, get_backend
 # Use Agg if not in scientific mode of Pycharm
-from SI_Toolkit.TF.TF_Functions.Initialization import get_net, get_norm_info_for_net
+from SI_Toolkit.Functions.General.Initialization import get_net, get_norm_info_for_net
 
 if get_backend() != 'module://backend_interagg':
     use('Agg')
@@ -48,12 +48,12 @@ def get_data_for_gui_TF(a, dataset, dataset_sampling_dt, net_name):
     if mode == 'batch':
         net_for_inference, net_for_inference_info = \
             get_net(a, time_series_length=1,
-                    batch_size=a.test_len, stateful=True)
+                    batch_size=a.test_len, stateful=True, library='TF')
         normalization_info = get_norm_info_for_net(net_for_inference_info)
     elif mode == 'sequential':
         net_for_inference, net_for_inference_info, normalization_info = \
             get_net(a, time_series_length=1,
-                    batch_size=1, stateful=True)
+                    batch_size=1, stateful=True, library='TF')
         normalization_info = get_norm_info_for_net(net_for_inference_info)
 
     # Get features, target, and time axis
