@@ -84,23 +84,23 @@ controller:
   dist-adam-resamp2-tf:
     seed: null                            # If null, random seed based on datetime is used
     dt: 0.02
-    mpc_horizon: 25                       # steps
+    mpc_horizon: 30                       # steps
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 1
+    predictor_intermediate_steps: 2
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor name is predictor_autoregressive_tf
-    resamp_per: 1                         #determines after how many steps the control plans are resamples
+    resamp_per: 5                         #determines after how many steps the control plans are resamples
     sample_stdev: 0.5                     #sampling variance of control action
     cem_LR: 0.05                         #learning rate parameter for adam
     adam_beta_1: 0.9    #default: 0.9      adam hyperparameter
     adam_beta_2: 0.999  #default: 0.999       adam hyperparameter
     adam_epsilon: 1.0e-8 #default: 1.0e-7    adam hyperparameter. consult https://ruder.io/optimizing-gradient-descent/ for information
     rtol: 1.0e-3
-    opt_keep_k: 5                          #how many plans should be kept for warmstarting when resampling, has to be smaller or equal num_rollouts, set equal num_rollouts for degenerate case without any resampling
-    num_rollouts: 20                      # number of parallel optimizations
-    SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
+    opt_keep_k: 8                          #how many plans should be kept for warmstarting when resampling, has to be smaller or equal num_rollouts, set equal num_rollouts for degenerate case without any resampling
+    num_rollouts: 32                      # number of parallel optimizations
+    SAMPLING_TYPE: None #if interpolated: linear interpolation; else iid
     warmup: True                          #whether or not we warmstart the controller. If true, first iteration will do mpc_horizon*outer_its optimizations
     interpolation_step: 1                #interpolation stepsize when sampling
-    outer_its: 1                         #number of optimization iterations
+    outer_its: 2                         #number of optimization iterations
     gradmax_clip: 5                     #maximal gradient entry to be kept, is ||gradient||_inf <= gradmax_clip
   mppi-var-tf:
     seed: null                          # If null, random seed based on datetime is used
@@ -124,7 +124,7 @@ controller:
     STDEV_max: 10                         # Minimal sampling variance for sampling
     max_grad_norm: 100000                 # max norm of gradient such that ||gradient||_2
   mppi:
-    seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
+    seed: 123                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 35                       # steps
     num_rollouts: 3500                    # Number of Monte Carlo samples
@@ -257,11 +257,11 @@ cartpole:
     sigma_angleD: 0.075 # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
     sigma_positionD: 0.005
   num_control_inputs: 1
-  dd_weight: 100.0
-  ep_weight: 50000.0
-  ekp_weight: 100.0
-  ekc_weight: 5.0
-  cc_weight: 1.0
+  dd_weight: 25.0          # Distance Difference
+  ep_weight: 10000.0         # Pole Potential
+  ekp_weight: 45.0           # Pole Kinetic
+  ekc_weight: 0.0           # Cart Kinetic
+  cc_weight: 2.0            # Control Cost
   ccrc_weight: 1.0
 
 
