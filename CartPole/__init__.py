@@ -6,58 +6,59 @@ You can find here methods with performing experiment, saving data, displaying Ca
 and many more. To run it needs some "environment": we provide you with GUI and data_generator
 @author: Marcin
 """
-
-# region Imported modules
-
-from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
-from CartPole.state_utilities import ANGLED_IDX, ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX, POSITIOND_IDX, POSITION_IDX
-from CartPole.cartpole_model import Q2u, s0
-from CartPole.cartpole_numba import cartpole_ode_numba, edge_bounce_numba, cartpole_integration_numba
-from CartPole.load import get_full_paths_to_csvs, load_csv_recording
-from CartPole.latency_adder import LatencyAdder
-from CartPole.noise_adder import NoiseAdder
-from others.p_globals import P_GLOBALS
-
-from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength,
-    export_globals
-)
-
-import numpy as np
-import pandas as pd
-
-import traceback
-
 # Import module to save history of the simulation as csv file
 import csv
 # To detect the latest csv file
-import glob
+from importlib import import_module
 # Import module to interact with OS
 import os
+import traceback
 # Import module to get a current time and date used to name the files containing the history of simulations
 from datetime import datetime
+
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from Control_Toolkit.others.environment import EnvironmentBatched, NumpyLibrary, TensorFlowLibrary
+from Control_Toolkit.others.globals_and_utils import get_available_controller_names, get_controller
+from others.globals_and_utils import MockSpace, create_rng, load_config
+from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
+                              controlBias, controlDisturbance, export_globals,
+                              g, k, m, u_max, v_max)
 # Interpolate function to create smooth random track
 from scipy.interpolate import BPoly, interp1d
 # Run range() automatically adding progress bar in terminal
 from tqdm import trange
+
+from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
+from CartPole.cartpole_model import Q2u, s0
+from CartPole.cartpole_numba import (cartpole_integration_numba,
+                                     cartpole_ode_numba, edge_bounce_numba)
+from CartPole.latency_adder import LatencyAdder
+from CartPole.load import get_full_paths_to_csvs, load_csv_recording
+from CartPole.noise_adder import NoiseAdder
+from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
+                                      ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
+
+# region Imported modules
+
 try:
     # Use gitpython to get a current revision number and use it in description of experimental data
     from git import Repo
 except:
     pass
 
-from numpy.random import SFC64, Generator
-
 # check memory usage of chosen methods. Commented by default
 # from memory_profiler import profile
 
 # region Graphics imports
 import matplotlib.pyplot as plt
-from matplotlib import animation
 # rc sets global parameters for matplotlib; transforms is used to rotate the Mast
-from matplotlib import rc, transforms
+from matplotlib import animation, rc, transforms
 # Shapes used to draw a Cart and the slider
-from matplotlib.patches import Circle, FancyBboxPatch, Rectangle, FancyArrowPatch
+from matplotlib.patches import (Circle, FancyArrowPatch, FancyBboxPatch,
+                                Rectangle)
+
 # Angle convention to rotate the mast in right direction - depends on used Equation
 from CartPole.cartpole_model import ANGLE_CONVENTION
 
@@ -69,20 +70,18 @@ rc('font', **font)
 # endregion
 
 import yaml
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
-PATH_TO_CONTROLLERS = config["cartpole"]["PATH_TO_CONTROLLERS"]
+
+config = load_config("config.yml")
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
 
-class CartPole:
+class CartPole(EnvironmentBatched):
+    num_states = 6
+    num_acions = 1
 
     def __init__(self, initial_state=s0, path_to_experiment_recordings=None):
-
-        SEED = config["cartpole"]["SEED"]
-        if SEED == "None":
-            SEED = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0//2)  # Fully random
-
-        self.rng_CartPole = Generator(SFC64(SEED))
+        self.config = config["cartpole"]
+        self.rng_CartPole = create_rng(self.__class__.__name__, self.config["seed"])
 
         if path_to_experiment_recordings is None:
             self.path_to_experiment_recordings = PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT
@@ -101,10 +100,13 @@ class CartPole:
         # Variables for control input and target position.
         self.u = 0.0  # Physical force acting on the cart
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
-        self.target_position = 0.0
+        self._target_position = 0.0
+        self.target_equilibrium = 1.0  # Up is 1.0, Down is -1.0
 
-        self.latency = config["cartpole"]["latency"]
-        self.LatencyAdderInstance = LatencyAdder(latency=self.latency)
+        self.action_space = MockSpace(-1.0, 1.0)
+
+        self.latency = self.config["latency"]
+        self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
         self.NoiseAdderInstance = NoiseAdder()
         self.s_with_noise_and_latency = np.copy(self.s)
 
@@ -142,7 +144,7 @@ class CartPole:
         self.controller = None  # Placeholder for the currently used controller function
         self.controller_name = ''  # Placeholder for the currently used controller name
         self.controller_idx = None  # Placeholder for the currently used controller index
-        self.controller_names = self.get_available_controller_names()  # list of controllers available in controllers folder
+        self.controller_names = get_available_controller_names()  # list of controllers available in controllers folder
         # endregion
 
         # region Variables for generating experiments with random target trace
@@ -233,6 +235,10 @@ class CartPole:
         self.set_controller('manual-stabilization')
         # endregion
 
+        # region Set cost function module
+        self.set_cost_functions()
+        # endregion
+        
     # region 1. Methods related to dynamic evolution of CartPole system
 
     # This method changes the internal state of the CartPole
@@ -316,6 +322,22 @@ class CartPole:
                 # This just fill the corresponding column in history with zeros
             else:
                 self.target_position = self.slider_value * TrackHalfLength  # Get target position from slider
+    
+    @property
+    def target_position(self):
+        return self._target_position
+
+    @property
+    def target_position_tf(self):
+        return self._target_position_tf
+    
+    @target_position.setter
+    def target_position(self, target_position):
+        self._target_position = target_position
+        if not hasattr(self, "_target_position_tf"):
+            self._target_position_tf = tf.Variable(target_position, dtype=tf.float32)
+        else:
+            self._target_position_tf.assign(target_position)
 
     def block_pole_at_90_deg(self):
         if self.stop_at_90:
@@ -441,7 +463,7 @@ class CartPole:
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = np.squeeze(self.controller.step(self.s_with_noise_and_latency, self.target_position, self.time))
+                self.Q = self.controller.step(self.s_with_noise_and_latency, self.time)
 
             self.dt_controller_steps_counter = 0
 
@@ -833,61 +855,22 @@ class CartPole:
 
     # region 4. Methods "Get, set, reset"
 
-    # Method returns the list of controllers available in the PATH_TO_CONTROLLERS folder
-    def get_available_controller_names(self):
-        """
-        Method returns the list of controllers available in the PATH_TO_CONTROLLERS folder
-        """
-        controller_files = glob.glob(PATH_TO_CONTROLLERS + 'controller_' + '*.py')
-        controller_names = ['manual-stabilization']
-        controller_names.extend(np.sort(
-            [os.path.basename(item)[len('controller_'):-len('.py')].replace('_', '-') for item in controller_files]
-        ))
-
-        return controller_names
-
     # Set the controller of CartPole
     def set_controller(self, controller_name=None, controller_idx=None):
-        """
-        The method sets a new controller as the current controller of the CartPole instance.
-        The controller may be indicated either by its name
-        or by the index on the controller list (see get_available_controller_names method).
-        """
-
-        # Check if the proper information was provided: either controller_name or controller_idx
-        if (controller_name is None) and (controller_idx is None):
-            raise ValueError('You have to specify either controller_name or controller_idx to set a new controller.'
-                             'You have specified none of the two.')
-        elif (controller_name is not None) and (controller_idx is not None):
-            raise ValueError('You have to specify either controller_name or controller_idx to set a new controller.'
-                             'You have specified both.')
-        else:
-            pass
-
-        # If controller name provided get controller index and vice versa
-        if (controller_name is not None):
-            try:
-                controller_idx = self.controller_names.index(controller_name)
-            except ValueError:
-                print('{} is not in list. \n In list are: {}'.format(controller_name, self.controller_names))
-                return False
-        else:
-            controller_name = self.controller_names[controller_idx]
-
-        # save controller name and index to variables in the CartPole namespace
-        self.controller_name = controller_name
-        self.controller_idx = controller_idx
-
-        # Load controller
-        if self.controller_name == 'manual-stabilization':
+        Controller, self.controller_name, self.controller_idx = get_controller(
+            controller_name=controller_name, controller_idx=controller_idx
+        )
+        if Controller is None:
             self.controller = None
         else:
-            controller_full_name = 'controller_' + self.controller_name.replace('-', '_')
-            path_import = PATH_TO_CONTROLLERS[2:].replace('/', '.').replace(r'\\', '.')
-            import_str = 'from ' + path_import + controller_full_name + ' import ' + controller_full_name
-            exec(import_str)
-            self.controller = eval(controller_full_name + '()')
+            self.controller = Controller(self, **{**config["controller"][self.controller_name], **{"num_control_inputs": self.config["num_control_inputs"]}})
 
+        if self.controller_name[-2:] == "tf":
+            self.set_computation_library(TensorFlowLibrary)
+        else:
+            self.set_computation_library(NumpyLibrary)
+        self.set_cost_functions()
+            
         # Set the maximal allowed value of the slider - relevant only for GUI
         if self.controller_name == 'manual-stabilization':
             self.Slider_Arrow.set_positions((0, 0), (0, 0))
@@ -900,6 +883,11 @@ class CartPole:
         self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, target_position=self.target_position, reset_dict_history=True)
 
         return True
+
+    def set_cost_functions(self):
+        cost_function_name = self.config["cost_function"].replace("-", "_")
+        cost_function_module = import_module(f"others.cost_functions.CartPole.{cost_function_name}")
+        self.cost_functions = getattr(cost_function_module, cost_function_name)(self)
 
     # This method resets the internal state of the CartPole instance
     # The starting state (for t = 0) may be
@@ -959,7 +947,7 @@ class CartPole:
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = np.squeeze(self.controller.step(self.s, self.target_position, self.time))
+                self.Q = self.controller.step(self.s, self.time)
 
             self.u = Q2u(self.Q)  # Calculate CURRENT control input
             self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)  # Calculate CURRENT second derivatives

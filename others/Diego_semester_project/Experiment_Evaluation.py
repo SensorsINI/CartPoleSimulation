@@ -10,8 +10,8 @@ import glob
 import matplotlib.pyplot as plt
 import matplotlib
 import sys
-# from others.cost_functions.quadratic_boundary_grad import q as stage_cost #use correct stage cost here, probably need to slightly adjust cost in controller
-from others.cost_functions.quadratic_boundary_grad import q_debug as stage_cost
+# from others.cost_functions.CartPole.quadratic_boundary_grad import q as stage_cost #use correct stage cost here, probably need to slightly adjust cost in controller
+from others.cost_functions.CartPole.quadratic_boundary_grad import q_debug as stage_cost
 # from PyQt5.QtCore import *
 # from PyQt5.QtGui import *
 # from PyQt5.QtWidgets import *

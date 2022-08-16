@@ -1,10 +1,11 @@
+from others.globals_and_utils import load_config
 from run_data_generator import run_data_generator
 
 # Automatically create new path to save everything in
 
 import yaml, os
-config_SI = yaml.load(open(os.path.join('SI_Toolkit_ASF', 'config_training.yml')), Loader=yaml.FullLoader)
-config_cartpole = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
+config_SI = load_config(os.path.join("SI_Toolkit_ASF", "config_training.yml"))
+config_cartpole = load_config(os.path.join("config.yml"))
 
 def get_record_path():
     experiment_index = 1

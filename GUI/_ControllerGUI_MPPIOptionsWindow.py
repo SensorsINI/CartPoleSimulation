@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QThreadPool, QTimer, Qt
 from numpy.core.numeric import roll
 
-import Controllers.controller_mppi as controller_mppi
+import Control_Toolkit_ASF.Controllers.controller_mppi as controller_mppi
 
 
 class MPPIOptionsWindow(QWidget):

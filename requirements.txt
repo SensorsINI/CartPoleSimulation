@@ -1,12 +1,17 @@
-tensorflow
-
 GitPython
+gym
 imageio
+engineering_notation
+derivative
+gpflow
+gym
+pygame
 matplotlib
 numba
 numpy
 pandas
 pip
+pygame
 PyYAML
 scikit-learn
 scipy
@@ -18,6 +23,11 @@ typing-extensions
 PyQt6
 tensorflow-probability
 
+torch
+tensorflow
+
 do-mpc==4.1.1
 casadi
 nni
+
+./SI_Toolkit

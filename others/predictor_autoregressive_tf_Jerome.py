@@ -2,11 +2,12 @@
 from SI_Toolkit.TF.TF_Functions.Initialization import get_net, get_norm_info_for_net
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 from SI_Toolkit.load_and_normalize import *
-from SI_Toolkit_ASF_global.predictors_customization import STATE_VARIABLES, STATE_INDICES, CONTROL_INPUTS
+from SI_Toolkit_ASF.predictors_customization import STATE_VARIABLES, STATE_INDICES, CONTROL_INPUTS
 from types import SimpleNamespace
-import yaml
 import os
 import tensorflow as tf
+
+from .globals_and_utils import load_config
 
 class predictor_autoregressive_tf:
     def __init__(self, horizon=None, batch_size=None, net_name=None):
@@ -20,7 +21,7 @@ class predictor_autoregressive_tf:
         self.prev_initial_state_tf = None
 
         # Neural Network
-        config = yaml.load(open(os.path.join('SI_Toolkit_ASF', 'config_testing.yml'), 'r'), Loader=yaml.FullLoader)
+        config = load_config(os.path.join("SI_Toolkit_ASF", "config_testing.yml"))
         if '/' in net_name:
             self.model_path = net_name.rsplit('/', 1)[0]
             self.net_name = self.net_name.split("/")[-1]

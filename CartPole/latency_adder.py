@@ -1,19 +1,16 @@
 import numpy as np
-from numpy.random import SFC64, Generator
-
-from datetime import datetime
 
 from CartPole.state_utilities import STATE_VARIABLES, \
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
 from tqdm import trange
 
-MAX_LATENCY_LEN = 50  # Total size of latency buffer.
+MAX_LATENCY_LEN = 200  # Total size of latency buffer.
 
 class LatencyAdder():
     def __init__(self,
-                 latency=0.0,
-                 dt_sampling=0.002,
+                 latency: float,
+                 dt_sampling: float,
                  ):
 
         self.dt_sampling = dt_sampling
@@ -77,6 +74,8 @@ class LatencyAdder():
     def set_latency(self, latency):
         self.latency = latency
         self.latency_len = latency/self.dt_sampling
+        if self.latency_len > MAX_LATENCY_LEN:
+            raise ValueError ('Not possible to add so much latency!')
         self.latency_len_int = int(self.latency_len)
         self.latency_len_fraction = self.latency_len-self.latency_len_int
         self.max_latency = MAX_LATENCY_LEN*self.dt_sampling

@@ -1,8 +1,9 @@
 """mpc controller"""
 
-from Controllers.template_controller import template_controller
-from CartPole.cartpole_model import TrackHalfLength, s0, Q2u
+from Control_Toolkit.Controllers import template_controller
+from CartPole.cartpole_model import TrackHalfLength, Q2u
 from CartPole.cartpole_numba import cartpole_ode_numba
+from others.globals_and_utils import load_config
 from others.p_globals import v_max
 from CartPole.state_utilities import create_cartpole_state, \
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
@@ -13,11 +14,9 @@ import numpy as np
 import casadi
 
 
-import yaml
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
-
-dt_mpc_simulation = config["controller"]["do_mpc_discrete"]["dt_mpc_simulation"]
-mpc_horizon = config["controller"]["do_mpc_discrete"]["mpc_horizon"]
+config = load_config("config.yml")
+dt = config["controller"]["do-mpc-discrete"]["dt"]
+mpc_horizon = config["controller"]["do-mpc-discrete"]["mpc_horizon"]
 
 
 def mpc_next_state(s, u, dt):
@@ -72,7 +71,7 @@ class controller_mpc_opti(template_controller):
         self.target_position = 0.0
 
         self.mpc_horizon = mpc_horizon
-        self.dt = dt_mpc_simulation
+        self.dt = dt
 
         self.yp_hat = np.zeros(self.mpc_horizon, dtype=object)  # MPC prediction of future states
         self.Q_hat = np.zeros(self.mpc_horizon)  # MPC prediction of future control inputs

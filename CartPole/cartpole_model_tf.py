@@ -1,16 +1,18 @@
 from types import SimpleNamespace
-from typing import Union
-from CartPole.state_utilities import (
-    create_cartpole_state,
-    ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
-)
-import tensorflow as tf
 
+import numpy as np
+import tensorflow as tf
+from others.globals_and_utils import create_rng, load_config
+from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
+                              controlBias, controlDisturbance, g, k, m, u_max,
+                              v_max)
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
-from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
-)
+from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
+                                      ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
+                                      create_cartpole_state)
+
+config = load_config("config.yml")
 
 k = tf.convert_to_tensor(k)
 M = tf.convert_to_tensor(M)
@@ -25,9 +27,9 @@ controlDisturbance = tf.convert_to_tensor(controlDisturbance)
 controlBias = tf.convert_to_tensor(controlBias)
 TrackHalfLength = tf.convert_to_tensor(TrackHalfLength)
 
-import numpy as np
-from numpy.random import SFC64, Generator
-import tensorflow as tf
+
+rng = create_rng(__name__, config["cartpole"]["seed"])
+
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
@@ -62,7 +64,7 @@ The 0-angle state is always defined as pole in upright position. This currently 
 s0 = create_cartpole_state()
 
 
-def _cartpole_ode (ca, sa, angleD, positionD, u,
+def _cartpole_ode(ca, sa, angleD, positionD, u,
                       k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
 
     """
@@ -148,7 +150,7 @@ def edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L
                                                                      t_step, L)
     return angle, angleD, position, positionD
 
-rng = Generator(SFC64(123))
+
 def Q2u(Q):
     """
     Converts dimensionless motor power [-1,1] to a physical force acting on a cart.
@@ -166,7 +168,7 @@ def euler_step(state, stateD, t_step):
     return state + stateD * t_step
 
 
-def cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD, t_step, ):
+def cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD, t_step):
     angle_next = euler_step(angle, angleD, t_step)
     angleD_next = euler_step(angleD, angleDD, t_step)
     position_next = euler_step(position, positionD, t_step)
@@ -181,7 +183,7 @@ def euler_step_tf(state, stateD, t_step):
 
 
 @Compile
-def cartpole_integration_tf(angle, angleD, angleDD, position, positionD, positionDD, t_step, ):
+def cartpole_integration_tf(angle, angleD, angleDD, position, positionD, positionDD, t_step):
     angle_next = euler_step_tf(angle, angleD, t_step)
     angleD_next = euler_step_tf(angleD, angleDD, t_step)
     position_next = euler_step_tf(position, positionD, t_step)

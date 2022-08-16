@@ -1,8 +1,9 @@
 from types import SimpleNamespace
-from numpy import float32
 import numpy as np
-import yaml
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+
+from others.globals_and_utils import load_config
+
+config = load_config("config.yml")
 
 # Parameters of the CartPole
 P_GLOBALS = SimpleNamespace()  # "p" like parameters

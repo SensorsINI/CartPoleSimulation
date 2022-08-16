@@ -1,14 +1,17 @@
 import tensorflow as tf
-from CartPole.cartpole_model_tf import _cartpole_ode, euler_step_tf, edge_bounce, cartpole_ode, edge_bounce_wrapper, \
-    cartpole_integration_tf
-from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, \
-    STATE_INDICES
-
+from others.globals_and_utils import create_rng, load_config
+from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
+                              controlBias, controlDisturbance, g, k, m, u_max,
+                              v_max)
 from SI_Toolkit.TF.TF_Functions.Compile import Compile
 
-from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
-)
+from CartPole.cartpole_model_tf import (_cartpole_ode, cartpole_integration_tf,
+                                        cartpole_ode, edge_bounce,
+                                        edge_bounce_wrapper)
+from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
+                                      ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
+
+config = load_config("config.yml")
 
 k = tf.convert_to_tensor(k)
 M = tf.convert_to_tensor(M)
@@ -22,6 +25,8 @@ u_max = tf.convert_to_tensor(u_max)
 controlDisturbance = tf.convert_to_tensor(controlDisturbance)
 controlBias = tf.convert_to_tensor(controlBias)
 TrackHalfLength = tf.convert_to_tensor(TrackHalfLength)
+
+rng = create_rng(__name__, config["cartpole"]["seed"])
 
 ###
 # FIXME: Currently tf predictor is not modeling edge bounce!
@@ -82,10 +87,9 @@ def Q2u_tf(Q):
     In future there might be implemented here a more sophisticated model of a motor driving CartPole
     """
     u = tf.convert_to_tensor(u_max, dtype=tf.float32) * (
-            Q +
-            tf.convert_to_tensor(controlDisturbance, dtype=tf.float32) * tf.random.normal(shape=tf.shape(Q),
-                                                                                          dtype=tf.float32) + tf.convert_to_tensor(
-        controlBias, dtype=tf.float32)
+        Q
+        + tf.convert_to_tensor(controlDisturbance * rng.standard_normal(size=Q.shape), dtype=tf.float32)
+        + tf.convert_to_tensor(controlBias, dtype=tf.float32)
     )  # Q is drive -1:1 range, add noise on control
 
     return u
