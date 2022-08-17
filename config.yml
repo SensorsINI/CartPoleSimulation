@@ -90,7 +90,7 @@ controller:
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor name is predictor_autoregressive_tf
     resamp_per: 1                         #determines after how many steps the control plans are resamples
     sample_stdev: 0.5                     #sampling variance of control action
-    cem_LR: 0.05                         #learning rate parameter for adam
+    cem_LR: 0.1                         #learning rate parameter for adam
     adam_beta_1: 0.9    #default: 0.9      adam hyperparameter
     adam_beta_2: 0.999  #default: 0.999       adam hyperparameter
     adam_epsilon: 1.0e-8 #default: 1.0e-7    adam hyperparameter. consult https://ruder.io/optimizing-gradient-descent/ for information
@@ -100,7 +100,7 @@ controller:
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
     warmup: True                          #whether or not we warmstart the controller. If true, first iteration will do mpc_horizon*outer_its optimizations
     interpolation_step: 1                #interpolation stepsize when sampling
-    outer_its: 1                         #number of optimization iterations
+    outer_its: 3                         #number of optimization iterations
     gradmax_clip: 5                     #maximal gradient entry to be kept, is ||gradient||_inf <= gradmax_clip
   mppi-var-tf:
     seed: null                          # If null, random seed based on datetime is used
