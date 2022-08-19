@@ -2,17 +2,15 @@ controller:
   cem-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
-    mpc_horizon: 35                       # steps
+    mpc_horizon: 40                       # steps
     cem_outer_it: 3                    #how many outer iterations to use
     num_rollouts: 200          #how many rollouts per outer cem iteration
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 10
+    predictor_intermediate_steps: 5
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
-    cem_stdev_min: 0.1
+    cem_stdev_min: 0.01
     cem_R: 1
-    cem_ccrc_weight: 1
     cem_best_k: 40
-    cem_LR: 0.1
   cem-naive-grad-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
@@ -25,7 +23,6 @@ controller:
     cem_stdev_min: 0.1
     cem_initial_action_stdev: 0.5
     cem_R: 1
-    cem_ccrc_weight: 1
     cem_best_k: 40
     cem_LR: 0.1
     gradmax_clip: 10
@@ -84,11 +81,11 @@ controller:
   dist-adam-resamp2-tf:
     seed: null                            # If null, random seed based on datetime is used
     dt: 0.02
-    mpc_horizon: 35                       # steps
+    mpc_horizon: 40                       # steps
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 5
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor name is predictor_autoregressive_tf
-    resamp_per: 1                         #determines after how many steps the control plans are resamples
+    resamp_per: 5                         #determines after how many steps the control plans are resamples
     sample_stdev: 0.5                     #sampling variance of control action
     cem_LR: 0.05                         #learning rate parameter for adam
     adam_beta_1: 0.9    #default: 0.9      adam hyperparameter
@@ -100,7 +97,7 @@ controller:
     SAMPLING_TYPE: None #if interpolated: linear interpolation; else iid
     warmup: True                          #whether or not we warmstart the controller. If true, first iteration will do mpc_horizon*outer_its optimizations
     interpolation_step: 1                #interpolation stepsize when sampling
-    outer_its: 2                         #number of optimization iterations
+    outer_its: 3                         #number of optimization iterations
     gradmax_clip: 5                     #maximal gradient entry to be kept, is ||gradient||_inf <= gradmax_clip
   mppi-var-tf:
     seed: null                          # If null, random seed based on datetime is used
@@ -258,8 +255,8 @@ cartpole:
     sigma_positionD: 0.005
   num_control_inputs: 1
   dd_weight: 100.0
-  ep_weight: 50000.0
-  ekp_weight: 100.0
+  ep_weight: 20000.0
+  ekp_weight: 120.0
   ekc_weight: 5.0
   cc_weight: 1.0
   ccrc_weight: 1.0
