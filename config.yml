@@ -97,10 +97,10 @@ controller:
     rtol: 1.0e-3
     opt_keep_k: 8                          #how many plans should be kept for warmstarting when resampling, has to be smaller or equal num_rollouts, set equal num_rollouts for degenerate case without any resampling
     num_rollouts: 32                      # number of parallel optimizations
-    SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
+    SAMPLING_TYPE: None #if interpolated: linear interpolation; else iid
     warmup: True                          #whether or not we warmstart the controller. If true, first iteration will do mpc_horizon*outer_its optimizations
     interpolation_step: 1                #interpolation stepsize when sampling
-    outer_its: 1                         #number of optimization iterations
+    outer_its: 2                         #number of optimization iterations
     gradmax_clip: 5                     #maximal gradient entry to be kept, is ||gradient||_inf <= gradmax_clip
   mppi-var-tf:
     seed: null                          # If null, random seed based on datetime is used
@@ -124,7 +124,7 @@ controller:
     STDEV_max: 10                         # Minimal sampling variance for sampling
     max_grad_norm: 100000                 # max norm of gradient such that ||gradient||_2
   mppi:
-    seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
+    seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
     mpc_horizon: 35                       # steps
     num_rollouts: 3500                    # Number of Monte Carlo samples
