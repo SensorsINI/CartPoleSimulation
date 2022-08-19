@@ -84,9 +84,9 @@ controller:
   dist-adam-resamp2-tf:
     seed: null                            # If null, random seed based on datetime is used
     dt: 0.02
-    mpc_horizon: 25                       # steps
+    mpc_horizon: 35                       # steps
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 1
+    predictor_intermediate_steps: 5
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor name is predictor_autoregressive_tf
     resamp_per: 1                         #determines after how many steps the control plans are resamples
     sample_stdev: 0.5                     #sampling variance of control action
@@ -95,8 +95,8 @@ controller:
     adam_beta_2: 0.999  #default: 0.999       adam hyperparameter
     adam_epsilon: 1.0e-8 #default: 1.0e-7    adam hyperparameter. consult https://ruder.io/optimizing-gradient-descent/ for information
     rtol: 1.0e-3
-    opt_keep_k: 5                          #how many plans should be kept for warmstarting when resampling, has to be smaller or equal num_rollouts, set equal num_rollouts for degenerate case without any resampling
-    num_rollouts: 20                      # number of parallel optimizations
+    opt_keep_k: 8                          #how many plans should be kept for warmstarting when resampling, has to be smaller or equal num_rollouts, set equal num_rollouts for degenerate case without any resampling
+    num_rollouts: 32                      # number of parallel optimizations
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
     warmup: True                          #whether or not we warmstart the controller. If true, first iteration will do mpc_horizon*outer_its optimizations
     interpolation_step: 1                #interpolation stepsize when sampling
