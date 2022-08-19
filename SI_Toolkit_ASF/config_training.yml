@@ -1,3 +1,4 @@
+library: 'TF'  # TF or Pytorch
 modeling:
   NET_NAME: 'GRU-32H1-32H2'
 paths:
@@ -29,4 +30,5 @@ training_default:
   ON_FLY_DATA_GENERATION: False
   NORMALIZE: True
   SHIFT_LABELS: 1  # for k, as a label to row i is taken row i+k
+  USE_NNI: False  # Decide if you want to use NNI package
 

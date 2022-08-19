@@ -3,7 +3,7 @@ from others.globals_and_utils import create_rng, load_config
 from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, g, k, m, u_max,
                               v_max)
-from SI_Toolkit.TF.TF_Functions.Compile import Compile
+from SI_Toolkit.Functions.TF.Compile import Compile
 
 from CartPole.cartpole_model_tf import (_cartpole_ode, cartpole_integration_tf,
                                         cartpole_ode, edge_bounce,

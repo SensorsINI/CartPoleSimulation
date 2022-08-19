@@ -1,5 +1,5 @@
 import numpy as np
-from Control_Toolkit.Controllers.scontroller_mppi_tf import controller_mppi_tf
+from Control_Toolkit.Controllers.controller_mppi_tf import controller_mppi_tf
 
 if __name__ == '__main__':
     ctrl = controller_mppi_tf()

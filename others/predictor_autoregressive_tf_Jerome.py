@@ -1,6 +1,6 @@
 # "Command line" parameters
-from SI_Toolkit.TF.TF_Functions.Initialization import get_net, get_norm_info_for_net
-from SI_Toolkit.TF.TF_Functions.Compile import Compile
+from SI_Toolkit.Functions.General.Initialization import get_net, get_norm_info_for_net
+from SI_Toolkit.Functions.TF import Compile
 from SI_Toolkit.load_and_normalize import *
 from SI_Toolkit_ASF.predictors_customization import STATE_VARIABLES, STATE_INDICES, CONTROL_INPUTS
 from types import SimpleNamespace
@@ -36,7 +36,7 @@ class predictor_autoregressive_tf:
         a = SimpleNamespace()
         a.path_to_models = self.model_path
         a.net_name = self.net_name
-        self.net, self.net_info = get_net(a, time_series_length=1, batch_size=batch_size, stateful=True)
+        self.net, self.net_info = get_net(a, time_series_length=1, batch_size=batch_size, stateful=True, library='TF')
         self.normalization_info = get_norm_info_for_net(self.net_info)[self.net_info.outputs]
 
         # Network sizes

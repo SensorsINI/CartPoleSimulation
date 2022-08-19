@@ -1,7 +1,7 @@
 import tensorflow as tf
 from SI_Toolkit.Predictors.predictor_autoregressive_tf import \
     predictor_autoregressive_tf
-from SI_Toolkit.TF.TF_Functions.Compile import Compile
+from SI_Toolkit.Functions.TF.Compile import Compile
 
 from others.globals_and_utils import create_rng
 
