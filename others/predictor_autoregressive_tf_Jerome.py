@@ -36,7 +36,7 @@ class predictor_autoregressive_tf:
         a = SimpleNamespace()
         a.path_to_models = self.model_path
         a.net_name = self.net_name
-        self.net, self.net_info = get_net(a, time_series_length=1, batch_size=batch_size, stateful=True, library='TF')
+        self.net, self.net_info = get_net(a, time_series_length=1, batch_size=batch_size, stateful=True)
         self.normalization_info = get_norm_info_for_net(self.net_info)[self.net_info.outputs]
 
         # Network sizes
