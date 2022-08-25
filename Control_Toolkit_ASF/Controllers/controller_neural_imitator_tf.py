@@ -33,7 +33,7 @@ class controller_neural_imitator_tf(template_controller):
         # Create a copy of the network suitable for inference (stateful and with sequence length one)
         self.net, self.net_info = \
             get_net(a, time_series_length=1,
-                    batch_size=self.batch_size, stateful=True, library='TF')
+                    batch_size=self.batch_size, stateful=True)
 
         self.normalization_info = get_norm_info_for_net(self.net_info)
 
