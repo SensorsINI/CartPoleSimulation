@@ -1,0 +1,36 @@
+library: 'Pytorch'  # TF or Pytorch, only for training, otherwise read from net_info
+modeling:
+  NET_NAME: 'GRU-32H1-32H2'
+paths:
+  # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
+  path_to_experiment: 'Experiment-NIPS-CPS/'
+  PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
+
+training_default:
+  # For training closed loop dynamics model:
+#  control_inputs: ['Q']
+#  state_inputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
+#  setpoint_inputs: []  # Can be only 'target_position' or empty for CartPole
+#  outputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
+  #  outputs: ['D_angle_sin', 'D_angle_cos', 'D_angleD', 'D_position', 'D_positionD'] # Don't forget to change SHIFT_LABELS to 0
+  translation_invariant_variables: []
+  # For training open loop dynamics model:
+  # inputs = ['position', 'positionD', 'angle_sin', 'angle_cos', 'angleD']
+  # outputs = inputs_list
+  # For training of a network imitating MPC:
+  setpoint_inputs: []  # Can be only 'target_position' or empty for CartPole
+  control_inputs: []
+  state_inputs: ['position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_position']
+  outputs:  ['Q']
+  EPOCHS: 20
+  BATCH_SIZE: 64
+  SEED: 1873
+  LR: 1.0e-2
+  WASH_OUT_LEN: 10  # needs to be set to 0 for GP training
+  POST_WASH_OUT_LEN: 10  # needs to be set to 1 for GP training
+  ON_FLY_DATA_GENERATION: False
+  NORMALIZE: True
+  SHIFT_LABELS: 0  # for k, as a label to row i is taken row i+k
+  USE_NNI: False  # Decide if you want to use NNI package
+  CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch
+
