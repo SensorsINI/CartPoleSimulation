@@ -31,4 +31,5 @@ training_default:
   NORMALIZE: True
   SHIFT_LABELS: 1  # for k, as a label to row i is taken row i+k
   USE_NNI: False  # Decide if you want to use NNI package
+  CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch
 
