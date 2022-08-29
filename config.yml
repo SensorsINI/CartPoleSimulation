@@ -256,8 +256,8 @@ cartpole:
   num_control_inputs: 1
   dd_weight: 100.0
   ep_weight: 20000.0
-  ekp_weight: 120.0
-  ekc_weight: 5.0
+  ekp_weight: 80.0
+  ekc_weight: 20.0
   cc_weight: 1.0
   ccrc_weight: 1.0
 
