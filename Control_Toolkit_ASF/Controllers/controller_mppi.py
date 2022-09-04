@@ -397,10 +397,13 @@ class controller_mppi(template_controller):
         self.wash_out_len = WASH_OUT_LEN
         self.warm_up_countdown = self.wash_out_len
         try:
-            from Controllers.controller_lqr import controller_lqr
-
-            self.auxiliary_controller_available = True
-            self.auxiliary_controller = controller_lqr()
+            from Control_Toolkit_ASF.Controllers.controller_lqr import controller_lqr
+            # FIXME: controller requires corresponding config...
+            print('Auxiliary controller not implemented yet in ')
+            # self.auxiliary_controller_available = True
+            # self.auxiliary_controller = controller_lqr()
+            self.auxiliary_controller_available = False
+            self.auxiliary_controller = None
         except ModuleNotFoundError:
             self.auxiliary_controller_available = False
             self.auxiliary_controller = None

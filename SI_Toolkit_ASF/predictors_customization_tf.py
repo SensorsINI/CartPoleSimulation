@@ -6,8 +6,7 @@ from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITI
 from CartPole.cartpole_tf import cartpole_fine_integration_tf, Q2u_tf
 from CartPole.cartpole_model import L
 
-from SI_Toolkit.TF.TF_Functions.Compile import Compile
-import numpy as np
+from SI_Toolkit.Functions.TF.Compile import Compile
 
 STATE_INDICES_TF = tf.lookup.StaticHashTable(
     initializer=tf.lookup.KeyValueTensorInitializer(
@@ -74,13 +73,13 @@ class predictor_output_augmentation_tf:
         features_augmentation = []
 
         if 'angle' not in outputs:
-            indices_augmentation.append(STATE_INDICES['angle'])
+            indices_augmentation.append(ANGLE_IDX)
             features_augmentation.append('angle')
         if 'angle_sin' not in outputs and 'angle' in outputs:
-            indices_augmentation.append(STATE_INDICES['angle_sin'])
+            indices_augmentation.append(ANGLE_SIN_IDX)
             features_augmentation.append('angle_sin')
         if 'angle_cos' not in outputs and 'angle' in outputs:
-            indices_augmentation.append(STATE_INDICES['angle_cos'])
+            indices_augmentation.append(ANGLE_COS_IDX)
             features_augmentation.append('angle_cos')
 
         self.indices_augmentation = indices_augmentation

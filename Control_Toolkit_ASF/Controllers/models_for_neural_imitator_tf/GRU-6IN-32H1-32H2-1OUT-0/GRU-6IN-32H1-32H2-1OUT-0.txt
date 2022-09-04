@@ -1,0 +1,44 @@
+CREATED:
+2022-08-26 at time 12:28:39
+
+WITH GIT REVISION:
+5a271178290192d49f2a1a8c040151a062f1d54f
+
+LIBRARY:
+Pytorch
+
+NET NAME:
+GRU-32H1-32H2
+
+NET FULL NAME:
+GRU-6IN-32H1-32H2-1OUT-0
+
+INPUTS:
+angleD, angle_cos, angle_sin, position, positionD, target_position
+
+OUTPUTS:
+Q
+
+TYPE:
+GRU
+
+NORMALIZATION:
+./SI_Toolkit_ASF/Experiments/Experiment-NIPS-CPS/Models/GRU-6IN-32H1-32H2-1OUT-0/NI_2022-08-02_14-22-06.csv
+
+PARENT NET:
+Network trained from scratch
+
+WASH OUT LENGTH:
+10
+
+CONSTRUCT NETWORK:
+with cells
+
+TRAINING_FILES:
+./SI_Toolkit_ASF/Experiments/Experiment-NIPS-CPS//Recordings/Train/
+
+VALIDATION_FILES:
+./SI_Toolkit_ASF/Experiments/Experiment-NIPS-CPS//Recordings/Validate/
+
+TEST_FILES:
+./SI_Toolkit_ASF/Experiments/Experiment-NIPS-CPS//Recordings/Test/
