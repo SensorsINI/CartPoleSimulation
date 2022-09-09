@@ -256,6 +256,14 @@ class CartPoleEnv_LTC(gym.Env):
             int(polewidth / 2),
             (129, 132, 203),
         )
+        if hasattr(self, "target_position"):
+            gfxdraw.filled_circle(
+                self.surf,
+                int(self.target_position * scale + screen_width / 2.0),
+                int(carty),
+                int(10),
+                (231, 76, 60),
+            )
 
         gfxdraw.hline(self.surf, 0, screen_width, carty, (0, 0, 0))
 
