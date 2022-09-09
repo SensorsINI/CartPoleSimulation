@@ -101,7 +101,8 @@ class CartPole(EnvironmentBatched):
         self.u = 0.0  # Physical force acting on the cart
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
         self._target_position = 0.0
-        self.target_equilibrium = 1.0  # Up is 1.0, Down is -1.0
+        self._target_equilibrium = 1.0  # Up is 1.0, Down is -1.0, here just a placeholder, change line below
+        self.target_equilibrium = 1.0
 
         self.action_space = MockSpace(-1.0, 1.0)
 
@@ -328,8 +329,16 @@ class CartPole(EnvironmentBatched):
         return self._target_position
 
     @property
+    def target_equilibrium(self):
+        return self._target_equilibrium
+
+    @property
     def target_position_tf(self):
         return self._target_position_tf
+
+    @property
+    def target_equilibrium_tf(self):
+        return self._target_equilibrium_tf
     
     @target_position.setter
     def target_position(self, target_position):
@@ -338,6 +347,14 @@ class CartPole(EnvironmentBatched):
             self._target_position_tf = tf.Variable(target_position, dtype=tf.float32)
         else:
             self._target_position_tf.assign(target_position)
+
+    @target_equilibrium.setter
+    def target_equilibrium(self, target_equilibrium):
+        self._target_equilibrium = target_equilibrium
+        if not hasattr(self, "_target_equilibrium_tf"):
+            self._target_equilibrium_tf = tf.Variable(target_equilibrium, dtype=tf.float32)
+        else:
+            self._target_equilibrium_tf.assign(target_equilibrium)
 
     def block_pole_at_90_deg(self):
         if self.stop_at_90:

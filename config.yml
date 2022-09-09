@@ -263,10 +263,10 @@ cartpole:
     sigma_angleD: 0.075 # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
     sigma_positionD: 0.005
   num_control_inputs: 1
-  dd_weight: 100.0
+  dd_weight: 600.0
   ep_weight: 20000.0
-  ekp_weight: 120.0
-  ekc_weight: 5.0
+  ekp_weight: 80.0
+  ekc_weight: 20.0
   cc_weight: 1.0
   ccrc_weight: 1.0
 

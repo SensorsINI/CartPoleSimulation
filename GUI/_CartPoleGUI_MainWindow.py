@@ -237,14 +237,58 @@ class MainWindow(QMainWindow):
         lspb.addWidget(self.bss)
         lspb.addWidget(self.bp)
 
+        lb = QVBoxLayout()  # Layout for buttons
+        lb.addLayout(lspb)
+        lb.addWidget(bq)
+
         # endregion
+
+        # region - up/down equilibrium switch
+        lud = QHBoxLayout()
+
+        # Left side - Tag
+        lud_left = QVBoxLayout()
+        lud_left.addStretch(1)
+        lud_left.addWidget(QLabel('Target\nequilibrium:'))
+        lud_left.addStretch(1)
+
+        # Right side - buttons
+        self.available_equilibria = ['Up', 'Down']
+        self.rbs_equilibrium = []
+        for equilibrium_name in self.available_equilibria:
+            self.rbs_equilibrium.append(QRadioButton(equilibrium_name))
+
+        # Ensures that radio buttons are exclusive
+        self.equilibria_buttons_group = QButtonGroup()
+        for button in self.rbs_equilibrium:
+            self.equilibria_buttons_group.addButton(button)
+
+        lud_right = QVBoxLayout()
+        lud_right.addStretch(1)
+
+        for rb in self.rbs_equilibrium:
+            rb.clicked.connect(self.RadioButtons_equilibrium)
+            lud_right.addWidget(rb)
+        lud_right.addStretch(1)
+
+        if self.CartPoleInstance.target_equilibrium == 1.0:
+            initial_target_equilibrium = 'Up'
+        else:
+            initial_target_equilibrium = 'Down'
+
+        self.rbs_equilibrium[self.available_equilibria.index(initial_target_equilibrium)].setChecked(True)
+
+        lud.addLayout(lud_left)
+        lud.addLayout(lud_right)
+
+        l_main_buttons_and_equilibria = QHBoxLayout()
+        l_main_buttons_and_equilibria.addLayout(lb, stretch=1)
+        l_main_buttons_and_equilibria.addLayout(lud)
+        layout.addLayout(l_main_buttons_and_equilibria)
 
         # region - Sliders setting initial state and buttons for kicking the pole
 
         # Sliders setting initial position and angle
-        lb = QVBoxLayout()  # Layout for buttons
-        lb.addLayout(lspb)
-        lb.addWidget(bq)
         ip = QHBoxLayout()  # Layout for initial position sliders
         self.initial_position_slider = QSlider(orientation=Qt.Orientation.Horizontal)
         self.initial_position_slider.setRange(-int(float(1000*TrackHalfLength)), int(float(1000*TrackHalfLength)))
@@ -310,8 +354,7 @@ class MainWindow(QMainWindow):
         ip.addWidget(kick_left_button)
         ip.addWidget(kick_right_button)
 
-        lb.addLayout(ip)
-        layout.addLayout(lb)
+        layout.addLayout(ip)
 
         # endregion
 
@@ -914,6 +957,14 @@ class MainWindow(QMainWindow):
         self.reset_variables(0)
         self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
         self.canvas.draw()
+
+    # Chose the equilibrium - stabilize up or down
+    def RadioButtons_equilibrium(self):
+        sleep(0.001)
+        if self.rbs_equilibrium[0].isChecked():
+            self.CartPoleInstance.target_equilibrium = 1.0
+        else:
+            self.CartPoleInstance.target_equilibrium = -1.0
 
     # Chose the noise mode - effect of start/stop button
     def RadioButtons_noise_on_off(self):

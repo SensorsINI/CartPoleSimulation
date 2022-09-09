@@ -33,7 +33,7 @@ class default(cartpole_cost_function):
     # cost for difference from upright position
     def E_pot_cost(self, angle):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
-        return 0.25 * (1.0 - tf.cos(angle)) ** 2
+        return self.target_equilibrium * 0.25 * (1.0 - tf.cos(angle)) ** 2
 
     # actuation cost
     def CC_cost(self, u):
