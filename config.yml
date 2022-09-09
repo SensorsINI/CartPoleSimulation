@@ -227,6 +227,15 @@ controller:
   neural-imitator-pytorch:
     net_name: 'GRU-6IN-32H1-32H2-1OUT-5'
     PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
+  secloc:
+    log_base: 1.05
+    dt: 1 # In the Arduino code is 1000
+    ref_period: 1
+    dead_band: 0.0025  # Radians
+    pid_Kp: 15.0
+    pid_Kd: 0.0
+    pid_Ki: 1.0
+    #secloc_motor_map: 128
 cartpole:
   cost_function: 'quadratic-boundary-grad' # from 'quadratic-boundary', 'quadratic-boundary-grad', 'quadratic-boundary-nonconvex', 'default'
   actuator_noise: 0.0  # TODO: There already exists a noise entry
