@@ -490,7 +490,7 @@ class controller_mppi(template_controller):
 
         self.iteration += 1
 
-        # generate data for swinging pole
+        # generate data for repeated swing-up
         # global ep_weight
         # if abs(s[ANGLE_IDX]*180/np.pi) < 5:
         #     self.last_down_angles = 0
@@ -599,7 +599,7 @@ class controller_mppi(template_controller):
         self.u[-1] = 0
         # self.u = zeros_like(self.u)
 
-        # # let pole swing for first 12 seconds of the experiment
+        # # let pole swing for first 10 seconds of the experiment
         # if time is not None and time <= 10:
         #     Q = 0
 
