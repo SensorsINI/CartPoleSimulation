@@ -1,9 +1,9 @@
 import numpy as np
-from Control_Toolkit.Controllers.controller_dist_adam_resamp2_tf import controller_dist_adam_resamp2
+from Control_Toolkit.Controllers.controller_rpgd_tf import controller_rpgd_tf
 
 # speed test which is activated if script is run directly and not as module
 if __name__ == '__main__':
-    ctrl = controller_dist_adam_resamp2()
+    ctrl = controller_rpgd_tf()
     import timeit
 
     from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX,
