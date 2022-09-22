@@ -78,7 +78,7 @@ controller:
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     optim_steps: 10
-  dist-adam-rpgd-tf:
+  rpgd-tf:
     seed: null                            # If null, random seed based on datetime is used
     dt: 0.02
     mpc_horizon: 40                       # steps
