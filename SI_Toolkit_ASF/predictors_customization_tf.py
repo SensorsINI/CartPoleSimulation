@@ -17,7 +17,7 @@ STATE_INDICES_TF = tf.lookup.StaticHashTable(
 
 class next_state_predictor_ODE_tf():
 
-    def __init__(self, dt, intermediate_steps, batch_size=1, disable_individual_compilation=False):
+    def __init__(self, dt, intermediate_steps, batch_size=1, disable_individual_compilation=False, planning_environment=None):
         self.s = tf.convert_to_tensor(create_cartpole_state())
 
         self.intermediate_steps = tf.convert_to_tensor(intermediate_steps, dtype=tf.int32)
