@@ -43,7 +43,7 @@ It should be also possible to create this file with `conda list -e > requirement
 
 You can use this repository to generate training data, train a neural network model using SI_Toolkit, and run the resulting controller.
 
-1. Define all the parameters in `run_data_generator.py` and `config.yml` to your liking.
+1. Define all the parameters in `config_data_gen.yml` to your liking.
 2. Run `python -m SI_Toolkit_ASF.run.run_data_generator_for_ML_Pipeline`. This will create a new experiment folder `./SI_Toolkit_ASF/Experiments/Experiment-[X]/`. You will work in this folder from now on. Within there, in `Recordings/` there is now a set of CSVs saved and split up into Train/Validate/Test folders. Also, copies of the current configuration files are saved there.
 3. In `./SI_Toolkit_ASF/config_training.yml` you can now set `paths/path_to_experiment:` to the newly created one. All pipeline-related scripts access this parameter to know which data to work on and where to store the models.
 4. Normalize the data using `python -m SI_Toolkit_ASF.run.Create_normalization_file`. This creates a normalization file within the experiment folder set in step 3.
