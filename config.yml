@@ -52,7 +52,7 @@ controller:
     adam_epsilon: 1.0e-07
     rtol: 1.0e-3
     gradient_steps: 5
-    mpc_rollouts: 40
+    num_rollouts: 40
     initial_action_stdev: 0.5
     gradmax_clip: 5
     predictor_intermediate_steps: 10

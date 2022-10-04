@@ -1,7 +1,6 @@
 import gym
 import os
 from gym.core import ObsType
-from gym.utils.renderer import Renderer
 from CartPole import CartPole
 from CartPole.cartpole_model import ANGLE_IDX, POSITION_IDX
 from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
@@ -35,7 +34,6 @@ class CartPoleEnv_LTC(gym.Env):
         self.CartPoleInstance = CartPole()
         self.RES = random_experiment_setter()
         self.mode = mode
-        self.renderer = Renderer(self.render_mode, self._render)
 
         self.intermediate_steps = int(self.RES.dt_controller_update/self.RES.dt_simulation)
 
@@ -87,7 +85,6 @@ class CartPoleEnv_LTC(gym.Env):
 
         self.step_termination_and_reward()
 
-        self.renderer.render_step()
         return self.state, self.reward, self.done, {"target": self.CartPoleInstance.target_position}
 
     def step_physics(self):
@@ -183,14 +180,8 @@ class CartPoleEnv_LTC(gym.Env):
             return tuple((self.state, {}))
         return self.state
 
-    def render(self, mode="human"):
-        if self.render_mode is not None:
-            return self.renderer.get_renders()
-        else:
-            return self._render(mode)
-
-    def _render(self, mode="human"):
-        assert mode in self.metadata["render_modes"]
+    def render(self):
+        assert self.render_mode in self.metadata["render_modes"]
         import pygame
         from pygame import gfxdraw
         
