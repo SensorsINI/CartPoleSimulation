@@ -7,7 +7,7 @@ controller:
     num_rollouts: 200          #how many rollouts per outer cem iteration
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 5
-    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
     cem_stdev_min: 0.01
     cem_R: 1
     cem_best_k: 40
@@ -19,19 +19,19 @@ controller:
     num_rollouts: 200                     # how many rollouts per outer cem iteration
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 10
-    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
     cem_stdev_min: 0.1
     cem_initial_action_stdev: 0.5
     cem_R: 1
     cem_best_k: 40
-    cem_LR: 0.1
+    learning_rate: 0.1
     gradmax_clip: 10
   cem-grad-bharadhwaj-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 35                       # steps
-    CEM_NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
-    cem_LR: 0.05
+    NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
+    learning_rate: 0.05
     cem_R: 1
     cem_best_k: 40
     cem_outer_it: 1
@@ -45,7 +45,7 @@ controller:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 35                       # steps
-    CEM_NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
+    NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
     learning_rate: 0.05
     adam_beta_1: 0.9
     adam_beta_2: 0.999
@@ -87,7 +87,7 @@ controller:
     NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor name is predictor_autoregressive_tf
     resamp_per: 5                         #determines after how many steps the control plans are resamples
     sample_stdev: 0.5                     #sampling variance of control action
-    cem_LR: 0.05                         #learning rate parameter for adam
+    learning_rate: 0.05                         #learning rate parameter for adam
     adam_beta_1: 0.9    #default: 0.9      adam hyperparameter
     adam_beta_2: 0.999  #default: 0.999       adam hyperparameter
     adam_epsilon: 1.0e-8 #default: 1.0e-7    adam hyperparameter. consult https://ruder.io/optimizing-gradient-descent/ for information

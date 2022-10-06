@@ -9,13 +9,25 @@ from CartPole.cartpole_jacobian import cartpole_jacobian
 from CartPole.cartpole_model import s0, u_max
 from CartPole.state_utilities import (ANGLE_IDX, ANGLED_IDX, POSITION_IDX,
                                       POSITIOND_IDX)
-from others.globals_and_utils import create_rng
-
 from Control_Toolkit.Controllers import template_controller
+from Control_Toolkit.Cost_Functions import cost_function_base
+from gym.spaces.box import Box
+from others.globals_and_utils import create_rng
+from SI_Toolkit.Predictors import predictor
 
 
 class controller_lqr(template_controller):
-    def __init__(self, environment, seed: int, Q: "list[float]", R: "list[float]", **kwargs):
+    def __init__(
+        self,
+        predictor: predictor,
+        cost_function: cost_function_base,
+        seed: int,
+        Q: "list[float]",
+        R: "list[float]",
+        action_space: Box,
+        actuator_noise: float=0.1,
+        **kwargs
+    ):
         # From https://github.com/markwmuller/controlpy/blob/master/controlpy/synthesis.py#L8
         """Solve the continuous time LQR controller for a continuous time system.
 
@@ -32,14 +44,12 @@ class controller_lqr(template_controller):
         The optimal input is then computed as:
          input: u = -K*x
         """
-        super().__init__(environment)
-        self.action_low = self.env_mock.action_space.low
-        self.action_high = self.env_mock.action_space.high
-        
-        self.p_Q = environment.config["actuator_noise"]
+        super().__init__(predictor=predictor, cost_function=cost_function, seed=seed, action_space=action_space, observation_space=None, mpc_horizon=None, num_rollouts=None)
+
+        self.p_Q = actuator_noise
         # ref Bertsekas, p.151
 
-        self.rng_lqr = create_rng(self.__class__.__name__, seed if seed==None else seed*2)
+        self.rng = create_rng(self.__class__.__name__, seed if seed==None else seed*2)
 
         # Calculate Jacobian around equilibrium
         # Set point around which the Jacobian should be linearized
@@ -78,12 +88,12 @@ class controller_lqr(template_controller):
 
     def step(self, s: np.ndarray, time=None):
         state = np.array(
-            [[s[POSITION_IDX] - self.env_mock.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
+            [[s[POSITION_IDX] - self.predictor.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
 
         Q = np.dot(-self.K, state).item()
 
-        Q = np.float32(Q * (1 + self.p_Q * self.rng_lqr.uniform(self.action_low, self.action_high)))
-        # Q = self.rng_lqr.uniform(-1.0, 1.0)
+        Q = np.float32(Q * (1 + self.p_Q * self.rng.uniform(self.action_low, self.action_high)))
+        # Q = self.rng.uniform(-1.0, 1.0)
 
         # Clip Q
         if Q > 1.0:

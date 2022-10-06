@@ -6,18 +6,22 @@ import do_mpc
 import numpy as np
 from CartPole.cartpole_model import Q2u, cartpole_ode_namespace
 from CartPole.state_utilities import cartpole_state_vector_to_namespace
-from others.globals_and_utils import create_rng
-
 from Control_Toolkit.Controllers import template_controller
+from Control_Toolkit.Cost_Functions import cost_function_base
+from gym.spaces.box import Box
+from others.globals_and_utils import create_rng
+from SI_Toolkit.Predictors import predictor
 
 
 class controller_do_mpc(template_controller):
     def __init__(
         self,
-        environment,
+        predictor: predictor,
+        cost_function: cost_function_base,
         seed: int,
         dt: float,
         mpc_horizon: int,
+        action_space: Box,
         p_Q: float,
         p_position: float,
         p_positionD: float,
@@ -31,9 +35,7 @@ class controller_do_mpc(template_controller):
         angleD_init=0.0,    
         **kwargs,
     ):
-        super().__init__(environment)
-        self.action_low = self.env_mock.action_space.low
-        self.action_high = self.env_mock.action_space.high
+        super().__init__(predictor=predictor, cost_function=cost_function, seed=seed, action_space=action_space, observation_space=None, mpc_horizon=mpc_horizon, num_rollouts=None)
         """
         Get configured do-mpc modules:
         """
@@ -85,7 +87,7 @@ class controller_do_mpc(template_controller):
         self.mpc = do_mpc.controller.MPC(self.model)
 
         setup_mpc = {
-            'n_horizon': mpc_horizon,
+            'n_horizon': self.mpc_horizon,
             't_step': dt,
             'n_robust': 0,
             'store_full_solution': False,
@@ -162,7 +164,7 @@ class controller_do_mpc(template_controller):
         self.x0['s.angle'] = s.angle
         self.x0['s.angleD'] = s.angleD
 
-        self.tvp_template['_tvp', :, 'target_position'] = self.env_mock.target_position
+        self.tvp_template['_tvp', :, 'target_position'] = self.predictor.target_position
 
         Q = self.mpc.make_step(self.x0)
 

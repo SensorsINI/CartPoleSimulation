@@ -1,13 +1,15 @@
 """do-mpc controller"""
 
+from types import SimpleNamespace
+
 import do_mpc
 import numpy as np
-
-from Control_Toolkit.Controllers import template_controller
-from CartPole.cartpole_model import v_max, Q2u, cartpole_ode_namespace, TrackHalfLength
+from CartPole.cartpole_model import (Q2u, TrackHalfLength,
+                                     cartpole_ode_namespace, v_max)
 from CartPole.state_utilities import cartpole_state_vector_to_namespace
-
-from types import SimpleNamespace
+from Control_Toolkit.Controllers import template_controller
+from Control_Toolkit.Cost_Functions import cost_function_base
+from gym.spaces.box import Box
 
 
 def mpc_next_state(s, u, dt):
@@ -52,18 +54,18 @@ def cartpole_integration(s, dt):
 class controller_do_mpc_discrete(template_controller):
     def __init__(
         self,
-        environment,
+        predictor,
+        cost_function: cost_function_base,
         dt: float,
         mpc_horizon: int,
+        action_space: Box,
         position_init=0.0,
         positionD_init=0.0,
         angle_init=0.0,
         angleD_init=0.0,
         **kwargs,
     ):
-        super().__init__(environment)
-        self.action_low = self.env_mock.action_space.low
-        self.action_high = self.env_mock.action_space.high
+        super().__init__(predictor=predictor, cost_function=cost_function, seed=None, action_space=action_space, observation_space=None, mpc_horizon=mpc_horizon, num_rollouts=1, controller_logging=False)
         """
         Get configured do-mpc modules:
         """
@@ -167,7 +169,7 @@ class controller_do_mpc_discrete(template_controller):
         self.x0['s.angle'] = s.angle
         self.x0['s.angleD'] = s.angleD
 
-        self.tvp_template['_tvp', :, 'target_position'] = self.env_mock.target_position
+        self.tvp_template['_tvp', :, 'target_position'] = self.predictor.target_position
 
         Q = self.mpc.make_step(self.x0)
 

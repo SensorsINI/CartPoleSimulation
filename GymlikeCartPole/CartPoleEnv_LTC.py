@@ -168,7 +168,7 @@ class CartPoleEnv_LTC(gym.Env):
         
         return done
 
-    def reset(self, state, seed: Optional[int] = None, return_info: bool = False, options: Optional[dict] = None) -> Union[ObsType, Tuple[ObsType, dict]]:
+    def reset(self, seed: Optional[int] = None, options: Optional[dict] = None) -> Tuple[ObsType, dict]:
         self.CartPoleInstance = self.RES.set(self.CartPoleInstance)
         self.state = self.CartPoleInstance.s
         self.target = self.CartPoleInstance.target_position
@@ -176,9 +176,7 @@ class CartPoleEnv_LTC(gym.Env):
 
         self.steps_beyond_done = None
 
-        if return_info:
-            return tuple((self.state, {}))
-        return self.state
+        return self.state, {}
 
     def render(self):
         assert self.render_mode in self.metadata["render_modes"]

@@ -484,7 +484,7 @@ class controller_mppi(template_controller):
         """
 
         self.s = s
-        self.target_position = np.float32(self.env_mock.target_position)
+        self.target_position = np.float32(self.predictor.target_position)
 
         self.iteration += 1
 

@@ -22,7 +22,7 @@ NET_NAME = config['controller']['neural-imitator-tf']['net_name']
 PATH_TO_MODELS = config['controller']['neural-imitator-tf']['PATH_TO_MODELS']
 
 class controller_neural_imitator_tf(template_controller):
-    def __init__(self, environment, batch_size=1, **kwargs):
+    def __init__(self, predictor, batch_size=1, **kwargs):
 
         a = SimpleNamespace()
         self.batch_size = batch_size  # It makes sense only for testing (Brunton plot for Q) of not rnn networks to make bigger batch, this is not implemented
@@ -49,12 +49,12 @@ class controller_neural_imitator_tf(template_controller):
         except:
             self.evaluate_net = self.evaluate_net_f
 
-        super().__init__(environment)
+        super().__init__(predictor)
 
     def step(self, s, time=None):
 
         net_input = s[..., [STATE_INDICES.get(key) for key in self.net_info.inputs[:-1]]]  # -1 is a fix to exclude target position
-        net_input = np.append(net_input, self.env_mock.target_position)
+        net_input = np.append(net_input, self.predictor.target_position)
 
         net_input = normalize_numpy_array(net_input,
                                           self.net_info.inputs,
