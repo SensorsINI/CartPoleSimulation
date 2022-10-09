@@ -198,10 +198,10 @@ class CartPoleEnv_LTC(gym.Env):
         
         if self.screen is None:
             pygame.init()
-            if mode == "human":
+            if self.render_mode == "human":
                 pygame.display.init()
                 self.screen = pygame.display.set_mode((screen_width, screen_height))
-            else:  # mode in {"rgb_array", "single_rgb_array"}
+            else:  # render mode in {"rgb_array", "single_rgb_array"}
                 self.screen = pygame.Surface((screen_width, screen_height))
 
         self.surf = pygame.Surface((screen_width, screen_height))
@@ -258,10 +258,10 @@ class CartPoleEnv_LTC(gym.Env):
 
         self.surf = pygame.transform.flip(self.surf, False, True)
         self.screen.blit(self.surf, (0, 0))
-        if mode == "human":
+        if self.render_mode == "human":
             pygame.display.flip()
 
-        if mode in {"rgb_array", "single_rgb_array"}:
+        if self.render_mode in {"rgb_array", "single_rgb_array"}:
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.screen)), axes=(1, 0, 2)
             )
