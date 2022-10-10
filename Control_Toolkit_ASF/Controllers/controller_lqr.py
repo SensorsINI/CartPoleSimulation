@@ -44,7 +44,7 @@ class controller_lqr(template_controller):
         The optimal input is then computed as:
          input: u = -K*x
         """
-        super().__init__(predictor=predictor, cost_function=cost_function, seed=seed, action_space=action_space, observation_space=None, mpc_horizon=None, num_rollouts=None)
+        super().__init__(predictor=predictor, cost_function=cost_function, seed=seed, action_space=action_space, observation_space=None, mpc_horizon=None, num_rollouts=None, controller_logging=False)
 
         self.p_Q = actuator_noise
         # ref Bertsekas, p.151
@@ -88,7 +88,7 @@ class controller_lqr(template_controller):
 
     def step(self, s: np.ndarray, time=None):
         state = np.array(
-            [[s[POSITION_IDX] - self.predictor.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
+            [[s[POSITION_IDX] - self.cost_function.environment.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
 
         Q = np.dot(-self.K, state).item()
 

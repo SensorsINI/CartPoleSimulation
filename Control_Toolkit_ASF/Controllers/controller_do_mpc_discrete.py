@@ -169,7 +169,7 @@ class controller_do_mpc_discrete(template_controller):
         self.x0['s.angle'] = s.angle
         self.x0['s.angleD'] = s.angleD
 
-        self.tvp_template['_tvp', :, 'target_position'] = self.predictor.target_position
+        self.tvp_template['_tvp', :, 'target_position'] = self.cost_function.environment.target_position
 
         Q = self.mpc.make_step(self.x0)
 

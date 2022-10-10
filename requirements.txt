@@ -30,4 +30,4 @@ do-mpc==4.1.1
 casadi
 nni
 
-./SI_Toolkit
+-e ./SI_Toolkit

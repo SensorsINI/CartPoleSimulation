@@ -9,48 +9,33 @@ Based on Williams, Aldrich, Theodorou (2015)
 # # # use('TkAgg')
 # use('macOSX')
 
-import copy
 
-from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength,
-)
-
-import os
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-from datetime import datetime
-
-from CartPole._CartPole_mathematical_helpers import (
-    conditional_decorator,
-    wrap_angle_rad_inplace,
-)
+from CartPole._CartPole_mathematical_helpers import wrap_angle_rad_inplace
 from CartPole.cartpole_model import TrackHalfLength
-from CartPole.state_utilities import (
-    ANGLE_COS_IDX,
-    ANGLE_IDX,
-    ANGLED_IDX,
-    ANGLE_SIN_IDX,
-    POSITION_IDX,
-    POSITIOND_IDX,
-    STATE_VARIABLES,
-    STATE_INDICES,
-    create_cartpole_state,
-)
+from CartPole.state_utilities import (ANGLE_IDX, ANGLED_IDX, POSITION_IDX,
+                                      POSITIOND_IDX, STATE_INDICES,
+                                      create_cartpole_state)
+from Control_Toolkit.Controllers import template_controller
+from Control_Toolkit.Cost_Functions import cost_function_base
+from gym.spaces.box import Box
 from matplotlib.widgets import Slider
 from numba import jit
 from numpy.random import SFC64, Generator
+from others.p_globals import TrackHalfLength
+from scipy.interpolate import interp1d
+from SI_Toolkit.Predictors.predictor_autoregressive_tf import \
+    predictor_autoregressive_tf
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
-from scipy.interpolate import interp1d
-from SI_Toolkit.Predictors.predictor_autoregressive_tf import predictor_autoregressive_tf
+
 # from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
 # from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
 
-from Control_Toolkit.Controllers import template_controller
-
-from others.p_globals import L
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
@@ -63,7 +48,6 @@ except AttributeError:  # Should get Attribute Error if NET_NAME is None
 """Timestep and sampling settings"""
 dt = config["controller"]["mppi"]["dt"]
 mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
-mpc_samples = mpc_horizon  # Number of steps in MPC horizon
 num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 update_every = config["controller"]["mppi"]["update_every"]
 predictor_name = config["controller"]["mppi"]["predictor_name"]
@@ -97,7 +81,7 @@ SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
 
 
 """Init logging variables"""
-LOGGING = config["controller"]["mppi"]["LOGGING"]
+LOGGING = config["controller"]["mppi"]["controller_logging"]
 # Save average cost for each cost component
 LOGS = {
     "cost_to_go": [],
@@ -167,18 +151,18 @@ def penalize_deviation(cc, u):
 
 """Define Predictor"""
 if predictor_name == "predictor_ODE_tf":
-    predictor = predictor_ODE_tf(horizon=mpc_samples, dt=dt, intermediate_steps=10)
+    predictor = predictor_ODE_tf(horizon=mpc_horizon, dt=dt, intermediate_steps=10)
 elif predictor_name == "predictor_ODE":
-    predictor = predictor_ODE(horizon=mpc_samples, dt=dt, intermediate_steps=10)
+    predictor = predictor_ODE(horizon=mpc_horizon, dt=dt, intermediate_steps=10)
 elif predictor_name == "predictor_autoregressive_tf":
     predictor = predictor_autoregressive_tf(
-        horizon=mpc_samples, batch_size=num_rollouts, net_name=NET_NAME
+        horizon=mpc_horizon, batch_size=num_rollouts, net_name=NET_NAME
     )
 # elif predictor_name == "predictor_autoregressive_GP":
-#     predictor = predictor_autoregressive_GP(horizon=mpc_samples)
+#     predictor = predictor_autoregressive_GP(horizon=mpc_horizon)
 
 predictor_ground_truth = predictor_ODE(
-    horizon=mpc_samples, dt=dt, intermediate_steps=10
+    horizon=mpc_horizon, dt=dt, intermediate_steps=10
 )
 
 def trajectory_rollouts(
@@ -236,10 +220,10 @@ def trajectory_rollouts(
         LOGS.get("cost_breakdown").get("cost_ekc").append(np.mean(ekc, 0))
         LOGS.get("cost_breakdown").get("cost_cc").append(np.mean(cc, 0))
         LOGS.get("cost_breakdown").get("cost_ccrc").append(np.mean(ccrc, 0))
-        # (1 x mpc_samples)
+        # (1 x mpc_horizon)
         LOGS.get("states").append(
             np.copy(s_horizon[:, :-1, :])
-        )  # num_rollouts x mpc_samples x STATE_VARIABLES
+        )  # num_rollouts x mpc_horizon x STATE_VARIABLES
 
     return S_tilde_k
 
@@ -344,11 +328,11 @@ def reward_weighted_average(S: np.ndarray, delta_u: np.ndarray):
 def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
     """Reward-weighted in-place update of nominal control inputs according to the MPPI method.
 
-    :param u: Sampling mean / warm started control inputs of size (,mpc_samples)
+    :param u: Sampling mean / warm started control inputs of size (,mpc_horizon)
     :type u: np.ndarray
     :param S: Cost array of size (num_rollouts)
     :type S: np.ndarray
-    :param delta_u: The input perturbations that had been used, shape (num_rollouts x mpc_samples)
+    :param delta_u: The input perturbations that had been used, shape (num_rollouts x mpc_horizon)
     :type delta_u: np.ndarray
     """
     u += reward_weighted_average(S, delta_u)
@@ -361,15 +345,25 @@ class controller_mppi(template_controller):
     :type template_controller: abc.ABC
     """
 
-    def __init__(self, environment, **kwargs):
-        super().__init__(environment)
-
+    def __init__(
+        self,
+        predictor: predictor,
+        cost_function: cost_function_base,
+        action_space: Box,
+        observation_space: Box,
+        mpc_horizon: int,
+        num_rollouts: int,
+        controller_logging: bool,
+        **kwargs,
+    ):
         """Random number generator"""
         seed = config["controller"]["mppi"]["seed"]
         if seed == None:
             seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
         self.rng_mppi = Generator(SFC64(seed))
         self.rng_mppi_rnn = Generator(SFC64(seed*2)) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
+
+        super().__init__(predictor=predictor, cost_function=cost_function, seed=seed, action_space=action_space, observation_space=observation_space, mpc_horizon=mpc_horizon, num_rollouts=num_rollouts, controller_logging=controller_logging)
 
         global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
         dd_weight = dd_weight * (1 + dd_noise * self.rng_mppi.uniform(-1.0, 1.0))
@@ -382,22 +376,21 @@ class controller_mppi(template_controller):
         self.s = create_cartpole_state()
 
         self.target_position = 0.0
-
         self.rho_sqrt_inv = 0.01
-
         self.iteration = -1
         self.control_enabled = True
 
         self.s_horizon = np.zeros((), dtype=np.float32)
-        self.u = np.zeros((mpc_samples), dtype=np.float32)
+        self.u = np.zeros((mpc_horizon), dtype=np.float32)
         self.u_prev = np.zeros_like(self.u, dtype=np.float32)
-        self.delta_u = np.zeros((num_rollouts, mpc_samples), dtype=np.float32)
+        self.delta_u = np.zeros((num_rollouts, mpc_horizon), dtype=np.float32)
         self.S_tilde_k = np.zeros((num_rollouts), dtype=np.float32)
 
         self.wash_out_len = WASH_OUT_LEN
         self.warm_up_countdown = self.wash_out_len
         try:
             from Control_Toolkit_ASF.Controllers.controller_lqr import controller_lqr
+
             # FIXME: controller requires corresponding config...
             print('Auxiliary controller not implemented yet in ')
             # self.auxiliary_controller_available = True
@@ -433,28 +426,28 @@ class controller_mppi(template_controller):
         If random_walk is true, each row represents a 1D random walk with Gaussian steps.
         """
         if sampling_type == "random_walk":
-            delta_u = np.empty((num_rollouts, mpc_samples), dtype=np.float32)
+            delta_u = np.empty((num_rollouts, mpc_horizon), dtype=np.float32)
             delta_u[:, 0] = stdev * self.rng_mppi.standard_normal(
                 size=(num_rollouts,), dtype=np.float32
             )
-            for i in range(1, mpc_samples):
+            for i in range(1, mpc_horizon):
                 delta_u[:, i] = delta_u[:, i - 1] + stdev * self.rng_mppi.standard_normal(
                     size=(num_rollouts,), dtype=np.float32
                 )
         elif sampling_type == "uniform":
-            delta_u = np.empty((num_rollouts, mpc_samples), dtype=np.float32)
-            for i in range(0, mpc_samples):
+            delta_u = np.empty((num_rollouts, mpc_horizon), dtype=np.float32)
+            for i in range(0, mpc_horizon):
                 delta_u[:, i] = self.rng_mppi.uniform(
                     low=-1.0, high=1.0, size=(num_rollouts,)
                 ).astype(np.float32)
         elif sampling_type == "repeated":
             delta_u = np.tile(
                 stdev * self.rng_mppi.standard_normal(size=(num_rollouts, 1), dtype=np.float32),
-                (1, mpc_samples),
+                (1, mpc_horizon),
             )
         elif sampling_type == "interpolated":
             step = 10
-            range_stop = int(np.ceil((mpc_samples) / step) * step) + 1
+            range_stop = int(np.ceil((mpc_horizon) / step) * step) + 1
             t = np.arange(start=0, stop=range_stop, step=step)
             t_interp = np.arange(start=0, stop=range_stop, step=1)
             t_interp = np.delete(t_interp, t)
@@ -464,10 +457,10 @@ class controller_mppi(template_controller):
             )
             f = interp1d(t, delta_u[:, t])
             delta_u[:, t_interp] = f(t_interp)
-            delta_u = delta_u[:, :mpc_samples]
+            delta_u = delta_u[:, :mpc_horizon]
         else:
             delta_u = stdev * self.rng_mppi.standard_normal(
-                size=(num_rollouts, mpc_samples), dtype=np.float32
+                size=(num_rollouts, mpc_horizon), dtype=np.float32
             )
 
         return delta_u
@@ -484,15 +477,15 @@ class controller_mppi(template_controller):
         """
 
         self.s = s
-        self.target_position = np.float32(self.predictor.target_position)
+        self.target_position = np.float32(self.cost_function.environment.target_position)
 
         self.iteration += 1
 
         # Adjust horizon if changed in GUI while running
         # FIXME: For this to work with NeuralNet predictor we need to build a setter,
         #  which also reinitialize arrays which size depends on horizon
-        predictor.horizon = mpc_samples
-        if mpc_samples != self.u.size:
+        self.predictor.horizon = mpc_horizon
+        if mpc_horizon != self.u.size:
             self.update_control_vector()
 
         if self.iteration % update_every == 0:
@@ -523,7 +516,7 @@ class controller_mppi(template_controller):
                 LOGS.get("inputs").append(np.copy(self.u))
 
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
-                # Compute one rollout of shape (mpc_samples + 1) x s.size
+                # Compute one rollout of shape (mpc_horizon + 1) x s.size
                 if predictor_name == "predictor_ODE":
                     rollout_trajectory = predictor.predict(np.copy(self.s), self.u[:, np.newaxis])
                 elif predictor_name in ["predictor_autoregressive_tf", "predictor_ODE_tf", "predictor_autoregressive_GP"]:
@@ -594,8 +587,8 @@ class controller_mppi(template_controller):
         When adjusting the horizon length, need to adjust this vector too.
         Init with zeros when lengthening, and slice when shortening horizon.
         """
-        update_length = min(mpc_samples, self.u.size)
-        u_new = np.zeros((mpc_samples), dtype=np.float32)
+        update_length = min(mpc_horizon, self.u.size)
+        u_new = np.zeros((mpc_horizon), dtype=np.float32)
         u_new[:update_length] = self.u[:update_length]
         self.u = u_new
         self.u_prev = np.copy(self.u)
@@ -618,7 +611,7 @@ class controller_mppi(template_controller):
             ### Graph the different cost components per iteration
             LOGS["cost_breakdown"]["cost_dd"] = np.stack(
                 LOGS.get("cost_breakdown").get("cost_dd"), axis=0
-            )  # ITERATIONS x mpc_samples
+            )  # ITERATIONS x mpc_horizon
             LOGS["cost_breakdown"]["cost_ep"] = np.stack(
                 LOGS.get("cost_breakdown").get("cost_ep"), axis=0
             )
@@ -717,7 +710,7 @@ class controller_mppi(template_controller):
                     )
 
             # Prepare data
-            # shape(slgs) = ITERATIONS x num_rollouts x mpc_samples x STATE_VARIABLES
+            # shape(slgs) = ITERATIONS x num_rollouts x mpc_horizon x STATE_VARIABLES
             slgs = np.stack(LOGS.get("states"), axis=0)
             wrap_angle_rad_inplace(slgs[:, :, :, ANGLE_IDX])
             # shape(iplgs) = ITERATIONS x mpc_horizon

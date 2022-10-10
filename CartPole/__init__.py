@@ -8,19 +8,23 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 """
 # Import module to save history of the simulation as csv file
 import csv
-# To detect the latest csv file
-from importlib import import_module
 # Import module to interact with OS
 import os
 import traceback
 # Import module to get a current time and date used to name the files containing the history of simulations
 from datetime import datetime
+# To detect the latest csv file
+from importlib import import_module
 
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from Control_Toolkit.others.environment import EnvironmentBatched, NumpyLibrary, TensorFlowLibrary
-from Control_Toolkit.others.globals_and_utils import get_available_controller_names, get_controller
+from CartPole.cartpole_tf import cartpole_fine_integration_tf
+from Control_Toolkit.others.environment import (EnvironmentBatched,
+                                                NumpyLibrary,
+                                                TensorFlowLibrary, TensorType)
+from Control_Toolkit.others.globals_and_utils import (
+    get_available_controller_names, get_controller)
 from others.globals_and_utils import MockSpace, create_rng, load_config
 from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
@@ -32,7 +36,7 @@ from tqdm import trange
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
 from CartPole.cartpole_model import Q2u, s0
-from CartPole.cartpole_numba import (cartpole_integration_numba,
+from CartPole.cartpole_numba import (cartpole_fine_integration_s_numba, cartpole_integration_numba,
                                      cartpole_ode_numba, edge_bounce_numba)
 from CartPole.latency_adder import LatencyAdder
 from CartPole.load import get_full_paths_to_csvs, load_csv_recording
@@ -69,7 +73,6 @@ rc('font', **font)
 
 # endregion
 
-import yaml
 
 config = load_config("config.yml")
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
@@ -104,7 +107,10 @@ class CartPole(EnvironmentBatched):
         self._target_equilibrium = 1.0  # Up is 1.0, Down is -1.0, here just a placeholder, change line below
         self.target_equilibrium = 1.0
 
-        self.action_space = MockSpace(-1.0, 1.0)
+        self.action_space = MockSpace(-1.0, 1.0, (1,), np.float32)
+        state_low = [-np.pi, -np.inf, -1.0, -1.0, -TrackHalfLength, -np.inf]
+        state_high = [-v for v in state_low]
+        self.observation_space = MockSpace(state_low, state_high, (6,), np.float32)
 
         self.latency = self.config["latency"]
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
@@ -877,16 +883,38 @@ class CartPole(EnvironmentBatched):
         Controller, self.controller_name, self.controller_idx = get_controller(
             controller_name=controller_name, controller_idx=controller_idx
         )
-        if Controller is None:
-            self.controller = None
-        else:
-            self.controller = Controller(self, **{**config["controller"][self.controller_name], **{"num_control_inputs": self.config["num_control_inputs"]}})
-
+        
         if self.controller_name[-2:] == "tf":
             self.set_computation_library(TensorFlowLibrary)
         else:
             self.set_computation_library(NumpyLibrary)
         self.set_cost_functions()
+        
+        if Controller is None:
+            self.controller = None
+        else:
+            controller_config = config["controller"][self.controller_name]
+            if "predictor_name" in controller_config:
+                predictor_module = import_module(f"SI_Toolkit.Predictors.{controller_config['predictor_name']}")
+                Predictor = getattr(predictor_module, controller_config["predictor_name"])
+                predictor = Predictor(
+                    horizon=controller_config["mpc_horizon"],
+                    dt=controller_config["dt"],
+                    intermediate_steps=controller_config["predictor_intermediate_steps"],
+                    batch_size=controller_config["num_rollouts"],
+                    disable_individual_compilation=True,
+                    net_name=controller_config["NET_NAME"],
+                )
+            else:
+                predictor = None
+            
+            self.controller = Controller(
+                predictor=predictor,
+                cost_function=self.cost_functions,
+                action_space=self.action_space,
+                observation_space=self.observation_space,
+                **config["controller"][self.controller_name],
+            )
             
         # Set the maximal allowed value of the slider - relevant only for GUI
         if self.controller_name == 'manual-stabilization':

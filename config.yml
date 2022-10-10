@@ -4,6 +4,7 @@ controller:
     dt: 0.02                              # sec
     mpc_horizon: 40                       # steps
     cem_outer_it: 3                    #how many outer iterations to use
+    cem_initial_action_stdev: 0.5
     num_rollouts: 200          #how many rollouts per outer cem iteration
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 5
@@ -11,6 +12,23 @@ controller:
     cem_stdev_min: 0.01
     cem_R: 1
     cem_best_k: 40
+    warmup: false
+    warmup_iterations: 250
+    controller_logging: True
+  cem-gmm-tf:
+    seed: null                          # If null, random seed based on datetime is used
+    dt: 0.02                              # sec
+    mpc_horizon: 40                       # steps
+    cem_outer_it: 3                    #how many outer iterations to use
+    num_rollouts: 200          #how many rollouts per outer cem iteration
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    predictor_intermediate_steps: 5
+    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
+    cem_stdev_min: 0.01
+    cem_initial_action_stdev: 0.5
+    cem_R: 1
+    cem_best_k: 40
+    controller_logging: True
   cem-naive-grad-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
@@ -26,23 +44,30 @@ controller:
     cem_best_k: 40
     learning_rate: 0.1
     gradmax_clip: 10
+    controller_logging: True
   cem-grad-bharadhwaj-tf:
     seed: null                          # If null, random seed based on datetime is used
+    controller_logging: true
+    mpc_horizon: 50                       # steps
     dt: 0.02                              # sec
-    mpc_horizon: 35                       # steps
     NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
     learning_rate: 0.05
+    adam_beta_1: 0.9
+    adam_beta_2: 0.999
+    adam_epsilon: 1.0e-08
     cem_R: 1
-    cem_best_k: 40
-    cem_outer_it: 1
-    num_rollouts: 200
-    cem_initial_action_stdev: 0.5
-    cem_stdev_min: 0.2
+    num_rollouts: 32
+    cem_best_k: 8
+    cem_outer_it: 2
+    cem_initial_action_stdev: 2
+    cem_stdev_min: 1.e-6
     gradmax_clip: 5
     predictor_intermediate_steps: 1
     predictor_name: predictor_ODE_tf
+    warmup: false
+    warmup_iterations: 250
   gradient-tf:
-    seed: null                          # If null, random seed based on datetime is used
+    seed: null                            # If null, random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 35                       # steps
     NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
@@ -57,8 +82,11 @@ controller:
     gradmax_clip: 5
     predictor_intermediate_steps: 10
     predictor_name: predictor_ODE_tf
+    warmup: false
+    warmup_iterations: 250
+    controller_logging: True
   mppi-optimize-tf:
-    seed: null                          # If null, random seed based on datetime is used
+    seed: null                            # If null, random seed based on datetime is used
     mppi_LR: 0.02
     adam_beta_1: 0.4                      #default: 0.9
     adam_beta_2: 0.8                      #default: 0.999
@@ -78,27 +106,53 @@ controller:
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
     optim_steps: 10
+    controller_logging: True
+  dist-adam-resamp2-tf:
+    seed: null                            # If null, random seed based on datetime is used
+    dt: 0.02
+    mpc_horizon: 40                       # steps
+    predictor_name: "predictor_autoregressive_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    NET_NAME: GRU-6IN-32H1-32H2-5OUT-2
+    SAMPLING_TYPE: interpolated
+    interpolation_step: 10
+    learning_rate: 0.05
+    adam_beta_1: 0.9
+    adam_beta_2: 0.999
+    adam_epsilon: 1.0e-08
+    gradmax_clip: 5
+    rtol: 1.0e-3
+    num_rollouts: 32
+    opt_keep_k: 8
+    outer_its: 2
+    predictor_intermediate_steps: 10
+    resamp_per: 10
+    sample_stdev: 0.5
+    warmup: false
+    warmup_iterations: 250
+    controller_logging: True
   rpgd-tf:
     seed: null                            # If null, random seed based on datetime is used
     dt: 0.02
     mpc_horizon: 40                       # steps
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 5
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor name is predictor_autoregressive_tf
-    resamp_per: 5                         #determines after how many steps the control plans are resamples
-    sample_stdev: 0.5                     #sampling variance of control action
-    learning_rate: 0.05                         #learning rate parameter for adam
-    adam_beta_1: 0.9    #default: 0.9      adam hyperparameter
-    adam_beta_2: 0.999  #default: 0.999       adam hyperparameter
-    adam_epsilon: 1.0e-8 #default: 1.0e-7    adam hyperparameter. consult https://ruder.io/optimizing-gradient-descent/ for information
+    NET_NAME: GRU-6IN-32H1-32H2-5OUT-2
+    SAMPLING_TYPE: interpolated
+    interpolation_step: 10
+    learning_rate: 0.05
+    adam_beta_1: 0.9
+    adam_beta_2: 0.999
+    adam_epsilon: 1.0e-08
+    gradmax_clip: 5
     rtol: 1.0e-3
-    opt_keep_k: 8                          #how many plans should be kept for warmstarting when resampling, has to be smaller or equal num_rollouts, set equal num_rollouts for degenerate case without any resampling
-    num_rollouts: 32                      # number of parallel optimizations
-    SAMPLING_TYPE: None #if interpolated: linear interpolation; else iid
-    warmup: True                          #whether or not we warmstart the controller. If true, first iteration will do mpc_horizon*outer_its optimizations
-    interpolation_step: 1                #interpolation stepsize when sampling
-    outer_its: 3                         #number of optimization iterations
-    gradmax_clip: 5                     #maximal gradient entry to be kept, is ||gradient||_inf <= gradmax_clip
+    num_rollouts: 32
+    opt_keep_k: 8
+    outer_its: 2
+    predictor_intermediate_steps: 10
+    resamp_per: 10
+    sample_stdev: 0.5
+    warmup: false
+    warmup_iterations: 250
+    controller_logging: True
   mppi-var-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
@@ -120,6 +174,7 @@ controller:
     STDEV_min: 0.01                       # Maximal variance for sampling
     STDEV_max: 10                         # Minimal sampling variance for sampling
     max_grad_norm: 100000                 # max norm of gradient such that ||gradient||_2
+    controller_logging: True
   mppi:
     seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
@@ -144,7 +199,7 @@ controller:
     SQRTRHOINV: 0.02                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
-    LOGGING: False                        # Collect and show detailed insights into the controller's behavior
+    controller_logging: False                        # Collect and show detailed insights into the controller's behavior
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
   mppi-tf:
     seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
@@ -165,9 +220,19 @@ controller:
     SQRTRHOINV: 0.03                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
     SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
-    LOGGING: False                        # Collect and show detailed insights into the controller's behavior
+    controller_logging: False                        # Collect and show detailed insights into the controller's behavior
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
     CLIP_CONTROL_INPUT: [1.0]             # How to clip control input, symmetric
+  random-action:
+    seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
+    dt: 0.02                              # sec
+    mpc_horizon: 35                       # steps
+    num_rollouts: 3500                    # Number of Monte Carlo samples
+    NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
+    num_rollouts: 320
+    predictor_intermediate_steps: 1
+    predictor_name: predictor_ODE_tf
+    controller_logging: False                        # Collect and show detailed insights into the controller's behavior
   custom-mpc-scipy:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.1
@@ -186,10 +251,12 @@ controller:
     m2: 0.0  # angleD_cost
     m3: 0.0  # position_cost
     m4: 0.0  # positionD_cost
+    controller_logging: True
   do-mpc-discrete:
     dt: 0.02  # s
     mpc_horizon: 50                       # steps
     num_rollouts: 1
+    controller_logging: True
   do-mpc:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02  # s
@@ -206,11 +273,13 @@ controller:
     l_angle: 0.1
     l_position: 1.0
     l_positionD: 0.1
+    controller_logging: True
   lqr:
     seed: null  # Seed for rng, for lqr only, put null to set random seed (do it when you generate data for training!)
     Q: [10.0, 1.0, 1.0, 1.0]
     R: 10.0
     control_noise: 1.0
+    controller_logging: True
   pid:
     P_angle: 9.0
     I_angle: 0.0
@@ -218,15 +287,25 @@ controller:
     P_position: 0.1
     I_position: 0.0
     D_position: 0.1
+    controller_logging: True
   mpc-opti:
     dt: 0.2  # s
     mpc_horizon: 10                       # steps
+    controller_logging: True
   neural-imitator-tf:
+    seed: null                            # If null, random seed based on datetime is used
     net_name: 'GRU-6IN-32H1-32H2-1OUT-4'
     PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
+    mpc_horizon: 40
+    num_rollouts: 1
+    controller_logging: True
   neural-imitator-pytorch:
+    seed: null                            # If null, random seed based on datetime is used
     net_name: 'GRU-6IN-32H1-32H2-1OUT-5'
     PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
+    mpc_horizon: 40
+    num_rollouts: 1
+    controller_logging: True
 cartpole:
   cost_function: 'quadratic-boundary-grad' # from 'quadratic-boundary', 'quadratic-boundary-grad', 'quadratic-boundary-nonconvex', 'default'
   actuator_noise: 0.0  # TODO: There already exists a noise entry

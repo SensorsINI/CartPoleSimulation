@@ -35,7 +35,7 @@ class controller_do_mpc(template_controller):
         angleD_init=0.0,    
         **kwargs,
     ):
-        super().__init__(predictor=predictor, cost_function=cost_function, seed=seed, action_space=action_space, observation_space=None, mpc_horizon=mpc_horizon, num_rollouts=None)
+        super().__init__(predictor=predictor, cost_function=cost_function, seed=seed, action_space=action_space, observation_space=None, mpc_horizon=mpc_horizon, num_rollouts=None, controller_logging=False)
         """
         Get configured do-mpc modules:
         """
@@ -164,7 +164,7 @@ class controller_do_mpc(template_controller):
         self.x0['s.angle'] = s.angle
         self.x0['s.angleD'] = s.angleD
 
-        self.tvp_template['_tvp', :, 'target_position'] = self.predictor.target_position
+        self.tvp_template['_tvp', :, 'target_position'] = self.cost_function.environment.target_position
 
         Q = self.mpc.make_step(self.x0)
 

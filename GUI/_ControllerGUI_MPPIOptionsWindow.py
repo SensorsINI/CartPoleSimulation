@@ -33,7 +33,7 @@ class MPPIOptionsWindow(QWidget):
     def __init__(self):
         super(MPPIOptionsWindow, self).__init__()
 
-        self.horizon_steps = controller_mppi.mpc_samples
+        self.horizon_steps = controller_mppi.mpc_horizon
         self.num_rollouts = controller_mppi.num_rollouts
         self.dd_weight = controller_mppi.dd_weight
         self.ep_weight = controller_mppi.ep_weight
@@ -258,7 +258,7 @@ class MPPIOptionsWindow(QWidget):
     def horizon_length_changed(self, val: int):
         self.horizon_steps = val
         # TODO: Replace by setter method
-        controller_mppi.mpc_samples = self.horizon_steps
+        controller_mppi.mpc_horizon = self.horizon_steps
         self.update_slider_labels()
 
     def num_rollouts_changed(self, val: int):
