@@ -1,8 +1,8 @@
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
 seed: 1998   # If not assign random seed based on datetime is used
-length_of_experiment: 1  # Length of each experiment in s:
+length_of_experiment: 8  # Length of each experiment in s:
 controller: 'mppi-tf'  # name of the controller to be used - does not matter for Cartpole Gym
-split: [0.81, 0.19]  # Train/Val/(Test) split - only matters if you run it in ML Pipeline mode
+split: [0.8, 0.1]  # Train/Val/(Test) split - only matters if you run it in ML Pipeline mode
 random_initial_state:
   # Unassigned variables will be randomly initialized (see below)
   position:
@@ -31,4 +31,4 @@ save_mode: 'online'  # It was intended to save memory usage, but it doesn't seem
 # Show popup window in the end with summary of experiment?
 show_summary_plots: False
 show_controller_report: False
-number_of_experiments: 1  # How many experiments will be generated
+number_of_experiments: 10  # How many experiments will be generated
