@@ -15,7 +15,7 @@ except ModuleNotFoundError:
     print('SI_Toolkit_ASF not yet created')
 
 from SI_Toolkit.Functions.General.Initialization import get_net, get_norm_info_for_net
-from SI_Toolkit.Functions.TF.Compile import Compile
+from SI_Toolkit.Functions.TF.Compile import CompileTF
 
 config = load_config("config.yml")
 NET_NAME = config['controller']['neural-imitator-tf']['net_name']
@@ -70,7 +70,7 @@ class controller_neural_imitator_tf(template_controller):
 
         return Q
 
-    @Compile
+    @CompileTF
     def evaluate_net_f(self, net_input):
         # print('retracing evaluate_net_f')
         net_output = self.net(net_input)

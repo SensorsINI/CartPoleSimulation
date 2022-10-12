@@ -1,6 +1,6 @@
 # "Command line" parameters
 from SI_Toolkit.Functions.General.Initialization import get_net, get_norm_info_for_net
-from SI_Toolkit.Functions.TF import Compile
+from SI_Toolkit.Functions.TF.Compile import CompileTF
 from SI_Toolkit.load_and_normalize import *
 from SI_Toolkit_ASF.predictors_customization import STATE_VARIABLES, STATE_INDICES, CONTROL_INPUTS
 from types import SimpleNamespace
@@ -84,7 +84,7 @@ class predictor_autoregressive_tf:
         return output_array
 
     # Predict (Euler: 6.8ms, RNN:10.5ms)
-    @Compile
+    @CompileTF
     def predict_tf(self, initial_state, Q):
         # assert tf.rank(Q) == 3
         # Select States
@@ -139,7 +139,7 @@ class predictor_autoregressive_tf:
         if tf.is_tensor(Q):
             self.update_internal_state_tf(tf.convert_to_tensor(Q[0,...], dtype=tf.float32))
 
-    @Compile
+    @CompileTF
     def iterate_net(self, Q, initial_state):
 
         net_output = tf.zeros(shape=(self.batch_size, self.state_length), dtype=tf.float32)

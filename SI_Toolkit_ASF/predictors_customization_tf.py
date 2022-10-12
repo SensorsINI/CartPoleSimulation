@@ -6,7 +6,7 @@ from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITI
 from CartPole.cartpole_tf import cartpole_fine_integration_tf, Q2u_tf
 from CartPole.cartpole_model import L
 
-from SI_Toolkit.Functions.TF.Compile import Compile
+from SI_Toolkit.Functions.TF.Compile import CompileTF
 
 STATE_INDICES_TF = tf.lookup.StaticHashTable(
     initializer=tf.lookup.KeyValueTensorInitializer(
@@ -26,12 +26,12 @@ class next_state_predictor_ODE_tf():
         if disable_individual_compilation:
             self.step = self._step
         else:
-            self.step = Compile(self._step)
+            self.step = CompileTF(self._step)
 
 
     def _step(self, s, Q, params):
 
-        # assers does not work with Compile, but left here for information
+        # assers does not work with CompileTF, but left here for information
         # assert Q.shape[0] == s.shape[0]
         # assert Q.ndim == 2
         # assert s.ndim == 2
@@ -96,7 +96,7 @@ class predictor_output_augmentation_tf:
         if disable_individual_compilation:
             self.augment = self._augment
         else:
-            self.augment = Compile(self._augment)
+            self.augment = CompileTF(self._augment)
 
     def get_indices_augmentation(self):
         return self.indices_augmentation
