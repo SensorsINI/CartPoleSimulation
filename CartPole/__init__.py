@@ -51,6 +51,10 @@ except:
 # check memory usage of chosen methods. Commented by default
 # from memory_profiler import profile
 
+# Giovanni's change to get rid of an error
+import matplotlib
+matplotlib.use('TkAgg')
+
 # region Graphics imports
 import matplotlib.pyplot as plt
 # rc sets global parameters for matplotlib; transforms is used to rotate the Mast
@@ -103,6 +107,9 @@ class CartPole(EnvironmentBatched):
         self._target_position = 0.0
         self._target_equilibrium = 1.0  # Up is 1.0, Down is -1.0, here just a placeholder, change line below
         self.target_equilibrium = 1.0
+
+        # Variable for pole length
+        self.pole_length = L
 
         self.action_space = MockSpace(-1.0, 1.0)
 
@@ -394,6 +401,7 @@ class CartPole(EnvironmentBatched):
                 self.dict_history['positionD'].append(self.s[POSITIOND_IDX])
                 self.dict_history['positionDD'].append(self.positionDD)
 
+                self.dict_history['pole_length'].append(self.pole_length)
                 self.dict_history['Q'].append(self.Q)
                 self.dict_history['u'].append(self.u)
 
@@ -423,12 +431,12 @@ class CartPole(EnvironmentBatched):
                                      'positionD': [self.s[POSITIOND_IDX]],
                                      'positionDD': [self.positionDD],
 
-
                                      'Q': [self.Q],
                                      'u': [self.u],
 
                                      'target_position': [self.target_position],
 
+                                     'pole_length': [self.pole_length],
                                      }
 
                 try:
@@ -644,8 +652,6 @@ class CartPole(EnvironmentBatched):
         axs[3].set_ylabel("position target (m)", fontsize=fontsize_labels)
         axs[3].plot(self.dict_history['time'], self.dict_history['target_position'], 'k')
         axs[3].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
-
-
 
         if adaptive_mode:
             ...
@@ -923,7 +929,7 @@ class CartPole(EnvironmentBatched):
 
         # reset global variables
         global k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
-        k[...], M[...], m[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
+        k[...], M[...], m[...], g[...], J_fric[...], M_fric[...], _, v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
 
         self.time = 0.0
         if reset_mode == 0:  # Don't change it
@@ -991,6 +997,7 @@ class CartPole(EnvironmentBatched):
                                  'u': [self.u],
 
                                  'target_position': [self.target_position],
+                                 'pole_length': [self.pole_length],
 
                                  }
             try:
