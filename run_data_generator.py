@@ -9,7 +9,7 @@ from CartPole.cartpole_model import TrackHalfLength, create_cartpole_state
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 from others.globals_and_utils import create_rng, load_config
-from others.p_globals import TrackHalfLength
+from others.p_globals import TrackHalfLength, P_GLOBALS, L
 
 # Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
 # On other OS you have to chose a different interactive backend.
@@ -146,6 +146,9 @@ def generate_random_initial_state(init_state_stub, init_limits, rng):
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     config = load_config("config_data_gen.yml")
 
+    # Variables loaded to change length pole for each experiment
+    pole_lengths = config["random_initial_state"]["different_pole_lengths"]
+
     if record_path is None:
         record_path = config["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
         csv = record_path + '/Experiment'
@@ -164,12 +167,20 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
         if show_summary_plots is True or show_controller_report is True:
             raise PermissionError("You cannot plot summary if save_mode is online")
 
-
     RES = random_experiment_setter()
 
     ############ END OF PARAMETERS SECTION ############
 
     for i in range(number_of_experiments):
+
+        if pole_lengths[0]:
+            P_GLOBALS.L = abs(float(
+                np.random.uniform(float(pole_lengths[1].split("/")[0]) / float(pole_lengths[1].split("/")[1]),
+                                  float(pole_lengths[2].split("/")[0]) / float(pole_lengths[2].split("/")[1]))))
+            global L
+            L[...] = P_GLOBALS.L
+
+
 
         if run_for_ML_Pipeline:
             if i < int(frac_train*number_of_experiments):
