@@ -1,17 +1,20 @@
 library: 'TF'  # TF or Pytorch
 modeling:
-  NET_NAME: 'GRU-32H1-32H2'
+  NET_NAME: 'GRU-7IN-32H1-32H2-16H3-2OUT-0'
+#  NET_NAME: 'GRU-32H1-32H2-16H3'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Pretrained-RNN-1/'
+  path_to_experiment: 'Experiment-7/'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
 
 training_default:
   # For training closed loop dynamics model:
-  control_inputs: ['Q']
-  state_inputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
+  control_inputs: []
+  pole_length: ['pole_length']
+  state_inputs: ['position', 'positionD', 'angle_sin', 'angle_cos', 'angleD', 'target_position']
   setpoint_inputs: []  # Can be only 'target_position' or empty for CartPole
-  outputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
+  outputs: ['pole_length', 'Q']
+  first_guess_pole_length: 0.5
   #  outputs: ['D_angle_sin', 'D_angle_cos', 'D_angleD', 'D_position', 'D_positionD'] # Don't forget to change SHIFT_LABELS to 0
   translation_invariant_variables: []
   # For training open loop dynamics model:
@@ -21,15 +24,17 @@ training_default:
   #  control_inputs: []
   #  state_inputs: ['position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_position']
   #  outputs:  ['Q']
-  EPOCHS: 10
+  EPOCHS: 20
   BATCH_SIZE: 16
   SEED: 1873
   LR: 1.0e-2
-  WASH_OUT_LEN: 10  # needs to be set to 0 for GP training
-  POST_WASH_OUT_LEN: 20  # needs to be set to 1 for GP training
+  WASH_OUT_LEN: 0  # needs to be set to 0 for GP training
+  POST_WASH_OUT_LEN: 1 # needs to be set to 1 for GP training
   ON_FLY_DATA_GENERATION: False
   NORMALIZE: True
-  SHIFT_LABELS: 1  # for k, as a label to row i is taken row i+k
+  SHIFT_LABELS: 0  # for k, as a label to row i is taken row i+k
   USE_NNI: False  # Decide if you want to use NNI package
   CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch
+testing:
+  test_experiments_to_show: 'all' # 'all' or select experiment number: e.g. [0,3,7]
 
