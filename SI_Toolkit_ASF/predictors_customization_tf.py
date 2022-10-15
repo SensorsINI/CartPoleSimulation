@@ -9,7 +9,7 @@ from CartPole.cartpole_tf import cartpole_fine_integration_tf, Q2u_tf
 from CartPole.cartpole_model import L
 from Control_Toolkit.others.environment import TensorType
 
-from SI_Toolkit.Functions.TF.Compile import Compile
+from SI_Toolkit.Functions.TF.Compile import CompileTF, CompileAdaptive
 
 STATE_INDICES_TF = tf.lookup.StaticHashTable(
     initializer=tf.lookup.KeyValueTensorInitializer(
@@ -20,20 +20,20 @@ STATE_INDICES_TF = tf.lookup.StaticHashTable(
 
 class next_state_predictor_ODE_tf():
 
-    def __init__(self, dt: float, intermediate_steps: int, batch_size: int, step_fun: Optional[Callable[[TensorType, TensorType, float], TensorType]]=None, disable_individual_compilation=False):
+    def __init__(self, dt, intermediate_steps, batch_size=1, disable_individual_compilation=False, planning_environment=None):
         self.s = tf.convert_to_tensor(create_cartpole_state())
 
         self.intermediate_steps = intermediate_steps
         self.t_step = dt / float(self.intermediate_steps)
 
-        # if disable_individual_compilation:
-        #     self.step = self._step
-        # else:
-        #     self.step = Compile(self._step)
+        if disable_individual_compilation:
+            self.step = self._step
+        else:
+            self.step = CompileTF(self._step)
 
-    def step(self, s, Q, params):
+    def _step(self, s, Q, params):
 
-        # assert does not work with Compile, but left here for information
+        # assers does not work with CompileTF, but left here for information
         # assert Q.shape[0] == s.shape[0]
         # assert Q.ndim == 2
         # assert s.ndim == 2
@@ -50,7 +50,9 @@ class next_state_predictor_ODE_tf():
 
 
 class predictor_output_augmentation_tf:
-    def __init__(self, net_info, disable_individual_compilation=False, differential_network=False):
+    def __init__(self, net_info, lib, disable_individual_compilation=False, differential_network=False):
+
+        self.lib = lib
 
         self.differential_network = differential_network
         if differential_network:
@@ -78,16 +80,16 @@ class predictor_output_augmentation_tf:
         self.augmentation_len = len(self.indices_augmentation)
 
         if 'angle' in outputs:
-            self.index_angle = tf.convert_to_tensor(self.net_output_indices['angle'])
+            self.index_angle = self.lib.to_tensor(self.net_output_indices['angle'], dtype=self.lib.int64)
         if 'angle_sin' in outputs:
-            self.index_angle_sin = tf.convert_to_tensor(self.net_output_indices['angle_sin'])
+            self.index_angle_sin = self.lib.to_tensor(self.net_output_indices['angle_sin'], dtype=self.lib.int64)
         if 'angle_cos' in outputs:
-            self.index_angle_cos = tf.convert_to_tensor(self.net_output_indices['angle_cos'])
+            self.index_angle_cos = self.lib.to_tensor(self.net_output_indices['angle_cos'], dtype=self.lib.int64)
 
         if disable_individual_compilation:
             self.augment = self._augment
         else:
-            self.augment = Compile(self._augment)
+            self.augment = CompileAdaptive(self._augment)
 
     def get_indices_augmentation(self):
         return self.indices_augmentation
@@ -99,19 +101,19 @@ class predictor_output_augmentation_tf:
 
         output = net_output  # [batch_size, time_steps, features]
         if 'angle' in self.features_augmentation:
-            angle = tf.math.atan2(
+            angle = self.lib.atan2(
                     net_output[..., self.index_angle_sin],
-                    net_output[..., self.index_angle_cos])[:, :, tf.newaxis]  # tf.math.atan2 removes the features (last) dimension, so it is added back with [:, :, tf.newaxis]
-            output = tf.concat([output, angle], axis=-1)
+                    net_output[..., self.index_angle_cos])[:, :, self.lib.newaxis]  # self.lib.atan2 removes the features (last) dimension, so it is added back with [:, :, self.lib.newaxis]
+            output = self.lib.concat([output, angle], axis=-1)
 
         if 'angle_sin' in self.features_augmentation:
             angle_sin = \
-                tf.sin(net_output[..., self.index_angle])[:, :, tf.newaxis]
-            output = tf.concat([output, angle_sin], axis=-1)
+                self.lib.sin(net_output[..., self.index_angle])[:, :, self.lib.newaxis]
+            output = self.lib.concat([output, angle_sin], axis=-1)
 
         if 'angle_cos' in self.features_augmentation:
             angle_cos = \
-                tf.cos(net_output[..., self.index_angle])[:, :, tf.newaxis]
-            output = tf.concat([output, angle_cos], axis=-1)
+                self.lib.cos(net_output[..., self.index_angle])[:, :, self.lib.newaxis]
+            output = self.lib.concat([output, angle_cos], axis=-1)
 
         return output

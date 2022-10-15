@@ -306,6 +306,15 @@ controller:
     mpc_horizon: 40
     num_rollouts: 1
     controller_logging: True
+  secloc:
+    log_base: 1.05
+    dt: 1 # In the Arduino code is 1000
+    ref_period: 1
+    dead_band: 0.0025  # Radians
+    pid_Kp: 15.0
+    pid_Kd: 0.0
+    pid_Ki: 1.0
+    #secloc_motor_map: 128
 cartpole:
   cost_function: 'quadratic-boundary-grad' # from 'quadratic-boundary', 'quadratic-boundary-grad', 'quadratic-boundary-nonconvex', 'default'
   actuator_noise: 0.0  # TODO: There already exists a noise entry

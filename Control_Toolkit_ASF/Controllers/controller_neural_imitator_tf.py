@@ -15,8 +15,7 @@ except ModuleNotFoundError:
     print("SI_Toolkit_ASF not yet created")
 
 from SI_Toolkit.Functions.General.Initialization import get_net, get_norm_info_for_net
-from SI_Toolkit.Functions.TF.Compile import Compile
-from SI_Toolkit.Predictors import predictor
+from SI_Toolkit.Functions.TF.Compile import CompileTF
 
 config = load_config("config.yml")
 NET_NAME = config["controller"]["neural-imitator-tf"]["net_name"]
@@ -26,7 +25,7 @@ PATH_TO_MODELS = config["controller"]["neural-imitator-tf"]["PATH_TO_MODELS"]
 class controller_neural_imitator_tf(template_controller):
     def __init__(
         self,
-        predictor: predictor,
+        predictor: template_predictor,
         cost_function: cost_function_base,
         seed: int,
         action_space: Box,
@@ -44,13 +43,9 @@ class controller_neural_imitator_tf(template_controller):
         a.net_name = NET_NAME
 
         # Create a copy of the network suitable for inference (stateful and with sequence length one)
-        self.net, self.net_info = get_net(
-            a,
-            time_series_length=1,
-            batch_size=self.batch_size,
-            stateful=True,
-            library="TF",
-        )
+        self.net, self.net_info = \
+            get_net(a, time_series_length=1,
+                    batch_size=self.batch_size, stateful=True)
 
         self.normalization_info = get_norm_info_for_net(self.net_info)
 
@@ -104,7 +99,7 @@ class controller_neural_imitator_tf(template_controller):
 
         return Q
 
-    @Compile
+    @CompileTF
     def evaluate_net_f(self, net_input):
         # print('retracing evaluate_net_f')
         net_output = self.net(net_input)

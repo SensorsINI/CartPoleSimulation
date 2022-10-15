@@ -1,6 +1,6 @@
-from SI_Toolkit.Functions.TF import Compile
+from SI_Toolkit.Functions.TF.Compile import CompileTF
 
-@Compile
+@CompileTF
 def runge_kutta(self, x, Q, h):
     k1 = self.cartpole_ode(x, Q)
     k2 = self.cartpole_ode(x + 0.5 * k1 * h, Q)
