@@ -111,7 +111,7 @@ controller:
     seed: null                            # If null, random seed based on datetime is used
     dt: 0.02
     mpc_horizon: 40                       # steps
-    predictor_name: "predictor_autoregressive_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     NET_NAME: GRU-6IN-32H1-32H2-5OUT-2
     SAMPLING_TYPE: interpolated
     interpolation_step: 10
@@ -153,6 +153,81 @@ controller:
     warmup: false
     warmup_iterations: 250
     controller_logging: True
+  controller-rpgd-me-tf:
+    seed: null                            # If null, random seed based on datetime is used
+    dt: 0.02
+    mpc_horizon: 40                       # steps
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    NET_NAME: GRU-6IN-32H1-32H2-5OUT-0
+    SAMPLING_TYPE: null
+    SAMPLING_DISTRIBUTION: uniform  # "normal" or "uniform"
+    interpolation_step: 10
+    learning_rate: 0.01
+    adam_beta_1: 0.9
+    adam_beta_2: 0.999
+    adam_epsilon: 1.0e-08
+    maximum_entropy_alpha: 0.0
+    gradmax_clip: 10
+    rtol: 1.0e-3
+    num_rollouts: 32
+    opt_keep_k: 0
+    outer_its: 25
+    predictor_intermediate_steps: 1
+    predictor_name: predictor_ODE_tf
+    resamp_per: 1
+    sample_stdev: 0.5
+    warmup: false
+    warmup_iterations: 250
+  controller-rpgd_ml_tf:
+    seed: null                            # If null, random seed based on datetime is used
+    dt: 0.02
+    mpc_horizon: 40                       # steps
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    NET_NAME: GRU-6IN-32H1-32H2-5OUT-0
+    SAMPLING_DISTRIBUTION: uniform  # "normal" or "uniform"
+    SAMPLING_TYPE: null
+    interpolation_step: 10
+    learning_rate: 0.01
+    adam_beta_1: 0.9
+    adam_beta_2: 0.999
+    adam_epsilon: 1.0e-08
+    maximum_entropy_alpha: 0.1
+    gradmax_clip: 10
+    rtol: 1.0e-3
+    num_rollouts: 32
+    opt_keep_k: 8
+    outer_its: 5
+    predictor_intermediate_steps: 1
+    predictor_name: predictor_ODE_tf
+    resamp_per: 1
+    sample_stdev: 0.5
+    warmup: false
+    warmup_iterations: 250
+  controller-rpgd_particle:
+    seed: null                            # If null, random seed based on datetime is used
+    dt: 0.02
+    mpc_horizon: 40                       # steps
+    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+    NET_NAME: GRU-6IN-32H1-32H2-5OUT-0
+    SAMPLING_DISTRIBUTION: uniform  # "normal" or "uniform"
+    SAMPLING_TYPE: null
+    interpolation_step: 10
+    learning_rate: 0.01
+    adam_beta_1: 0.9
+    adam_beta_2: 0.999
+    adam_epsilon: 1.0e-08
+    maximum_entropy_alpha: 0.1
+    gradmax_clip: 10
+    rtol: 1.0e-3
+    num_rollouts: 32
+    opt_keep_k: 8
+    outer_its: 5
+    predictor_intermediate_steps: 1
+    predictor_name: predictor_ODE_tf
+    resamp_per: 1
+    sample_stdev: 0.5
+    warmup: false
+    warmup_iterations: 250
   mppi-var-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec

@@ -11,6 +11,7 @@ Based on Williams, Aldrich, Theodorou (2015)
 
 
 from datetime import datetime
+from SI_Toolkit.Predictors import template_predictor
 
 import matplotlib.pyplot as plt
 import numpy as np

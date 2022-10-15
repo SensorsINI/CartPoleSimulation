@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from SI_Toolkit.Predictors import template_predictor
 
 import numpy as np
 import tensorflow as tf

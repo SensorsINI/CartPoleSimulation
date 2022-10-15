@@ -1,6 +1,7 @@
 """do-mpc controller"""
 
 from types import SimpleNamespace
+from SI_Toolkit.Predictors import template_predictor
 
 import do_mpc
 import numpy as np
@@ -54,7 +55,7 @@ def cartpole_integration(s, dt):
 class controller_do_mpc_discrete(template_controller):
     def __init__(
         self,
-        predictor,
+        predictor: template_predictor,
         cost_function: cost_function_base,
         dt: float,
         mpc_horizon: int,
