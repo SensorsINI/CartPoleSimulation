@@ -7,7 +7,7 @@ from Control_Toolkit.Cost_Functions import cost_function_base
 from gym.spaces.box import Box
 from others.globals_and_utils import load_config
 from SI_Toolkit.load_and_normalize import normalize_numpy_array
-from SI_Toolkit.Predictors import predictor
+from SI_Toolkit.Predictors import template_predictor
 
 try:
     from SI_Toolkit_ASF.predictors_customization import STATE_INDICES
@@ -26,7 +26,7 @@ PATH_TO_MODELS = config["controller"]["neural-imitator-pytorch"]["PATH_TO_MODELS
 class controller_neural_imitator_pytorch(template_controller):
     def __init__(
         self,
-        predictor: predictor,
+        predictor: template_predictor,
         cost_function: cost_function_base,
         seed: int,
         action_space: Box,

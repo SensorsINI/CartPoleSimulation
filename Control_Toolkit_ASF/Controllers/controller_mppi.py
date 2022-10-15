@@ -347,7 +347,7 @@ class controller_mppi(template_controller):
 
     def __init__(
         self,
-        predictor: predictor,
+        predictor: template_predictor,
         cost_function: cost_function_base,
         action_space: Box,
         observation_space: Box,

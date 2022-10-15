@@ -13,13 +13,13 @@ from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.Cost_Functions import cost_function_base
 from gym.spaces.box import Box
 from others.globals_and_utils import create_rng
-from SI_Toolkit.Predictors import predictor
+from SI_Toolkit.Predictors import template_predictor
 
 
 class controller_lqr(template_controller):
     def __init__(
         self,
-        predictor: predictor,
+        predictor: template_predictor,
         cost_function: cost_function_base,
         seed: int,
         Q: "list[float]",
