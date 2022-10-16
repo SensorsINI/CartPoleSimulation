@@ -1,0 +1,30 @@
+
+predictors_specifications_testing: ['I_love_control', 'I_love_control_too', 'GRU-6IN-32H1-32H2-5OUT-0']
+
+# 'predictors_specifications_testing' may be a names from the list of predictors below (assuming specification make sense)
+# It can be a names of networks e.g. 'GRU-6IN-32H1-32H2-5OUT-0' to be used for test
+# For multiple network they must be in the same folder specified in predictors:neural:path_to_model
+# One can also specify full path to each model as name,
+# but in this case the predictors:neural:path_to_model must be empty
+# Also otherwise the specifications from
+# Where multiple ODE models are available, one can specify the name after colon e.g. ["ODE_TF:simple", "ODE:st"]
+# In this case name from predictor_config is getting overwritten
+
+test_file: 'Experiment-1.csv'
+
+path_to_testfile: './SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Recordings/Test/'
+
+features_to_plot: [ 'angle',      # Only to indicate what odd to be displayed in Brunton Test
+                    'angleD',
+                    'angle_cos',
+                    'angle_sin',
+                    'position',
+                    'positionD',
+        ]
+control_inputs: [ 'Q' ]   # Indicates which inputs to network are control_input, TODO: Not sure how it would work with multiple inputs
+
+test_len: 'max'
+test_max_horizon: 50  # Indicates prediction horizon for testing
+test_start_idx: 0  # Indicates starting point from which data from test file should be taken
+
+decimation: 1  # If your dataset has sampling frequency being multiple of your network's sampling frequency
