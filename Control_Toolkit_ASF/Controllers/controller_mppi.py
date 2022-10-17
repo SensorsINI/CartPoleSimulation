@@ -37,21 +37,39 @@ from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
 # from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
 # from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
 
+from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper
+
+from Control_Toolkit.Controllers import template_controller
+
+from others.p_globals import L
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
-NET_NAME = config["controller"]["mppi"]["NET_NAME"]
-try:
-    NET_TYPE = NET_NAME.split("-")[0]
-except AttributeError:  # Should get Attribute Error if NET_NAME is None
-    NET_TYPE = None
 
 """Timestep and sampling settings"""
-dt = config["controller"]["mppi"]["dt"]
 mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
 num_rollouts = config["controller"]["mppi"]["num_rollouts"]
 update_every = config["controller"]["mppi"]["update_every"]
-predictor_name = config["controller"]["mppi"]["predictor_name"]
+predictor_specification = config["controller"]["mppi"]["predictor_specification"]
+
+"""Define Predictor"""
+predictor = PredictorWrapper()
+predictor.configure(batch_size=num_rollouts, horizon=mpc_horizon, predictor_specification=predictor_specification)
+
+dt = predictor.predictor_config['dt']
+if predictor.predictor_config['predictor_type'] == 'neural':
+    MODEL_NAME = predictor.predictor_config['model_name']
+    try:
+        NET_TYPE = MODEL_NAME.split("-")[0]
+    except AttributeError:  # Should get Attribute Error if NET_NAME is None
+        NET_TYPE = None
+else:
+    NET_TYPE = None
+
+predictor_ground_truth = predictor_ODE(
+    horizon=mpc_horizon, dt=dt, intermediate_steps=10
+)
+
 
 WASH_OUT_LEN = config["controller"]["mppi"]["WASH_OUT_LEN"]
 
@@ -149,22 +167,6 @@ def penalize_deviation(cc, u):
                 cc[i, j] = 1.0e5
     return cc
 
-
-"""Define Predictor"""
-if predictor_name == "predictor_ODE_tf":
-    predictor = predictor_ODE_tf(horizon=mpc_horizon, dt=dt, intermediate_steps=10)
-elif predictor_name == "predictor_ODE":
-    predictor = predictor_ODE(horizon=mpc_horizon, dt=dt, intermediate_steps=10)
-elif predictor_name == "predictor_autoregressive_tf":
-    predictor = predictor_autoregressive_tf(
-        horizon=mpc_horizon, batch_size=num_rollouts, net_name=NET_NAME
-    )
-# elif predictor_name == "predictor_autoregressive_GP":
-#     predictor = predictor_autoregressive_GP(horizon=mpc_horizon)
-
-predictor_ground_truth = predictor_ODE(
-    horizon=mpc_horizon, dt=dt, intermediate_steps=10
-)
 
 def trajectory_rollouts(
     s: np.ndarray,
@@ -518,9 +520,9 @@ class controller_mppi(template_controller):
 
                 # Simulate nominal rollout to plot the trajectory the controller wants to make
                 # Compute one rollout of shape (mpc_horizon + 1) x s.size
-                if predictor_name == "predictor_ODE":
+                if predictor.predictor_type == "ODE":
                     rollout_trajectory = predictor.predict(np.copy(self.s), self.u[:, np.newaxis])
-                elif predictor_name in ["predictor_autoregressive_tf", "predictor_ODE_tf", "predictor_autoregressive_GP"]:
+                elif predictor.predictor_type in ["neural", "ODE_TF", "GP"]:
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     # FIXME: Problaby you can reduce it!
 
@@ -536,8 +538,9 @@ class controller_mppi(template_controller):
         if (
             self.warm_up_countdown > 0
             and self.auxiliary_controller_available
+            and predictor.predictor_type == "neural"
             and (NET_TYPE == "GRU" or NET_TYPE == "LSTM" or NET_TYPE == "RNN")
-            and predictor_name == "predictor_autoregressive_tf"
+
         ):
             self.warm_up_countdown -= 1
             if abs(s[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small
@@ -578,7 +581,7 @@ class controller_mppi(template_controller):
 
         # Prepare predictor for next timestep
         Q_update = np.tile(Q, (num_rollouts, 1, 1))
-        predictor.update_internal_state(Q_update, self.s)
+        predictor.update(Q_update, self.s)
 
         return Q  # normed control input in the range [-1,1]
 

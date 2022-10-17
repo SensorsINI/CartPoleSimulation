@@ -304,7 +304,7 @@ class MainWindow(QMainWindow):
         ip.addWidget(self.initial_position_slider)
         ip.addWidget(QLabel("Initial angle:"))
         ip.addWidget(self.initial_angle_slider)
-        ip.addStretch(0.01)
+        ip.addStretch(0)
 
         # Slider setting latency
         self.LATENCY_SLIDER_RANGE_INT = 1000
@@ -336,9 +336,9 @@ class MainWindow(QMainWindow):
 
         self.rbs_noise[1].setChecked(True)
 
-        ip.addStretch(0.01)
+        ip.addStretch(0)
         ip.addLayout(lr_n)
-        ip.addStretch(0.01)
+        ip.addStretch(0)
 
         # Buttons giving kick to the pole
         kick_label = QLabel("Kick pole:")

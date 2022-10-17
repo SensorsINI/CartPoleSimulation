@@ -20,6 +20,7 @@ controller:
     cem_outer_it: 3                    #how many outer iterations to use
     cem_initial_action_stdev: 0.5
     num_rollouts: 200          #how many rollouts per outer cem iteration
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     cem_stdev_min: 0.01
     cem_R: 1
     cem_best_k: 40
@@ -41,6 +42,7 @@ controller:
     mpc_horizon: 35                       # steps
     cem_outer_it: 1                       # how many outer iterations to use
     num_rollouts: 200                     # how many rollouts per outer cem iteration
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     cem_stdev_min: 0.1
     cem_initial_action_stdev: 0.5
     cem_R: 1
@@ -52,6 +54,7 @@ controller:
     seed: null                          # If null, random seed based on datetime is used
     controller_logging: true
     mpc_horizon: 50                       # steps
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     learning_rate: 0.05
     adam_beta_1: 0.9
     adam_beta_2: 0.999
@@ -68,6 +71,7 @@ controller:
   gradient-tf:
     seed: null                            # If null, random seed based on datetime is used
     mpc_horizon: 35                       # steps
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     learning_rate: 0.05
     adam_beta_1: 0.9
     adam_beta_2: 0.999
@@ -89,6 +93,7 @@ controller:
     gradmax_clip: 1000
     mpc_horizon: 35                       # steps
     num_rollouts: 400                     # Number of Monte Carlo samples
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     cc_weight: 1.0
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
@@ -110,6 +115,7 @@ controller:
     gradmax_clip: 5
     rtol: 1.0e-3
     num_rollouts: 32
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     opt_keep_k: 8
     outer_its: 2
     resamp_per: 10
@@ -129,6 +135,7 @@ controller:
     gradmax_clip: 5
     rtol: 1.0e-3
     num_rollouts: 32
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     opt_keep_k: 8
     outer_its: 2
     resamp_per: 10
@@ -150,6 +157,7 @@ controller:
     gradmax_clip: 10
     rtol: 1.0e-3
     num_rollouts: 32
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     opt_keep_k: 0
     outer_its: 25
     resamp_per: 1
@@ -170,6 +178,7 @@ controller:
     gradmax_clip: 10
     rtol: 1.0e-3
     num_rollouts: 32
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     opt_keep_k: 8
     outer_its: 5
     resamp_per: 1
@@ -190,6 +199,7 @@ controller:
     gradmax_clip: 10
     rtol: 1.0e-3
     num_rollouts: 32
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     opt_keep_k: 8
     outer_its: 5
     resamp_per: 1
@@ -203,6 +213,7 @@ controller:
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
     interpolation_step: 10                #interpolation stepsize when sampling
     cc_weight: 1.0
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     R: 1.0                                # How much to punish Q
     # mc stands for mathematical correct, as this controller uses the formula from the paper
     LBD_mc: 10.0                          # Cost parameter lambda
@@ -220,7 +231,7 @@ controller:
     mpc_horizon: 35                       # steps
     num_rollouts: 3500                    # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    GP_NAME: 'SGP_30'                     # Applies only if predictor name is GP
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01
@@ -242,7 +253,7 @@ controller:
     mpc_horizon: 35                       # steps
     num_rollouts: 3500                    # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    GP_NAME: 'SGP_30'                     # Applies only if predictor name is GP
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0', 'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     cc_weight: 1.0
     cost_noise: 0.0                       # Noise on stage cost weights by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0 othewise
     control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
@@ -373,5 +384,5 @@ cartpole:
   ccrc_weight: 1.0
 
 
-data_generator:
+data_generator: # FIXME: Warum seed for data_generator here?
   seed: 1  # If null random seed based on datetime is used
