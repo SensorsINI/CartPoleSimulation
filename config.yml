@@ -250,7 +250,3 @@ cartpole:
   ekc_weight: 20.0
   cc_weight: 1.0
   ccrc_weight: 1.0
-
-
-data_generator: # FIXME: Warum seed for data_generator here?
-  seed: 1  # If null random seed based on datetime is used
