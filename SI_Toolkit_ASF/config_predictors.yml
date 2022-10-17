@@ -1,4 +1,6 @@
-predictor_name_main: 'I_love_control'
+predictor_name_default: 'I_love_control'
+# If controller does not specify predictor_specification (leave empty)
+# a predictor from "predictors:predictor_name_default" from below is loaded
 
 predictors:
   ### THESE ARE DEFAULT PREDICTORS! DON'T CHANGE THEM, RATHER ADD YOUR PREDICTOR BELOW
