@@ -5,9 +5,7 @@ controller:
     mpc_horizon: 40                       # steps
     cem_outer_it: 3                    #how many outer iterations to use
     num_rollouts: 200          #how many rollouts per outer cem iteration
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 5
-    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     cem_stdev_min: 0.01
     cem_R: 1
     cem_best_k: 40
@@ -17,9 +15,7 @@ controller:
     mpc_horizon: 35                       # steps
     cem_outer_it: 1                       # how many outer iterations to use
     num_rollouts: 200                     # how many rollouts per outer cem iteration
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 10
-    CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     cem_stdev_min: 0.1
     cem_initial_action_stdev: 0.5
     cem_R: 1
@@ -30,7 +26,7 @@ controller:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 35                       # steps
-    CEM_NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     cem_LR: 0.05
     cem_R: 1
     cem_best_k: 40
@@ -39,13 +35,11 @@ controller:
     cem_initial_action_stdev: 0.5
     cem_stdev_min: 0.2
     gradmax_clip: 5
-    predictor_intermediate_steps: 1
-    predictor_name: predictor_ODE_tf
   gradient-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
     mpc_horizon: 35                       # steps
-    CEM_NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     learning_rate: 0.05
     adam_beta_1: 0.9
     adam_beta_2: 0.999
@@ -55,8 +49,6 @@ controller:
     mpc_rollouts: 40
     initial_action_stdev: 0.5
     gradmax_clip: 5
-    predictor_intermediate_steps: 10
-    predictor_name: predictor_ODE_tf
   mppi-optimize-tf:
     seed: null                          # If null, random seed based on datetime is used
     mppi_LR: 0.02
@@ -67,9 +59,7 @@ controller:
     dt: 0.02                              # sec
     mpc_horizon: 35                       # steps
     num_rollouts: 400                     # Number of Monte Carlo samples
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 10
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor name is predictor_autoregressive_tf
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     cc_weight: 1.0
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
@@ -82,9 +72,7 @@ controller:
     seed: null                            # If null, random seed based on datetime is used
     dt: 0.02
     mpc_horizon: 40                       # steps
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 5
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor name is predictor_autoregressive_tf
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     resamp_per: 5                         #determines after how many steps the control plans are resamples
     sample_stdev: 0.5                     #sampling variance of control action
     cem_LR: 0.05                         #learning rate parameter for adam
@@ -107,9 +95,7 @@ controller:
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
     interpolation_step: 10                #interpolation stepsize when sampling
     cc_weight: 1.0
-    predictor_name: "predictor_ODE_tf"             # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 10
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor name is predictor_autoregressive_tf
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     R: 1.0                                # How much to punish Q
     # mc stands for mathematical correct, as this controller uses the formula from the paper
     LBD_mc: 10.0                          # Cost parameter lambda
@@ -126,10 +112,7 @@ controller:
     mpc_horizon: 35                       # steps
     num_rollouts: 3500                    # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf", "predictor_autoregressive_GP"]
-    predictor_intermediate_steps: 10
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor name is predictor_autoregressive_tf
-    GP_NAME: 'SGP_30'                     # Applies only if predictor name is GP
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     dd_weight: 120.0
     ep_weight: 50000.0
     ekp_weight: 0.01
@@ -152,10 +135,7 @@ controller:
     mpc_horizon: 35                       # steps
     num_rollouts: 3500                    # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf", "predictor_autoregressive_GP"]
-    predictor_intermediate_steps: 10
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor name is predictor_autoregressive_tf
-    GP_NAME: 'SGP_30'                     # Applies only if predictor name is GP
+    predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0', 'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
     cc_weight: 1.0
     cost_noise: 0.0                       # Noise on stage cost weights by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0 othewise
     control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
@@ -272,5 +252,5 @@ cartpole:
   ccrc_weight: 1.0
 
 
-data_generator:
+data_generator: # FIXME: Warum seed for data_generator here?
   seed: 1  # If null random seed based on datetime is used

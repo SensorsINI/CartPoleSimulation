@@ -6,12 +6,13 @@ predictors:
     predictor_type: 'neural'
     model_name: 'GRU-6IN-32H1-32H2-5OUT-0'
     path_to_model: './SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Models/'
-    dt: # Matters only for differential network
+    dt: 0.02
     update_before_predicting: True
   GP_default:
     predictor_type: 'GP'
     model_name:
     path_to_model:
+    dt: 0.02
   ODE_default:
     predictor_type: 'ODE'
     model_name:
@@ -21,7 +22,7 @@ predictors:
     predictor_type: 'ODE_TF'
     model_name:
     dt: 0.02
-    intermediate_steps: 10
+    intermediate_steps: 5
 
   # ADD YOUR PREDICTORS BELOW
 
