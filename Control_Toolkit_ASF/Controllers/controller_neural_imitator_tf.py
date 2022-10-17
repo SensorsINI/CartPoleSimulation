@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from CartPole.state_utilities import CONTROL_INPUTS
 from Control_Toolkit.Controllers import template_controller
-from Control_Toolkit.Cost_Functions import cost_function_base
+from Control_Toolkit_ASF.Cost_Functions import cost_function_base
 from gym.spaces.box import Box
 from others.globals_and_utils import load_config
 from SI_Toolkit.load_and_normalize import normalize_numpy_array

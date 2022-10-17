@@ -7,7 +7,7 @@ import numpy as np
 from CartPole.cartpole_model import Q2u, cartpole_ode_namespace
 from CartPole.state_utilities import cartpole_state_vector_to_namespace
 from Control_Toolkit.Controllers import template_controller
-from Control_Toolkit.Cost_Functions import cost_function_base
+from Control_Toolkit_ASF.Cost_Functions import cost_function_base
 from gym.spaces.box import Box
 from others.globals_and_utils import create_rng
 from SI_Toolkit.Predictors import template_predictor

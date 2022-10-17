@@ -1,5 +1,5 @@
 testing:
-  tests: ['predictor_ODE', 'predictor_ODE_tf', 'GRU-6IN-32H1-32H2-5OUT-0']  # May be 'predictor_ODE' (Euler), 'predictor_ODE_tf', Euler-predictor, name of network or None = 'Dense-16H1-16H2'
+  tests: ['predictor_ODE', 'predictor_ODE_tf', 'GRU-6IN-32H1-32H2-5OUT-2']  # May be 'predictor_ODE' (Euler), 'predictor_ODE_tf', Euler-predictor, name of network or None = 'Dense-16H1-16H2'
   TEST_FILE: 'Experiment-1.csv'
   features: ['angle',
      'angleD',
@@ -9,8 +9,8 @@ testing:
      'positionD',
      ]
   control_inputs: ['Q']   # Indicates which inputs to network are control_input, TODO: Not sure how it would work with multiple inputs
-  PATH_TO_NN: './SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Models/'  # Path where the neural network models are stored
-  PATH_TO_TEST_FILE: './SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Recordings/Test/'
+  PATH_TO_NN: './SI_Toolkit_ASF/Experiments/Experiment-2/Models/'  # Path where the neural network models are stored
+  PATH_TO_TEST_FILE: './SI_Toolkit_ASF/Experiments/Experiment-2/Recordings/Test/'
   TEST_LEN: 'max'
   DECIMATION: 1
   MAX_HORIZON: 50  # Indicates prediction horizon for testing

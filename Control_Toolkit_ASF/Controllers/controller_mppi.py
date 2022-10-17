@@ -22,7 +22,7 @@ from CartPole.state_utilities import (ANGLE_IDX, ANGLED_IDX, POSITION_IDX,
                                       POSITIOND_IDX, STATE_INDICES,
                                       create_cartpole_state)
 from Control_Toolkit.Controllers import template_controller
-from Control_Toolkit.Cost_Functions import cost_function_base
+from Control_Toolkit_ASF.Cost_Functions import cost_function_base
 from gym.spaces.box import Box
 from matplotlib.widgets import Slider
 from numba import jit

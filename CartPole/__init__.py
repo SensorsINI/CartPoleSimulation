@@ -20,11 +20,12 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from CartPole.cartpole_tf import cartpole_fine_integration_tf
+from Control_Toolkit import Planner
 from Control_Toolkit.others.environment import (EnvironmentBatched,
                                                 NumpyLibrary,
                                                 TensorFlowLibrary, TensorType)
 from Control_Toolkit.others.globals_and_utils import (
-    get_available_controller_names, get_controller)
+    get_available_controller_names, get_controller_name)
 from others.globals_and_utils import MockSpace, create_rng, load_config
 from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
@@ -240,10 +241,6 @@ class CartPole(EnvironmentBatched):
 
         # region Initialize CartPole in manual-stabilization mode
         self.set_controller('manual-stabilization')
-        # endregion
-
-        # region Set cost function module
-        self.set_cost_functions()
         # endregion
         
     # region 1. Methods related to dynamic evolution of CartPole system
@@ -880,42 +877,16 @@ class CartPole(EnvironmentBatched):
 
     # Set the controller of CartPole
     def set_controller(self, controller_name=None, controller_idx=None):
-        Controller, self.controller_name, self.controller_idx = get_controller(
-            controller_name=controller_name, controller_idx=controller_idx
+        self.controller_name, self.controller_idx = get_controller_name(
+            controller_name=controller_name, controller_idx=None
         )
         
-        if self.controller_name[-2:] == "tf":
-            self.set_computation_library(TensorFlowLibrary)
-        else:
-            self.set_computation_library(NumpyLibrary)
-        self.set_cost_functions()
-        
-        if Controller is None:
-            self.controller = None
-        else:
-            controller_config = config["controller"][self.controller_name]
-            if "predictor_name" in controller_config:
-                predictor_module = import_module(f"SI_Toolkit.Predictors.{controller_config['predictor_name']}")
-                Predictor = getattr(predictor_module, controller_config["predictor_name"])
-                predictor = Predictor(
-                    horizon=controller_config["mpc_horizon"],
-                    dt=controller_config["dt"],
-                    intermediate_steps=controller_config["predictor_intermediate_steps"],
-                    batch_size=controller_config["num_rollouts"],
-                    disable_individual_compilation=True,
-                    net_name=controller_config["NET_NAME"],
-                )
-            else:
-                predictor = None
-            
-            self.controller = Controller(
-                predictor=predictor,
-                cost_function=self.cost_functions,
-                action_space=self.action_space,
-                observation_space=self.observation_space,
-                **config["controller"][self.controller_name],
-            )
-            
+        self.planner = Planner(
+            predictor_name=self.config["predictor"],
+            cost_function_name=self.config["cost_function"],
+            controller_name=self.controller_name,
+        )
+                
         # Set the maximal allowed value of the slider - relevant only for GUI
         if self.controller_name == 'manual-stabilization':
             self.Slider_Arrow.set_positions((0, 0), (0, 0))
@@ -928,11 +899,6 @@ class CartPole(EnvironmentBatched):
         self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, target_position=self.target_position, reset_dict_history=True)
 
         return True
-
-    def set_cost_functions(self):
-        cost_function_name = self.config["cost_function"].replace("-", "_")
-        cost_function_module = import_module(f"others.cost_functions.CartPole.{cost_function_name}")
-        self.cost_functions = getattr(cost_function_module, cost_function_name)(self)
 
     # This method resets the internal state of the CartPole instance
     # The starting state (for t = 0) may be

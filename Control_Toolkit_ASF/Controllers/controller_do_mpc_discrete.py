@@ -9,7 +9,7 @@ from CartPole.cartpole_model import (Q2u, TrackHalfLength,
                                      cartpole_ode_namespace, v_max)
 from CartPole.state_utilities import cartpole_state_vector_to_namespace
 from Control_Toolkit.Controllers import template_controller
-from Control_Toolkit.Cost_Functions import cost_function_base
+from Control_Toolkit_ASF.Cost_Functions import cost_function_base
 from gym.spaces.box import Box
 
 

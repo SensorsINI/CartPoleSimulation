@@ -1,14 +1,25 @@
+controller_name: 'mppi-tf'  # name of the controller to be used - does not matter for Cartpole Gym
+predictor_name: predictor_ODE_tf    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
+cost_function_name: cost_function_default
+
+predictor:
+  predictor_intermediate_steps: 5       # Number of Euler steps. Increase for more accuracy.
+  dt: 0.02                              # sec
+  disable_individual_compilation: false
+  # NET_NAME can be a path to a model. If it's only a model name, the path from config_testing.yml will be used
+  NET_NAME: GRU-6IN-32H1-32H2-5OUT-0  # Applies only if predictor name is predictor_autoregressive_tf
+
+cost_function:
+  cost_function_default:
+    R: 0.2
+
 controller:
   cem-tf:
     seed: null                          # If null, random seed based on datetime is used
-    dt: 0.02                              # sec
     mpc_horizon: 40                       # steps
     cem_outer_it: 3                    #how many outer iterations to use
     cem_initial_action_stdev: 0.5
     num_rollouts: 200          #how many rollouts per outer cem iteration
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 5
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
     cem_stdev_min: 0.01
     cem_R: 1
     cem_best_k: 40
@@ -17,13 +28,9 @@ controller:
     controller_logging: True
   cem-gmm-tf:
     seed: null                          # If null, random seed based on datetime is used
-    dt: 0.02                              # sec
     mpc_horizon: 40                       # steps
     cem_outer_it: 3                    #how many outer iterations to use
     num_rollouts: 200          #how many rollouts per outer cem iteration
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 5
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
     cem_stdev_min: 0.01
     cem_initial_action_stdev: 0.5
     cem_R: 1
@@ -31,13 +38,9 @@ controller:
     controller_logging: True
   cem-naive-grad-tf:
     seed: null                          # If null, random seed based on datetime is used
-    dt: 0.02                              # sec
     mpc_horizon: 35                       # steps
     cem_outer_it: 1                       # how many outer iterations to use
     num_rollouts: 200                     # how many rollouts per outer cem iteration
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 10
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
     cem_stdev_min: 0.1
     cem_initial_action_stdev: 0.5
     cem_R: 1
@@ -49,8 +52,6 @@ controller:
     seed: null                          # If null, random seed based on datetime is used
     controller_logging: true
     mpc_horizon: 50                       # steps
-    dt: 0.02                              # sec
-    NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
     learning_rate: 0.05
     adam_beta_1: 0.9
     adam_beta_2: 0.999
@@ -62,15 +63,11 @@ controller:
     cem_initial_action_stdev: 2
     cem_stdev_min: 1.e-6
     gradmax_clip: 5
-    predictor_intermediate_steps: 1
-    predictor_name: predictor_ODE_tf
     warmup: false
     warmup_iterations: 250
   gradient-tf:
     seed: null                            # If null, random seed based on datetime is used
-    dt: 0.02                              # sec
     mpc_horizon: 35                       # steps
-    NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
     learning_rate: 0.05
     adam_beta_1: 0.9
     adam_beta_2: 0.999
@@ -80,8 +77,6 @@ controller:
     num_rollouts: 40
     initial_action_stdev: 0.5
     gradmax_clip: 5
-    predictor_intermediate_steps: 10
-    predictor_name: predictor_ODE_tf
     warmup: false
     warmup_iterations: 250
     controller_logging: True
@@ -92,12 +87,8 @@ controller:
     adam_beta_2: 0.8                      #default: 0.999
     adam_epsilon: 1.0e-7                  #default: 1.0e-7
     gradmax_clip: 1000
-    dt: 0.02                              # sec
     mpc_horizon: 35                       # steps
     num_rollouts: 400                     # Number of Monte Carlo samples
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 10
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor name is predictor_autoregressive_tf
     cc_weight: 1.0
     R: 1.0                                # How much to punish Q
     LBD: 100.0                            # Cost parameter lambda
@@ -109,10 +100,7 @@ controller:
     controller_logging: True
   dist-adam-resamp2-tf:
     seed: null                            # If null, random seed based on datetime is used
-    dt: 0.02
     mpc_horizon: 40                       # steps
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    NET_NAME: GRU-6IN-32H1-32H2-5OUT-2
     SAMPLING_TYPE: interpolated
     interpolation_step: 10
     learning_rate: 0.05
@@ -124,7 +112,6 @@ controller:
     num_rollouts: 32
     opt_keep_k: 8
     outer_its: 2
-    predictor_intermediate_steps: 10
     resamp_per: 10
     sample_stdev: 0.5
     warmup: false
@@ -132,10 +119,7 @@ controller:
     controller_logging: True
   rpgd-tf:
     seed: null                            # If null, random seed based on datetime is used
-    dt: 0.02
     mpc_horizon: 40                       # steps
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    NET_NAME: GRU-6IN-32H1-32H2-5OUT-2
     SAMPLING_TYPE: interpolated
     interpolation_step: 10
     learning_rate: 0.05
@@ -147,7 +131,6 @@ controller:
     num_rollouts: 32
     opt_keep_k: 8
     outer_its: 2
-    predictor_intermediate_steps: 10
     resamp_per: 10
     sample_stdev: 0.5
     warmup: false
@@ -155,10 +138,7 @@ controller:
     controller_logging: True
   controller-rpgd-me-tf:
     seed: null                            # If null, random seed based on datetime is used
-    dt: 0.02
     mpc_horizon: 40                       # steps
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    NET_NAME: GRU-6IN-32H1-32H2-5OUT-0
     SAMPLING_TYPE: null
     SAMPLING_DISTRIBUTION: uniform  # "normal" or "uniform"
     interpolation_step: 10
@@ -172,18 +152,13 @@ controller:
     num_rollouts: 32
     opt_keep_k: 0
     outer_its: 25
-    predictor_intermediate_steps: 1
-    predictor_name: predictor_ODE_tf
     resamp_per: 1
     sample_stdev: 0.5
     warmup: false
     warmup_iterations: 250
   controller-rpgd_ml_tf:
     seed: null                            # If null, random seed based on datetime is used
-    dt: 0.02
     mpc_horizon: 40                       # steps
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    NET_NAME: GRU-6IN-32H1-32H2-5OUT-0
     SAMPLING_DISTRIBUTION: uniform  # "normal" or "uniform"
     SAMPLING_TYPE: null
     interpolation_step: 10
@@ -197,18 +172,13 @@ controller:
     num_rollouts: 32
     opt_keep_k: 8
     outer_its: 5
-    predictor_intermediate_steps: 1
-    predictor_name: predictor_ODE_tf
     resamp_per: 1
     sample_stdev: 0.5
     warmup: false
     warmup_iterations: 250
   controller-rpgd_particle:
     seed: null                            # If null, random seed based on datetime is used
-    dt: 0.02
     mpc_horizon: 40                       # steps
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    NET_NAME: GRU-6IN-32H1-32H2-5OUT-0
     SAMPLING_DISTRIBUTION: uniform  # "normal" or "uniform"
     SAMPLING_TYPE: null
     interpolation_step: 10
@@ -222,23 +192,17 @@ controller:
     num_rollouts: 32
     opt_keep_k: 8
     outer_its: 5
-    predictor_intermediate_steps: 1
-    predictor_name: predictor_ODE_tf
     resamp_per: 1
     sample_stdev: 0.5
     warmup: false
     warmup_iterations: 250
   mppi-var-tf:
     seed: null                          # If null, random seed based on datetime is used
-    dt: 0.02                              # sec
     mpc_horizon: 35                       # steps
     num_rollouts: 400                     # Number of Monte Carlo samples
     SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
     interpolation_step: 10                #interpolation stepsize when sampling
     cc_weight: 1.0
-    predictor_name: "predictor_ODE_tf"             # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
-    predictor_intermediate_steps: 10
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # TODO: DOES NOT WORK YET!!! Applies only if predictor name is predictor_autoregressive_tf
     R: 1.0                                # How much to punish Q
     # mc stands for mathematical correct, as this controller uses the formula from the paper
     LBD_mc: 10.0                          # Cost parameter lambda
@@ -256,9 +220,6 @@ controller:
     mpc_horizon: 35                       # steps
     num_rollouts: 3500                    # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf", "predictor_autoregressive_GP"]
-    predictor_intermediate_steps: 10
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor name is predictor_autoregressive_tf
     GP_NAME: 'SGP_30'                     # Applies only if predictor name is GP
     dd_weight: 120.0
     ep_weight: 50000.0
@@ -278,13 +239,9 @@ controller:
     WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
   mppi-tf:
     seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
-    dt: 0.02                              # sec
     mpc_horizon: 35                       # steps
     num_rollouts: 3500                    # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
-    predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf", "predictor_autoregressive_GP"]
-    predictor_intermediate_steps: 10
-    NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0'  # Applies only if predictor name is predictor_autoregressive_tf
     GP_NAME: 'SGP_30'                     # Applies only if predictor name is GP
     cc_weight: 1.0
     cost_noise: 0.0                       # Noise on stage cost weights by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0 othewise
@@ -300,17 +257,12 @@ controller:
     CLIP_CONTROL_INPUT: [1.0]             # How to clip control input, symmetric
   random-action:
     seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
-    dt: 0.02                              # sec
     mpc_horizon: 35                       # steps
     num_rollouts: 3500                    # Number of Monte Carlo samples
-    NET_NAME: GRU-3IN-32H1-32H2-2OUT-0
     num_rollouts: 320
-    predictor_intermediate_steps: 1
-    predictor_name: predictor_ODE_tf
     controller_logging: False                        # Collect and show detailed insights into the controller's behavior
   custom-mpc-scipy:
     seed: null                          # If null, random seed based on datetime is used
-    dt: 0.1
     # method: 'L-BFGS-B'
     method: 'SLSQP'
     ftol: 1.0e-8
@@ -334,7 +286,6 @@ controller:
     controller_logging: True
   do-mpc:
     seed: null                          # If null, random seed based on datetime is used
-    dt: 0.02  # s
     mpc_horizon: 50                       # steps
     num_rollouts: 1
     # Perturbation factors:
@@ -364,19 +315,16 @@ controller:
     D_position: 0.1
     controller_logging: True
   mpc-opti:
-    dt: 0.2  # s
     mpc_horizon: 10                       # steps
     controller_logging: True
   neural-imitator-tf:
     seed: null                            # If null, random seed based on datetime is used
-    net_name: 'GRU-6IN-32H1-32H2-1OUT-4'
     PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
     mpc_horizon: 40
     num_rollouts: 1
     controller_logging: True
   neural-imitator-pytorch:
     seed: null                            # If null, random seed based on datetime is used
-    net_name: 'GRU-6IN-32H1-32H2-1OUT-5'
     PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
     mpc_horizon: 40
     num_rollouts: 1
