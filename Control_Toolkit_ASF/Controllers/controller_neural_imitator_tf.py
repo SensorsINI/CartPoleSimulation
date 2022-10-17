@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from SI_Toolkit.Predictors import template_predictor
 
 import numpy as np
 import tensorflow as tf
@@ -15,7 +14,8 @@ try:
 except ModuleNotFoundError:
     print("SI_Toolkit_ASF not yet created")
 
-from SI_Toolkit.Functions.General.Initialization import get_net, get_norm_info_for_net
+from SI_Toolkit.Functions.General.Initialization import (get_net,
+                                                         get_norm_info_for_net)
 from SI_Toolkit.Functions.TF.Compile import CompileTF
 
 config = load_config("config.yml")
@@ -26,13 +26,13 @@ PATH_TO_MODELS = config["controller"]["neural-imitator-tf"]["PATH_TO_MODELS"]
 class controller_neural_imitator_tf(template_controller):
     def __init__(
         self,
-        predictor: template_predictor,
         cost_function: cost_function_base,
         seed: int,
         action_space: Box,
         observation_space: Box,
         mpc_horizon: int,
         num_rollouts: int,
+        predictor_specification: str,
         controller_logging: bool,
         **kwargs
     ):
@@ -68,16 +68,7 @@ class controller_neural_imitator_tf(template_controller):
         except:
             self.evaluate_net = self.evaluate_net_f
 
-        super().__init__(
-            predictor=predictor,
-            cost_function=cost_function,
-            seed=seed,
-            action_space=action_space,
-            observation_space=observation_space,
-            mpc_horizon=mpc_horizon,
-            num_rollouts=num_rollouts,
-            controller_logging=controller_logging,
-        )
+        super().__init__(cost_function=cost_function, seed=seed, action_space=action_space, observation_space=observation_space, mpc_horizon=mpc_horizon, num_rollouts=num_rollouts, predictor_specification=predictor_specification, controller_logging=controller_logging)
 
     def step(self, s, time=None):
 

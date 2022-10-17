@@ -11,7 +11,6 @@ Based on Williams, Aldrich, Theodorou (2015)
 
 
 from datetime import datetime
-from SI_Toolkit.Predictors import template_predictor
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -29,19 +28,14 @@ from numba import jit
 from numpy.random import SFC64, Generator
 from others.p_globals import TrackHalfLength
 from scipy.interpolate import interp1d
-from SI_Toolkit.Predictors.predictor_autoregressive_tf import \
-    predictor_autoregressive_tf
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
-from SI_Toolkit.Predictors.predictor_ODE_tf import predictor_ODE_tf
+from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper
 
 # from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
 # from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
 
-from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper
 
-from Control_Toolkit.Controllers import template_controller
 
-from others.p_globals import L
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 
@@ -350,7 +344,6 @@ class controller_mppi(template_controller):
 
     def __init__(
         self,
-        predictor: template_predictor,
         cost_function: cost_function_base,
         action_space: Box,
         observation_space: Box,
@@ -366,7 +359,7 @@ class controller_mppi(template_controller):
         self.rng_mppi = Generator(SFC64(seed))
         self.rng_mppi_rnn = Generator(SFC64(seed*2)) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
 
-        super().__init__(predictor=predictor, cost_function=cost_function, seed=seed, action_space=action_space, observation_space=observation_space, mpc_horizon=mpc_horizon, num_rollouts=num_rollouts, controller_logging=controller_logging)
+        super().__init__(cost_function=cost_function, seed=seed, action_space=action_space, observation_space=observation_space, mpc_horizon=mpc_horizon, num_rollouts=num_rollouts, predictor_specification=predictor_specification, controller_logging=controller_logging)
 
         global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
         dd_weight = dd_weight * (1 + dd_noise * self.rng_mppi.uniform(-1.0, 1.0))
@@ -392,7 +385,8 @@ class controller_mppi(template_controller):
         self.wash_out_len = WASH_OUT_LEN
         self.warm_up_countdown = self.wash_out_len
         try:
-            from Control_Toolkit_ASF.Controllers.controller_lqr import controller_lqr
+            from Control_Toolkit_ASF.Controllers.controller_lqr import \
+                controller_lqr
 
             # FIXME: controller requires corresponding config...
             print('Auxiliary controller not implemented yet in ')
@@ -487,7 +481,7 @@ class controller_mppi(template_controller):
         # Adjust horizon if changed in GUI while running
         # FIXME: For this to work with NeuralNet predictor we need to build a setter,
         #  which also reinitialize arrays which size depends on horizon
-        self.predictor.horizon = mpc_horizon
+        predictor.horizon = mpc_horizon
         if mpc_horizon != self.u.size:
             self.update_control_vector()
 

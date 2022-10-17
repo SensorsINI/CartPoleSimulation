@@ -7,7 +7,6 @@ from Control_Toolkit_ASF.Cost_Functions import cost_function_base
 from gym.spaces.box import Box
 from others.globals_and_utils import load_config
 from SI_Toolkit.load_and_normalize import normalize_numpy_array
-from SI_Toolkit.Predictors import template_predictor
 
 try:
     from SI_Toolkit_ASF.predictors_customization import STATE_INDICES
@@ -26,13 +25,13 @@ PATH_TO_MODELS = config["controller"]["neural-imitator-pytorch"]["PATH_TO_MODELS
 class controller_neural_imitator_pytorch(template_controller):
     def __init__(
         self,
-        predictor: template_predictor,
         cost_function: cost_function_base,
         seed: int,
         action_space: Box,
         observation_space: Box,
         mpc_horizon: int,
         num_rollouts: int,
+        predictor_specification: str,
         controller_logging: bool,
         **kwargs
     ):
@@ -55,16 +54,8 @@ class controller_neural_imitator_pytorch(template_controller):
         self.net.reset()
         self.net.eval()
 
-        super().__init__(
-            predictor=predictor,
-            cost_function=cost_function,
-            seed=seed,
-            action_space=action_space,
-            observation_space=observation_space,
-            mpc_horizon=mpc_horizon,
-            num_rollouts=num_rollouts,
-            controller_logging=controller_logging,
-        )
+        super().__init__(cost_function=cost_function, seed=seed, action_space=action_space, observation_space=observation_space, mpc_horizon=mpc_horizon, num_rollouts=num_rollouts, predictor_specification=predictor_specification, controller_logging=controller_logging)
+
 
     def step(self, s, time=None):
 

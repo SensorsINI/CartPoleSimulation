@@ -10,17 +10,16 @@ from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit_ASF.Cost_Functions import cost_function_base
 from gym.spaces.box import Box
 from others.globals_and_utils import create_rng
-from SI_Toolkit.Predictors import template_predictor
 
 
 class controller_do_mpc(template_controller):
     def __init__(
         self,
-        predictor: template_predictor,
         cost_function: cost_function_base,
         seed: int,
         dt: float,
         mpc_horizon: int,
+        predictor_specification: str,
         action_space: Box,
         p_Q: float,
         p_position: float,
@@ -35,7 +34,7 @@ class controller_do_mpc(template_controller):
         angleD_init=0.0,    
         **kwargs,
     ):
-        super().__init__(predictor=predictor, cost_function=cost_function, seed=seed, action_space=action_space, observation_space=None, mpc_horizon=mpc_horizon, num_rollouts=None, controller_logging=False)
+        super().__init__(cost_function=cost_function, seed=seed, action_space=action_space, observation_space=None, mpc_horizon=mpc_horizon, num_rollouts=None, predictor_specification=predictor_specification, controller_logging=False)
         """
         Get configured do-mpc modules:
         """
