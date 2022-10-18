@@ -19,7 +19,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from Control_Toolkit.others.environment import EnvironmentBatched, NumpyLibrary, TensorFlowLibrary
+from Control_Toolkit.others.environment import EnvironmentBatched
+from SI_Toolkit.computation_library import NumpyLibrary, TensorFlowLibrary
 from Control_Toolkit.others.globals_and_utils import get_available_controller_names, get_controller
 from others.globals_and_utils import MockSpace, create_rng, load_config
 from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
@@ -68,8 +69,6 @@ rc('font', **font)
 # endregion
 
 # endregion
-
-import yaml
 
 config = load_config("config.yml")
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]

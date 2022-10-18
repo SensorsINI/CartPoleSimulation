@@ -1,6 +1,6 @@
 from typing import Union
 import tensorflow as tf
-from Control_Toolkit.others.environment import NumpyLibrary, TensorFlowLibrary
+from SI_Toolkit.computation_library import NumpyLibrary, TensorFlowLibrary
 
 
 class cartpole_cost_function:
