@@ -1,7 +1,7 @@
 from Control_Toolkit.others.environment import EnvironmentBatched
 
 
-class cost_function_default:
+class cost_function_gym:
     """Uses as cost function the get_reward method of environment provided."""
 
     def __init__(self, env) -> None:

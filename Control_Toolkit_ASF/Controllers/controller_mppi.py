@@ -10,6 +10,7 @@ Based on Williams, Aldrich, Theodorou (2015)
 # use('macOSX')
 
 
+import os
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -35,16 +36,14 @@ from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper
 # from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
 
 
-
-
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
-
+controller_config = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml"), "r"), Loader=yaml.FullLoader)
 
 """Timestep and sampling settings"""
-mpc_horizon = config["controller"]["mppi"]["mpc_horizon"]
-num_rollouts = config["controller"]["mppi"]["num_rollouts"]
-update_every = config["controller"]["mppi"]["update_every"]
-predictor_specification = config["controller"]["mppi"]["predictor_specification"]
+mpc_horizon = controller_config["mppi"]["mpc_horizon"]
+num_rollouts = controller_config["mppi"]["num_rollouts"]
+update_every = controller_config["mppi"]["update_every"]
+predictor_specification = controller_config["mppi"]["predictor_specification"]
 
 """Define Predictor"""
 predictor = PredictorWrapper()
@@ -65,19 +64,19 @@ predictor_ground_truth = predictor_ODE(
 )
 
 
-WASH_OUT_LEN = config["controller"]["mppi"]["WASH_OUT_LEN"]
+WASH_OUT_LEN = controller_config["mppi"]["WASH_OUT_LEN"]
 
 """Parameters weighting the different cost components"""
-dd_weight = config["controller"]["mppi"]["dd_weight"]
-ep_weight = config["controller"]["mppi"]["ep_weight"]
-ekp_weight = config["controller"]["mppi"]["ekp_weight"]
-ekc_weight = config["controller"]["mppi"]["ekc_weight"]
-cc_weight = config["controller"]["mppi"]["cc_weight"]
-ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
+dd_weight = controller_config["mppi"]["dd_weight"]
+ep_weight = controller_config["mppi"]["ep_weight"]
+ekp_weight = controller_config["mppi"]["ekp_weight"]
+ekc_weight = controller_config["mppi"]["ekc_weight"]
+cc_weight = controller_config["mppi"]["cc_weight"]
+ccrc_weight = controller_config["mppi"]["ccrc_weight"]
 
 """Perturbation factor"""
-p_Q = config["controller"]["mppi"]["control_noise"]
-dd_noise = ep_noise = ekp_noise = ekc_noise = cc_noise = config["controller"]["mppi"][
+p_Q = config["cartpole"]["actuator_noise"]
+dd_noise = ep_noise = ekp_noise = ekc_noise = cc_noise = controller_config["mppi"][
     "cost_noise"
 ]
 
@@ -85,16 +84,16 @@ gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = gui_ccrc = np.zeros(1, dtype=np.f
 
 
 """MPPI constants"""
-R = config["controller"]["mppi"]["R"]
-LBD = config["controller"]["mppi"]["LBD"]
-NU = config["controller"]["mppi"]["NU"]
-SQRTRHODTINV = config["controller"]["mppi"]["SQRTRHOINV"] * (1 / np.math.sqrt(dt))
-GAMMA = config["controller"]["mppi"]["GAMMA"]
-SAMPLING_TYPE = config["controller"]["mppi"]["SAMPLING_TYPE"]
+R = controller_config["mppi"]["R"]
+LBD = controller_config["mppi"]["LBD"]
+NU = controller_config["mppi"]["NU"]
+SQRTRHODTINV = controller_config["mppi"]["SQRTRHOINV"] * (1 / np.sqrt(dt))
+GAMMA = controller_config["mppi"]["GAMMA"]
+SAMPLING_TYPE = controller_config["mppi"]["SAMPLING_TYPE"]
 
 
 """Init logging variables"""
-LOGGING = config["controller"]["mppi"]["controller_logging"]
+LOGGING = controller_config["mppi"]["controller_logging"]
 # Save average cost for each cost component
 LOGS = {
     "cost_to_go": [],
@@ -353,13 +352,13 @@ class controller_mppi(template_controller):
         **kwargs,
     ):
         """Random number generator"""
-        seed = config["controller"]["mppi"]["seed"]
+        seed = controller_config["mppi"]["seed"]
         if seed == None:
             seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
         self.rng_mppi = Generator(SFC64(seed))
         self.rng_mppi_rnn = Generator(SFC64(seed*2)) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
 
-        super().__init__(cost_function=cost_function, seed=seed, action_space=action_space, observation_space=observation_space, mpc_horizon=mpc_horizon, num_rollouts=num_rollouts, predictor_specification=predictor_specification, controller_logging=controller_logging)
+        super().__init__(cost_function=cost_function, seed=seed, action_space=action_space, observation_space=observation_space, mpc_horizon=mpc_horizon, num_rollouts=num_rollouts, controller_logging=controller_logging)
 
         global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
         dd_weight = dd_weight * (1 + dd_noise * self.rng_mppi.uniform(-1.0, 1.0))
@@ -474,7 +473,7 @@ class controller_mppi(template_controller):
         """
 
         self.s = s
-        self.target_position = np.float32(self.cost_function.environment.target_position)
+        self.target_position = np.float32(self.cost_function.target_position)
 
         self.iteration += 1
 

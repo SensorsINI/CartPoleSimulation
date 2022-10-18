@@ -1,21 +1,28 @@
 
+from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper
 import numpy as np
 import math
 import sys
 import datetime as dt
+import yaml
 
 from scipy.interpolate import interp1d
 from dataclasses import dataclass
 from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.others.environment import EnvironmentBatched
+from Control_Toolkit_ASF.Cost_Functions import cost_function_base
+from others.globals_and_utils import MockSpace
+
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+actuator_noise = config["cartpole"]["actuator_noise"]
 
 """
 Python implementation of the theory for Sparse Envent-Based Closed Loop Control (SECLOC):
 https://www.frontiersin.org/articles/10.3389/fnins.2019.00827/full
 """
 class controller_secloc(template_controller):
-    def __init__(self, environment: EnvironmentBatched, log_base: float, dt: int, ref_period: int, dead_band: float, pid_Kp: float, pid_Kd: float, pid_Ki: float, **kwargs):
-        super().__init__(environment, **kwargs)
+    def __init__(self, cost_function: cost_function_base, log_base: float, dt: int, ref_period: int, dead_band: float, pid_Kp: float, pid_Kd: float, pid_Ki: float, **kwargs):
+        super().__init__(cost_function=cost_function, seed=None, action_space=MockSpace(-1.0, 1.0, (1,)), observation_space=None, mpc_horizon=None, num_rollouts=None, controller_logging=False)
         # self.log_base = log_base
         # self.dt = dt
         # self.ref_period = ref_period
@@ -23,7 +30,7 @@ class controller_secloc(template_controller):
         # self.pid_Kp = pid_Kp
         # self.pid_Kd = pid_Kd
         # self.pid_Ki = pid_Ki
-        self.p_Q = environment.config["actuator_noise"]
+        self.p_Q = actuator_noise
         self.pid = Event_based_PID(Kp=pid_Kp, Kd=pid_Kd, Ki=pid_Ki, sensor_log_base=1.15, disp=True)
         self.potentiometer = Event_based_sensor(pid=self.pid, log_base=log_base, dt=dt, ref_period=ref_period, dead_band=dead_band, disp=True)
         self.potentiometer.set_point = 0

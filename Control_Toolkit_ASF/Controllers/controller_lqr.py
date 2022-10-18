@@ -5,6 +5,8 @@ It assumes that the input relation is u = Q*u_max (no fancy motor model) !
 
 import numpy as np
 import scipy
+import yaml
+
 from CartPole.cartpole_jacobian import cartpole_jacobian
 from CartPole.cartpole_model import s0, u_max
 from CartPole.state_utilities import (ANGLE_IDX, ANGLED_IDX, POSITION_IDX,
@@ -13,6 +15,9 @@ from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit_ASF.Cost_Functions import cost_function_base
 from gym.spaces.box import Box
 from others.globals_and_utils import create_rng
+
+config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+actuator_noise = config["cartpole"]["actuator_noise"]
 
 
 class controller_lqr(template_controller):
@@ -23,7 +28,6 @@ class controller_lqr(template_controller):
         Q: "list[float]",
         R: "list[float]",
         action_space: Box,
-        actuator_noise: float=0.1,
         **kwargs
     ):
         # From https://github.com/markwmuller/controlpy/blob/master/controlpy/synthesis.py#L8
@@ -42,7 +46,7 @@ class controller_lqr(template_controller):
         The optimal input is then computed as:
          input: u = -K*x
         """
-        super().__init__(cost_function=cost_function, seed=seed, action_space=action_space, observation_space=None, mpc_horizon=None, num_rollouts=None, predictor_specification=None, controller_logging=False)
+        super().__init__(cost_function=cost_function, seed=seed, action_space=action_space, observation_space=None, mpc_horizon=None, num_rollouts=None, controller_logging=False)
 
         self.p_Q = actuator_noise
         # ref Bertsekas, p.151
@@ -86,7 +90,7 @@ class controller_lqr(template_controller):
 
     def step(self, s: np.ndarray, time=None):
         state = np.array(
-            [[s[POSITION_IDX] - self.cost_function.environment.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
+            [[s[POSITION_IDX] - self.cost_function.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
 
         Q = np.dot(-self.K, state).item()
 

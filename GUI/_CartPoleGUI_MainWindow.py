@@ -271,7 +271,7 @@ class MainWindow(QMainWindow):
             lud_right.addWidget(rb)
         lud_right.addStretch(1)
 
-        if self.CartPoleInstance.target_equilibrium == 1.0:
+        if self.CartPoleInstance.planner.cost_function.target_equilibrium == 1.0:
             initial_target_equilibrium = 'Up'
         else:
             initial_target_equilibrium = 'Down'
@@ -629,11 +629,11 @@ class MainWindow(QMainWindow):
             except KeyError:
                 pass
             self.CartPoleInstance.Q = row['Q']
-            self.CartPoleInstance.target_position = row['target_position']
+            self.CartPoleInstance.planner.cost_function.target_position = row['target_position']
             if self.CartPoleInstance.controller_name == 'manual-stabilization':
                 self.CartPoleInstance.slider_value = self.CartPoleInstance.Q
             else:
-                self.CartPoleInstance.slider_value = self.CartPoleInstance.target_position/TrackHalfLength
+                self.CartPoleInstance.slider_value = self.CartPoleInstance.planner.cost_function.target_position/TrackHalfLength
 
             # TODO: Make it more general for all possible parameters
             try:
@@ -718,7 +718,7 @@ class MainWindow(QMainWindow):
         # The following line is important as it let the user to set with the slider the starting target position
         # After the slider was reset at the end of last experiment
         # With the small sliders he can also adjust starting initial_state
-        self.reset_variables(2, s=np.copy(self.initial_state), target_position=self.CartPoleInstance.target_position)
+        self.reset_variables(2, s=np.copy(self.initial_state), target_position=self.CartPoleInstance.planner.cost_function.target_position)
 
         if self.simulator_mode == 'Random Experiment':
 
@@ -837,7 +837,7 @@ class MainWindow(QMainWindow):
                 self.labTargetPosition.setText("")
             else:
                 self.labTargetPosition.setText(
-                    "Target position (m): " + str(np.around(self.CartPoleInstance.target_position, 2)))
+                    "Target position (m): " + str(np.around(self.CartPoleInstance.planner.cost_function.target_position, 2)))
 
             if self.CartPoleInstance.controller_name == 'manual_stabilization':
                 self.labSliderInstant.setText(
@@ -962,9 +962,9 @@ class MainWindow(QMainWindow):
     def RadioButtons_equilibrium(self):
         sleep(0.001)
         if self.rbs_equilibrium[0].isChecked():
-            self.CartPoleInstance.target_equilibrium = 1.0
+            self.CartPoleInstance.planner.cost_function.target_equilibrium = 1.0
         else:
-            self.CartPoleInstance.target_equilibrium = -1.0
+            self.CartPoleInstance.planner.cost_function.target_equilibrium = -1.0
 
     # Chose the noise mode - effect of start/stop button
     def RadioButtons_noise_on_off(self):

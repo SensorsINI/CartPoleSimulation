@@ -104,9 +104,6 @@ class CartPole(EnvironmentBatched):
         # Variables for control input and target position.
         self.u = 0.0  # Physical force acting on the cart
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
-        self._target_position = 0.0
-        self._target_equilibrium = 1.0  # Up is 1.0, Down is -1.0, here just a placeholder, change line below
-        self.target_equilibrium = 1.0
 
         self.action_space = MockSpace(-1.0, 1.0, (1,), np.float32)
         state_low = [-np.pi, -np.inf, -1.0, -1.0, -TrackHalfLength, -np.inf]
@@ -149,7 +146,7 @@ class CartPole(EnvironmentBatched):
         # region Variables controlling operation of the program - should not be modified directly
         self.save_flag = False  # Signalizes that the current time step should be saved
         self.csv_filepath = None  # Where to save the experiment history.
-        self.controller = None  # Placeholder for the currently used controller function
+        self.planner = None  # Placeholder for the currently used controller function
         self.controller_name = ''  # Placeholder for the currently used controller name
         self.controller_idx = None  # Placeholder for the currently used controller index
         self.controller_names = get_available_controller_names()  # list of controllers available in controllers folder
@@ -318,46 +315,14 @@ class CartPole(EnvironmentBatched):
             if self.time >= self.t_max_pre:
                 return
 
-            self.target_position = self.random_track_f(self.time)
-            self.slider_value = self.target_position/TrackHalfLength  # Assign target position to slider to display it
+            self.planner.cost_function.target_position = self.random_track_f(self.time)
+            self.slider_value = self.planner.cost_function.target_position/TrackHalfLength  # Assign target position to slider to display it
         else:
             if self.controller_name == 'manual-stabilization':
-                self.target_position = 0.0  # In this case target position is not used.
+                self.planner.cost_function.target_position = 0.0  # In this case target position is not used.
                 # This just fill the corresponding column in history with zeros
             else:
-                self.target_position = self.slider_value * TrackHalfLength  # Get target position from slider
-    
-    @property
-    def target_position(self):
-        return self._target_position
-
-    @property
-    def target_equilibrium(self):
-        return self._target_equilibrium
-
-    @property
-    def target_position_tf(self):
-        return self._target_position_tf
-
-    @property
-    def target_equilibrium_tf(self):
-        return self._target_equilibrium_tf
-    
-    @target_position.setter
-    def target_position(self, target_position):
-        self._target_position = target_position
-        if not hasattr(self, "_target_position_tf"):
-            self._target_position_tf = tf.Variable(target_position, dtype=tf.float32)
-        else:
-            self._target_position_tf.assign(target_position)
-
-    @target_equilibrium.setter
-    def target_equilibrium(self, target_equilibrium):
-        self._target_equilibrium = target_equilibrium
-        if not hasattr(self, "_target_equilibrium_tf"):
-            self._target_equilibrium_tf = tf.Variable(target_equilibrium, dtype=tf.float32)
-        else:
-            self._target_equilibrium_tf.assign(target_equilibrium)
+                self.planner.cost_function.target_position = self.slider_value * TrackHalfLength  # Get target position from slider
 
     def block_pole_at_90_deg(self):
         if self.stop_at_90:
@@ -402,10 +367,10 @@ class CartPole(EnvironmentBatched):
 
                 # The target_position is not always meaningful
                 # If it is not meaningful all values in this column are set to 0
-                self.dict_history['target_position'].append(self.target_position)
+                self.dict_history['target_position'].append(self.planner.cost_function.target_position)
 
                 try:
-                    for key, value in self.controller.controller_data_for_csv.items():
+                    for key, value in self.planner.controller.controller_data_for_csv.items():
                         self.dict_history[key].append(value[0])
                 except AttributeError:
                     pass
@@ -430,12 +395,12 @@ class CartPole(EnvironmentBatched):
                                      'Q': [self.Q],
                                      'u': [self.u],
 
-                                     'target_position': [self.target_position],
+                                     'target_position': [self.planner.cost_function.target_position],
 
                                      }
 
                 try:
-                    self.dict_history.update(self.controller.controller_data_for_csv)
+                    self.dict_history.update(self.planner.controller.controller_data_for_csv)
                 except AttributeError:
                     pass
                 except Exception:
@@ -483,7 +448,7 @@ class CartPole(EnvironmentBatched):
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s_with_noise_and_latency, self.time)
+                self.Q = self.planner.step(self.s_with_noise_and_latency, self.time)
 
             self.dt_controller_steps_counter = 0
 
@@ -793,10 +758,10 @@ class CartPole(EnvironmentBatched):
         self.number_of_timesteps_in_random_experiment = int(np.ceil(self.length_of_experiment / self.dt_simulation))
 
         # Target position at time 0
-        self.target_position = self.random_track_f(self.time)
+        self.planner.cost_function.target_position = self.random_track_f(self.time)
 
         # Reset variables
-        self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, target_position=self.target_position)
+        self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, target_position=self.planner.cost_function.target_position)
 
     # Runs a random experiment with parameters set with setup_cartpole_random_experiment
     # And saves the experiment recording to csv file
@@ -878,13 +843,14 @@ class CartPole(EnvironmentBatched):
     # Set the controller of CartPole
     def set_controller(self, controller_name=None, controller_idx=None):
         self.controller_name, self.controller_idx = get_controller_name(
-            controller_name=controller_name, controller_idx=None
+            controller_name=controller_name, controller_idx=controller_idx
         )
         
         self.planner = Planner(
-            predictor_name=self.config["predictor"],
-            cost_function_name=self.config["cost_function"],
             controller_name=self.controller_name,
+            environment_name="CartPole",
+            action_space=self.action_space,
+            observation_space=self.observation_space,
         )
                 
         # Set the maximal allowed value of the slider - relevant only for GUI
@@ -896,7 +862,7 @@ class CartPole(EnvironmentBatched):
         # TODO: optimally reset_dict_history would be False and the controller could be switched during experiment
         #   The False option is not implemented yet. So it is possible to switch controller only when the experiment is not running.
         #   Check also how it covers the case when controller is switched (possibly multiple times) when experiment is not running
-        self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, target_position=self.target_position, reset_dict_history=True)
+        self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, target_position=self.planner.cost_function.target_position, reset_dict_history=True)
 
         return True
 
@@ -909,7 +875,7 @@ class CartPole(EnvironmentBatched):
 
         # Some controllers may need reset before being reused in the next experiment without reloading
         try:
-            self.controller.controller_reset()
+            self.planner.controller_reset()
         except AttributeError:
             pass
         except NotImplementedError:
@@ -926,7 +892,7 @@ class CartPole(EnvironmentBatched):
             self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
             self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
-            self.target_position = 0.0
+            self.planner.cost_function.target_position = 0.0
             self.slider_value = 0.0
 
         elif reset_mode == 1:  # You may change this but be careful with other user. Better use 3
@@ -939,7 +905,7 @@ class CartPole(EnvironmentBatched):
             self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
             self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
-            self.target_position = 0.0
+            self.planner.cost_function.target_position = 0.0
             self.slider_value = 0.0
 
         elif reset_mode == 2:  # Don't change it
@@ -949,7 +915,7 @@ class CartPole(EnvironmentBatched):
                 self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
                 self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
-                self.slider = self.target_position = target_position
+                self.slider = self.planner.cost_function.target_position = target_position
 
             else:
                 raise ValueError('s, Q or target position not provided for initial state')
@@ -958,7 +924,7 @@ class CartPole(EnvironmentBatched):
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s, self.time)
+                self.Q = self.planner.step(self.s, self.time)
 
             self.u = Q2u(self.Q)  # Calculate CURRENT control input
             self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)  # Calculate CURRENT second derivatives
@@ -984,11 +950,11 @@ class CartPole(EnvironmentBatched):
                                  'Q': [self.Q],
                                  'u': [self.u],
 
-                                 'target_position': [self.target_position],
+                                 'target_position': [self.planner.cost_function.target_position],
 
                                  }
             try:
-                self.dict_history.update(self.controller.controller_data_for_csv)
+                self.dict_history.update(self.planner.controller.controller_data_for_csv)
             except AttributeError:
                 pass
             except Exception:
