@@ -156,7 +156,7 @@ rpgd-me-tf:
   warmup: false
   warmup_iterations: 250
   controller_logging: True
-rpgd_ml_tf:
+rpgd-ml-tf:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
   SAMPLING_DISTRIBUTION: uniform  # "normal" or "uniform"
