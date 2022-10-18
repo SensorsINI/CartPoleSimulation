@@ -21,7 +21,7 @@ import pandas as pd
 import tensorflow as tf
 from CartPole.cartpole_tf import cartpole_fine_integration_tf
 from Control_Toolkit import Planner
-from Control_Toolkit.others.environment import (EnvironmentBatched,
+from SI_Toolkit.computation_library import (EnvironmentBatched,
                                                 NumpyLibrary,
                                                 TensorFlowLibrary, TensorType)
 from Control_Toolkit.others.globals_and_utils import (

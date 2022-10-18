@@ -1,21 +1,17 @@
-from typing import Callable, Optional
 import numpy as np
 
 from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, create_cartpole_state
 
 from CartPole.cartpole_model import Q2u, L
 from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
-from Control_Toolkit.others.environment import TensorType
 
 class next_state_predictor_ODE():
 
-    def __init__(self, dt: float, intermediate_steps: int, batch_size: int, step_fun: Optional[Callable[[TensorType, TensorType, float], TensorType]]=None, **kwargs):
+    def __init__(self, dt: float, intermediate_steps: int, batch_size: int, **kwargs):
         self.s = create_cartpole_state()
 
         self.intermediate_steps = intermediate_steps
         self.t_step = np.float32(dt / float(self.intermediate_steps))
-        
-        self.step_fun = step_fun
         
     def step(self, s, Q, params):
 

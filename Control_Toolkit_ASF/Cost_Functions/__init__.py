@@ -1,4 +1,4 @@
-from Control_Toolkit.others.environment import ComputationLibrary, TensorType
+from SI_Toolkit.computation_library import ComputationLibrary, TensorType
 from Control_Toolkit.others.globals_and_utils import get_logger
 
 logger = get_logger(__name__)

@@ -3,7 +3,7 @@ from typing import Union
 import numpy as np
 import tensorflow as tf
 import torch
-from Control_Toolkit.others.environment import (
+from SI_Toolkit.computation_library import (
     ComputationLibrary,
     NumpyLibrary,
     PyTorchLibrary,

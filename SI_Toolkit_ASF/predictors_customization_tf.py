@@ -7,7 +7,6 @@ from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITI
 
 from CartPole.cartpole_tf import cartpole_fine_integration_tf, Q2u_tf
 from CartPole.cartpole_model import L
-from Control_Toolkit.others.environment import TensorType
 
 from SI_Toolkit.Functions.TF.Compile import CompileTF, CompileAdaptive
 
