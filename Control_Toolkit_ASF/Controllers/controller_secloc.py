@@ -10,8 +10,6 @@ from scipy.interpolate import interp1d
 from dataclasses import dataclass
 from Control_Toolkit.Controllers import template_controller
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
-actuator_noise = config["cartpole"]["actuator_noise"]
 config_controller = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml"), "r"), Loader=yaml.FullLoader)
 
 """
@@ -30,7 +28,6 @@ class controller_secloc(template_controller):
         pid_Kd = config_controller["secloc"]["pid_Kd"]
         pid_Ki = config_controller["secloc"]["pid_Ki"]
         
-        self.p_Q = actuator_noise
         self.pid = Event_based_PID(Kp=pid_Kp, Kd=pid_Kd, Ki=pid_Ki, sensor_log_base=1.15, disp=True)
         self.potentiometer = Event_based_sensor(pid=self.pid, log_base=log_base, dt=dt, ref_period=ref_period, dead_band=dead_band, disp=True)
         self.potentiometer.set_point = 0
@@ -55,7 +52,7 @@ class controller_secloc(template_controller):
             motor_signal = -self.motor_map
         motor_signal = self.interpolation(motor_signal)
         print(f"Map the motor signal {self.potentiometer.pid.motor_signal} to [-1,1]: motor_action: {motor_signal}")
-        Q = np.float32(motor_signal * (1 + self.p_Q))
+        Q = np.float32(motor_signal)
         # Clip Q
         if Q > 1.0:
             Q = 1.0
