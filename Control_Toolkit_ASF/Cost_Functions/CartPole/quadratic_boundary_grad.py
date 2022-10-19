@@ -1,7 +1,6 @@
 import os
+from Control_Toolkit_ASF.Cost_Functions import cost_function_base
 
-from Control_Toolkit_ASF.Cost_Functions.CartPole.cartpole_cost_function import \
-    cartpole_cost_function
 from others.globals_and_utils import load_config
 
 from CartPole.cartpole_model import TrackHalfLength
@@ -14,17 +13,16 @@ dd_weight = config["CartPole"]["quadratic_boundary_grad"]["dd_weight"]
 cc_weight = config["CartPole"]["quadratic_boundary_grad"]["cc_weight"]
 ep_weight = config["CartPole"]["quadratic_boundary_grad"]["ep_weight"]
 ekp_weight = config["CartPole"]["quadratic_boundary_grad"]["ekp_weight"]
+ccrc_weight = config["CartPole"]["quadratic_boundary_grad"]["ccrc_weight"]
 R = config["CartPole"]["quadratic_boundary_grad"]["R"]
 
-ccrc_weight = config["controller"]["mppi"]["ccrc_weight"]
 
-
-class quadratic_boundary_grad(cartpole_cost_function):
+class quadratic_boundary_grad(cost_function_base):
     # cost for distance from track edge
     def distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
         return (
-            (position - self.target_position) / (2.0 * TrackHalfLength)
+            (position - self.controller.target_position) / (2.0 * TrackHalfLength)
         ) ** 2 + self.lib.cast(
             self.lib.abs(position) > 0.95 * TrackHalfLength, self.lib.float32
         ) * 1e9 * (
@@ -34,7 +32,7 @@ class quadratic_boundary_grad(cartpole_cost_function):
     # cost for difference from upright position
     def E_pot_cost(self, angle):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
-        return self.target_equilibrium * 0.25 * (1.0 - self.lib.cos(angle)) ** 2
+        return self.controller.target_equilibrium * 0.25 * (1.0 - self.lib.cos(angle)) ** 2
     
     def E_kin_cost(self, angleD):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
@@ -63,7 +61,7 @@ class quadratic_boundary_grad(cartpole_cost_function):
         terminal_cost = 10000 * self.lib.cast(
             (self.lib.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
             | (
-                self.lib.abs(terminal_states[:, POSITION_IDX] - self.target_position)
+                self.lib.abs(terminal_states[:, POSITION_IDX] - self.controller.target_position)
                 > 0.1 * TrackHalfLength
             ),
             self.lib.float32,

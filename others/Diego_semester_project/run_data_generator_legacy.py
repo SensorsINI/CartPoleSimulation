@@ -55,7 +55,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     ### Controller which should be used in generated experiment:
     controller_DataGen = 'mppi-optimize'
-    # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
+    # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi-cartpole'
 
     """" This is the interesting part where i set up the directory and copy all relevant information"""
     ### Setup directory with data for exp

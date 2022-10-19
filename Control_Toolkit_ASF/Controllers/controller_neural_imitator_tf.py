@@ -1,10 +1,12 @@
 from types import SimpleNamespace
 from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper
+from SI_Toolkit.computation_library import TensorFlowLibrary, TensorType
 
 import numpy as np
 import tensorflow as tf
 from CartPole.state_utilities import CONTROL_INPUTS
 from Control_Toolkit.Controllers import template_controller
+from Control_Toolkit.Optimizers import template_optimizer
 from Control_Toolkit_ASF.Cost_Functions import cost_function_base
 from gym.spaces.box import Box
 from others.globals_and_utils import load_config
@@ -21,26 +23,17 @@ from SI_Toolkit.Functions.General.Initialization import (get_net,
                                                          get_norm_info_for_net)
 from SI_Toolkit.Functions.TF.Compile import CompileTF
 
-controller_config = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml"), "r"), Loader=yaml.FullLoader)
-NET_NAME = controller_config["neural-imitator-tf"]["net_name"]
-PATH_TO_MODELS = controller_config["neural-imitator-tf"]["PATH_TO_MODELS"]
+config_controller = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml"), "r"), Loader=yaml.FullLoader)
+NET_NAME = config_controller["neural-imitator-tf"]["net_name"]
+PATH_TO_MODELS = config_controller["neural-imitator-tf"]["PATH_TO_MODELS"]
 
 
 class controller_neural_imitator_tf(template_controller):
-    def __init__(
-        self,
-        cost_function: cost_function_base,
-        seed: int,
-        action_space: Box,
-        observation_space: Box,
-        mpc_horizon: int,
-        num_rollouts: int,
-        controller_logging: bool,
-        **kwargs
-    ):
-
+    _computation_library = TensorFlowLibrary
+    
+    def configure(self):
         a = SimpleNamespace()
-        self.batch_size = num_rollouts  # It makes sense only for testing (Brunton plot for Q) of not rnn networks to make bigger batch, this is not implemented
+        self.batch_size = 1  # It makes sense only for testing (Brunton plot for Q) of not rnn networks to make bigger batch, this is not implemented
 
         a.path_to_models = PATH_TO_MODELS
         a.net_name = NET_NAME
@@ -70,14 +63,13 @@ class controller_neural_imitator_tf(template_controller):
         except:
             self.evaluate_net = self.evaluate_net_f
 
-        super().__init__(cost_function=cost_function, seed=seed, action_space=action_space, observation_space=observation_space, mpc_horizon=mpc_horizon, num_rollouts=num_rollouts, controller_logging=controller_logging)
-
-    def step(self, s, time=None):
+    def step(self, s: np.ndarray, time=None, updated_attributes: dict[str, TensorType]={}):
+        self.update_attributes(updated_attributes)
 
         net_input = s[
             ..., [STATE_INDICES.get(key) for key in self.net_info.inputs[:-1]]
         ]  # -1 is a fix to exclude target position
-        net_input = np.append(net_input, self.cost_function.target_position)
+        net_input = np.append(net_input, self.target_position)
 
         net_input = normalize_numpy_array(
             net_input, self.net_info.inputs, self.normalization_info

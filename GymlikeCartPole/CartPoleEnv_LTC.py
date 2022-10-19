@@ -105,7 +105,7 @@ class CartPoleEnv_LTC(gym.Env):
 
         # Update target position depending on the mode of operation
         # self.CartPoleInstance.update_target_position()
-        # self.CartPoleInstance.planner.cost_function.target_position = 0.0  # TODO: Make option of random target position
+        # self.CartPoleInstance.target_position = 0.0  # TODO: Make option of random target position
 
         # Save data to internal dictionary
         # FIXE: Not working for some reason
@@ -171,8 +171,8 @@ class CartPoleEnv_LTC(gym.Env):
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None) -> Tuple[ObsType, dict]:
         self.CartPoleInstance = self.RES.set(self.CartPoleInstance)
         self.state = self.CartPoleInstance.s
-        self.CartPoleInstance.planner.cost_function.target_position = 0.0
-        self.target = self.CartPoleInstance.planner.cost_function.target_position
+        self.CartPoleInstance.target_position = 0.0
+        self.target = self.CartPoleInstance.target_position
         self.done = False
 
         self.steps_beyond_done = None

@@ -1,10 +1,15 @@
 from SI_Toolkit.computation_library import ComputationLibrary, TensorType
+from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.others.globals_and_utils import get_logger
 
 logger = get_logger(__name__)
 
 
 class cost_function_base:
+    def __init__(self, controller: template_controller, ComputationLib: "type[ComputationLibrary]") -> None:
+        self.controller = controller
+        self.set_computation_library(ComputationLib)
+    
     def get_terminal_cost(self, s_hor: TensorType):
         raise NotImplementedError()
 

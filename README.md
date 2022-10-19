@@ -64,9 +64,11 @@ and Data Generator, with which user can easily generate hours of experimental da
 The CartPole loads controllers from Controllers folder.
 One can specify in GUI or in Data Generator which controller should be used.
 Adding controllers is easy:
-They just have to fit the template provided in Controllers/template_controller.py.
+They just have to fit the template provided in Control_Toolkit/Controllers/template_controller.py.
+CartPole-specific controllers can be defined in Control_Toolkit_ASF/Controllers
 If a file in Controllers folder is named controller_....py and contains the function with the same name (controller_...)
 it will be automatically detected and added to the list of possible controllers.
+The MPC controller can be used in combination with any of the optimizers in Control_Toolkit/Optimizers. You can define new optimizers as well
 
 ## Operation hints:
   

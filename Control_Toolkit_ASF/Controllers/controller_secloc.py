@@ -1,35 +1,41 @@
 
 from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper
+from SI_Toolkit.computation_library import NumpyLibrary, TensorType
 import numpy as np
 import math
 import sys
-import datetime as dt
+from datetime import datetime
 import yaml
+import os
 
 from scipy.interpolate import interp1d
 from dataclasses import dataclass
 from Control_Toolkit.Controllers import template_controller
+from Control_Toolkit.Optimizers import template_optimizer
 from Control_Toolkit.others.environment import EnvironmentBatched
 from Control_Toolkit_ASF.Cost_Functions import cost_function_base
 from others.globals_and_utils import MockSpace
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 actuator_noise = config["cartpole"]["actuator_noise"]
+config_controller = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml"), "r"), Loader=yaml.FullLoader)
 
 """
 Python implementation of the theory for Sparse Envent-Based Closed Loop Control (SECLOC):
 https://www.frontiersin.org/articles/10.3389/fnins.2019.00827/full
 """
 class controller_secloc(template_controller):
-    def __init__(self, cost_function: cost_function_base, log_base: float, dt: int, ref_period: int, dead_band: float, pid_Kp: float, pid_Kd: float, pid_Ki: float, **kwargs):
-        super().__init__(cost_function=cost_function, seed=None, action_space=MockSpace(-1.0, 1.0, (1,)), observation_space=None, mpc_horizon=None, num_rollouts=None, controller_logging=False)
-        # self.log_base = log_base
-        # self.dt = dt
-        # self.ref_period = ref_period
-        # self.dead_band = dead_band
-        # self.pid_Kp = pid_Kp
-        # self.pid_Kd = pid_Kd
-        # self.pid_Ki = pid_Ki
+    _computation_library = NumpyLibrary
+    
+    def configure(self):
+        log_base = config_controller["secloc"]["log_base"]
+        dt = config_controller["secloc"]["dt"]
+        ref_period = config_controller["secloc"]["ref_period"]
+        dead_band = config_controller["secloc"]["dead_band"]
+        pid_Kp = config_controller["secloc"]["pid_Kp"]
+        pid_Kd = config_controller["secloc"]["pid_Kd"]
+        pid_Ki = config_controller["secloc"]["pid_Ki"]
+        
         self.p_Q = actuator_noise
         self.pid = Event_based_PID(Kp=pid_Kp, Kd=pid_Kd, Ki=pid_Ki, sensor_log_base=1.15, disp=True)
         self.potentiometer = Event_based_sensor(pid=self.pid, log_base=log_base, dt=dt, ref_period=ref_period, dead_band=dead_band, disp=True)
@@ -38,7 +44,8 @@ class controller_secloc(template_controller):
         self.interpolation = interp1d([-self.motor_map,self.motor_map], [1,-1])
         self.step_idx = 0
 
-    def step(self, s: np.ndarray, time=None):
+    def step(self, s: np.ndarray, time=None, updated_attributes: dict[str, TensorType]={}):
+        self.update_attributes(updated_attributes)
         # Read the cartpole state s = ["angle", "angleD", "angle_cos", "angle_sin", "position", "positionD"]
         # angle: pole UP -> 0, then +/-pi
         print(f"***** Step #{self.step_idx} *****")
@@ -94,8 +101,8 @@ class Event_based_PID:
         self.motor_signal = 0
 
     def change_event_received(self, polarity: int, change_sign: int, n_change_base: int):
-        elapsed_time = (self.c_time_micros - dt.datetime.now().microsecond)*0.000001
-        self.c_time_micros = dt.datetime.now().microsecond
+        elapsed_time = (self.c_time_micros - datetime.now().microsecond)*0.000001
+        self.c_time_micros = datetime.now().microsecond
         self.I_err += self.Err * (2.0 + pow(-1.0, change_sign) * (pow(self.sensor_log_base, n_change_base * polarity) - 1.0)) / (elapsed_time * 2.0)
         self.D_err = pow(-1.0, change_sign) * (pow(self.sensor_log_base, n_change_base * polarity) - 1.0) * self.Err / elapsed_time
         self.Err += (pow(self.sensor_log_base, n_change_base * polarity) - 1.0) * self.Err
@@ -109,7 +116,7 @@ class Event_based_PID:
         self.Err = e0
         self.I_err = 0
         self.D_err = 0
-        self.c_time_micros = dt.datetime.now().microsecond 
+        self.c_time_micros = datetime.now().microsecond 
 
 
 class Event_based_sensor:

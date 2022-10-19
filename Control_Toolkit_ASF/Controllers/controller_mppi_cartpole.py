@@ -12,6 +12,7 @@ Based on Williams, Aldrich, Theodorou (2015)
 
 import os
 from datetime import datetime
+from SI_Toolkit.computation_library import NumpyLibrary, TensorType
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -37,13 +38,14 @@ from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper
 
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
-controller_config = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml"), "r"), Loader=yaml.FullLoader)
+config_controller = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml"), "r"), Loader=yaml.FullLoader)
+config_mppi_cartpole = config_controller["mppi-cartpole"]
 
 """Timestep and sampling settings"""
-mpc_horizon = controller_config["mppi"]["mpc_horizon"]
-num_rollouts = controller_config["mppi"]["num_rollouts"]
-update_every = controller_config["mppi"]["update_every"]
-predictor_specification = controller_config["mppi"]["predictor_specification"]
+mpc_horizon = config_mppi_cartpole["mpc_horizon"]
+num_rollouts = config_mppi_cartpole["num_rollouts"]
+update_every = config_mppi_cartpole["update_every"]
+predictor_specification = config_mppi_cartpole["predictor_specification"]
 
 """Define Predictor"""
 predictor = PredictorWrapper()
@@ -64,19 +66,19 @@ predictor_ground_truth = predictor_ODE(
 )
 
 
-WASH_OUT_LEN = controller_config["mppi"]["WASH_OUT_LEN"]
+WASH_OUT_LEN = config_mppi_cartpole["WASH_OUT_LEN"]
 
 """Parameters weighting the different cost components"""
-dd_weight = controller_config["mppi"]["dd_weight"]
-ep_weight = controller_config["mppi"]["ep_weight"]
-ekp_weight = controller_config["mppi"]["ekp_weight"]
-ekc_weight = controller_config["mppi"]["ekc_weight"]
-cc_weight = controller_config["mppi"]["cc_weight"]
-ccrc_weight = controller_config["mppi"]["ccrc_weight"]
+dd_weight = config_mppi_cartpole["dd_weight"]
+ep_weight = config_mppi_cartpole["ep_weight"]
+ekp_weight = config_mppi_cartpole["ekp_weight"]
+ekc_weight = config_mppi_cartpole["ekc_weight"]
+cc_weight = config_mppi_cartpole["cc_weight"]
+ccrc_weight = config_mppi_cartpole["ccrc_weight"]
 
 """Perturbation factor"""
 p_Q = config["cartpole"]["actuator_noise"]
-dd_noise = ep_noise = ekp_noise = ekc_noise = cc_noise = controller_config["mppi"][
+dd_noise = ep_noise = ekp_noise = ekc_noise = cc_noise = config_mppi_cartpole[
     "cost_noise"
 ]
 
@@ -84,16 +86,16 @@ gui_dd = gui_ep = gui_ekp = gui_ekc = gui_cc = gui_ccrc = np.zeros(1, dtype=np.f
 
 
 """MPPI constants"""
-R = controller_config["mppi"]["R"]
-LBD = controller_config["mppi"]["LBD"]
-NU = controller_config["mppi"]["NU"]
-SQRTRHODTINV = controller_config["mppi"]["SQRTRHOINV"] * (1 / np.sqrt(dt))
-GAMMA = controller_config["mppi"]["GAMMA"]
-SAMPLING_TYPE = controller_config["mppi"]["SAMPLING_TYPE"]
+R = config_mppi_cartpole["R"]
+LBD = config_mppi_cartpole["LBD"]
+NU = config_mppi_cartpole["NU"]
+SQRTRHODTINV = config_mppi_cartpole["SQRTRHOINV"] * (1 / np.sqrt(dt))
+GAMMA = config_mppi_cartpole["GAMMA"]
+SAMPLING_TYPE = config_mppi_cartpole["SAMPLING_TYPE"]
 
 
 """Init logging variables"""
-LOGGING = controller_config["mppi"]["controller_logging"]
+LOGGING = config_mppi_cartpole["controller_logging"]
 # Save average cost for each cost component
 LOGS = {
     "cost_to_go": [],
@@ -334,31 +336,21 @@ def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
     u += reward_weighted_average(S, delta_u)
 
 
-class controller_mppi(template_controller):
+class controller_mppi_cartpole(template_controller):
     """Controller implementing the Model Predictive Path Integral method (Williams et al. 2015)
 
     :param template_controller: Superclass describing the basic controller interface
     :type template_controller: abc.ABC
     """
-
-    def __init__(
-        self,
-        cost_function: cost_function_base,
-        action_space: Box,
-        observation_space: Box,
-        mpc_horizon: int,
-        num_rollouts: int,
-        controller_logging: bool,
-        **kwargs,
-    ):
+    _computation_library = NumpyLibrary
+    
+    def configure(self):
         """Random number generator"""
-        seed = controller_config["mppi"]["seed"]
+        seed = config_mppi_cartpole["seed"]
         if seed == None:
             seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000.0)  # Fully random
         self.rng_mppi = Generator(SFC64(seed))
         self.rng_mppi_rnn = Generator(SFC64(seed*2)) # There are some random numbers used at warm up of rnn only. Separate rng prevents a shift
-
-        super().__init__(cost_function=cost_function, seed=seed, action_space=action_space, observation_space=observation_space, mpc_horizon=mpc_horizon, num_rollouts=num_rollouts, controller_logging=controller_logging)
 
         global dd_weight, ep_weight, ekp_weight, ekc_weight, cc_weight
         dd_weight = dd_weight * (1 + dd_noise * self.rng_mppi.uniform(-1.0, 1.0))
@@ -370,7 +362,6 @@ class controller_mppi(template_controller):
         # State of the cart
         self.s = create_cartpole_state()
 
-        self.target_position = 0.0
         self.rho_sqrt_inv = 0.01
         self.iteration = -1
         self.control_enabled = True
@@ -461,7 +452,7 @@ class controller_mppi(template_controller):
 
         return delta_u
 
-    def step(self, s: np.ndarray, time=None):
+    def step(self, s: np.ndarray, time=None, updated_attributes: dict[str, TensorType]={}):
         """Perform controller step
 
         :param s: State passed to controller after system has evolved for one step
@@ -471,9 +462,9 @@ class controller_mppi(template_controller):
         :return: A normed control value in the range [-1.0, 1.0]
         :rtype: np.float32
         """
+        self.update_attributes(updated_attributes)
 
         self.s = s
-        self.target_position = np.float32(self.cost_function.target_position)
 
         self.iteration += 1
 

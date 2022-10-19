@@ -3,15 +3,18 @@ This is a linear-quadratic regulator
 It assumes that the input relation is u = Q*u_max (no fancy motor model) !
 """
 
+from SI_Toolkit.computation_library import NumpyLibrary, TensorType
 import numpy as np
 import scipy
 import yaml
+import os
 
 from CartPole.cartpole_jacobian import cartpole_jacobian
 from CartPole.cartpole_model import s0, u_max
 from CartPole.state_utilities import (ANGLE_IDX, ANGLED_IDX, POSITION_IDX,
                                       POSITIOND_IDX)
 from Control_Toolkit.Controllers import template_controller
+from Control_Toolkit.Optimizers import template_optimizer
 from Control_Toolkit_ASF.Cost_Functions import cost_function_base
 from gym.spaces.box import Box
 from others.globals_and_utils import create_rng
@@ -19,17 +22,13 @@ from others.globals_and_utils import create_rng
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 actuator_noise = config["cartpole"]["actuator_noise"]
 
+config_controller = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml")), Loader=yaml.FullLoader)
+config_lqr = config_controller["lqr"]
 
 class controller_lqr(template_controller):
-    def __init__(
-        self,
-        cost_function: cost_function_base,
-        seed: int,
-        Q: "list[float]",
-        R: "list[float]",
-        action_space: Box,
-        **kwargs
-    ):
+    _computation_library = NumpyLibrary
+    
+    def configure(self):
         # From https://github.com/markwmuller/controlpy/blob/master/controlpy/synthesis.py#L8
         """Solve the continuous time LQR controller for a continuous time system.
 
@@ -46,11 +45,10 @@ class controller_lqr(template_controller):
         The optimal input is then computed as:
          input: u = -K*x
         """
-        super().__init__(cost_function=cost_function, seed=seed, action_space=action_space, observation_space=None, mpc_horizon=None, num_rollouts=None, controller_logging=False)
-
         self.p_Q = actuator_noise
         # ref Bertsekas, p.151
 
+        seed = config_lqr["seed"]
         self.rng = create_rng(self.__class__.__name__, seed if seed==None else seed*2)
 
         # Calculate Jacobian around equilibrium
@@ -68,8 +66,8 @@ class controller_lqr(template_controller):
         B = np.reshape(jacobian[:, -1], newshape=(4, 1)) * u_max
 
         # Cost matrices for LQR controller
-        self.Q = np.diag(Q) # How much to punish x, v, theta, omega
-        self.R = R  # How much to punish Q
+        self.Q = np.diag(config_lqr["Q"]) # How much to punish x, v, theta, omega
+        self.R = config_lqr["R"]  # How much to punish Q
 
         # first, try to solve the ricatti equation
         X = scipy.linalg.solve_continuous_are(A, B, self.Q, self.R)
@@ -88,21 +86,16 @@ class controller_lqr(template_controller):
         self.X = X
         self.eigVals = eigVals
 
-    def step(self, s: np.ndarray, time=None):
+    def step(self, s: np.ndarray, time=None, updated_attributes: dict[str, TensorType]={}):
+        self.update_attributes(updated_attributes)
+        
         state = np.array(
-            [[s[POSITION_IDX] - self.cost_function.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
+            [[s[POSITION_IDX] - self.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
 
         Q = np.dot(-self.K, state).item()
 
-        Q = np.float32(Q * (1 + self.p_Q * self.rng.uniform(self.action_low, self.action_high)))
-        # Q = self.rng.uniform(-1.0, 1.0)
+        Q *= (1 + self.p_Q * float(self.rng.uniform(self.action_low, self.action_high)))
 
         # Clip Q
-        if Q > 1.0:
-            Q = 1.0
-        elif Q < -1.0:
-            Q = -1.0
-        else:
-            pass
-
+        Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
         return Q

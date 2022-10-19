@@ -3,15 +3,19 @@ This is a linear-quadratic regulator
 It assumes that the input relation is u = Q*u_max (no fancy motor model) !
 """
 
+from SI_Toolkit.computation_library import NumpyLibrary
 import numpy as np
-
 from Control_Toolkit.Controllers import template_controller
+
+from Control_Toolkit.Optimizers import template_optimizer
 from CartPole.state_utilities import cartpole_state_varname_to_index
 from others.globals_and_utils import load_config
 
 config = load_config("config.yml")
 
 class controller_pid(template_controller):
+    _computation_library = NumpyLibrary
+    
     def __init__(self):
         self.P_angle = config["controller"]["pid"]["P_angle"]
         self.I_angle = config["controller"]["pid"]["I_angle"]

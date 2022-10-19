@@ -166,20 +166,35 @@ class MainWindow(QMainWindow):
         self.rbs_controllers = []
         for controller_name in self.CartPoleInstance.controller_names:
             self.rbs_controllers.append(QRadioButton(controller_name))
+        self.rbs_optimizers = []
+        for optimizer_name in self.CartPoleInstance.optimizer_names:
+            self.rbs_optimizers.append(QRadioButton(optimizer_name))
+        self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)
 
         # Ensures that radio buttons are exclusive
         self.controllers_buttons_group = QButtonGroup()
         for button in self.rbs_controllers:
             self.controllers_buttons_group.addButton(button)
+        
+        self.optimizers_buttons_group = QButtonGroup()
+        for button in self.rbs_optimizers:
+            self.optimizers_buttons_group.addButton(button)
 
         lr_c = QVBoxLayout()
         lr_c.addStretch(1)
+        lr_c.addWidget(QLabel("Controller"))
         for rb in self.rbs_controllers:
             rb.clicked.connect(self.RadioButtons_controller_selection)
             lr_c.addWidget(rb)
         lr_c.addStretch(1)
+        lr_c.addWidget(QLabel("MPC Optimizer"))
+        for rb in self.rbs_optimizers:
+            rb.clicked.connect(self.RadioButtons_optimizer_selection)
+            lr_c.addWidget(rb)
+        lr_c.addStretch(1)
 
         self.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
+        self.rbs_optimizers[self.CartPoleInstance.optimizer_idx].setChecked(True)
 
         # endregion
 
@@ -271,7 +286,7 @@ class MainWindow(QMainWindow):
             lud_right.addWidget(rb)
         lud_right.addStretch(1)
 
-        if self.CartPoleInstance.planner.cost_function.target_equilibrium == 1.0:
+        if self.CartPoleInstance.target_equilibrium == 1.0:
             initial_target_equilibrium = 'Up'
         else:
             initial_target_equilibrium = 'Down'
@@ -596,10 +611,16 @@ class MainWindow(QMainWindow):
                 line = line[0]
                 if line[:len('# Controller: ')] == '# Controller: ':
                     controller_set = self.CartPoleInstance.set_controller(line[len('# Controller: '):].rstrip("\n"))
+                    optimizer_set = self.CartPoleInstance.set_optimizer(line[len('# Optimizer: '):].rstrip("\n"))
                     if controller_set:
                         self.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
                     else:
                         self.rbs_controllers[1].setChecked(True) # Set first, but not manual stabilization
+                    if optimizer_set:
+                        self.rbs_optimizers[self.CartPoleInstance.optimizer_idx].setChecked(True)
+                    else:
+                        self.rbs_optimizers[1].setChecked(True)
+                    self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)    
                     break
 
         # Augment the experiment history with simulation time step size
@@ -629,11 +650,11 @@ class MainWindow(QMainWindow):
             except KeyError:
                 pass
             self.CartPoleInstance.Q = row['Q']
-            self.CartPoleInstance.planner.cost_function.target_position = row['target_position']
+            self.CartPoleInstance.target_position = row['target_position']
             if self.CartPoleInstance.controller_name == 'manual-stabilization':
                 self.CartPoleInstance.slider_value = self.CartPoleInstance.Q
             else:
-                self.CartPoleInstance.slider_value = self.CartPoleInstance.planner.cost_function.target_position/TrackHalfLength
+                self.CartPoleInstance.slider_value = self.CartPoleInstance.target_position/TrackHalfLength
 
             # TODO: Make it more general for all possible parameters
             try:
@@ -718,7 +739,7 @@ class MainWindow(QMainWindow):
         # The following line is important as it let the user to set with the slider the starting target position
         # After the slider was reset at the end of last experiment
         # With the small sliders he can also adjust starting initial_state
-        self.reset_variables(2, s=np.copy(self.initial_state), target_position=self.CartPoleInstance.planner.cost_function.target_position)
+        self.reset_variables(2, s=np.copy(self.initial_state), target_position=self.CartPoleInstance.target_position)
 
         if self.simulator_mode == 'Random Experiment':
 
@@ -837,7 +858,7 @@ class MainWindow(QMainWindow):
                 self.labTargetPosition.setText("")
             else:
                 self.labTargetPosition.setText(
-                    "Target position (m): " + str(np.around(self.CartPoleInstance.planner.cost_function.target_position, 2)))
+                    "Target position (m): " + str(np.around(self.CartPoleInstance.target_position, 2)))
 
             if self.CartPoleInstance.controller_name == 'manual_stabilization':
                 self.labSliderInstant.setText(
@@ -935,6 +956,8 @@ class MainWindow(QMainWindow):
         for i in range(len(self.rbs_controllers)):
             if self.rbs_controllers[i].isChecked():
                 self.CartPoleInstance.set_controller(controller_idx=i)
+        
+        self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)
 
         # Reset the state of GUI and of the Cart instance after the mode has changed
         # TODO: Do I need the follwowing lines?
@@ -943,6 +966,16 @@ class MainWindow(QMainWindow):
         self.canvas.draw()
 
         self.open_additional_controller_widget()
+        
+    def update_rbs_optimizers_status(self, visible: bool):
+        for rb in self.rbs_optimizers:
+            rb.setEnabled(visible)
+        
+    def RadioButtons_optimizer_selection(self):
+        # Change the mode variable depending on the Radiobutton state
+        for i in range(len(self.rbs_optimizers)):
+            if self.rbs_optimizers[i].isChecked():
+                self.CartPoleInstance.set_optimizer(optimizer_idx=i)
 
     # Chose the simulator mode - effect of start/stop button
     def RadioButtons_simulator_mode(self):
@@ -962,9 +995,9 @@ class MainWindow(QMainWindow):
     def RadioButtons_equilibrium(self):
         sleep(0.001)
         if self.rbs_equilibrium[0].isChecked():
-            self.CartPoleInstance.planner.cost_function.target_equilibrium = 1.0
+            self.CartPoleInstance.target_equilibrium = 1.0
         else:
-            self.CartPoleInstance.planner.cost_function.target_equilibrium = -1.0
+            self.CartPoleInstance.target_equilibrium = -1.0
 
     # Chose the noise mode - effect of start/stop button
     def RadioButtons_noise_on_off(self):
@@ -1087,7 +1120,7 @@ class MainWindow(QMainWindow):
 
     def open_additional_controller_widget(self):
         # Open up additional options widgets depending on the controller type
-        if self.CartPoleInstance.controller_name == 'mppi':
+        if self.CartPoleInstance.controller_name == 'mppi-cartpole':
             self.optionsControllerWidget = MPPIOptionsWindow()
         else:
             try: self.optionsControllerWidget.close()
