@@ -18,11 +18,11 @@ import numpy as np
 
 import os
 config_CartPole = load_config("config.yml")
-config_data_generator = load_config("config_data_generator.yml")
+config_data_gen = load_config("config_data_gen.yml")
 
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
-    seed = config_data_generator["seed"]
+    seed = config_data_gen["seed"]
     rng_data_generator = create_rng(__name__, seed)
 
     reset_seed_for_each_experiment = False

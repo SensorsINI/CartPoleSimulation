@@ -69,7 +69,6 @@ rc('font', **font)
 
 # endregion
 
-
 config = load_config("config.yml")
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
