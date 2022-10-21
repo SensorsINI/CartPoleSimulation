@@ -1,6 +1,6 @@
 import os
 
-from Control_Toolkit_ASF.Cost_Functions import cost_function_base
+from Control_Toolkit.Cost_Functions import cost_function_base
 from others.globals_and_utils import load_config
 
 from CartPole.cartpole_model import TrackHalfLength
