@@ -1,0 +1,33 @@
+cost_function_name_default: default
+# Default value is used if controller does not specify a cost_function_specification (leave empty)
+# Cost functions are grouped by environment name in a folder within Control_Toolkit_ASF.Cost_Functions
+# Check config.yml to learn more on how cost_functions are selected
+
+CartPole:
+  default:
+    dd_weight: 600.0
+    ep_weight: 20000.0
+    ekp_weight: 80.0
+    ekc_weight: 20.0
+    cc_weight: 1.0
+    ccrc_weight: 1.0
+    R: 1.0                                # How much to punish Q
+  quadratic_boundary_grad:
+    dd_weight: 600.0
+    ep_weight: 20000.0
+    ekp_weight: 80.0
+    cc_weight: 1.0
+    ccrc_weight: 1.0
+    R: 1.0                                # How much to punish Q
+  quadratic_boundary_nonconvex:
+    dd_weight: 600.0
+    ep_weight: 20000.0
+    cc_weight: 1.0
+    ccrc_weight: 1.0
+    R: 1.0                                # How much to punish Q
+  quadratic_boundary:
+    dd_weight: 600.0
+    ep_weight: 20000.0
+    cc_weight: 1.0
+    ccrc_weight: 1.0
+    R: 1.0                                # How much to punish Q

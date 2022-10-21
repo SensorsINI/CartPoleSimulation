@@ -1,4 +1,6 @@
+from typing import Callable, Optional
 import tensorflow as tf
+from CartPole.cartpole_model_tf import Q2u
 
 from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, CONTROL_INDICES, create_cartpole_state
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
@@ -20,14 +22,13 @@ class next_state_predictor_ODE_tf():
     def __init__(self, dt, intermediate_steps, batch_size=1, disable_individual_compilation=False, planning_environment=None):
         self.s = tf.convert_to_tensor(create_cartpole_state())
 
-        self.intermediate_steps = tf.convert_to_tensor(intermediate_steps, dtype=tf.int32)
-        self.t_step = tf.convert_to_tensor(dt / float(self.intermediate_steps), dtype=tf.float32)
+        self.intermediate_steps = intermediate_steps
+        self.t_step = dt / float(self.intermediate_steps)
 
         if disable_individual_compilation:
             self.step = self._step
         else:
             self.step = CompileTF(self._step)
-
 
     def _step(self, s, Q, params):
 
@@ -42,19 +43,8 @@ class next_state_predictor_ODE_tf():
             pole_half_length = tf.convert_to_tensor(params, dtype=tf.float32)
 
         Q = tf.squeeze(Q, axis=1)  # Removes features dimension, specific for cartpole as it has only one control input
-
-        u = Q2u_tf(Q)
-
-        (
-            s_next
-        ) = cartpole_fine_integration_tf(
-            s,
-            u=u,
-            t_step=self.t_step,
-            intermediate_steps=self.intermediate_steps,
-            L=pole_half_length,
-        )
-
+        u = Q2u(Q)
+        s_next = cartpole_fine_integration_tf(s, u, self.t_step, self.intermediate_steps, L=pole_half_length)
         return s_next
 
 

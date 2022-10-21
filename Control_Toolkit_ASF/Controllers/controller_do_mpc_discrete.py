@@ -1,13 +1,19 @@
 """do-mpc controller"""
 
+import os
+from types import SimpleNamespace
+
 import do_mpc
 import numpy as np
-
-from Control_Toolkit.Controllers import template_controller
-from CartPole.cartpole_model import v_max, Q2u, cartpole_ode_namespace, TrackHalfLength
+import yaml
+from CartPole.cartpole_model import (Q2u, TrackHalfLength,
+                                     cartpole_ode_namespace, v_max)
 from CartPole.state_utilities import cartpole_state_vector_to_namespace
+from Control_Toolkit.Controllers import template_controller
+from SI_Toolkit.computation_library import NumpyLibrary, TensorType
 
-from types import SimpleNamespace
+config_controller = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml")), Loader=yaml.FullLoader)
+config_do_mpc_discrete = config_controller["do-mpc-discrete"]
 
 
 def mpc_next_state(s, u, dt):
@@ -50,20 +56,9 @@ def cartpole_integration(s, dt):
 
 
 class controller_do_mpc_discrete(template_controller):
-    def __init__(
-        self,
-        environment,
-        dt: float,
-        mpc_horizon: int,
-        position_init=0.0,
-        positionD_init=0.0,
-        angle_init=0.0,
-        angleD_init=0.0,
-        **kwargs,
-    ):
-        super().__init__(environment)
-        self.action_low = self.env_mock.action_space.low
-        self.action_high = self.env_mock.action_space.high
+    _computation_library = NumpyLibrary
+    
+    def configure(self):
         """
         Get configured do-mpc modules:
         """
@@ -83,7 +78,7 @@ class controller_do_mpc_discrete(template_controller):
 
         target_position = self.model.set_variable('_tvp', 'target_position')
 
-        s_next = mpc_next_state(s, Q2u(Q), dt=dt)
+        s_next = mpc_next_state(s, Q2u(Q), dt=config_do_mpc_discrete["dt"])
 
         self.model.set_rhs('s.position', s_next.position)
         self.model.set_rhs('s.angle', s_next.angle)
@@ -108,8 +103,8 @@ class controller_do_mpc_discrete(template_controller):
         self.mpc = do_mpc.controller.MPC(self.model)
 
         setup_mpc = {
-            'n_horizon': mpc_horizon,
-            't_step': dt,
+            'n_horizon': config_do_mpc_discrete["mpc_horizon"],
+            't_step': config_do_mpc_discrete["dt"],
             'n_robust': 0,
             'store_full_solution': False,
             'store_lagr_multiplier': False,
@@ -143,11 +138,10 @@ class controller_do_mpc_discrete(template_controller):
 
         # Set initial state
         self.x0 = self.mpc.x0
-        self.x0['s.position'] = position_init
-        self.x0['s.positionD'] = positionD_init
-        self.x0['s.angle'] = angle_init
-        self.x0['s.angleD'] = angleD_init
-
+        self.x0['s.position'] = config_do_mpc_discrete["position_init"]
+        self.x0['s.positionD'] = config_do_mpc_discrete["positionD_init"]
+        self.x0['s.angle'] = config_do_mpc_discrete["angle_init"]
+        self.x0['s.angleD'] = config_do_mpc_discrete["angleD_init"]
 
         self.mpc.x0 = self.x0
 
@@ -156,8 +150,8 @@ class controller_do_mpc_discrete(template_controller):
     def tvp_fun(self, t_ind):
         return self.tvp_template
 
-
-    def step(self, s, time=None):
+    def step(self, s: np.ndarray, time=None, updated_attributes: dict[str, TensorType]={}):
+        self.update_attributes(updated_attributes)
 
         s = cartpole_state_vector_to_namespace(s)
 
@@ -167,7 +161,7 @@ class controller_do_mpc_discrete(template_controller):
         self.x0['s.angle'] = s.angle
         self.x0['s.angleD'] = s.angleD
 
-        self.tvp_template['_tvp', :, 'target_position'] = self.env_mock.target_position
+        self.tvp_template['_tvp', :, 'target_position'] = self.target_position
 
         Q = self.mpc.make_step(self.x0)
 

@@ -23,10 +23,9 @@ config_data_gen = load_config("config_data_gen.yml")
 
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     seed = config_data_gen["seed"]
+    rng_data_generator = create_rng(__name__, seed)
 
     reset_seed_for_each_experiment = False
-
-    rng_data_generator = create_rng(__name__, seed)
 
     Expname = 'Exp-mppi-optimize-swingup-nn-A'
     #csv = './adaptive_test/Experiment.csv'
@@ -56,7 +55,7 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
 
     ### Controller which should be used in generated experiment:
     controller_DataGen = 'mppi-optimize'
-    # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi'
+    # Possible options: 'manual-stabilization', 'do-mpc', 'do-mpc-discrete', 'lqr', 'mppi-cartpole'
 
     """" This is the interesting part where i set up the directory and copy all relevant information"""
     ### Setup directory with data for exp

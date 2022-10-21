@@ -17,7 +17,7 @@ save_interval = 0.02  # s, How often to save the results of simulation
 
 # Starting setting of the CartPole GUI (can be changed in GUI)
 # controller_init = 'custom-mpc-scipy'  # Defines which controller is loaded at the start of the program
-controller_init = 'mppi-tf'
+controller_init = 'mppi-cartpole'
 """
 Possible choices for CartPole controller:
 
@@ -31,8 +31,8 @@ Possible choices for CartPole controller:
 'mpc-opti' -> mpc implementation based on casadi opti library
 """
 
-save_history_init = True  # Save experiment history as CSV (after experiment finished, online saving for Data Generator only)
-show_experiment_summary_init = True  # If true a window plotting the experiment history will be displayed after experiment ended
+save_history_init = False  # Save experiment history as CSV (after experiment finished, online saving for Data Generator only)
+show_experiment_summary_init = False  # If true a window plotting the experiment history will be displayed after experiment ended
 stop_at_90_init = False  # Block the pole if it reaches +/-90 deg (horizontal position)
 slider_on_click_init = True  # True: update slider only on click, False: update slider while hoovering over it
 simulator_mode_init = 'Slider-Controlled Experiment'  # Effects Start/Stop button:

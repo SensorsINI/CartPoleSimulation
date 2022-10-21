@@ -1,0 +1,216 @@
+cem-tf:
+  seed: null                          # If null, random seed based on datetime is used
+  mpc_horizon: 40                       # steps
+  cem_outer_it: 3                    #how many outer iterations to use
+  cem_initial_action_stdev: 0.5
+  num_rollouts: 200          #how many rollouts per outer cem iteration
+  cem_stdev_min: 0.01
+  cem_best_k: 40
+  warmup: false
+  warmup_iterations: 250
+  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+cem-gmm-tf:
+  seed: null                          # If null, random seed based on datetime is used
+  mpc_horizon: 40                       # steps
+  cem_outer_it: 3                    #how many outer iterations to use
+  num_rollouts: 200          #how many rollouts per outer cem iteration
+  cem_stdev_min: 0.01
+  cem_initial_action_stdev: 0.5
+  cem_best_k: 40
+  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+cem-naive-grad-tf:
+  seed: null                          # If null, random seed based on datetime is used
+  mpc_horizon: 35                       # steps
+  cem_outer_it: 1                       # how many outer iterations to use
+  num_rollouts: 200                     # how many rollouts per outer cem iteration
+  cem_stdev_min: 0.1
+  cem_initial_action_stdev: 0.5
+  cem_best_k: 40
+  learning_rate: 0.1
+  gradmax_clip: 10
+  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+cem-grad-bharadhwaj-tf:
+  seed: null                          # If null, random seed based on datetime is used
+  mpc_horizon: 50                       # steps
+  learning_rate: 0.05
+  adam_beta_1: 0.9
+  adam_beta_2: 0.999
+  adam_epsilon: 1.0e-08
+  num_rollouts: 32
+  cem_best_k: 8
+  cem_outer_it: 2
+  cem_initial_action_stdev: 2
+  cem_stdev_min: 1.e-6
+  gradmax_clip: 5
+  warmup: false
+  warmup_iterations: 250
+  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+gradient-tf:
+  seed: null                            # If null, random seed based on datetime is used
+  mpc_horizon: 35                       # steps
+  learning_rate: 0.05
+  adam_beta_1: 0.9
+  adam_beta_2: 0.999
+  adam_epsilon: 1.0e-07
+  rtol: 1.0e-3
+  gradient_steps: 5
+  num_rollouts: 40
+  initial_action_stdev: 0.5
+  gradmax_clip: 5
+  warmup: false
+  warmup_iterations: 250
+  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+mppi-optimize-tf:
+  seed: null                            # If null, random seed based on datetime is used
+  dt: 0.02                              # sec
+  mppi_LR: 0.02
+  adam_beta_1: 0.4                      #default: 0.9
+  adam_beta_2: 0.8                      #default: 0.999
+  adam_epsilon: 1.0e-7                  #default: 1.0e-7
+  gradmax_clip: 1000
+  mpc_horizon: 35                       # steps
+  num_rollouts: 400                     # Number of Monte Carlo samples
+  cc_weight: 1.0
+  R: 1.0                                # How much to punish Q
+  LBD: 100.0                            # Cost parameter lambda
+  NU: 1000.0                            # Exploration variance
+  SQRTRHOINV: 0.02
+  GAMMA: 1.00                           # Future cost discount
+  SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
+  optim_steps: 10
+  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+dist-adam-resamp2-tf:
+  seed: null                            # If null, random seed based on datetime is used
+  mpc_horizon: 40                       # steps
+  SAMPLING_TYPE: interpolated
+  interpolation_step: 10
+  learning_rate: 0.05
+  adam_beta_1: 0.9
+  adam_beta_2: 0.999
+  adam_epsilon: 1.0e-08
+  gradmax_clip: 5
+  rtol: 1.0e-3
+  num_rollouts: 32
+  opt_keep_k: 8
+  outer_its: 2
+  resamp_per: 10
+  sample_stdev: 0.5
+  warmup: false
+  warmup_iterations: 250
+  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+rpgd-tf:
+  seed: null                            # If null, random seed based on datetime is used
+  mpc_horizon: 40                       # steps
+  SAMPLING_TYPE: interpolated
+  interpolation_step: 10
+  learning_rate: 0.05
+  adam_beta_1: 0.9
+  adam_beta_2: 0.999
+  adam_epsilon: 1.0e-08
+  gradmax_clip: 5
+  rtol: 1.0e-3
+  num_rollouts: 32
+  opt_keep_k: 8
+  outer_its: 2
+  resamp_per: 10
+  sample_stdev: 0.5
+  warmup: false
+  warmup_iterations: 250
+  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+rpgd-me-tf:
+  seed: null                            # If null, random seed based on datetime is used
+  mpc_horizon: 40                       # steps
+  SAMPLING_TYPE: null
+  interpolation_step: 10
+  learning_rate: 0.01
+  adam_beta_1: 0.9
+  adam_beta_2: 0.999
+  adam_epsilon: 1.0e-08
+  maximum_entropy_alpha: 0.0
+  gradmax_clip: 10
+  rtol: 1.0e-3
+  num_rollouts: 32
+  opt_keep_k: 0
+  outer_its: 25
+  resamp_per: 1
+  sample_stdev: 0.5
+  warmup: false
+  warmup_iterations: 250
+  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+rpgd-ml-tf:
+  seed: null                            # If null, random seed based on datetime is used
+  mpc_horizon: 40                       # steps
+  SAMPLING_DISTRIBUTION: uniform  # "normal" or "uniform"
+  SAMPLING_TYPE: null
+  interpolation_step: 10
+  learning_rate: 0.01
+  adam_beta_1: 0.9
+  adam_beta_2: 0.999
+  adam_epsilon: 1.0e-08
+  maximum_entropy_alpha: 0.1
+  gradmax_clip: 10
+  rtol: 1.0e-3
+  num_rollouts: 32
+  opt_keep_k: 8
+  outer_its: 5
+  resamp_per: 1
+  sample_stdev: 0.5
+  warmup: false
+  warmup_iterations: 250
+  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+rpgd-particle-tf:
+  seed: null                            # If null, random seed based on datetime is used
+  mpc_horizon: 40                       # steps
+  SAMPLING_TYPE: null
+  interpolation_step: 10
+  learning_rate: 0.01
+  adam_beta_1: 0.9
+  adam_beta_2: 0.999
+  adam_epsilon: 1.0e-08
+  maximum_entropy_alpha: 0.1
+  gradmax_clip: 10
+  rtol: 1.0e-3
+  num_rollouts: 32
+  opt_keep_k: 8
+  outer_its: 5
+  resamp_per: 1
+  sample_stdev: 0.5
+  warmup: false
+  warmup_iterations: 250
+  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+mppi-var-tf:
+  seed: null                          # If null, random seed based on datetime is used
+  dt: 0.02                              # sec
+  mpc_horizon: 35                       # steps
+  num_rollouts: 400                     # Number of Monte Carlo samples
+  SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
+  interpolation_step: 10                #interpolation stepsize when sampling
+  cc_weight: 1.0
+  R: 1.0                                # How much to punish Q
+  # mc stands for mathematical correct, as this controller uses the formula from the paper
+  LBD_mc: 10.0                          # Cost parameter lambda
+  SQRTRHOINV_mc: 0.002                  # Sampling variance
+  NU_mc: 20.0                           # Exploration variance
+  GAMMA: 1.00                           # Future cost discount
+  LR: 1000                              # Learning rate for adaption of variance, !!! Set to 0 to retrieve a mppi version in accordance with mppi paper
+  STDEV_min: 0.01                       # Maximal variance for sampling
+  STDEV_max: 10                         # Minimal sampling variance for sampling
+  max_grad_norm: 100000                 # max norm of gradient such that ||gradient||_2
+  predictor_specification: "ODE_TF"     # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+mppi-tf:
+  seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
+  mpc_horizon: 35                       # steps
+  num_rollouts: 3500                    # Number of Monte Carlo samples
+  cc_weight: 1.0
+  R: 1.0                                # How much to punish Q
+  LBD: 100.0                            # Cost parameter lambda
+  NU: 1000.0                            # Exploration variance
+  SQRTRHOINV: 0.03                      # Sampling variance
+  GAMMA: 1.00                           # Future cost discount
+  SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
+  predictor_specification: "ODE_TF"     # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+random-action-tf:
+  seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
+  mpc_horizon: 35                      # steps
+  num_rollouts: 320
+  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF

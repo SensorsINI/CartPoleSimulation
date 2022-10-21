@@ -1,5 +1,8 @@
 """mpc controller"""
 
+import os
+from SI_Toolkit.computation_library import NumpyLibrary
+import yaml
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize
@@ -11,31 +14,32 @@ from Control_Toolkit_ASF.Controllers.controller_lqr import controller_lqr
 from others.globals_and_utils import create_rng, load_config
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 
-config = load_config("config.yml")
+controller_config = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml"), "r"), Loader=yaml.FullLoader)
+
 
 predictor = predictor_ODE
 # WARNING: if using RNN to provide CartPole model to MPC
 # make sure that it is trained to predict future states with this timestep
-dt = config['controller']['custom_mpc_scipy']['dt']
+dt = controller_config['custom-mpc-scipy']['dt']
 
 # method = 'L-BFGS-B'
-method = config['controller']['custom_mpc_scipy']['method']
-ftol = config['controller']['custom_mpc_scipy']['ftol']
-mpc_horizon = config['controller']['custom_mpc_scipy']['mpc_horizon']
+method = controller_config['custom-mpc-scipy']['method']
+ftol = controller_config['custom-mpc-scipy']['ftol']
+mpc_horizon = controller_config['custom-mpc-scipy']['mpc_horizon']
 
 # weights
-wr = config['controller']['custom_mpc_scipy']['wr']
+wr = controller_config['custom-mpc-scipy']['wr']
 
-l1 = config['controller']['custom_mpc_scipy']['l1']
-l1_2 = config['controller']['custom_mpc_scipy']['l1_2']
-l2 = config['controller']['custom_mpc_scipy']['l2']
-l3 = config['controller']['custom_mpc_scipy']['l3']
-l4 = config['controller']['custom_mpc_scipy']['l4']
+l1 = controller_config['custom-mpc-scipy']['l1']
+l1_2 = controller_config['custom-mpc-scipy']['l1_2']
+l2 = controller_config['custom-mpc-scipy']['l2']
+l3 = controller_config['custom-mpc-scipy']['l3']
+l4 = controller_config['custom-mpc-scipy']['l4']
 
-m1 = config['controller']['custom_mpc_scipy']['m1']
-m2 = config['controller']['custom_mpc_scipy']['m2']
-m3 = config['controller']['custom_mpc_scipy']['m3']
-m4 = config['controller']['custom_mpc_scipy']['m4']
+m1 = controller_config['custom-mpc-scipy']['m1']
+m2 = controller_config['custom-mpc-scipy']['m2']
+m3 = controller_config['custom-mpc-scipy']['m3']
+m4 = controller_config['custom-mpc-scipy']['m4']
 
 # w_sum = wr + l1 + l2 + l3 + m1 + m2 + m3 + m4
 w_sum = 1.0
@@ -51,6 +55,8 @@ m4 /= w_sum
 
 
 class controller_custom_mpc_scipy:
+    _computation_library = NumpyLibrary
+    
     def __init__(self):
 
         # LQR to stabilize pole in the starting phase
@@ -64,7 +70,7 @@ class controller_custom_mpc_scipy:
         self.predictor_time = []
         self.nfun = []
 
-        self.rng = create_rng(self.__class__.__name__, config["controller"]["custom_mpc_scipy"]["seed"])
+        self.rng = create_rng(self.__class__.__name__, controller_config["custom-mpc-scipy"]["seed"])
 
         # I do the norm and unnorm unnecessarilly!
         # You need only to scale once!

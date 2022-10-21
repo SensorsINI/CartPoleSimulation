@@ -26,24 +26,24 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QThreadPool, QTimer, Qt
 from numpy.core.numeric import roll
 
-import Control_Toolkit_ASF.Controllers.controller_mppi as controller_mppi
+import Control_Toolkit_ASF.Controllers.controller_mppi_cartpole as controller_mppi_cartpole
 
 
 class MPPIOptionsWindow(QWidget):
     def __init__(self):
         super(MPPIOptionsWindow, self).__init__()
 
-        self.horizon_steps = controller_mppi.mpc_samples
-        self.num_rollouts = controller_mppi.num_rollouts
-        self.dd_weight = controller_mppi.dd_weight
-        self.ep_weight = controller_mppi.ep_weight
-        self.ekp_weight = controller_mppi.ekp_weight * 1.0e1
-        self.ekc_weight = controller_mppi.ekc_weight * 1.0e-1
-        self.cc_weight = controller_mppi.cc_weight * 1.0e-2
-        self.ccrc_weight = controller_mppi.ccrc_weight * 1.0e-2
-        self.R = controller_mppi.R          # How much to punish Q
-        self.LBD = controller_mppi.LBD      # Cost parameter lambda
-        self.NU = controller_mppi.NU        # Exploration variance
+        self.horizon_steps = controller_mppi_cartpole.mpc_horizon
+        self.num_rollouts = controller_mppi_cartpole.num_rollouts
+        self.dd_weight = controller_mppi_cartpole.dd_weight
+        self.ep_weight = controller_mppi_cartpole.ep_weight
+        self.ekp_weight = controller_mppi_cartpole.ekp_weight * 1.0e1
+        self.ekc_weight = controller_mppi_cartpole.ekc_weight * 1.0e-1
+        self.cc_weight = controller_mppi_cartpole.cc_weight * 1.0e-2
+        self.ccrc_weight = controller_mppi_cartpole.ccrc_weight * 1.0e-2
+        self.R = controller_mppi_cartpole.R          # How much to punish Q
+        self.LBD = controller_mppi_cartpole.LBD      # Cost parameter lambda
+        self.NU = controller_mppi_cartpole.NU        # Exploration variance
 
         layout = QVBoxLayout()
 
@@ -213,23 +213,23 @@ class MPPIOptionsWindow(QWidget):
         # Sampling type
         h_layout = QHBoxLayout()
         btn1 = QRadioButton("iid")
-        if btn1.text() == controller_mppi.SAMPLING_TYPE: btn1.setChecked(True)
+        if btn1.text() == controller_mppi_cartpole.SAMPLING_TYPE: btn1.setChecked(True)
         btn1.toggled.connect(lambda: self.toggle_button(btn1))
         h_layout.addWidget(btn1)
         btn2 = QRadioButton("random_walk")
-        if btn2.text() == controller_mppi.SAMPLING_TYPE: btn2.setChecked(True)
+        if btn2.text() == controller_mppi_cartpole.SAMPLING_TYPE: btn2.setChecked(True)
         btn2.toggled.connect(lambda: self.toggle_button(btn2))
         h_layout.addWidget(btn2)
         btn3 = QRadioButton("uniform")
-        if btn3.text() == controller_mppi.SAMPLING_TYPE: btn3.setChecked(True)
+        if btn3.text() == controller_mppi_cartpole.SAMPLING_TYPE: btn3.setChecked(True)
         btn3.toggled.connect(lambda: self.toggle_button(btn3))
         h_layout.addWidget(btn3)
         btn4 = QRadioButton("repeated")
-        if btn4.text() == controller_mppi.SAMPLING_TYPE: btn4.setChecked(True)
+        if btn4.text() == controller_mppi_cartpole.SAMPLING_TYPE: btn4.setChecked(True)
         btn4.toggled.connect(lambda: self.toggle_button(btn4))
         h_layout.addWidget(btn4)
         btn5 = QRadioButton("interpolated")
-        if btn5.text() == controller_mppi.SAMPLING_TYPE: btn5.setChecked(True)
+        if btn5.text() == controller_mppi_cartpole.SAMPLING_TYPE: btn5.setChecked(True)
         btn5.toggled.connect(lambda: self.toggle_button(btn5))
         h_layout.addWidget(btn5)
         mppi_constants_layout.addWidget(QLabel("Sampling type:"))
@@ -258,76 +258,76 @@ class MPPIOptionsWindow(QWidget):
     def horizon_length_changed(self, val: int):
         self.horizon_steps = val
         # TODO: Replace by setter method
-        controller_mppi.mpc_samples = self.horizon_steps
+        controller_mppi_cartpole.mpc_horizon = self.horizon_steps
         self.update_slider_labels()
 
     def num_rollouts_changed(self, val: int):
         self.num_rollouts = val
-        controller_mppi.num_rollouts = self.num_rollouts
+        controller_mppi_cartpole.num_rollouts = self.num_rollouts
         self.update_slider_labels()
 
     def dd_weight_changed(self, val: int):
         self.dd_weight = val
         # TODO: Replace by setter method
-        controller_mppi.dd_weight = self.dd_weight * 1.0
+        controller_mppi_cartpole.dd_weight = self.dd_weight * 1.0
         self.update_slider_labels()
     
     def ep_weight_changed(self, val: int):
         self.ep_weight = val
         # TODO: Replace by setter method
-        controller_mppi.ep_weight = self.ep_weight * 1.0
+        controller_mppi_cartpole.ep_weight = self.ep_weight * 1.0
         self.update_slider_labels()
     
     def ekp_weight_changed(self, val: int):
         self.ekp_weight = val
         # TODO: Replace by setter method
-        controller_mppi.ekp_weight = self.ekp_weight * 1.0e-1
+        controller_mppi_cartpole.ekp_weight = self.ekp_weight * 1.0e-1
         self.update_slider_labels()
     
     def ekc_weight_changed(self, val: int):
         self.ekc_weight = val
         # TODO: Replace by setter method
-        controller_mppi.ekc_weight = self.ekc_weight * 1.0e1
+        controller_mppi_cartpole.ekc_weight = self.ekc_weight * 1.0e1
         self.update_slider_labels()
     
     def cc_weight_changed(self, val: int):
         self.cc_weight = val
         # TODO: Replace by setter method
-        controller_mppi.cc_weight = self.cc_weight * 1.0e2
+        controller_mppi_cartpole.cc_weight = self.cc_weight * 1.0e2
         self.update_slider_labels()
 
     def ccrc_weight_changed(self, val: int):
         self.ccrc_weight = val
         # TODO: Replace by setter method
-        controller_mppi.ccrc_weight = self.ccrc_weight * 1.0e2
+        controller_mppi_cartpole.ccrc_weight = self.ccrc_weight * 1.0e2
         self.update_slider_labels()
 
     def R_changed(self, val: str):
         if val == '': val = '0'
         val = float(val)
         self.R = val
-        controller_mppi.R = self.R
+        controller_mppi_cartpole.R = self.R
     
     def LBD_changed(self, val: str):
         if val == '': val = '0'
         val = float(val)
         if val == 0: val = 1.0
         self.LBD = val
-        controller_mppi.LBD = self.LBD
+        controller_mppi_cartpole.LBD = self.LBD
     
     def NU_changed(self, val: str):
         if val == '': val = '0'
         val = float(val)
         if val == 0: val = 1.0
         self.NU = val
-        controller_mppi.NU = self.NU
+        controller_mppi_cartpole.NU = self.NU
 
     def toggle_button(self, b):
-        if b.isChecked(): controller_mppi.SAMPLING_TYPE = b.text()
+        if b.isChecked(): controller_mppi_cartpole.SAMPLING_TYPE = b.text()
     
     def update_slider_labels(self):
         self.horizon_label.setText(
-            f"Horizon: {self.horizon_steps} steps = {round(self.horizon_steps * controller_mppi.dt, 2)} s"
+            f"Horizon: {self.horizon_steps} steps = {round(self.horizon_steps * controller_mppi_cartpole.dt, 2)} s"
         )
         self.rollouts_label.setText(
             f"Rollouts: {self.num_rollouts}"
@@ -353,20 +353,20 @@ class MPPIOptionsWindow(QWidget):
 
     def update_labels(self):
         self.dd_label.setText(
-            f"{round(controller_mppi.gui_dd.item(), 2)}"
+            f"{round(controller_mppi_cartpole.gui_dd.item(), 2)}"
         )
         self.ep_label.setText(
-            f"{round(controller_mppi.gui_ep.item(), 2)}"
+            f"{round(controller_mppi_cartpole.gui_ep.item(), 2)}"
         )
         self.ekp_label.setText(
-            f"{round(controller_mppi.gui_ekp.item(), 2)}"
+            f"{round(controller_mppi_cartpole.gui_ekp.item(), 2)}"
         )
         self.ekc_label.setText(
-            f"{round(controller_mppi.gui_ekc.item(), 2)}"
+            f"{round(controller_mppi_cartpole.gui_ekc.item(), 2)}"
         )
         self.cc_label.setText(
-            f"{round(controller_mppi.gui_cc.item(), 2)}"
+            f"{round(controller_mppi_cartpole.gui_cc.item(), 2)}"
         )
         self.ccrc_label.setText(
-            f"{round(controller_mppi.gui_ccrc.item(), 2)}"
+            f"{round(controller_mppi_cartpole.gui_ccrc.item(), 2)}"
         )

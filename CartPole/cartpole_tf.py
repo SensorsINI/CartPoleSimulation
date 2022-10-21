@@ -160,5 +160,5 @@ def cartpole_fine_integration_tf(s, u, t_step, intermediate_steps,
     )
 
     ### TODO: This is ugly! But I don't know how to resolve it...
-    s_next = tf.stack([angle, angleD, angle_cos, angle_sin, position, positionD],axis = 1)
+    s_next = tf.stack([angle, angleD, angle_cos, angle_sin, position, positionD], axis=1)
     return s_next

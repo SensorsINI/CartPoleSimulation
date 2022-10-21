@@ -1,9 +1,20 @@
 import numpy as np
-from Control_Toolkit.Controllers.controller_cem_naive_grad_tf import controller_cem_naive_grad_tf
+from Control_Toolkit.Controllers.controller_mpc import controller_mpc
+from others.globals_and_utils import MockSpace
 
 # speed test, which is activated if script is run directly and not as module
 if __name__ == '__main__':
-    ctrl = controller_cem_naive_grad_tf()
+    state_low = [-np.pi, -np.inf, -1.0, -1.0, -0.22, -np.inf]
+    state_high = [-v for v in state_low]
+    
+    ctrl = controller_mpc(
+        environment_name="CartPole",
+        initial_environment_attributes={"target_position": 0.0, "target_equilibrium": 1.0},
+        action_space=MockSpace(-1.0, 1.0, (1,), np.float32),
+        observation_space=MockSpace(state_low, state_high, (6,), np.float32)
+    )
+    ctrl.configure(optimizer_name="cem-naive-grad-tf")
+    
     import timeit
 
     from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX,

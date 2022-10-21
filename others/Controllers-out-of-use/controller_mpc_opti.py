@@ -1,6 +1,8 @@
 """mpc controller"""
 
+from SI_Toolkit.computation_library import NumpyLibrary
 from Control_Toolkit.Controllers import template_controller
+from Control_Toolkit.Optimizers import template_optimizer
 from CartPole.cartpole_model import TrackHalfLength, Q2u
 from CartPole.cartpole_numba import cartpole_ode_numba
 from others.globals_and_utils import load_config
@@ -59,6 +61,8 @@ def cartpole_integration(s, angleDD, positionDD, dt):
 
 
 class controller_mpc_opti(template_controller):
+    _computation_library = NumpyLibrary
+    
     def __init__(self):
 
         """

@@ -35,7 +35,7 @@ except ImportError:
 # At least while using Spyder 4 IDE,
 # this is the only way allowing program to be restarted without restarting Python kernel
 def run_gui():
-    # Creat an instance of PyQt6 application
+    # Create an instance of PyQt6 application
     # Every PyQt6 application has to contain this line
     app = QApplication(sys.argv)
     # Set the default icon to use for all the windows of our application

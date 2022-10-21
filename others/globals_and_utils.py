@@ -7,6 +7,7 @@ import math
 import os
 import time
 from datetime import datetime
+from typing import Tuple
 import yaml
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0' # all TF messages
@@ -218,10 +219,11 @@ def load_config(filename: str) -> dict:
 
 
 class MockSpace:
-    def __init__(self, low, high, shape=None, dtype=np.float32) -> None:
-        self.low, self.high, self.shape = low, high, shape
+    def __init__(self, low, high, shape: Tuple, dtype=np.float32) -> None:
+        self.low, self.high = np.atleast_1d(low).astype(dtype), np.atleast_1d(high).astype(dtype)
         self.dtype = dtype
-
+        self.shape = shape
+        
 
 timers = {}
 times = {}
