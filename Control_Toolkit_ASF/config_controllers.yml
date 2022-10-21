@@ -1,6 +1,7 @@
 mpc:
   optimizer: mppi-tf
   computation_library: TensorFlowLibrary  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.
+  cost_function_specification: default  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary"
   controller_logging: true
 mppi-cartpole:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
