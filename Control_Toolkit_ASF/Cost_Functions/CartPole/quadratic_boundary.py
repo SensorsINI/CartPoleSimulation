@@ -81,10 +81,3 @@ class quadratic_boundary(cost_function_base):
             ccrc = ccrc_weight * self.control_change_rate_cost(u, u_prev)
         stage_cost = dd + ep + cc + ccrc
         return stage_cost
-    
-    # total cost of the trajectory
-    def get_trajectory_cost(self, s_hor, u, u_prev=None):
-        stage_cost = self.get_stage_cost(s_hor[:, 1:, :], u, u_prev)
-        total_cost = self.lib.sum(stage_cost, 1)
-        total_cost = total_cost + self.get_terminal_cost(s_hor)
-        return total_cost
