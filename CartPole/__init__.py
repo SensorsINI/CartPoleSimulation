@@ -861,8 +861,9 @@ class CartPole(EnvironmentBatched):
             self.controller = Controller(
                 environment_name="CartPole",
                 initial_environment_attributes={"target_position": self.target_position, "target_equilibrium": self.target_equilibrium},
-                action_space=self.action_space,
-                observation_space=self.observation_space,
+                num_states=self.observation_space.shape[0],
+                num_control_inputs=self.action_space.shape[0],
+                control_limits=(self.action_space.low, self.action_space.high),
             )
             # Final configuration of controller
             if self.controller.has_optimizer:

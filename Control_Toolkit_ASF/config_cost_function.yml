@@ -1,4 +1,4 @@
-cost_function_name: default
+cost_function_name_default: default
 
 CartPole:
   default:
