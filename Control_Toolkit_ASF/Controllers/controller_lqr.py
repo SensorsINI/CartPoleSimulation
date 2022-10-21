@@ -14,9 +14,6 @@ from CartPole.cartpole_model import s0, u_max
 from CartPole.state_utilities import (ANGLE_IDX, ANGLED_IDX, POSITION_IDX,
                                       POSITIOND_IDX)
 from Control_Toolkit.Controllers import template_controller
-from Control_Toolkit.Optimizers import template_optimizer
-from Control_Toolkit_ASF.Cost_Functions import cost_function_base
-from gym.spaces.box import Box
 from others.globals_and_utils import create_rng
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
