@@ -44,7 +44,7 @@ class controller_neural_imitator_pytorch(template_controller):
         self.net.reset()
         self.net.eval()
 
-    def step(self, s: np.ndarray, time=None, updated_attributes: dict[str, TensorType]={}):
+    def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
         self.update_attributes(updated_attributes)
 
         net_input = s[

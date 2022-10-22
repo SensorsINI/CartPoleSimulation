@@ -450,7 +450,7 @@ class controller_mppi_cartpole(template_controller):
 
         return delta_u
 
-    def step(self, s: np.ndarray, time=None, updated_attributes: dict[str, TensorType]={}):
+    def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
         """Perform controller step
 
         :param s: State passed to controller after system has evolved for one step

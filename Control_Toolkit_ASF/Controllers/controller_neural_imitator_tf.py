@@ -58,7 +58,7 @@ class controller_neural_imitator_tf(template_controller):
         except:
             self.evaluate_net = self.evaluate_net_f
 
-    def step(self, s: np.ndarray, time=None, updated_attributes: dict[str, TensorType]={}):
+    def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
         self.update_attributes(updated_attributes)
 
         net_input = s[

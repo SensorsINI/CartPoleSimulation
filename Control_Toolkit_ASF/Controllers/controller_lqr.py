@@ -83,7 +83,7 @@ class controller_lqr(template_controller):
         self.X = X
         self.eigVals = eigVals
 
-    def step(self, s: np.ndarray, time=None, updated_attributes: dict[str, TensorType]={}):
+    def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
         self.update_attributes(updated_attributes)
         
         state = np.array(

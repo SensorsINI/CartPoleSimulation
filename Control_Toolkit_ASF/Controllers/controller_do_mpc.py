@@ -139,7 +139,7 @@ class controller_do_mpc(template_controller):
         return self.tvp_template
 
 
-    def step(self, s: np.ndarray, time=None, updated_attributes: dict[str, TensorType]={}):
+    def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
         self.update_attributes(updated_attributes)
 
         s = cartpole_state_vector_to_namespace(s)
