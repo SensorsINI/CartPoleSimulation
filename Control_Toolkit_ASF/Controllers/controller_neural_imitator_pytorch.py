@@ -17,15 +17,14 @@ from SI_Toolkit.Functions.General.Initialization import (get_net,
                                                          get_norm_info_for_net)
 from SI_Toolkit.Functions.Pytorch.Network import get_device
 
-config_controller = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml"), "r"), Loader=yaml.FullLoader)
-NET_NAME = config_controller["neural-imitator-pytorch"]["net_name"]
-PATH_TO_MODELS = config_controller["neural-imitator-pytorch"]["PATH_TO_MODELS"]
-
 
 class controller_neural_imitator_pytorch(template_controller):
     _computation_library = PyTorchLibrary
     
     def configure(self):
+        NET_NAME = self.config_controller["net_name"]
+        PATH_TO_MODELS = self.config_controller["PATH_TO_MODELS"]
+        
         a = SimpleNamespace()
         self.batch_size = 1  # It makes sense only for testing (Brunton plot for Q) of not rnn networks to make bigger batch, this is not implemented
         

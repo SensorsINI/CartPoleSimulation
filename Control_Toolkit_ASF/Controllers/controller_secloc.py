@@ -10,7 +10,6 @@ from scipy.interpolate import interp1d
 from dataclasses import dataclass
 from Control_Toolkit.Controllers import template_controller
 
-config_controller = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml"), "r"), Loader=yaml.FullLoader)
 
 """
 Python implementation of the theory for Sparse Envent-Based Closed Loop Control (SECLOC):
@@ -20,13 +19,13 @@ class controller_secloc(template_controller):
     _computation_library = NumpyLibrary
     
     def configure(self):
-        log_base = config_controller["secloc"]["log_base"]
-        dt = config_controller["secloc"]["dt"]
-        ref_period = config_controller["secloc"]["ref_period"]
-        dead_band = config_controller["secloc"]["dead_band"]
-        pid_Kp = config_controller["secloc"]["pid_Kp"]
-        pid_Kd = config_controller["secloc"]["pid_Kd"]
-        pid_Ki = config_controller["secloc"]["pid_Ki"]
+        log_base = self.config_controller["log_base"]
+        dt = self.config_controller["dt"]
+        ref_period = self.config_controller["ref_period"]
+        dead_band = self.config_controller["dead_band"]
+        pid_Kp = self.config_controller["pid_Kp"]
+        pid_Kd = self.config_controller["pid_Kd"]
+        pid_Ki = self.config_controller["pid_Ki"]
         
         self.pid = Event_based_PID(Kp=pid_Kp, Kd=pid_Kd, Ki=pid_Ki, sensor_log_base=1.15, disp=True)
         self.potentiometer = Event_based_sensor(pid=self.pid, log_base=log_base, dt=dt, ref_period=ref_period, dead_band=dead_band, disp=True)

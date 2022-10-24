@@ -19,8 +19,6 @@ from others.globals_and_utils import create_rng
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 actuator_noise = config["cartpole"]["actuator_noise"]
 
-config_controller = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml")), Loader=yaml.FullLoader)
-config_lqr = config_controller["lqr"]
 
 class controller_lqr(template_controller):
     _computation_library = NumpyLibrary
@@ -63,8 +61,8 @@ class controller_lqr(template_controller):
         B = np.reshape(jacobian[:, -1], newshape=(4, 1)) * u_max
 
         # Cost matrices for LQR controller
-        self.Q = np.diag(config_lqr["Q"]) # How much to punish x, v, theta, omega
-        self.R = config_lqr["R"]  # How much to punish Q
+        self.Q = np.diag(self.config_controller["Q"]) # How much to punish x, v, theta, omega
+        self.R = self.config_controller["R"]  # How much to punish Q
 
         # first, try to solve the ricatti equation
         X = scipy.linalg.solve_continuous_are(A, B, self.Q, self.R)
