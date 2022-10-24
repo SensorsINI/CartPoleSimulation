@@ -25,7 +25,7 @@ predictors:
     predictor_type: 'ODE_TF'
     model_name:
     dt: 0.02
-    intermediate_steps: 5
+    intermediate_steps: 10
 
   # ADD YOUR PREDICTORS BELOW
 
