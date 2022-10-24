@@ -1,6 +1,6 @@
 import tensorflow as tf
-from SI_Toolkit.Predictors.predictor_autoregressive_tf import \
-    predictor_autoregressive_tf
+from SI_Toolkit.Predictors.predictor_autoregressive_neural import \
+    predictor_autoregressive_neural
 from SI_Toolkit.Functions.TF.Compile import CompileTF
 
 from others.globals_and_utils import create_rng
@@ -38,8 +38,8 @@ if __name__ == '__main__':
     batch_size = 8
     horizon = 10
 
-    predictor = predictor_autoregressive_tf(horizon=horizon, batch_size=batch_size,
-                                            net_name='LSTM-6IN-8H1-4H2-16H3-5OUT-0')
+    predictor = predictor_autoregressive_neural(horizon=horizon, batch_size=batch_size,
+                                                net_name='LSTM-6IN-8H1-4H2-16H3-5OUT-0')
 
     rng = create_rng(__name__, None)
     initial_state = rng.random(size=(batch_size, 6))
