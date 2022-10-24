@@ -45,7 +45,7 @@ class controller_lqr(template_controller):
         self.p_Q = actuator_noise
         # ref Bertsekas, p.151
 
-        seed = config_lqr["seed"]
+        seed = self.config_controller["seed"]
         self.rng = create_rng(self.__class__.__name__, seed if seed==None else seed*2)
 
         # Calculate Jacobian around equilibrium
