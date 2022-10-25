@@ -13,8 +13,8 @@ predictors:
     update_before_predicting: True
   GP_default:
     predictor_type: 'GP'
-    model_name:
-    path_to_model:
+    model_name: 'SGP_10'
+    path_to_model: 'SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Models'
     dt: 0.02
   ODE_default:
     predictor_type: 'ODE'
