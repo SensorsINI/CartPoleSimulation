@@ -37,7 +37,7 @@ It should be also possible to create this file with `conda list -e > requirement
 
 ## Basic Operation
 1. **Run GUI:** Run `python run_cartpole_gui.py` from top-level path.
-2. **Run a single experiment:** Open `run_data_generator.py`. In the marked section, you can define your experiment. For a single run, set `number_of_experiments = 1`. Then open `./config.yml` to modify controller-related parameters. For example, you can choose there whether MPPI should run with the true model ('predictor_ODE' == Euler Integrator) or with a neural network ('predictor_autoregressive_tf'). Once set, run `python -m run_data_generator`. It will create a new folder `./Experiment_Recordings/` and store a csv log file in it.
+2. **Run a single experiment:** Open `run_data_generator.py`. In the marked section, you can define your experiment. For a single run, set `number_of_experiments = 1`. Then open `./config.yml` to modify controller-related parameters. For example, you can choose there whether MPPI should run with the true model ('predictor_ODE' == Euler Integrator) or with a neural network ('predictor_autoregressive_neural'). Once set, run `python -m run_data_generator`. It will create a new folder `./Experiment_Recordings/` and store a csv log file in it.
 
 ## Run a Machine Learning Pipeline
 
@@ -50,7 +50,7 @@ You can use this repository to generate training data, train a neural network mo
 5. Train a model using either TensorFlow (default) or PyTorch. Specify the library to use in `./SI_Toolkit_ASF/config_training.yml`. Type `python -m SI_Toolkit_ASF.run.Train_Network -h` for a list of parameters you can define. Some default values are set in the same config as in step 3 and can also be modified there. Now run the Train module with all parameter flags that you wish. You will want to specify the network architecture. Training will store a new model within a subfolder `Models/` in the chosen experiment folder.
 6. Test the model. Adjust the parameters in `./SI_Toolkit_ASF/config_testing.yml` to select the correct test file and model. Run `python -m SI_Toolkit_ASF.run.Run_Brunton_Test` which selects the test run set in config and compares the model's predictions versus true model behavior in Brunton-style plots. You can again see all params with the flag `-h`. If the script breaks, set a smaller `--test_len`.
    ![Alt Text](https://raw.githubusercontent.com/SensorsINI/CartPoleSimulation/master/others/Media/Brunton.gif "Brunton plots Demo")
-7. Run MPPI with the trained model. Define an experiment in `run_data_generator.py`, select "predictor_autoregressive_tf" in the top-level config file, and run `python -m run_data_generator`. The results can be replayed in GUI.
+7. Run MPPI with the trained model. Define an experiment in `run_data_generator.py`, select "predictor_autoregressive_neural" in the top-level config file, and run `python -m run_data_generator`. The results can be replayed in GUI.
 
 ## Structure:
 
@@ -64,9 +64,11 @@ and Data Generator, with which user can easily generate hours of experimental da
 The CartPole loads controllers from Controllers folder.
 One can specify in GUI or in Data Generator which controller should be used.
 Adding controllers is easy:
-They just have to fit the template provided in Controllers/template_controller.py.
+They just have to fit the template provided in Control_Toolkit/Controllers/template_controller.py.
+CartPole-specific controllers can be defined in Control_Toolkit_ASF/Controllers
 If a file in Controllers folder is named controller_....py and contains the function with the same name (controller_...)
 it will be automatically detected and added to the list of possible controllers.
+The MPC controller can be used in combination with any of the optimizers in Control_Toolkit/Optimizers. You can define new optimizers as well
 
 ## Operation hints:
   

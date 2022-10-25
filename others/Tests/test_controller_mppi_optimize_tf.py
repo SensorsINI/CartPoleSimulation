@@ -1,9 +1,20 @@
 import numpy as np
-from Control_Toolkit.Controllers.controller_dist_adam_resamp2_tf import controller_dist_adam_resamp2
+from Control_Toolkit.Controllers.controller_mpc import controller_mpc
+from others.globals_and_utils import MockSpace
 
-# speed test which is activated if script is run directly and not as module
+# speed test, which is activated if script is run directly and not as module
 if __name__ == '__main__':
-    ctrl = controller_dist_adam_resamp2()
+    state_low = [-np.pi, -np.inf, -1.0, -1.0, -0.22, -np.inf]
+    state_high = [-v for v in state_low]
+    
+    ctrl = controller_mpc(
+        environment_name="CartPole",
+        initial_environment_attributes={"target_position": 0.0, "target_equilibrium": 1.0},
+        action_space=MockSpace(-1.0, 1.0, (1,), np.float32),
+        observation_space=MockSpace(state_low, state_high, (6,), np.float32)
+    )
+    ctrl.configure(optimizer_name="mppi-optimize-tf")
+    
     import timeit
 
     from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX,
@@ -23,7 +34,7 @@ if __name__ == '__main__':
     ctrl.step(s0)
     f_to_measure = 'ctrl.step(s0)'
     number = 1  # Gives the number of times each timeit call executes the function which we want to measure
-    repeat_timeit = 100  # Gives how many times timeit should be repeated
+    repeat_timeit = 1000  # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, globals=globals()).repeat(repeat_timeit, number)
     min_time = min(timings) / float(number)
     max_time = max(timings) / float(number)

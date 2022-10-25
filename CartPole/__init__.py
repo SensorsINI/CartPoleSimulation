@@ -8,19 +8,19 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 """
 # Import module to save history of the simulation as csv file
 import csv
-# To detect the latest csv file
-from importlib import import_module
 # Import module to interact with OS
 import os
 import traceback
 # Import module to get a current time and date used to name the files containing the history of simulations
 from datetime import datetime
+# To detect the latest csv file
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-from Control_Toolkit.others.environment import EnvironmentBatched, NumpyLibrary, TensorFlowLibrary
-from Control_Toolkit.others.globals_and_utils import get_available_controller_names, get_controller
+from Control_Toolkit.Controllers import template_controller
+from Control_Toolkit.others.environment import EnvironmentBatched
+from Control_Toolkit.others.globals_and_utils import (
+    get_available_controller_names, get_available_optimizer_names, get_controller_name, get_optimizer_name, import_controller_by_name)
 from others.globals_and_utils import MockSpace, create_rng, load_config
 from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
@@ -69,8 +69,6 @@ rc('font', **font)
 
 # endregion
 
-import yaml
-
 config = load_config("config.yml")
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
@@ -100,11 +98,11 @@ class CartPole(EnvironmentBatched):
         # Variables for control input and target position.
         self.u = 0.0  # Physical force acting on the cart
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
-        self._target_position = 0.0
-        self._target_equilibrium = 1.0  # Up is 1.0, Down is -1.0, here just a placeholder, change line below
-        self.target_equilibrium = 1.0
 
-        self.action_space = MockSpace(-1.0, 1.0)
+        self.action_space = MockSpace(-1.0, 1.0, (1,), np.float32)
+        state_low = [-np.pi, -np.inf, -1.0, -1.0, -TrackHalfLength, -np.inf]
+        state_high = [-v for v in state_low]
+        self.observation_space = MockSpace(state_low, state_high, (6,), np.float32)
 
         self.latency = self.config["latency"]
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
@@ -144,8 +142,11 @@ class CartPole(EnvironmentBatched):
         self.csv_filepath = None  # Where to save the experiment history.
         self.controller = None  # Placeholder for the currently used controller function
         self.controller_name = ''  # Placeholder for the currently used controller name
+        self.optimizer_name = ''  # Placeholder for the currently used optimizer name
         self.controller_idx = None  # Placeholder for the currently used controller index
+        self.optimizer_idx = None  # Placeholder for the currently used optimizer index
         self.controller_names = get_available_controller_names()  # list of controllers available in controllers folder
+        self.optimizer_names = get_available_optimizer_names()  # list of controllers available in controllers folder
         # endregion
 
         # region Variables for generating experiments with random target trace
@@ -231,13 +232,13 @@ class CartPole(EnvironmentBatched):
 
         self.init_graphical_elements()  # Assign proper object to the above variables
         # endregion
+        
+        self.target_position = 0.0
+        self.target_equilibrium = 1.0
 
         # region Initialize CartPole in manual-stabilization mode
-        self.set_controller('manual-stabilization')
-        # endregion
-
-        # region Set cost function module
-        self.set_cost_functions()
+        self.set_controller(controller_name='manual-stabilization')
+        self.set_optimizer(optimizer_idx=0)
         # endregion
         
     # region 1. Methods related to dynamic evolution of CartPole system
@@ -323,38 +324,6 @@ class CartPole(EnvironmentBatched):
                 # This just fill the corresponding column in history with zeros
             else:
                 self.target_position = self.slider_value * TrackHalfLength  # Get target position from slider
-    
-    @property
-    def target_position(self):
-        return self._target_position
-
-    @property
-    def target_equilibrium(self):
-        return self._target_equilibrium
-
-    @property
-    def target_position_tf(self):
-        return self._target_position_tf
-
-    @property
-    def target_equilibrium_tf(self):
-        return self._target_equilibrium_tf
-    
-    @target_position.setter
-    def target_position(self, target_position):
-        self._target_position = target_position
-        if not hasattr(self, "_target_position_tf"):
-            self._target_position_tf = tf.Variable(target_position, dtype=tf.float32)
-        else:
-            self._target_position_tf.assign(target_position)
-
-    @target_equilibrium.setter
-    def target_equilibrium(self, target_equilibrium):
-        self._target_equilibrium = target_equilibrium
-        if not hasattr(self, "_target_equilibrium_tf"):
-            self._target_equilibrium_tf = tf.Variable(target_equilibrium, dtype=tf.float32)
-        else:
-            self._target_equilibrium_tf.assign(target_equilibrium)
 
     def block_pole_at_90_deg(self):
         if self.stop_at_90:
@@ -480,7 +449,7 @@ class CartPole(EnvironmentBatched):
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s_with_noise_and_latency, self.time)
+                self.Q = self.controller.step(self.s_with_noise_and_latency, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
 
             self.dt_controller_steps_counter = 0
 
@@ -508,7 +477,7 @@ class CartPole(EnvironmentBatched):
 
             # Set path where to save the data
             if csv_name is None or csv_name == '':
-                self.csv_filepath = self.path_to_experiment_recordings + 'CP_' + self.controller_name + str(
+                self.csv_filepath = self.path_to_experiment_recordings + 'CP_' + self.controller_name + self.optimizer_name + str(
                     datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')) + '.csv'
             else:
                 self.csv_filepath = csv_name
@@ -554,6 +523,8 @@ class CartPole(EnvironmentBatched):
                 writer.writerow(['#'])
 
                 writer.writerow(['# Controller: {}'.format(self.controller_name)])
+                if self.optimizer_name:
+                    writer.writerow(['# MPC Optimizer: {}'.format(self.optimizer_name)])
 
                 writer.writerow(['#'])
                 writer.writerow(['# Parameters:'])
@@ -871,23 +842,36 @@ class CartPole(EnvironmentBatched):
     # endregion
 
     # region 4. Methods "Get, set, reset"
+    
+    def set_optimizer(self, optimizer_name=None, optimizer_idx=None):
+        self.optimizer_name, self.optimizer_idx = get_optimizer_name(
+            optimizer_name=optimizer_name, optimizer_idx=optimizer_idx
+        )
+        if self.controller is not None and getattr(self.controller, "has_optimizer", False):
+            self.controller.configure(self.optimizer_name)
 
     # Set the controller of CartPole
     def set_controller(self, controller_name=None, controller_idx=None):
-        Controller, self.controller_name, self.controller_idx = get_controller(
+        self.controller_name, self.controller_idx = get_controller_name(
             controller_name=controller_name, controller_idx=controller_idx
         )
-        if Controller is None:
-            self.controller = None
-        else:
-            self.controller = Controller(self, **{**config["controller"][self.controller_name], **{"num_control_inputs": self.config["num_control_inputs"]}})
-
-        if self.controller_name[-2:] == "tf":
-            self.set_computation_library(TensorFlowLibrary)
-        else:
-            self.set_computation_library(NumpyLibrary)
-        self.set_cost_functions()
+        
+        if self.controller_name != 'manual-stabilization':
+            Controller: "type[template_controller]" = import_controller_by_name(self.controller_name)
+            self.controller = Controller(
+                environment_name="CartPole",
+                initial_environment_attributes={"target_position": self.target_position, "target_equilibrium": self.target_equilibrium},
+                num_states=self.observation_space.shape[0],
+                num_control_inputs=self.action_space.shape[0],
+                control_limits=(self.action_space.low, self.action_space.high),
+            )
+            # Final configuration of controller
+            if self.controller.has_optimizer:
+                self.controller.configure(self.optimizer_name)
+            else:
+                self.controller.configure()
             
+                
         # Set the maximal allowed value of the slider - relevant only for GUI
         if self.controller_name == 'manual-stabilization':
             self.Slider_Arrow.set_positions((0, 0), (0, 0))
@@ -900,11 +884,6 @@ class CartPole(EnvironmentBatched):
         self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, target_position=self.target_position, reset_dict_history=True)
 
         return True
-
-    def set_cost_functions(self):
-        cost_function_name = self.config["cost_function"].replace("-", "_")
-        cost_function_module = import_module(f"others.cost_functions.CartPole.{cost_function_name}")
-        self.cost_functions = getattr(cost_function_module, cost_function_name)(self)
 
     # This method resets the internal state of the CartPole instance
     # The starting state (for t = 0) may be
@@ -964,7 +943,7 @@ class CartPole(EnvironmentBatched):
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s, self.time)
+                self.Q = self.controller.step(self.s, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
 
             self.u = Q2u(self.Q)  # Calculate CURRENT control input
             self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)  # Calculate CURRENT second derivatives

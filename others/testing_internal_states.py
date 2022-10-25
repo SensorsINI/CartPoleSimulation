@@ -1,14 +1,14 @@
 import tensorflow as tf
-from SI_Toolkit.Predictors.predictor_autoregressive_tf import \
-    predictor_autoregressive_tf
+from SI_Toolkit.Predictors.predictor_autoregressive_neural import \
+    predictor_autoregressive_neural
 from SI_Toolkit.Functions.TF.Compile import CompileTF
 
 from others.globals_and_utils import create_rng
 
 
 @CompileTF
-def copy_internal_states_to_ref(net, layers_ref):
-    for layer, layer_ref in zip(net.layers, layers_ref):
+def copy_internal_states_to_ref(net, memory_states_ref):
+    for layer, layer_ref in zip(net.layers, memory_states_ref):
         if (('gru' in layer.name) or
                 ('lstm' in layer.name) or
                 ('rnn' in layer.name)):
@@ -20,8 +20,8 @@ def copy_internal_states_to_ref(net, layers_ref):
 
 
 @CompileTF
-def copy_internal_states_from_ref(net, layers_ref):
-    for layer, layer_ref in zip(net.layers, layers_ref):
+def copy_internal_states_from_ref(net, memory_states_ref):
+    for layer, layer_ref in zip(net.layers, memory_states_ref):
         if (('gru' in layer.name) or
                 ('lstm' in layer.name) or
                 ('rnn' in layer.name)):
@@ -38,8 +38,8 @@ if __name__ == '__main__':
     batch_size = 8
     horizon = 10
 
-    predictor = predictor_autoregressive_tf(horizon=horizon, batch_size=batch_size,
-                                            net_name='LSTM-6IN-8H1-4H2-16H3-5OUT-0')
+    predictor = predictor_autoregressive_neural(horizon=horizon, batch_size=batch_size,
+                                                net_name='LSTM-6IN-8H1-4H2-16H3-5OUT-0')
 
     rng = create_rng(__name__, None)
     initial_state = rng.random(size=(batch_size, 6))
@@ -47,16 +47,16 @@ if __name__ == '__main__':
     Q = np.float32(rng.random(size=(batch_size, horizon, len(CONTROL_INPUTS))))
 
     net = predictor.net
-    layers_ref = predictor.layers_ref
-    _r = layers_ref[1].states
+    memory_states_ref = predictor.memory_states_ref
+    _r = memory_states_ref[1].states
     _o = net.layers[1].states
-    copy_internal_states_from_ref(net, layers_ref)
+    copy_internal_states_from_ref(net, memory_states_ref)
 
     predictor.predict(initial_state, Q)
 
     pass  # Check layers in both
 
-    copy_internal_states_from_ref(net, layers_ref)
+    copy_internal_states_from_ref(net, memory_states_ref)
 
     pass  # Check if both are zero
 
@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
     pass  # check if ref is still 0
 
-    copy_internal_states_to_ref(net, layers_ref)
+    copy_internal_states_to_ref(net, memory_states_ref)
 
     pass # Check if both are equal
 

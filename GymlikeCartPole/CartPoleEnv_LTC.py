@@ -1,7 +1,6 @@
 import gym
 import os
 from gym.core import ObsType
-from gym.utils.renderer import Renderer
 from CartPole import CartPole
 from CartPole.cartpole_model import ANGLE_IDX, POSITION_IDX
 from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
@@ -35,7 +34,6 @@ class CartPoleEnv_LTC(gym.Env):
         self.CartPoleInstance = CartPole()
         self.RES = random_experiment_setter()
         self.mode = mode
-        self.renderer = Renderer(self.render_mode, self._render)
 
         self.intermediate_steps = int(self.RES.dt_controller_update/self.RES.dt_simulation)
 
@@ -87,8 +85,7 @@ class CartPoleEnv_LTC(gym.Env):
 
         self.step_termination_and_reward()
 
-        self.renderer.render_step()
-        return self.state, self.reward, self.done, {"target": self.CartPoleInstance.target_position}
+        return self.state, self.reward, self.done, {"target": self.target}
 
     def step_physics(self):
 
@@ -108,7 +105,7 @@ class CartPoleEnv_LTC(gym.Env):
 
         # Update target position depending on the mode of operation
         # self.CartPoleInstance.update_target_position()
-        self.CartPoleInstance.target_position = 0.0  # TODO: Make option of random target position
+        # self.CartPoleInstance.target_position = 0.0  # TODO: Make option of random target position
 
         # Save data to internal dictionary
         # FIXE: Not working for some reason
@@ -171,26 +168,19 @@ class CartPoleEnv_LTC(gym.Env):
         
         return done
 
-    def reset(self, state, seed: Optional[int] = None, return_info: bool = False, options: Optional[dict] = None) -> Union[ObsType, Tuple[ObsType, dict]]:
+    def reset(self, seed: Optional[int] = None, options: Optional[dict] = None) -> Tuple[ObsType, dict]:
         self.CartPoleInstance = self.RES.set(self.CartPoleInstance)
         self.state = self.CartPoleInstance.s
+        self.CartPoleInstance.target_position = 0.0
         self.target = self.CartPoleInstance.target_position
         self.done = False
 
         self.steps_beyond_done = None
 
-        if return_info:
-            return tuple((self.state, {}))
-        return self.state
+        return self.state, {}
 
-    def render(self, mode="human"):
-        if self.render_mode is not None:
-            return self.renderer.get_renders()
-        else:
-            return self._render(mode)
-
-    def _render(self, mode="human"):
-        assert mode in self.metadata["render_modes"]
+    def render(self):
+        assert self.render_mode in self.metadata["render_modes"]
         import pygame
         from pygame import gfxdraw
         
@@ -209,10 +199,10 @@ class CartPoleEnv_LTC(gym.Env):
         
         if self.screen is None:
             pygame.init()
-            if mode == "human":
+            if self.render_mode == "human":
                 pygame.display.init()
                 self.screen = pygame.display.set_mode((screen_width, screen_height))
-            else:  # mode in {"rgb_array", "single_rgb_array"}
+            else:  # render mode in {"rgb_array", "single_rgb_array"}
                 self.screen = pygame.Surface((screen_width, screen_height))
 
         self.surf = pygame.Surface((screen_width, screen_height))
@@ -256,15 +246,23 @@ class CartPoleEnv_LTC(gym.Env):
             int(polewidth / 2),
             (129, 132, 203),
         )
+        if hasattr(self, "target_position"):
+            gfxdraw.filled_circle(
+                self.surf,
+                int(self.target * scale + screen_width / 2.0),
+                int(carty),
+                int(10),
+                (231, 76, 60),
+            )
 
         gfxdraw.hline(self.surf, 0, screen_width, carty, (0, 0, 0))
 
         self.surf = pygame.transform.flip(self.surf, False, True)
         self.screen.blit(self.surf, (0, 0))
-        if mode == "human":
+        if self.render_mode == "human":
             pygame.display.flip()
 
-        if mode in {"rgb_array", "single_rgb_array"}:
+        if self.render_mode in {"rgb_array", "single_rgb_array"}:
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.screen)), axes=(1, 0, 2)
             )

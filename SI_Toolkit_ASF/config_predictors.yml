@@ -1,0 +1,43 @@
+predictor_name_default: 'I_love_control'
+# If controller does not specify predictor_specification (leave empty)
+# a predictor from "predictors:predictor_name_default" from below is loaded
+# Check config.yml and config_testing.yml to learn more on how predictors are selected
+
+predictors:
+  ### THESE ARE DEFAULT PREDICTORS! DON'T CHANGE THEM, RATHER ADD YOUR PREDICTOR BELOW
+  neural_default:
+    predictor_type: 'neural'
+    model_name: 'GRU-6IN-32H1-32H2-5OUT-0'
+    path_to_model: './SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Models/'
+    dt: 0.02
+    update_before_predicting: True
+  GP_default:
+    predictor_type: 'GP'
+    model_name: 'SGP_10'
+    path_to_model: 'SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Models'
+    dt: 0.02
+  ODE_default:
+    predictor_type: 'ODE'
+    model_name:
+    dt: 0.02
+    intermediate_steps: 10
+  ODE_TF_default:
+    predictor_type: 'ODE_TF'
+    model_name:
+    dt: 0.02
+    intermediate_steps: 10
+
+  # ADD YOUR PREDICTORS BELOW
+
+  I_love_control:
+    predictor_type: 'neural'  # Possible options are: 'neural', 'GP', 'ODE, 'ODE_TF'
+    model_name: 'GRU-6IN-32H1-32H2-5OUT-0'
+    path_to_model: './SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Models/'
+    dt: # Matters only for differential network
+    update_before_predicting: True
+
+  I_love_control_too:
+    predictor_type: 'ODE'
+    model_name:
+    dt: 0.02
+    intermediate_steps: 10
