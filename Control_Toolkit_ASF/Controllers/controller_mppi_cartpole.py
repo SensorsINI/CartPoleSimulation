@@ -192,7 +192,7 @@ def trajectory_rollouts(
 
     # Compute stage costs
     cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
-        s_horizon[:, 1:, :], u, delta_u, u_prev, target_position
+        s_horizon[:, :-1, :], u, delta_u, u_prev, target_position
     )
     S_tilde_k = np.sum(cost_increment, axis=1)
     # Compute terminal cost
