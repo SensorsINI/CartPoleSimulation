@@ -8,7 +8,6 @@ cem-tf:
   cem_best_k: 40
   warmup: false
   warmup_iterations: 250
-  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
 cem-gmm-tf:
   seed: null                          # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
@@ -17,7 +16,6 @@ cem-gmm-tf:
   cem_stdev_min: 0.01
   cem_initial_action_stdev: 0.5
   cem_best_k: 40
-  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
 cem-naive-grad-tf:
   seed: null                          # If null, random seed based on datetime is used
   mpc_horizon: 35                       # steps
@@ -28,7 +26,6 @@ cem-naive-grad-tf:
   cem_best_k: 40
   learning_rate: 0.1
   gradmax_clip: 10
-  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
 cem-grad-bharadhwaj-tf:
   seed: null                          # If null, random seed based on datetime is used
   mpc_horizon: 50                       # steps
@@ -44,7 +41,6 @@ cem-grad-bharadhwaj-tf:
   gradmax_clip: 5
   warmup: false
   warmup_iterations: 250
-  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
 gradient-tf:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 35                       # steps
@@ -59,7 +55,6 @@ gradient-tf:
   gradmax_clip: 5
   warmup: false
   warmup_iterations: 250
-  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
 mppi-optimize-tf:
   seed: null                            # If null, random seed based on datetime is used
   dt: 0.02                              # sec
@@ -78,7 +73,6 @@ mppi-optimize-tf:
   GAMMA: 1.00                           # Future cost discount
   SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
   optim_steps: 10
-  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
 dist-adam-resamp2-tf:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
@@ -97,7 +91,6 @@ dist-adam-resamp2-tf:
   sample_stdev: 0.5
   warmup: false
   warmup_iterations: 250
-  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
 rpgd-tf:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
@@ -116,7 +109,6 @@ rpgd-tf:
   sample_stdev: 0.5
   warmup: false
   warmup_iterations: 250
-  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
 rpgd-me-tf:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
@@ -136,7 +128,6 @@ rpgd-me-tf:
   sample_stdev: 0.5
   warmup: false
   warmup_iterations: 250
-  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
 rpgd-ml-tf:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
@@ -157,7 +148,6 @@ rpgd-ml-tf:
   sample_stdev: 0.5
   warmup: false
   warmup_iterations: 250
-  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
 rpgd-particle-tf:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
@@ -177,7 +167,6 @@ rpgd-particle-tf:
   sample_stdev: 0.5
   warmup: false
   warmup_iterations: 250
-  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
 mppi-var-tf:
   seed: null                          # If null, random seed based on datetime is used
   dt: 0.02                              # sec
@@ -196,7 +185,6 @@ mppi-var-tf:
   STDEV_min: 0.01                       # Maximal variance for sampling
   STDEV_max: 10                         # Minimal sampling variance for sampling
   max_grad_norm: 100000                 # max norm of gradient such that ||gradient||_2
-  predictor_specification: "ODE_TF"     # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
 mppi-tf:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                       # steps
@@ -208,9 +196,7 @@ mppi-tf:
   SQRTRHOINV: 0.03                      # Sampling variance
   GAMMA: 1.00                           # Future cost discount
   SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
-  predictor_specification: "ODE_TF"     # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
 random-action-tf:
   seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                      # steps
   num_rollouts: 320
-  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF

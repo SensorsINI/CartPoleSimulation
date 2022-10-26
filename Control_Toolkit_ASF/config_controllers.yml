@@ -6,7 +6,6 @@ mpc:
   controller_logging: true
 mppi-cartpole:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
-  dt: 0.02                              # sec
   mpc_horizon: 35                       # steps
   num_rollouts: 3500                    # Number of Monte Carlo samples
   update_every: 1                       # Cost weighted update of inputs every ... steps
@@ -47,7 +46,6 @@ custom-mpc-scipy:
   m4: 0.0  # positionD_cost
   controller_logging: True
 do-mpc-discrete:
-  dt: 0.02  # s
   mpc_horizon: 50                       # steps
   num_rollouts: 1
   # Initial positions
@@ -58,7 +56,6 @@ do-mpc-discrete:
   controller_logging: True
 do-mpc:
   seed: null                          # If null, random seed based on datetime is used
-  dt: 0.02                              # sec
   mpc_horizon: 50                       # steps
   num_rollouts: 1
   # Perturbation factors:
@@ -111,7 +108,6 @@ neural-imitator-pytorch:
   controller_logging: True
 secloc:
   log_base: 1.05
-  dt: 1 # In the Arduino code is 1000
   ref_period: 1
   dead_band: 0.0025  # Radians
   pid_Kp: 15.0
