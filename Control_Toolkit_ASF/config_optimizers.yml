@@ -156,7 +156,6 @@ rpgd-particle-tf:
   adam_beta_1: 0.9
   adam_beta_2: 0.999
   adam_epsilon: 1.0e-08
-  maximum_entropy_alpha: 0.1
   gradmax_clip: 10
   rtol: 1.0e-3
   num_rollouts: 32

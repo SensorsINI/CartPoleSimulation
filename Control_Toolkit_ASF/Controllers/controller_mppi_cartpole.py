@@ -45,12 +45,12 @@ mpc_horizon = config_mppi_cartpole["mpc_horizon"]
 num_rollouts = config_mppi_cartpole["num_rollouts"]
 update_every = config_mppi_cartpole["update_every"]
 predictor_specification = config_mppi_cartpole["predictor_specification"]
+dt = config_data_gen["dt"]["control"]
 
 """Define Predictor"""
 predictor = PredictorWrapper()
-predictor.configure(batch_size=num_rollouts, horizon=mpc_horizon, predictor_specification=predictor_specification)
+predictor.configure(batch_size=num_rollouts, horizon=mpc_horizon, dt=dt, predictor_specification=predictor_specification)
 
-dt = config_data_gen["dt"]["control"]
 if predictor.predictor_config['predictor_type'] == 'neural':
     MODEL_NAME = predictor.predictor_config['model_name']
     try:
