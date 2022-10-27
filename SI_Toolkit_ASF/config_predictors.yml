@@ -8,12 +8,12 @@ predictors:
   neural_default:
     predictor_type: 'neural'
     model_name: 'GRU-6IN-32H1-32H2-5OUT-0'
-    path_to_model: './SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Models/'
+    path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-2/Models/'
     update_before_predicting: True
   GP_default:
     predictor_type: 'GP'
     model_name: 'SGP_10'
-    path_to_model: 'SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Models'
+    path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-2/Models/'
   ODE_default:
     predictor_type: 'ODE'
     model_name:
@@ -27,8 +27,8 @@ predictors:
 
   I_love_control:
     predictor_type: 'neural'  # Possible options are: 'neural', 'GP', 'ODE, 'ODE_TF'
-    model_name: 'GRU-6IN-32H1-32H2-5OUT-0'
-    path_to_model: './SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Models/'
+    model_name: 'GRU-6IN-32H1-32H2-5OUT-2'
+    path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-2/Models/'
     update_before_predicting: True
 
   I_love_control_too:
