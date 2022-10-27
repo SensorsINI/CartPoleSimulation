@@ -57,7 +57,6 @@ gradient-tf:
   warmup_iterations: 250
 mppi-optimize-tf:
   seed: null                            # If null, random seed based on datetime is used
-  dt: 0.02                              # sec
   mppi_LR: 0.02
   adam_beta_1: 0.4                      #default: 0.9
   adam_beta_2: 0.8                      #default: 0.999
@@ -169,7 +168,6 @@ rpgd-particle-tf:
   warmup_iterations: 250
 mppi-var-tf:
   seed: null                          # If null, random seed based on datetime is used
-  dt: 0.02                              # sec
   mpc_horizon: 35                       # steps
   num_rollouts: 400                     # Number of Monte Carlo samples
   SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid

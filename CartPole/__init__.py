@@ -859,6 +859,7 @@ class CartPole(EnvironmentBatched):
         if self.controller_name != 'manual-stabilization':
             Controller: "type[template_controller]" = import_controller_by_name(self.controller_name)
             self.controller = Controller(
+                dt=self.dt_controller,
                 environment_name="CartPole",
                 initial_environment_attributes={"target_position": self.target_position, "target_equilibrium": self.target_equilibrium},
                 num_states=self.observation_space.shape[0],
