@@ -43,7 +43,7 @@ class quadratic_boundary_grad(cost_function_base):
         return R * self.lib.sum(u**2, 2)
 
     # final stage cost
-    def get_terminal_cost(self, s):
+    def get_terminal_cost(self, terminal_states):
         """Calculate terminal cost of a set of trajectories
 
         Williams et al use an indicator function type of terminal cost in
@@ -52,8 +52,8 @@ class quadratic_boundary_grad(cost_function_base):
         TODO: Try a quadratic terminal cost => Use the LQR terminal cost term obtained
         by linearizing the system around the unstable equilibrium.
 
-        :param s: Reference to numpy array of states of all rollouts
-        :type s: np.ndarray
+        :param terminal_states: Reference to numpy array of terminal states of all rollouts
+        :type terminal_states: np.ndarray
         :return: One terminal cost per rollout
         :rtype: np.ndarray
         """
