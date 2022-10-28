@@ -102,7 +102,7 @@ neural-imitator-tf:
 neural-imitator-pytorch:
   seed: null                            # If null, random seed based on datetime is used
   PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
-  net_name: 'GRU-6IN-32H1-32H2-1OUT-4'
+  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'
   mpc_horizon: 40
   num_rollouts: 1
   controller_logging: True

@@ -70,13 +70,12 @@ mppi-optimize-tf:
   NU: 1000.0                            # Exploration variance
   SQRTRHOINV: 0.02
   GAMMA: 1.00                           # Future cost discount
-  SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
+  period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   optim_steps: 10
 dist-adam-resamp2-tf:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
-  SAMPLING_TYPE: interpolated
-  interpolation_step: 10
+  period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   learning_rate: 0.05
   adam_beta_1: 0.9
   adam_beta_2: 0.999
@@ -93,8 +92,7 @@ dist-adam-resamp2-tf:
 rpgd-tf:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
-  SAMPLING_TYPE: interpolated
-  interpolation_step: 10
+  period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   learning_rate: 0.05
   adam_beta_1: 0.9
   adam_beta_2: 0.999
@@ -111,8 +109,7 @@ rpgd-tf:
 rpgd-me-tf:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
-  SAMPLING_TYPE: null
-  interpolation_step: 10
+  period_interpolation_inducing_points: 1                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   learning_rate: 0.01
   adam_beta_1: 0.9
   adam_beta_2: 0.999
@@ -131,8 +128,7 @@ rpgd-ml-tf:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
   SAMPLING_DISTRIBUTION: uniform  # "normal" or "uniform"
-  SAMPLING_TYPE: null
-  interpolation_step: 10
+  period_interpolation_inducing_points: 1                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   learning_rate: 0.01
   adam_beta_1: 0.9
   adam_beta_2: 0.999
@@ -150,8 +146,7 @@ rpgd-ml-tf:
 rpgd-particle-tf:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
-  SAMPLING_TYPE: null
-  interpolation_step: 10
+  period_interpolation_inducing_points: 1                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   learning_rate: 0.01
   adam_beta_1: 0.9
   adam_beta_2: 0.999
@@ -169,8 +164,7 @@ mppi-var-tf:
   seed: null                          # If null, random seed based on datetime is used
   mpc_horizon: 35                       # steps
   num_rollouts: 400                     # Number of Monte Carlo samples
-  SAMPLING_TYPE: "interpolated" #if interpolated: linear interpolation; else iid
-  interpolation_step: 10                #interpolation stepsize when sampling
+  period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   cc_weight: 1.0
   R: 1.0                                # How much to punish Q
   # mc stands for mathematical correct, as this controller uses the formula from the paper
@@ -192,7 +186,7 @@ mppi-tf:
   NU: 1000.0                            # Exploration variance
   SQRTRHOINV: 0.03                      # Sampling variance
   GAMMA: 1.00                           # Future cost discount
-  SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
+  period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
 random-action-tf:
   seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                      # steps
