@@ -19,7 +19,7 @@ class DataSelector:
         self.exp_len = self.wash_out_len + self.post_wash_out_len
 
         self.num = 20  # You get one more bean as num
-        self.points_per_bin = 1000
+        self.points_per_bin = 1
         self.nr_states_per_bin = np.ones((self.num,self.num,self.num,self.num))*self.points_per_bin
         self.nr_states_per_bin_current = np.zeros_like(self.nr_states_per_bin)
         self.table_empty_places_init = np.sum(self.nr_states_per_bin)
