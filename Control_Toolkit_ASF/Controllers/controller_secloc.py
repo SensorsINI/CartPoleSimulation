@@ -11,6 +11,9 @@ from dataclasses import dataclass
 from Control_Toolkit.Controllers import template_controller
 
 
+dt = 1.0  # In the Arduino code is 1000
+
+
 """
 Python implementation of the theory for Sparse Envent-Based Closed Loop Control (SECLOC):
 https://www.frontiersin.org/articles/10.3389/fnins.2019.00827/full
@@ -20,7 +23,6 @@ class controller_secloc(template_controller):
     
     def configure(self):
         log_base = self.config_controller["log_base"]
-        dt = self.config_controller["dt"]
         ref_period = self.config_controller["ref_period"]
         dead_band = self.config_controller["dead_band"]
         pid_Kp = self.config_controller["pid_Kp"]
