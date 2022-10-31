@@ -1,4 +1,6 @@
 import os
+
+from SI_Toolkit.computation_library import TensorType
 from Control_Toolkit.Cost_Functions import cost_function_base
 
 from others.globals_and_utils import load_config
@@ -19,7 +21,7 @@ R = config["CartPole"]["quadratic_boundary_grad"]["R"]
 
 class quadratic_boundary_grad(cost_function_base):
     # cost for distance from track edge
-    def distance_difference_cost(self, position):
+    def _distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
         return (
             (position - self.controller.target_position) / (2.0 * TrackHalfLength)
@@ -30,20 +32,20 @@ class quadratic_boundary_grad(cost_function_base):
         ) ** 2  # Soft constraint: Do not crash into border
 
     # cost for difference from upright position
-    def E_pot_cost(self, angle):
+    def _E_pot_cost(self, angle):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
         return self.controller.target_equilibrium * 0.25 * (1.0 - self.lib.cos(angle)) ** 2
     
-    def E_kin_cost(self, angleD):
+    def _E_kin_cost(self, angleD):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
         return angleD ** 2
 
     # actuation cost
-    def CC_cost(self, u):
+    def _CC_cost(self, u):
         return R * self.lib.sum(u**2, 2)
 
     # final stage cost
-    def get_terminal_cost(self, terminal_states):
+    def get_terminal_cost(self, terminal_states: TensorType):
         """Calculate terminal cost of a set of trajectories
 
         Williams et al use an indicator function type of terminal cost in
@@ -57,7 +59,6 @@ class quadratic_boundary_grad(cost_function_base):
         :return: One terminal cost per rollout
         :rtype: np.ndarray
         """
-        terminal_states = s[:, -1, :]
         terminal_cost = 10000 * self.lib.cast(
             (self.lib.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
             | (
@@ -68,8 +69,8 @@ class quadratic_boundary_grad(cost_function_base):
         )
         return terminal_cost
 
-    # cost of changeing control to fast
-    def control_change_rate_cost(self, u, u_prev):
+    # cost of changing control to fast
+    def _control_change_rate_cost(self, u, u_prev):
         """Compute penalty of control jerk, i.e. difference to previous control input"""
         u_prev_vec = self.lib.concat(
             (self.lib.ones((u.shape[0], 1, u.shape[2])) * u_prev, u[:, :-1, :]), 1
@@ -77,25 +78,25 @@ class quadratic_boundary_grad(cost_function_base):
         return self.lib.sum((u - u_prev_vec) ** 2, 2)
 
     # all stage costs together
-    def get_stage_cost(self, s, u, u_prev):
-        dd = dd_weight * self.distance_difference_cost(
-            s[:, :, POSITION_IDX]
+    def get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
+        dd = dd_weight * self._distance_difference_cost(
+            states[:, :, POSITION_IDX]
         )
-        ep = ep_weight * self.E_pot_cost(s[:, :, ANGLE_IDX])
-        ekp = ekp_weight * self.E_kin_cost(s[:, :, ANGLED_IDX])
-        cc = cc_weight * self.CC_cost(u)
-        ccrc = ccrc_weight * self.control_change_rate_cost(u, u_prev)
+        ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX])
+        ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLED_IDX])
+        cc = cc_weight * self._CC_cost(inputs)
+        ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
         stage_cost = dd + ep + ekp + cc + ccrc
         return stage_cost
 
     def q_debug(self, s, u, u_prev):
-        dd = dd_weight * self.distance_difference_cost(
+        dd = dd_weight * self._distance_difference_cost(
             s[:, :, POSITION_IDX]
         )
-        ep = ep_weight * self.E_pot_cost(s[:, :, ANGLE_IDX])
-        cc = cc_weight * self.CC_cost(u)
+        ep = ep_weight * self._E_pot_cost(s[:, :, ANGLE_IDX])
+        cc = cc_weight * self._CC_cost(u)
         ccrc = 0
         if u_prev is not None:
-            ccrc = ccrc_weight * self.control_change_rate_cost(u, u_prev)
+            ccrc = ccrc_weight * self._control_change_rate_cost(u, u_prev)
         stage_cost = dd + ep + cc + ccrc
         return stage_cost, dd, ep, cc, ccrc

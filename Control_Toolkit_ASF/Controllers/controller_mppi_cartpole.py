@@ -36,6 +36,7 @@ from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper
 
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config_data_gen = yaml.load(open("config_data_gen.yml", "r"), Loader=yaml.FullLoader)
 config_controller = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml"), "r"), Loader=yaml.FullLoader)
 config_mppi_cartpole = config_controller["mppi-cartpole"]
 
@@ -44,12 +45,12 @@ mpc_horizon = config_mppi_cartpole["mpc_horizon"]
 num_rollouts = config_mppi_cartpole["num_rollouts"]
 update_every = config_mppi_cartpole["update_every"]
 predictor_specification = config_mppi_cartpole["predictor_specification"]
+dt = config_data_gen["dt"]["control"]
 
 """Define Predictor"""
 predictor = PredictorWrapper()
-predictor.configure(batch_size=num_rollouts, horizon=mpc_horizon, predictor_specification=predictor_specification)
+predictor.configure(batch_size=num_rollouts, horizon=mpc_horizon, dt=dt, predictor_specification=predictor_specification)
 
-dt = predictor.predictor_config['dt']
 if predictor.predictor_config['predictor_type'] == 'neural':
     MODEL_NAME = predictor.predictor_config['model_name']
     try:
@@ -192,7 +193,7 @@ def trajectory_rollouts(
 
     # Compute stage costs
     cost_increment, dd, ep, ekp, ekc, cc, ccrc = q(
-        s_horizon[:, 1:, :], u, delta_u, u_prev, target_position
+        s_horizon[:, :-1, :], u, delta_u, u_prev, target_position
     )
     S_tilde_k = np.sum(cost_increment, axis=1)
     # Compute terminal cost

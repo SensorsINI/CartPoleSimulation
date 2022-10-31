@@ -19,7 +19,7 @@ logger = my_logger(__name__)
 # FIXME: Check saving of first step
 # TODO: Version for swing-up not stabilisation
 # TODO: saving the episode after finished
-# TODO: Make rendering with GUI/matplotlib animation, including also target position
+# TODO: Make rendering with GUI/matplotlib animation, including also target_position
 
 config = load_config(os.path.join("GymlikeCartPole", "config_gym.yml"))
 length_of_episode = config["length_of_episode"]
@@ -67,7 +67,7 @@ class CartPoleEnv_LTC(gym.Env):
         self.state = None
         self.action = None
         self.reward = None
-        self.target = None
+        self.target_position = None
         self.done = False
 
         self.steps_beyond_done = None
@@ -85,7 +85,7 @@ class CartPoleEnv_LTC(gym.Env):
 
         self.step_termination_and_reward()
 
-        return self.state, self.reward, self.done, {"target": self.target}
+        return self.state, self.reward, self.done, {"target_position": self.target_position}
 
     def step_physics(self):
 
@@ -103,9 +103,9 @@ class CartPoleEnv_LTC(gym.Env):
         # Update the total time of the simulation
         self.CartPoleInstance.step_time()
 
-        # Update target position depending on the mode of operation
+        # Update target_position position depending on the mode of operation
         # self.CartPoleInstance.update_target_position()
-        # self.CartPoleInstance.target_position = 0.0  # TODO: Make option of random target position
+        # self.CartPoleInstance.target_position = 0.0  # TODO: Make option of random target_position position
 
         # Save data to internal dictionary
         # FIXE: Not working for some reason
@@ -123,10 +123,10 @@ class CartPoleEnv_LTC(gym.Env):
                 self.done = bool(self.done)
 
             self.reward = self.get_reward(self.state, self.action)
-            self.done = self.is_done(self.state)
+            self.done = self.is_done(self.lib, self.state)
 
-        elif self.mode == 'follow target position':
-            raise NotImplementedError  # TODO What is a suitable reward&termination condition for following target position?
+        elif self.mode == 'follow target_position position':
+            raise NotImplementedError  # TODO What is a suitable reward&termination condition for following target_position position?
         elif self.mode == 'swing-up':
             raise NotImplementedError  # TODO What is a suitable reward&termination condition for swing-up task?
         else:
@@ -135,7 +135,7 @@ class CartPoleEnv_LTC(gym.Env):
     def get_reward(self, state, action):
         reached_final_time = bool(self.CartPoleInstance.time >= self.CartPoleInstance.length_of_experiment)
 
-        if not self.is_done(state):
+        if not self.is_done(self.lib, state):
             if reached_final_time:
                 reward = 10.0
             else:
@@ -172,7 +172,7 @@ class CartPoleEnv_LTC(gym.Env):
         self.CartPoleInstance = self.RES.set(self.CartPoleInstance)
         self.state = self.CartPoleInstance.s
         self.CartPoleInstance.target_position = 0.0
-        self.target = self.CartPoleInstance.target_position
+        self.target_position = self.CartPoleInstance.target_position
         self.done = False
 
         self.steps_beyond_done = None
@@ -249,7 +249,7 @@ class CartPoleEnv_LTC(gym.Env):
         if hasattr(self, "target_position"):
             gfxdraw.filled_circle(
                 self.surf,
-                int(self.target * scale + screen_width / 2.0),
+                int(self.target_position * scale + screen_width / 2.0),
                 int(carty),
                 int(10),
                 (231, 76, 60),
