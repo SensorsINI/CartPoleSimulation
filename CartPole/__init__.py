@@ -21,8 +21,8 @@ from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.others.environment import EnvironmentBatched
 from Control_Toolkit.others.globals_and_utils import (
     get_available_controller_names, get_available_optimizer_names, get_controller_name, get_optimizer_name, import_controller_by_name)
-from others.globals_and_utils import MockSpace, create_rng, load_config
-from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
+from ..others.globals_and_utils import MockSpace, create_rng, load_config
+from ..others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
                               g, k, m, u_max, v_max)
 # Interpolate function to create smooth random track

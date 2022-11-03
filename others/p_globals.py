@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 import numpy as np
 
-from others.globals_and_utils import load_config
+from ..others.globals_and_utils import load_config
 
 config = load_config("config.yml")
 
