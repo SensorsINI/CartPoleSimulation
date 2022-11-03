@@ -4,13 +4,13 @@ controller:
     dt: 0.02                              # sec
     mpc_horizon: 40                       # steps
     cem_outer_it: 3                    #how many outer iterations to use
-    num_rollouts: 200          #how many rollouts per outer cem iteration
+    num_rollouts: 320          #how many rollouts per outer cem iteration
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf"]
     predictor_intermediate_steps: 5
     CEM_NET_NAME: 'GRU-6IN-32H1-32H2-5OUT-0' # Applies only if predictor name is predictor_autoregressive_tf
     cem_stdev_min: 0.01
     cem_R: 1
-    cem_best_k: 40
+    cem_best_k: 80
   cem-naive-grad-tf:
     seed: null                          # If null, random seed based on datetime is used
     dt: 0.02                              # sec
@@ -94,9 +94,9 @@ controller:
     rtol: 1.0e-3
     opt_keep_k: 8                          #how many plans should be kept for warmstarting when resampling, has to be smaller or equal num_rollouts, set equal num_rollouts for degenerate case without any resampling
     num_rollouts: 32                      # number of parallel optimizations
-    SAMPLING_TYPE: None #if interpolated: linear interpolation; else iid
+    SAMPLING_TYPE: interpolated #if interpolated: linear interpolation; else iid
     warmup: True                          #whether or not we warmstart the controller. If true, first iteration will do mpc_horizon*outer_its optimizations
-    interpolation_step: 1                #interpolation stepsize when sampling
+    interpolation_step: 10                #interpolation stepsize when sampling
     outer_its: 3                         #number of optimization iterations
     gradmax_clip: 5                     #maximal gradient entry to be kept, is ||gradient||_inf <= gradmax_clip
   mppi-var-tf:
@@ -149,8 +149,8 @@ controller:
   mppi-tf:
     seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
     dt: 0.02                              # sec
-    mpc_horizon: 35                       # steps
-    num_rollouts: 3500                    # Number of Monte Carlo samples
+    mpc_horizon: 40                       # steps
+    num_rollouts: 320                    # Number of Monte Carlo samples
     update_every: 1                       # Cost weighted update of inputs every ... steps
     predictor_name: "predictor_ODE_tf"    # One of ["predictor_ODE", "predictor_ODE_tf", "predictor_autoregressive_tf", "predictor_autoregressive_GP"]
     predictor_intermediate_steps: 10
@@ -160,7 +160,7 @@ controller:
     cost_noise: 0.0                       # Noise on stage cost weights by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0 othewise
     control_noise: 0.0                    # Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
     R: 1.0                                # How much to punish Q
-    LBD: 100.0                            # Cost parameter lambda
+    LBD: 0.1                            # Cost parameter lambda
     NU: 1000.0                            # Exploration variance
     SQRTRHOINV: 0.03                      # Sampling variance
     GAMMA: 1.00                           # Future cost discount
@@ -264,8 +264,9 @@ cartpole:
     sigma_positionD: 0.005
   num_control_inputs: 1
   dd_weight: 600.0
+  # dd_weight: 3000.0
   ep_weight: 20000.0
-  ekp_weight: 80.0
+  ekp_weight: 70.0
   ekc_weight: 20.0
   cc_weight: 1.0
   ccrc_weight: 1.0
