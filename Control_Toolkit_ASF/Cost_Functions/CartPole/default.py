@@ -1,4 +1,5 @@
 import os
+from yaml import safe_load
 
 from SI_Toolkit.computation_library import TensorType
 from Control_Toolkit.Cost_Functions import cost_function_base
@@ -9,7 +10,7 @@ from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import ANGLE_IDX, POSITION_IDX
 
 # load constants from config file
-config = load_config(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"))
+config = safe_load(open(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"), "r"))
 
 dd_weight = config["CartPole"]["default"]["dd_weight"]
 cc_weight = config["CartPole"]["default"]["cc_weight"]
@@ -75,7 +76,7 @@ class default(cost_function_base):
         ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX])
         cc = cc_weight * self._CC_cost(inputs)
         ccrc = 0
-        if previous_input is not None:
-            ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
+        # if previous_input is not None:
+        #     ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
         stage_cost = dd + ep + cc + ccrc
         return stage_cost
