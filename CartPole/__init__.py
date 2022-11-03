@@ -238,7 +238,6 @@ class CartPole(EnvironmentBatched):
 
         # region Initialize CartPole in manual-stabilization mode
         self.set_controller(controller_name='manual-stabilization')
-        self.set_optimizer(optimizer_idx=0)
         # endregion
         
     # region 1. Methods related to dynamic evolution of CartPole system
