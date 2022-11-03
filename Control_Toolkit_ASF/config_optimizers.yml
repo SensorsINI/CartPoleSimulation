@@ -92,7 +92,7 @@ dist-adam-resamp2-tf:
 rpgd-tf:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
-  period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
+  period_interpolation_inducing_points: 1                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   learning_rate: 0.05
   adam_beta_1: 0.9
   adam_beta_2: 0.999
