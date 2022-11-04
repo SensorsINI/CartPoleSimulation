@@ -3,7 +3,7 @@ import numpy as np
 
 from others.globals_and_utils import load_config
 
-config = load_config("config.yml")
+config = load_config("CartPoleSimulation/config.yml")
 
 # Parameters of the CartPole
 P_GLOBALS = SimpleNamespace()  # "p" like parameters

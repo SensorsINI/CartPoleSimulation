@@ -19,8 +19,9 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from Control_Toolkit.others.environment import EnvironmentBatched, NumpyLibrary, TensorFlowLibrary
-from Control_Toolkit.others.globals_and_utils import get_available_controller_names, get_controller
+from Control_Toolkit.others.environment import EnvironmentBatched
+from Control_Toolkit.others.globals_and_utils import get_available_controller_names #, get_controller
+from SI_Toolkit.computation_library import NumpyLibrary, TensorFlowLibrary
 from others.globals_and_utils import MockSpace, create_rng, load_config
 from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
@@ -71,7 +72,7 @@ rc('font', **font)
 
 import yaml
 
-config = load_config("config.yml")
+config = load_config("CartPoleSimulation/config.yml")
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
 
@@ -874,9 +875,10 @@ class CartPole(EnvironmentBatched):
 
     # Set the controller of CartPole
     def set_controller(self, controller_name=None, controller_idx=None):
-        Controller, self.controller_name, self.controller_idx = get_controller(
-            controller_name=controller_name, controller_idx=controller_idx
-        )
+        # Controller, self.controller_name, self.controller_idx = get_controller(
+        #     controller_name=controller_name, controller_idx=controller_idx
+        # )
+        Controller, self.controller_name, self.controller_idx = None, None, None
         if Controller is None:
             self.controller = None
         else:

@@ -38,7 +38,7 @@ sigma_Q = 0.1
 # sigma_angleD = _noise_derivative(dt_derivative)*sigma_angle
 # sigma_positionD = _noise_derivative(dt_derivative)*sigma_position
 
-config = load_config("config.yml")
+config = load_config("CartPoleSimulation/config.yml")
 
 sigma_angle = config["cartpole"]["noise"]["sigma_angle"]
 sigma_position = config["cartpole"]["noise"]["sigma_position"]
