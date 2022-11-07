@@ -17,7 +17,11 @@ save_interval = 0.02  # s, How often to save the results of simulation
 
 # Starting setting of the CartPole GUI (can be changed in GUI)
 # controller_init = 'custom-mpc-scipy'  # Defines which controller is loaded at the start of the program
-controller_init = 'mppi-cartpole'
+import os
+if os.getcwd().split(os.sep)[-1] == 'Driver':
+    controller_init = 'mpc'  # Load as default if loaded as part of physical-cartpole
+else:
+    controller_init = 'mppi-cartpole'  # Load as default if loaded as cartpole simulator stand alone
 """
 Possible choices for CartPole controller:
 

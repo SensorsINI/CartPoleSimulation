@@ -194,7 +194,8 @@ class MainWindow(QMainWindow):
         lr_c.addStretch(1)
 
         self.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
-        self.rbs_optimizers[self.CartPoleInstance.optimizer_idx].setChecked(True)
+        if self.CartPoleInstance.optimizer_idx is not None:
+            self.rbs_optimizers[self.CartPoleInstance.optimizer_idx].setChecked(True)
 
         # endregion
 
@@ -470,7 +471,11 @@ class MainWindow(QMainWindow):
         # region - Radio buttons selecting simulator mode: user defined experiment, random experiment, replay
 
         # List available simulator modes - constant
-        self.available_simulator_modes = ['Slider-Controlled Experiment', 'Random Experiment', 'Replay']
+        if os.getcwd().split(os.sep)[-1] == 'Driver':
+            self.available_simulator_modes = ['Slider-Controlled Experiment', 'Random Experiment', 'Replay', 'Physical CP']
+        else:
+            self.available_simulator_modes = ['Slider-Controlled Experiment', 'Random Experiment', 'Replay']
+
         self.rbs_simulator_mode = []
         for mode_name in self.available_simulator_modes:
             self.rbs_simulator_mode.append(QRadioButton(mode_name))
@@ -533,8 +538,8 @@ class MainWindow(QMainWindow):
 
         # region Starts a thread repeatedly redrawing gauges (labels) of the GUI
         # It runs till the QUIT button is pressed
-        worker_labels = Worker(self.set_labels_thread)
-        self.threadpool.start(worker_labels)
+        # worker_labels = Worker(self.set_labels_thread)
+        # self.threadpool.start(worker_labels)
         # endregion
 
         # region Start animation repeatedly redrawing changing elements of matplotlib figures (CartPole drawing and slider)
@@ -682,6 +687,11 @@ class MainWindow(QMainWindow):
 
         self.experiment_or_replay_thread_terminated = True
 
+    def physical_experiment_thread(self):
+        from DriverFunctions.PhysicalCartPoleDriver import PhysicalCartPoleDriver
+        PhysicalCartPoleDriverInstance = PhysicalCartPoleDriver(self.CartPoleInstance)
+        PhysicalCartPoleDriverInstance.run()
+
     # endregion
 
     # region "START! / STOP!" button -> run/stop slider-controlled experiment, random experiment or replay experiment recording
@@ -764,6 +774,8 @@ class MainWindow(QMainWindow):
             worker = Worker(self.replay_thread)
         elif self.simulator_mode == 'Slider-Controlled Experiment' or self.simulator_mode == 'Random Experiment':
             worker = Worker(self.experiment_thread)
+        elif self.simulator_mode == 'Physical CP':
+            worker = Worker(self.physical_experiment_thread)
         worker.signals.finished.connect(self.finish_thread)
         # Execute
         self.threadpool.start(worker)

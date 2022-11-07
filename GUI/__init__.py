@@ -6,10 +6,17 @@ You can either run this script as main, or import run_gui() function wherever yo
 
 # Import module to interact with OS
 import sys
+import os
 
 # Import functions from PyQt6 module (creating GUI)
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
+
+if os.path.isdir('./Driver'):
+    sys.path.insert(0, os.path.abspath(os.path.join(".", "Driver")))
+    sys.path.insert(1, os.path.abspath(os.path.join(".", "Driver", "CartPoleSimulation")))
+    os.chdir("Driver")
+
 # Import custom made elements of GUI
 from GUI._CartPoleGUI_MainWindow import MainWindow
 
