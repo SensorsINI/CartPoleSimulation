@@ -12,7 +12,7 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
                                       create_cartpole_state)
 
-config = load_config("config.yml")
+config = load_config("CartPoleSimulation/config.yml")
 
 k = tf.convert_to_tensor(k)
 M = tf.convert_to_tensor(M)

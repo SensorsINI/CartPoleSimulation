@@ -74,10 +74,18 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
     :returns: A 4x5 numpy.ndarray with all partial derivatives
     """
     if isinstance(s, np.ndarray):
-        angle = s[ANGLE_IDX]
-        angleD = s[ANGLED_IDX]
-        position = s[POSITION_IDX]
-        positionD = s[POSITIOND_IDX]
+        if s.size == 6:
+            angle = s[ANGLE_IDX]
+            angleD = s[ANGLED_IDX]
+            position = s[POSITION_IDX]
+            positionD = s[POSITIOND_IDX]
+        elif s.size == 4:
+            angle = s[2]
+            angleD = s[3]
+            position = s[0]
+            positionD = s[1]
+        else:
+            raise ValueError('State passed has to have size 4 or 6')
     elif isinstance(s, SimpleNamespace):
         angle = s.angle
         angleD = s.angleD
