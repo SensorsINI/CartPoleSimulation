@@ -1,4 +1,5 @@
 import os
+from yaml import safe_load
 
 from SI_Toolkit.computation_library import TensorType
 from Control_Toolkit.Cost_Functions import cost_function_base
@@ -6,10 +7,10 @@ from Control_Toolkit.Cost_Functions import cost_function_base
 from others.globals_and_utils import load_config
 
 from CartPole.cartpole_model import TrackHalfLength
-from CartPole.state_utilities import ANGLE_IDX, POSITION_IDX
+from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX
 
-# load constants from config file
-config = load_config(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"))
+#load constants from config file
+config = safe_load(open(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"), "r"))
 
 dd_weight = config["CartPole"]["quadratic_boundary_nonconvex"]["dd_weight"]
 cc_weight = config["CartPole"]["quadratic_boundary_nonconvex"]["cc_weight"]
