@@ -211,9 +211,17 @@ def load_config(filename: str) -> dict:
     :type filename: str
     """
     try:
-        config = yaml.load(open(os.path.join("CartPoleSimulation", filename), "r"), Loader=yaml.FullLoader)
-    except FileNotFoundError:
         config = yaml.load(open(filename), Loader=yaml.FullLoader)
+
+    except FileNotFoundError:
+        for i in range(2):
+            try:
+                filename = os.path.join("..", filename)
+                config = yaml.load(open(filename, "r"), Loader=yaml.FullLoader)
+                break
+            except FileNotFoundError:
+                if i==1: raise FileNotFoundError('Cannot find any config')
+
     return config
 
 
