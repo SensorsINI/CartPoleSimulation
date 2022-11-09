@@ -176,7 +176,7 @@ mppi-var-tf:
   STDEV_min: 0.01                       # Maximal variance for sampling
   STDEV_max: 10                         # Minimal sampling variance for sampling
   max_grad_norm: 100000                 # max norm of gradient such that ||gradient||_2
-mppi-tf:
+mppi:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                       # steps
   num_rollouts: 3500                    # Number of Monte Carlo samples
