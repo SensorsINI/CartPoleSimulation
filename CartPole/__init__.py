@@ -869,7 +869,7 @@ class CartPole(EnvironmentBatched):
             if self.controller.has_optimizer:
                 self.controller.configure(self.optimizer_name)
                 self.optimizer_name, self.optimizer_idx = get_optimizer_name(
-                    optimizer_name=self.controller.optimizer_name
+                    optimizer_name=self.controller.optimizer.optimizer_name
                 )
 
             else:
