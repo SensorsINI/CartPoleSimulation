@@ -92,7 +92,7 @@ dist-adam-resamp2-tf:
 rpgd-tf:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
-  period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
+  period_interpolation_inducing_points: 1                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   learning_rate: 0.05
   adam_beta_1: 0.9
   adam_beta_2: 0.999
@@ -176,7 +176,7 @@ mppi-var-tf:
   STDEV_min: 0.01                       # Maximal variance for sampling
   STDEV_max: 10                         # Minimal sampling variance for sampling
   max_grad_norm: 100000                 # max norm of gradient such that ||gradient||_2
-mppi-tf:
+mppi:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                       # steps
   num_rollouts: 3500                    # Number of Monte Carlo samples

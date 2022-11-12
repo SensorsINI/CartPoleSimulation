@@ -79,6 +79,8 @@ class MainWindow(QMainWindow):
         self.CartPoleInstance.stop_at_90 = stop_at_90_init
         self.set_random_experiment_generator_init_params()
 
+        self.PhysicalCartPoleDriverInstance = None
+
         # endregion
 
         # region Decide whether to save the data in "CartPole memory" or not
@@ -194,7 +196,8 @@ class MainWindow(QMainWindow):
         lr_c.addStretch(1)
 
         self.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
-        self.rbs_optimizers[self.CartPoleInstance.optimizer_idx].setChecked(True)
+        if self.CartPoleInstance.optimizer_idx is not None:
+            self.rbs_optimizers[self.CartPoleInstance.optimizer_idx].setChecked(True)
 
         # endregion
 
@@ -470,7 +473,11 @@ class MainWindow(QMainWindow):
         # region - Radio buttons selecting simulator mode: user defined experiment, random experiment, replay
 
         # List available simulator modes - constant
-        self.available_simulator_modes = ['Slider-Controlled Experiment', 'Random Experiment', 'Replay']
+        if os.getcwd().split(os.sep)[-1] == 'Driver':
+            self.available_simulator_modes = ['Slider-Controlled Experiment', 'Random Experiment', 'Replay', 'Physical CP']
+        else:
+            self.available_simulator_modes = ['Slider-Controlled Experiment', 'Random Experiment', 'Replay']
+
         self.rbs_simulator_mode = []
         for mode_name in self.available_simulator_modes:
             self.rbs_simulator_mode.append(QRadioButton(mode_name))
@@ -682,6 +689,35 @@ class MainWindow(QMainWindow):
 
         self.experiment_or_replay_thread_terminated = True
 
+    def physical_experiment_thread(self):
+
+        self.bp.setText("Dance!")
+
+        # Necessary only for debugging in Visual Studio Code IDE
+        try:
+            ptvsd.debug_this_thread()
+        except:
+            pass
+
+        while not self.PhysicalCartPoleDriverInstance.terminate_experiment and not self.terminate_experiment_or_replay_thread:
+
+            self.PhysicalCartPoleDriverInstance.experiment_sequence()
+
+            if self.CartPoleInstance.controller_name == 'manual-stabilization':
+                self.CartPoleInstance.slider_value = self.CartPoleInstance.Q
+            else:
+                self.CartPoleInstance.slider_value = self.CartPoleInstance.target_position/TrackHalfLength
+
+        self.PhysicalCartPoleDriverInstance.terminate_experiment = True
+        self.terminate_experiment_or_replay_thread = True
+
+        self.PhysicalCartPoleDriverInstance.quit_experiment()
+
+        self.PhysicalCartPoleDriverInstance = None
+
+        self.experiment_or_replay_thread_terminated = True
+
+
     # endregion
 
     # region "START! / STOP!" button -> run/stop slider-controlled experiment, random experiment or replay experiment recording
@@ -692,28 +728,46 @@ class MainWindow(QMainWindow):
         # If "START! / STOP!" button in "START!" mode...
         if self.start_or_stop_action == 'START!':
             self.bss.setText("STOP!")
-            self.start_thread()
+            if self.simulator_mode == 'Physical CP':
+                self.PhysicalCartPoleDriverInstance.switch_on_control()
+            else:
+                self.start_thread()
+            self.start_or_stop_action = "STOP!"
 
         # If "START! / STOP!" button in "STOP!" mode...
         elif self.start_or_stop_action == 'STOP!':
             self.bss.setText("START!")
-            self.bp.setText("PAUSE")
-            # This flag is periodically checked by thread. It terminates if set True.
-            self.terminate_experiment_or_replay_thread = True
-            # The stop_thread function is called automatically by the thread when it terminates
-            # It is implemented this way, because thread my terminate not only due "STOP!" button
-            # (e.g. replay thread when whole experiment is replayed)
+            if self.simulator_mode == 'Physical CP':
+                self.PhysicalCartPoleDriverInstance.switch_off_control()
+            else:
+                self.bp.setText("PAUSE")
+                # This flag is periodically checked by thread. It terminates if set True.
+                self.terminate_experiment_or_replay_thread = True
+                # The stop_thread function is called automatically by the thread when it terminates
+                # It is implemented this way, because thread my terminate not only due "STOP!" button
+                # (e.g. replay thread when whole experiment is replayed)
+            self.start_or_stop_action = "START!"
         
     def pause_unpause_button(self):
-        # Only Pause if experiment is running
-        if self.pause_or_unpause_action == 'PAUSE' and self.start_or_stop_action == 'STOP!':
-            self.pause_or_unpause_action = 'UNPAUSE'
-            self.pause_experiment_or_replay_thread = True
-            self.bp.setText("UNPAUSE")
-        elif self.pause_or_unpause_action == 'UNPAUSE' and self.start_or_stop_action == 'STOP!':
-            self.pause_or_unpause_action = 'PAUSE'
-            self.pause_experiment_or_replay_thread = False
-            self.bp.setText("PAUSE")
+        if self.simulator_mode == 'Physical CP':
+            if self.pause_or_unpause_action == 'PAUSE' and self.start_or_stop_action == 'STOP!':
+                self.PhysicalCartPoleDriverInstance.danceEnabled = True
+                self.pause_or_unpause_action = 'UNPAUSE'
+                self.bp.setText("Stop dancing!")
+            else:
+                self.PhysicalCartPoleDriverInstance.danceEnabled = False
+                self.pause_or_unpause_action = 'PAUSE'
+                self.bp.setText("Dance!")
+        else:
+            # Only Pause if experiment is running
+            if self.pause_or_unpause_action == 'PAUSE' and self.start_or_stop_action == 'STOP!':
+                self.pause_or_unpause_action = 'UNPAUSE'
+                self.pause_experiment_or_replay_thread = True
+                self.bp.setText("UNPAUSE")
+            elif self.pause_or_unpause_action == 'UNPAUSE' and self.start_or_stop_action == 'STOP!':
+                self.pause_or_unpause_action = 'PAUSE'
+                self.pause_experiment_or_replay_thread = False
+                self.bp.setText("PAUSE")
 
     # Run thread. works for all simulator modes.
     def start_thread(self):
@@ -768,10 +822,6 @@ class MainWindow(QMainWindow):
         # Execute
         self.threadpool.start(worker)
 
-
-        # Determine what should happen when "START! / STOP!" is pushed NEXT time
-        self.start_or_stop_action = "STOP!"
-
     # finish_threads works for all simulation modes
     # Some lines mya be redundant for replay,
     # however as they do not take much computation time we leave them here
@@ -791,6 +841,11 @@ class MainWindow(QMainWindow):
                 self.CartPoleInstance.controller.controller_report()
             except:
                 pass
+
+        if self.simulator_mode == 'Physical CP':
+            self.PhysicalCartPoleDriverInstance.quit_experiment()
+            self.PhysicalCartPoleDriverInstance = None
+
 
         if self.show_experiment_summary:
             self.w_summary = SummaryWindow(summary_plots=self.CartPoleInstance.summary_plots)
@@ -916,7 +971,10 @@ class MainWindow(QMainWindow):
     # If the mouse cursor is over the lower chart it reads the corresponding value
     # and updates the slider
     def on_mouse_movement(self, event):
-        if self.simulator_mode == 'Slider-Controlled Experiment':
+        condition = self.simulator_mode == 'Slider-Controlled Experiment' or (
+                self.simulator_mode == 'Physical CP' and not self.PhysicalCartPoleDriverInstance.danceEnabled
+        )
+        if condition:
             if event.xdata == None or event.ydata == None:
                 pass
             else:
@@ -929,7 +987,10 @@ class MainWindow(QMainWindow):
     # If the mouse cursor is over the lower chart it reads the corresponding value
     # and updates the slider
     def on_mouse_click(self, event):
-        if self.simulator_mode == 'Slider-Controlled Experiment':
+        condition = self.simulator_mode == 'Slider-Controlled Experiment' or (
+                self.simulator_mode == 'Physical CP' and not self.PhysicalCartPoleDriverInstance.danceEnabled
+        )
+        if condition:
             if event.xdata == None or event.ydata == None:
                 pass
             else:
@@ -988,6 +1049,22 @@ class MainWindow(QMainWindow):
         # Reset the state of GUI and of the Cart instance after the mode has changed
         # TODO: Do I need the follwowing lines?
         self.reset_variables(0)
+
+        if self.simulator_mode == 'Physical CP':
+            print("********************************************************************")
+            print("\n\nSetting up physical cartpole driver...")
+            from DriverFunctions.PhysicalCartPoleDriver import PhysicalCartPoleDriver
+            self.PhysicalCartPoleDriverInstance = PhysicalCartPoleDriver(self.CartPoleInstance)
+            self.PhysicalCartPoleDriverInstance.setup()
+            worker = Worker(self.physical_experiment_thread)
+            worker.signals.finished.connect(self.finish_thread)
+            # Execute
+            self.threadpool.start(worker)
+
+        else:
+            self.PhysicalCartPoleDriverInstance.terminate_experiment = True
+
+
         self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
         self.canvas.draw()
 
