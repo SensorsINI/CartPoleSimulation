@@ -1,8 +1,19 @@
 mpc:
-  optimizer: rpgd-tf
-  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+  optimizer: mppi
+
+#  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+#  computation_library: tensorflow  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.
+
+#  predictor_specification: "GRU-6IN-32H1-32H2-5OUT-3"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+#  computation_library: tensorflow  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.
+
+  predictor_specification: "GRU-6IN-64H1-64H2-5OUT-0"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+  computation_library: pytorch  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.
+
+  online_learning_activated: True
+
+
   cost_function_specification: default  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary"
-  computation_library: tensorflow  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.
   controller_logging: true
 mppi-cartpole:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
