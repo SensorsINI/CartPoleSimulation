@@ -8,12 +8,12 @@ predictors:
   neural_default:
     predictor_type: 'neural'
     model_name: 'GRU-6IN-32H1-32H2-5OUT-0'
-    path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-2/Models/'
+    path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-Xi/Models/'
     update_before_predicting: True
   GP_default:
     predictor_type: 'GP'
     model_name: 'SGP_10'
-    path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-2/Models/'
+    path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-Xi/Models/'
   ODE_default:
     predictor_type: 'ODE'
     model_name:
