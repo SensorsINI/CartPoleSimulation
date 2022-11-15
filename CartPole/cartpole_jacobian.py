@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 from typing import Union
 
+import casadi
 import numpy as np
 
 from CartPole.cartpole_model import _cartpole_ode
@@ -73,13 +74,13 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
 
     :returns: A 4x5 numpy.ndarray with all partial derivatives
     """
-    if isinstance(s, np.ndarray):
-        if s.size == 6:
+    if isinstance(s, np.ndarray) or isinstance(s, casadi.SX):
+        if s.size == 6 or s.shape[0] == 6:
             angle = s[ANGLE_IDX]
             angleD = s[ANGLED_IDX]
             position = s[POSITION_IDX]
             positionD = s[POSITIOND_IDX]
-        elif s.size == 4:
+        elif s.size == 4 or s.shape[0] == 4:
             angle = s[2]
             angleD = s[3]
             position = s[0]
@@ -93,8 +94,8 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
         positionD = s.positionD
     
     J = np.zeros(shape=(4, 5), dtype=np.float32)  # Array to keep Jacobian
-    ca = np.cos(angle)
-    sa = np.sin(angle)
+    # ca = np.cos(angle)
+    # sa = np.sin(angle)
 
     # Jacobian entries
     J[0, 0] = 0.0  # xx
