@@ -13,7 +13,7 @@ if __name__ == '__main__':
         action_space=MockSpace(-1.0, 1.0, (1,), np.float32),
         observation_space=MockSpace(state_low, state_high, (6,), np.float32)
     )
-    ctrl.configure(optimizer_name="mppi-tf")
+    ctrl.configure(optimizer_name="mppi")
     
     import timeit
 
