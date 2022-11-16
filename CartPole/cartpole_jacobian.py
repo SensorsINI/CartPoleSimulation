@@ -81,10 +81,10 @@ def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):
             position = s[POSITION_IDX]
             positionD = s[POSITIOND_IDX]
         elif s.size == 4 or s.shape[0] == 4:
-            angle = s[2]
-            angleD = s[3]
-            position = s[0]
-            positionD = s[1]
+            angle = s[0]
+            angleD = s[1]
+            position = s[2]
+            positionD = s[3]
         else:
             raise ValueError('State passed has to have size 4 or 6')
     elif isinstance(s, SimpleNamespace):

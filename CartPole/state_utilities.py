@@ -89,6 +89,25 @@ def cartpole_state_vector_to_namespace(s_vector: np.ndarray) -> SimpleNamespace:
         setattr(s_namespace, a, s_vector[i])
     return s_namespace
 
+def cartpole_state_vector_to_jacobian_order(s: np.ndarray):
+    # Jacobian does not match the state order, permutation is needed
+    new_s = np.ndarray(4)
+    new_s[0] = s[POSITION_IDX]
+    new_s[1] = s[POSITIOND_IDX]
+    new_s[2] = s[ANGLE_IDX]
+    new_s[3] = s[ANGLED_IDX]
+    return new_s
+
+def jacobian_order_to_cartpole_state_vector(s: np.ndarray):
+    # Jacobian does not match the state order, permutation is needed
+    new_s = np.ndarray(6)
+    new_s[POSITION_IDX] = s[0]
+    new_s[POSITIOND_IDX] = s[1]
+    new_s[ANGLE_IDX] = s[2]
+    new_s[ANGLED_IDX] = s[3]
+    new_s[2] = np.cos(new_s[ANGLE_IDX])
+    new_s[3] = np.sin(new_s[ANGLE_IDX])
+    return new_s
 
 # # Test functions
 # s = create_cartpole_state(dict(angleD=12.1, angleDD=-33.5, position=2.3, positionD=-19.77, positionDD=3.42))
