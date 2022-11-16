@@ -1,6 +1,6 @@
-import gym
+import gymnasium as gym
 import os
-from gym.core import ObsType
+from gymnasium.core import ObsType
 from CartPole import CartPole
 from CartPole.cartpole_model import ANGLE_IDX, POSITION_IDX
 from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
