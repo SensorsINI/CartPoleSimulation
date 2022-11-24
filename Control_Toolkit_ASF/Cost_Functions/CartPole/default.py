@@ -78,5 +78,10 @@ class default(cost_function_base):
         ccrc = 0
         # if previous_input is not None:
         #     ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
-        stage_cost = dd + ep + cc + ccrc
+
+        if self.controller.target_positions_vector[0] > 0:
+            stage_cost = dd + ep + cc + ccrc
+        else:
+            stage_cost = dd - ep + cc + ccrc
+
         return stage_cost
