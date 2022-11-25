@@ -125,6 +125,25 @@ def cartpole_ode(s: np.ndarray, u: float,
         s[..., ANGLE_COS_IDX], s[..., ANGLE_SIN_IDX], s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u,
         k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L
     )
+    """
+    Calculates current values of second derivative of angle and position
+    from current value of angle and position, and their first derivatives
+
+    :param angle, angleD, position, positionD: Essential state information of cart.
+        Angle is in radians, 0 vertical and increasing CCW.
+        position is in meters, 0 in middle of track and increasing to right.
+    :param M and m: masses in kg of cart and pole.
+    :param ca and sa: sin and cos of angle of pole.
+    :param g: gravity in m/s^2
+    :param J_fric and M_fric: friction coefficients in Nm per rad/s of pole  TODO check correct
+    :param  M_fric: friction coefficient of cart in N per m/s TODO check correct
+    :param L: length of pole in meters.
+
+    :param u: Force applied on cart in unnormalized range TODO what does this mean?
+
+    :returns: angular acceleration in rad/s^2 positive CCW, horizontal acceleration in m/s^2 positive to right
+    """
+
     return angleDD, positionDD
 
 def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L=L):
