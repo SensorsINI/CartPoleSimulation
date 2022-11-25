@@ -143,6 +143,28 @@ def _cartpole_fine_integration_tf(angle, angleD,
 def cartpole_fine_integration_tf(s, u, t_step, intermediate_steps,
                                  k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
     #print('test 5')
+    """
+    Calculates current values of second derivative of angle and position
+    from current value of angle and position, and their first derivatives
+
+    :param s: state of cartpole
+        Angle is in radians, 0 vertical and increasing CCW.
+        position is in meters, 0 in middle of track and increasing to right.
+    :param u: cart accelerator in m/s^2 positive rightwards
+    :param t_step: the timestep in seconds
+    :param intermediate_steps: TODO what is this?
+    :param k: TODO don't know what this is
+    :param M and m: masses in kg of cart and pole.
+    :param ca and sa: sin and cos of angle of pole.
+    :param g: gravity in m/s^2
+    :param J_fric and M_fric: friction coefficients in Nm per rad/s of pole  TODO check correct
+    :param  M_fric: friction coefficient of cart in N per m/s TODO check correct
+    :param L: length of pole in meters.
+
+    :param u: Force applied on cart in Newtons TODO check is this correct?
+
+    :returns: next state of s
+    """
     (
         angle, angleD, position, positionD, angle_cos, angle_sin
     ) = _cartpole_fine_integration_tf(
