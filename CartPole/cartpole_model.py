@@ -54,8 +54,17 @@ def _cartpole_ode (ca, sa, angleD, positionD, u,
     Calculates current values of second derivative of angle and position
     from current value of angle and position, and their first derivatives
 
-    :param angle, angleD, position, positionD: Essential state information of cart
-    :param u: Force applied on cart in unnormalized range
+    :param angle, angleD, position, positionD: Essential state information of cart.
+        Angle is in radians, 0 vertical and increasing CCW.
+        position is in meters, 0 in middle of track and increasing to right.
+    :param M and m: masses in kg of cart and pole.
+    :param ca and sa: sin and cos of angle of pole.
+    :param g: gravity in m/s^2
+    :param J_fric and M_fric: friction coefficients in Nm per rad/s of pole  TODO check correct
+    :param  M_fric: friction coefficient of cart in N per m/s TODO check correct
+    :param L: length of pole in meters.
+
+    :param u: Force applied on cart in unnormalized range TODO what does this mean?
 
     :returns: angular acceleration, horizontal acceleration
     """
