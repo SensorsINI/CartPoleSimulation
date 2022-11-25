@@ -8,6 +8,7 @@ from others.globals_and_utils import load_config
 
 from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX
+from CartPole.cartpole_model import u_max
 
 #load constants from config file
 config = safe_load(open(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"), "r"))
@@ -21,6 +22,8 @@ R = config["CartPole"]["quadratic_boundary_grad"]["R"]
 
 
 class quadratic_boundary_grad(cost_function_base):
+    MAX_COST = dd_weight * 1.0e7 + ep_weight + ekp_weight * 25.0 + cc_weight * R * (u_max ** 2) + ccrc_weight * 4 * (u_max ** 2)
+    
     # cost for distance from track edge
     def _distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
@@ -79,7 +82,7 @@ class quadratic_boundary_grad(cost_function_base):
         return self.lib.sum((u - u_prev_vec) ** 2, 2)
 
     # all stage costs together
-    def get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
+    def _get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
         dd = dd_weight * self._distance_difference_cost(
             states[:, :, POSITION_IDX]
         )
