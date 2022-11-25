@@ -151,9 +151,11 @@ class MainWindow(QMainWindow):
         # region - Matplotlib figures (CartPole drawing and Slider)
         # Draw Figure
         self.fig = Figure(figsize=(25, 10))  # Regulates the size of Figure in inches, before scaling to window size.
+        from matplotlib import gridspec
+        gs = gridspec.GridSpec(2,1, height_ratios=[4, 1]) # make pole plot 4 times larger than cart target position plot
         self.canvas = FigureCanvas(self.fig)
-        self.fig.AxCart = self.canvas.figure.add_subplot(211)
-        self.fig.AxSlider = self.canvas.figure.add_subplot(212)
+        self.fig.AxCart = self.canvas.figure.add_subplot(gs[0])
+        self.fig.AxSlider = self.canvas.figure.add_subplot(gs[1])
         self.fig.AxSlider.set_ylim(0, 1)
 
         self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
@@ -461,8 +463,7 @@ class MainWindow(QMainWindow):
 
         # region -- Checkbox: Decide how the cartpole should be displayed
         self.cb_show_hanging_pole = QCheckBox('Show hanging pole', self)
-        if self.CartPoleInstance.show_hanging_pole:
-            self.cb_show_hanging_pole.toggle()
+        self.cb_show_hanging_pole.setChecked(self.CartPoleInstance.show_hanging_pole)
         self.cb_show_hanging_pole.toggled.connect(self.cb_show_hanging_pole_f)
         l_cb.addWidget(self.cb_show_hanging_pole)
 

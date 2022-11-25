@@ -51,7 +51,7 @@ speedup_init = 1.0  # Multiplicative factor by which the simulation seen by the 
 # Action toggling between showing the ground level and above
 # and showing above and below ground level the length of the pole
 # Second option is good for visualizing swing-up
-show_hanging_pole_init = False
+show_hanging_pole_init = True
 
 # Variables for random trace generation - GUI only
 # Data Generator sets these parameters independently

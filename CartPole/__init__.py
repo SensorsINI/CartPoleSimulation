@@ -196,7 +196,7 @@ class CartPole(EnvironmentBatched):
         self.slider_max = 1.0
         self.slider_value = 0.0
 
-        self.show_hanging_pole = False
+        self.show_hanging_pole = True
 
         self.physical_to_graphics = None
         self.graphics_to_physical = None
