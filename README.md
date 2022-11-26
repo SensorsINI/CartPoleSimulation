@@ -43,7 +43,7 @@ It should be also possible to create this file with `conda list -e > requirement
  If tensoflow JIT compilation fails, turn it off in [SI_Toolkit_ASF/__init__.py](SI_Toolkit_ASF/__init__.py) by setting GLOBALLY_DISABLE_COMPILATION=True until you can sort out tensorflow woes.
 2. **Run a single experiment:** Open `run_data_generator.py`. In the marked section, you can define your experiment. For a single run, set `number_of_experiments = 1`. Then open [config.yml](./config.yml) to modify controller-related parameters. For example, you can choose there whether MPPI should run with the true model ('predictor_ODE' == Euler Integrator) or with a neural network ('predictor_autoregressive_neural'). Once set, run `python -m run_data_generator`. Or you can use the pycharm target `Run Cartpole GUI`. It will create a new folder `./Experiment_Recordings/` and store a csv log file in it.
 
-### Getting Tensorflow JIT to work
+### Getting Tensorflow Just In Time (JIT) compilation to work
 You might need to install the CUDA toolkit and DNN toolkit if you want to accelerate (a LOT) the arithmetic.
  See https://www.tensorflow.org/install/pip . Note that this installation can be INSIDE your virtual conda environment, not on the host computer, although you might need to use an NVIDIA graphic driver to give the tools access to the physical GPU.
 
