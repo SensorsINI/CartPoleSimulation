@@ -7,6 +7,7 @@ import math
 import os
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Tuple
 import yaml
 
@@ -181,6 +182,12 @@ class CustomFormatter(logging.Formatter):
 
 
 def my_logger(name):
+    """ Use my_logger to define a logger with useful color output and info and warning turned on according to the global LOGGING_LEVEL.
+
+    :param name: the name of this logger. Use __name__ to give it the name of the module that instantiates it.
+
+    :returns: the logger.
+    """
     # logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     logger = logging.getLogger(name)
     logger.setLevel(LOGGING_LEVEL)
@@ -216,6 +223,49 @@ def load_config(filename: str) -> dict:
     except FileNotFoundError:
         config = yaml.load(open(filename), Loader=yaml.FullLoader)
     return config
+
+
+def load_or_reload_config_if_modified(filename:str, every:int=1)->dict:
+    """
+    Reloads a YAML config if the yaml file was modified since runtime started or since last reloaded.
+    The initial call will store the config in a private dict to return on subsequent calls.
+
+    :param filename the filename, e.g. "config.yml". The search includes
+    :param every: only check every this many times we are invoked
+
+    :returns: the original config if file has not been modified
+        since startup or last reload time,
+        otherwise the reloaded config.
+    """
+    load_or_reload_config_if_modified.counter+=1
+    if filename in load_or_reload_config_if_modified.cached_configs and load_or_reload_config_if_modified.counter>1 and load_or_reload_config_if_modified.counter%every!=0:
+        return load_or_reload_config_if_modified.cached_configs[filename] # if not checking this time, return cached config
+    try:
+        filepath=Path(filename)
+        mtime=filepath.stat().st_mtime # get mod time
+
+        if ((not (filename in load_or_reload_config_if_modified.cached_configs))) \
+                or ((filename in load_or_reload_config_if_modified.cached_configs) and mtime > load_or_reload_config_if_modified.mtimes[filename]):
+            config=None
+            try:
+                config = yaml.load(open(os.path.join("CartPoleSimulation", filename), "r"), Loader=yaml.FullLoader)
+            except FileNotFoundError:
+                config = yaml.load(open(filename), Loader=yaml.FullLoader)
+
+            load_or_reload_config_if_modified.mtimes[filename]=mtime
+            load_or_reload_config_if_modified.cached_configs[filename]=config
+            log.info(f'(re)loaded modified config {filename}')
+            return config
+        else:
+            return load_or_reload_config_if_modified.cached_configs[filename]
+    except Exception as e:
+        logging.error(f'could not reload {filename}: got exception {e}')
+        raise e
+
+load_or_reload_config_if_modified.cached_configs=dict()
+load_or_reload_config_if_modified.mtimes=dict()
+load_or_reload_config_if_modified.start_time=time.time()
+load_or_reload_config_if_modified.counter=0
 
 
 class MockSpace:
