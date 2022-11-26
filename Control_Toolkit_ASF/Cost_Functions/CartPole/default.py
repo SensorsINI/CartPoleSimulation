@@ -64,7 +64,13 @@ class default(cost_function_base):
 
     # cost of changing control to fast
     def _control_change_rate_cost(self, u, u_prev):
-        """Compute penalty of control jerk, i.e. difference to previous control input"""
+        """Compute penalty of control jerk, i.e. difference to previous control input
+
+        :poram u: the current control input (cart acceleration in dimensionless scale)
+        :param u_prev: the previous timesteps control input
+
+        :returns: the cost of changing control
+        """
         u_prev_vec = self.lib.concat(
             (self.lib.ones((u.shape[0], 1, u.shape[2])) * u_prev, u[:, :-1, :]), 1
         )
@@ -72,14 +78,25 @@ class default(cost_function_base):
 
     # all stage costs together
     def get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
-        dd = dd_weight * self._distance_difference_cost(states[:, :, POSITION_IDX])
-        ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX])
-        cc = cc_weight * self._CC_cost(inputs)
-        ccrc = 0
+        """
+        Computes cost of one stage (one timestep of rollout).
+
+        :param states: Tensor of states [rollout, timestep, state].
+            rollout dimension is the batch dimension of the rollouts, e.g. 1000 parallel rollouts.
+            timestep dimension are the timesteps of each rollout, e.g. 50 timesteps.
+            state is the state vector, defined by the STATE_INDICES in [state_utilities.py](../CartPole/state_utilities.py)
+        :param inputs: control input, e.g. cart acceleration
+        :param previous_input: previous control input, can be used to compute cost of changing control input
+        :return: scalar float cost
+        """
+        dd = dd_weight * self._distance_difference_cost(states[:, :, POSITION_IDX]) # compute cart position target distance cost
+        ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX]) # compute the potential energy cost of cart pole
+        cc = cc_weight * self._CC_cost(inputs) # compute the cart acceleration control cost
+        ccrc = 0 # compute the control change cost
         # if previous_input is not None:
         #     ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
 
-        if self.controller.target_positions_vector[0] > 0:
+        if self.controller.target_positions_vector[0] > 0: # TODO why is potential cost positve for this case and negative otherwise?
             stage_cost = dd + ep + cc + ccrc
         else:
             stage_cost = dd - ep + cc + ccrc
