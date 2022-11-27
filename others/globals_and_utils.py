@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Tuple
 import yaml
+from generallibrary import print_link, print_link_to_obj # for logging links to source code in logging output for pycharm clicking, see https://stackoverflow.com/questions/26300594/print-code-link-into-pycharms-console
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0' # all TF messages
 
@@ -157,19 +158,25 @@ def yes_or_no(question, default='y', timeout=None):
         if reply[0].lower() == 'n':
             return False
 
+from generallibrary import print_link, print_link_to_obj # https://stackoverflow.com/questions/26300594/print-code-link-into-pycharms-console
+
 class CustomFormatter(logging.Formatter):
     """Logging Formatter to add colors and count warning / errors"""
+    # see https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output/7995762#7995762
 
     grey = "\x1b[38;21m"
     yellow = "\x1b[33;21m"
+    cyan = "\x1b[1;36m" # dark green
+    green = "\x1b[31;21m" # dark green
     red = "\x1b[31;21m"
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
-    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+    # File "{file}", line {max(line, 1)}'.replace("\\", "/")
+    format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s (File "%(pathname)s", line %(lineno)d, in %(funcName)s)'
 
     FORMATS = {
         logging.DEBUG: grey + format + reset,
-        logging.INFO: grey + format + reset,
+        logging.INFO: cyan + format + reset,
         logging.WARNING: yellow + format + reset,
         logging.ERROR: red + format + reset,
         logging.CRITICAL: bold_red + format + reset
@@ -178,11 +185,11 @@ class CustomFormatter(logging.Formatter):
     def format(self, record):
         log_fmt = self.FORMATS.get(record.levelno)
         formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
+        return formatter.format(record).replace("\\", "/") #replace \ with / for pycharm links
 
 
-def my_logger(name):
-    """ Use my_logger to define a logger with useful color output and info and warning turned on according to the global LOGGING_LEVEL.
+def get_logger(name):
+    """ Use get_logger to define a logger with useful color output and info and warning turned on according to the global LOGGING_LEVEL.
 
     :param name: the name of this logger. Use __name__ to give it the name of the module that instantiates it.
 
@@ -198,7 +205,7 @@ def my_logger(name):
     return logger
 
 
-log=my_logger(__name__)
+log=get_logger(__name__)
 
 
 def create_rng(id: str, seed: str, use_tf: bool=False):
@@ -225,13 +232,14 @@ def load_config(filename: str) -> dict:
     return config
 
 
-def load_or_reload_config_if_modified(filename:str, every:int=1)->dict:
+def load_or_reload_config_if_modified(filename:str, every:int=1, paths=("CartPoleSimulation","Control_Toolkit","Control_Toolkit_ASF","SI_Toolkit","SI_Toolkit_ASF"))->dict:
     """
     Reloads a YAML config if the yaml file was modified since runtime started or since last reloaded.
     The initial call will store the config in a private dict to return on subsequent calls.
 
-    :param filename the filename, e.g. "config.yml". The search includes
+    :param filename the filename, e.g. "xxx.yml". The search includes all root folders in paths.
     :param every: only check every this many times we are invoked
+    :param paths: the folders to search for (in that order) for the file xxx.yml
 
     :returns: the original config if file has not been modified
         since startup or last reload time,
@@ -248,9 +256,18 @@ def load_or_reload_config_if_modified(filename:str, every:int=1)->dict:
                 or ((filename in load_or_reload_config_if_modified.cached_configs) and mtime > load_or_reload_config_if_modified.mtimes[filename]):
             config=None
             try:
-                config = yaml.load(open(os.path.join("CartPoleSimulation", filename), "r"), Loader=yaml.FullLoader)
-            except FileNotFoundError:
                 config = yaml.load(open(filename), Loader=yaml.FullLoader)
+                log.info(f'found {filename} from root path')
+            except FileNotFoundError:
+                for p in paths:
+                    try:
+                        fn=os.path.join(p, filename)
+                        config = yaml.load(open(fn, "r"), Loader=yaml.FullLoader)
+                        log.info(f"found {filename} in {fn}")
+                    except FileNotFoundError:
+                        pass
+            if config is None:
+                raise FileNotFoundError(f'could not find config file {filename} from root or anywhere in {paths}')
 
             load_or_reload_config_if_modified.mtimes[filename]=mtime
             load_or_reload_config_if_modified.cached_configs[filename]=config
