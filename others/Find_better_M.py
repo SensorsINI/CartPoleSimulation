@@ -12,7 +12,7 @@ but, the results for positionDD is better with k=4/3"
 
 
 from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
+    k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
 )
 
 import numpy as np
@@ -20,7 +20,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def _cartpole_ode (ca, sa, angleD, positionD, u,
-                      k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+                   k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
 
     """
     Calculates current values of second derivative of angle and position
@@ -37,16 +37,16 @@ def _cartpole_ode (ca, sa, angleD, positionD, u,
     # g (gravitational acceleration) is positive (absolute value)
     # Checked independently by Marcin and Krishna
 
-    A = (k + 1) * (M + m) - m * (ca ** 2)
+    A = (k + 1) * (m_cart + m_pole) - m_pole * (ca ** 2)
     F_fric = - M_fric * positionD  # Force resulting from cart friction, notice that the mass of the cart is not explicitly there
     T_fric = - J_fric * angleD  # Torque resulting from pole friction
 
     positionDD = (
             (
-                    + m * g * sa * ca  # Movement of the cart due to gravity
+                    + m_pole * g * sa * ca  # Movement of the cart due to gravity
                     + ((T_fric * ca) / L)  # Movement of the cart due to pend' s friction in the joint
                     + (k + 1) * (
-                            - (m * L * (
+                            - (m_pole * L * (
                                         angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
                             + F_fric  # Braking of the cart due its friction
                             + u  # Effect of force applied to cart
@@ -67,8 +67,8 @@ angleD = 0.9
 positionD = -.50
 u = 0.8
 
-def positionDD_1THIRD(M_factor): return _cartpole_ode(ca, sa, angleD=angleD, positionD=positionD, u=u, k=k, M=M_factor*M)
-def positionDD_4THIRDS(): return _cartpole_ode(ca, sa, angleD=angleD, positionD=positionD, u=u, k=k+1.0, M=M)
+def positionDD_1THIRD(M_factor): return _cartpole_ode(ca, sa, angleD=angleD, positionD=positionD, u=u, k=k, m_cart=M_factor * m_cart)
+def positionDD_4THIRDS(): return _cartpole_ode(ca, sa, angleD=angleD, positionD=positionD, u=u, k=k+1.0, m_cart=m_cart)
 
 def SE(M_factor): return (positionDD_4THIRDS()-positionDD_1THIRD(M_factor))**2
 
@@ -86,14 +86,14 @@ M_factor = np.linspace(M_min, M_max, 100)
 
 
 meanSE = []
-for M in M_factor:
-    meanSE.append(np.sum(SE(M))/len(angle))
+for m_cart in M_factor:
+    meanSE.append(np.sum(SE(m_cart)) / len(angle))
 
 meanSE = np.array(meanSE)
 
 maxSE = []
-for M in M_factor:
-    maxSE.append(max(SE(M)))
+for m_cart in M_factor:
+    maxSE.append(max(SE(m_cart)))
 
 maxSE = np.array(maxSE)
 

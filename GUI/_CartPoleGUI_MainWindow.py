@@ -14,7 +14,7 @@ import time
 import sys
 
 from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength,
+    k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength,
 )
 
 # region Imports needed to create layout of the window in __init__ method

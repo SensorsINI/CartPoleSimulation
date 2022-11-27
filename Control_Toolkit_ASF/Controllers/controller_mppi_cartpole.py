@@ -232,7 +232,8 @@ def q(
     u_prev: np.ndarray,
     target_position: np.float32,
 ) -> np.ndarray:
-    """Stage cost function. Computes stage-cost elementwise for all rollouts and all trajectory steps at once.
+    """Stage cost function, i.e. the cost for a particular timestep.
+    Computes stage-cost elementwise for all rollouts and all trajectory steps at once.
 
     :param s: Current states of all rollouts
     :type s: np.ndarray

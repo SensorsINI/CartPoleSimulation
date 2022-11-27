@@ -4,21 +4,50 @@ from yaml import safe_load
 from SI_Toolkit.computation_library import TensorType
 from Control_Toolkit.Cost_Functions import cost_function_base
 
-from others.globals_and_utils import load_config
+from others.globals_and_utils import load_config, load_or_reload_config_if_modified
 
 from CartPole.cartpole_model import TrackHalfLength
-from CartPole.state_utilities import ANGLE_IDX, POSITION_IDX
-
-# load constants from config file
-config = safe_load(open(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"), "r"))
-
-dd_weight = config["CartPole"]["default"]["dd_weight"]
-cc_weight = config["CartPole"]["default"]["cc_weight"]
-ep_weight = config["CartPole"]["default"]["ep_weight"]
-ccrc_weight = config["CartPole"]["default"]["ccrc_weight"]
-R = config["CartPole"]["default"]["R"]
+from CartPole.state_utilities import ANGLE_IDX, POSITION_IDX, ANGLED_IDX
 
 class default(cost_function_base):
+
+    # all stage costs together
+    def get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
+        """
+        Computes costs of all stages, i.e., costs of all rollouts for each timestep.
+
+        :param states: Tensor of states [rollout, timestep, state].
+            rollout dimension is the batch dimension of the rollouts, e.g. 1000 parallel rollouts.
+            timestep dimension are the timesteps of each rollout, e.g. 50 timesteps.
+            state is the state vector, defined by the STATE_INDICES in [state_utilities.py](../CartPole/state_utilities.py)
+        :param inputs: control input, e.g. cart acceleration
+        :param previous_input: previous control input, can be used to compute cost of changing control input
+        :return: Tensor of [rollout, timestamp] over all rollouts and horizon timesteps
+        """
+        config=load_or_reload_config_if_modified(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"),every=1)
+        self.dd_weight = config["CartPole"]["default"]["dd_weight"]
+        self.cc_weight = config["CartPole"]["default"]["cc_weight"]
+        self.ep_weight = config["CartPole"]["default"]["ep_weight"]
+        self.ccrc_weight = config["CartPole"]["default"]["ccrc_weight"]
+        self.R = config["CartPole"]["default"]["R"]
+
+        dd = self.dd_weight * self._distance_difference_cost(states[:, :, POSITION_IDX]) # compute cart position target distance cost
+        cc = self.cc_weight * self.R*self._CC_cost(inputs) # compute the cart acceleration control cost
+        ccrc = 0 # compute the control change cost
+        angle=states[:, :, ANGLE_IDX]
+        angleD=states[:,:,ANGLED_IDX]
+        ep = self.ep_weight * angleD # make pole spin
+        # if previous_input is not None:
+        #     ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
+
+        # if self.controller.target_positions_vector[0] > 0: # TODO why is potential cost positive for this case and negative otherwise?
+        #     stage_cost = dd + ep + cc + ccrc
+        # else:
+        stage_cost = dd + ep + cc + ccrc
+
+        return stage_cost
+
+
     # cost for distance from track edge
     def _distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
@@ -35,7 +64,7 @@ class default(cost_function_base):
 
     # actuation cost
     def _CC_cost(self, u):
-        return R * self.lib.sum(u**2, 2)
+        return self.lib.sum(u**2, 2)
 
     # final stage cost
     def get_terminal_cost(self, terminal_states: TensorType):
@@ -62,7 +91,7 @@ class default(cost_function_base):
         )
         return terminal_cost
 
-    # cost of changing control to fast
+    # cost of changing control too fast
     def _control_change_rate_cost(self, u, u_prev):
         """Compute penalty of control jerk, i.e. difference to previous control input
 
@@ -76,29 +105,3 @@ class default(cost_function_base):
         )
         return self.lib.sum((u - u_prev_vec) ** 2, 2)
 
-    # all stage costs together
-    def get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
-        """
-        Computes cost of one stage (one timestep of rollout).
-
-        :param states: Tensor of states [rollout, timestep, state].
-            rollout dimension is the batch dimension of the rollouts, e.g. 1000 parallel rollouts.
-            timestep dimension are the timesteps of each rollout, e.g. 50 timesteps.
-            state is the state vector, defined by the STATE_INDICES in [state_utilities.py](../CartPole/state_utilities.py)
-        :param inputs: control input, e.g. cart acceleration
-        :param previous_input: previous control input, can be used to compute cost of changing control input
-        :return: scalar float cost
-        """
-        dd = dd_weight * self._distance_difference_cost(states[:, :, POSITION_IDX]) # compute cart position target distance cost
-        ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX]) # compute the potential energy cost of cart pole
-        cc = cc_weight * self._CC_cost(inputs) # compute the cart acceleration control cost
-        ccrc = 0 # compute the control change cost
-        # if previous_input is not None:
-        #     ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
-
-        if self.controller.target_positions_vector[0] > 0: # TODO why is potential cost positve for this case and negative otherwise?
-            stage_cost = dd + ep + cc + ccrc
-        else:
-            stage_cost = dd - ep + cc + ccrc
-
-        return stage_cost

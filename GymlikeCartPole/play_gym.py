@@ -1,6 +1,6 @@
 from time import sleep
 
-from others.globals_and_utils import load_config, my_logger
+from others.globals_and_utils import load_config, get_logger
 from Control_Toolkit.others.globals_and_utils import import_controller_by_name
 
 from GymlikeCartPole.CartPoleEnv_LTC import CartPoleEnv_LTC
@@ -11,7 +11,7 @@ Controller = import_controller_by_name(controller_full_name)
 
 config = load_config("config.yml")
 
-logger = my_logger(__name__)
+logger = get_logger(__name__)
 
 env = CartPoleEnv_LTC()
 controller = Controller(env.CartPoleInstance, **{**config["controller"][controller_name], **{"num_control_inputs": config["cartpole"]["num_control_inputs"]}})
