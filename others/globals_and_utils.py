@@ -271,7 +271,7 @@ def load_or_reload_config_if_modified(filename:str, every:int=1, paths=("CartPol
 
             load_or_reload_config_if_modified.mtimes[filename]=mtime
             load_or_reload_config_if_modified.cached_configs[filename]=config
-            log.info(f'(re)loaded modified config {filename}')
+            log.info(f'(re)loaded modified config (File "{filename}")') # format (File "XXX") generates pycharm link to file in console output
             return config
         else:
             return load_or_reload_config_if_modified.cached_configs[filename]
