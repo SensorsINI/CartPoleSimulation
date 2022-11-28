@@ -24,6 +24,7 @@ PyQt6
 tensorflow-probability
 Pillow
 # generallibrary # print links in logging output https://stackoverflow.com/questions/26300594/print-code-link-into-pycharms-console
+dictdiffer
 
 torch
 tensorflow
