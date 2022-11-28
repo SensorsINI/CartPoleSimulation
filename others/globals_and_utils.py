@@ -8,9 +8,14 @@ import os
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
+
+import dictdiffer as dictdiffer
 import yaml
 from generallibrary import print_link, print_link_to_obj # for logging links to source code in logging output for pycharm clicking, see https://stackoverflow.com/questions/26300594/print-code-link-into-pycharms-console
+
+from Control_Toolkit.others.globals_and_utils import get_logger
+log=get_logger(__name__)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0' # all TF messages
 
@@ -158,54 +163,7 @@ def yes_or_no(question, default='y', timeout=None):
         if reply[0].lower() == 'n':
             return False
 
-from generallibrary import print_link, print_link_to_obj # https://stackoverflow.com/questions/26300594/print-code-link-into-pycharms-console
 
-class CustomFormatter(logging.Formatter):
-    """Logging Formatter to add colors and count warning / errors"""
-    # see https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output/7995762#7995762
-
-    grey = "\x1b[38;21m"
-    yellow = "\x1b[33;21m"
-    cyan = "\x1b[1;36m" # dark green
-    green = "\x1b[31;21m" # dark green
-    red = "\x1b[31;21m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-    # File "{file}", line {max(line, 1)}'.replace("\\", "/")
-    format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s (File "%(pathname)s", line %(lineno)d, in %(funcName)s)'
-
-    FORMATS = {
-        logging.DEBUG: grey + format + reset,
-        logging.INFO: cyan + format + reset,
-        logging.WARNING: yellow + format + reset,
-        logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset
-    }
-
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record).replace("\\", "/") #replace \ with / for pycharm links
-
-
-def get_logger(name):
-    """ Use get_logger to define a logger with useful color output and info and warning turned on according to the global LOGGING_LEVEL.
-
-    :param name: the name of this logger. Use __name__ to give it the name of the module that instantiates it.
-
-    :returns: the logger.
-    """
-    # logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-    logger = logging.getLogger(name)
-    logger.setLevel(LOGGING_LEVEL)
-    # create console handler
-    ch = logging.StreamHandler()
-    ch.setFormatter(CustomFormatter())
-    logger.addHandler(ch)
-    return logger
-
-
-log=get_logger(__name__)
 
 
 def create_rng(id: str, seed: str, use_tf: bool=False):
@@ -231,58 +189,65 @@ def load_config(filename: str) -> dict:
         config = yaml.load(open(filename), Loader=yaml.FullLoader)
     return config
 
-
-def load_or_reload_config_if_modified(filename:str, every:int=1, paths=("CartPoleSimulation","Control_Toolkit","Control_Toolkit_ASF","SI_Toolkit","SI_Toolkit_ASF"))->dict:
+def load_or_reload_config_if_modified(filepath:str, every:int=1)->Tuple[dict,Optional[dict]]:
     """
     Reloads a YAML config if the yaml file was modified since runtime started or since last reloaded.
     The initial call will store the config in a private dict to return on subsequent calls.
 
-    :param filename the filename, e.g. "xxx.yml". The search includes all root folders in paths.
+    Only modified entries are returned in changes. Added or deleted items are not returned.
+
+    :param filepath the relative path to file. Generate for call with e.g. os.path.join("Control_Toolkit_ASF", "config_cost_functions.yml")
     :param every: only check every this many times we are invoked
-    :param paths: the folders to search for (in that order) for the file xxx.yml
 
-    :returns: the original config if file has not been modified
-        since startup or last reload time,
-        otherwise the reloaded config.
+    :returns: (config,changes)
+        config: the original config if file has not been modified
+            since startup or last reload time,
+            otherwise the reloaded config.
+        changes: a dict of key,value of modified config entries in format dict(['a.b.c',new_value], ...)
+
+
     """
-    load_or_reload_config_if_modified.counter+=1
-    if filename in load_or_reload_config_if_modified.cached_configs and load_or_reload_config_if_modified.counter>1 and load_or_reload_config_if_modified.counter%every!=0:
-        return load_or_reload_config_if_modified.cached_configs[filename] # if not checking this time, return cached config
+    counter=0
+    if filepath in load_or_reload_config_if_modified.counter:
+        load_or_reload_config_if_modified.counter[filepath]+=1
+        counter=load_or_reload_config_if_modified.counter[filepath]
+    else:
+        load_or_reload_config_if_modified.counter[filepath] =1
+    if filepath in load_or_reload_config_if_modified.cached_configs and counter>0 and counter%every!=0:
+        return (load_or_reload_config_if_modified.cached_configs[filepath],False) # if not checking this time, return cached config
     try:
-        filepath=Path(filename)
-        mtime=filepath.stat().st_mtime # get mod time
+        fp=Path(filepath)
+        mtime=fp.stat().st_mtime # get mod time
 
-        if ((not (filename in load_or_reload_config_if_modified.cached_configs))) \
-                or ((filename in load_or_reload_config_if_modified.cached_configs) and mtime > load_or_reload_config_if_modified.mtimes[filename]):
-            config=None
-            try:
-                config = yaml.load(open(filename), Loader=yaml.FullLoader)
-                log.info(f'found {filename} from root path')
-            except FileNotFoundError:
-                for p in paths:
-                    try:
-                        fn=os.path.join(p, filename)
-                        config = yaml.load(open(fn, "r"), Loader=yaml.FullLoader)
-                        log.info(f"found {filename} in {fn}")
-                    except FileNotFoundError:
-                        pass
-            if config is None:
-                raise FileNotFoundError(f'could not find config file {filename} from root or anywhere in {paths}')
+        if ((not (filepath in load_or_reload_config_if_modified.cached_configs))) \
+                or ((filepath in load_or_reload_config_if_modified.cached_configs) and mtime > load_or_reload_config_if_modified.mtimes[filepath]):
+            # if loading first time, or we have loaded and the file has been modified since we loaded it, then reload it and flag that it was modified (globally)
+            changes = None
+            new_config = yaml.load(open(filepath), Loader=yaml.FullLoader)
+            if filepath in load_or_reload_config_if_modified.cached_configs:
+                old_config=load_or_reload_config_if_modified.cached_configs[filepath]
+                diff=dictdiffer.diff(new_config,old_config) # https://github.com/inveniosoftware/dictdiffer https://stackoverflow.com/questions/32815640/how-to-get-the-difference-between-two-dictionaries-in-python
+                for (type,path,(new,old)) in diff:
+                    if type=='change':
+                        log.info(f'{path} changed: old/new {old}/{new}')
+                        if changes is None:
+                            changes=dict()
+                        changes[path]=new
 
-            load_or_reload_config_if_modified.mtimes[filename]=mtime
-            load_or_reload_config_if_modified.cached_configs[filename]=config
-            log.info(f'(re)loaded modified config (File "{filename}")') # format (File "XXX") generates pycharm link to file in console output
-            return config
+            load_or_reload_config_if_modified.mtimes[filepath]=mtime
+            load_or_reload_config_if_modified.cached_configs[filepath]=new_config
+            log.info(f'(re)loaded modified config (File "{filepath}")') # format (File "XXX") generates pycharm link to file in console output
+            return (new_config,changes) # it was modified, so return changes dict
         else:
-            return load_or_reload_config_if_modified.cached_configs[filename]
+            return (load_or_reload_config_if_modified.cached_configs[filepath], None) # return previous config and None for changes
     except Exception as e:
-        logging.error(f'could not reload {filename}: got exception {e}')
+        logging.error(f'could not reload {filepath}: got exception {e}')
         raise e
 
 load_or_reload_config_if_modified.cached_configs=dict()
 load_or_reload_config_if_modified.mtimes=dict()
 load_or_reload_config_if_modified.start_time=time.time()
-load_or_reload_config_if_modified.counter=0
+load_or_reload_config_if_modified.counter=dict()
 
 
 class MockSpace:
