@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
         # endregion
 
         # region - Change geometry of the main window
-        self.setGeometry(300, 300, 2500, 1000)
+        self.setGeometry(300, 100, 1000, 800) # origin x,y size w,h
         # endregion
 
         # region - Matplotlib figures (CartPole drawing and Slider)
@@ -1062,8 +1062,8 @@ class MainWindow(QMainWindow):
             # Execute
             self.threadpool.start(worker)
 
-        else:
-            self.PhysicalCartPoleDriverInstance.terminate_experiment = True
+        elif hasattr(self.PhysicalCartPoleDriverInstance,'terminate_experiment'):
+            self.PhysicalCartPoleDriverInstance.terminate_experiment = True  # TODO not all things have terminate_experiment, throws NoneType exception
 
 
         self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
