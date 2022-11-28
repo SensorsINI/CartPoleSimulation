@@ -1,9 +1,9 @@
 from types import SimpleNamespace
 import numpy as np
 
-from others.globals_and_utils import load_config
+from others.globals_and_utils import load_or_reload_config_if_modified
 
-config = load_config("config.yml")
+(config,_) = load_or_reload_config_if_modified("config.yml")
 
 # Parameters of the CartPole
 P_GLOBALS = SimpleNamespace()  # "p" like parameters
