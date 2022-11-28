@@ -13,6 +13,8 @@ import os
 import traceback
 # Import module to get a current time and date used to name the files containing the history of simulations
 from datetime import datetime
+from typing import Optional
+
 # To detect the latest csv file
 
 import numpy as np
@@ -140,7 +142,7 @@ class CartPole(EnvironmentBatched):
         # region Variables controlling operation of the program - should not be modified directly
         self.save_flag = False  # Signalizes that the current time step should be saved
         self.csv_filepath = None  # Where to save the experiment history.
-        self.controller = None  # Placeholder for the currently used controller function
+        self.controller:template_controller = Optional[None]  # Placeholder for the currently used controller function
         self.controller_name = ''  # Placeholder for the currently used controller name
         self.optimizer_name = ''  # Placeholder for the currently used optimizer name
         self.controller_idx = None  # Placeholder for the currently used controller index
@@ -433,10 +435,12 @@ class CartPole(EnvironmentBatched):
             L=L,
         )
 
-    # Determine the dimensionless [-1,1] value of the motor power Q
-    # This function should be called for the first time to calculate 0th time step
-    # Otherwise it goes out of sync with saving
+
     def Update_Q(self):
+        """ Determine the dimensionless [-1,1] value of the motor power Q
+        This function should be called for the first time to calculate 0th time step
+        Otherwise it goes out of sync with saving,
+    """
         # Calculate time steps from last update
         # The counter should be initialized at max-1 to start with a control input update
         self.dt_controller_steps_counter += 1
@@ -448,7 +452,7 @@ class CartPole(EnvironmentBatched):
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s_with_noise_and_latency, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
+                self.Q = self.controller.step(self.s_with_noise_and_latency, self.time, updated_attributes= {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
 
             self.dt_controller_steps_counter = 0
 
