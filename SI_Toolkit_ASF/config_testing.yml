@@ -13,15 +13,6 @@ test_file: 'Experiment-1.csv'
 
 path_to_testfile: './SI_Toolkit_ASF/Experiments/Experiment-2/Recordings/Test/'
 
-features_to_plot: [ 'angle',      # Only to indicate what odd to be displayed in Brunton Test
-                    'angleD',
-                    'angle_cos',
-                    'angle_sin',
-                    'position',
-                    'positionD',
-        ]
-control_inputs: [ 'Q' ]   # Indicates which inputs to network are control_input, TODO: Not sure how it would work with multiple inputs
-
 test_len: 'max'
 test_max_horizon: 50  # Indicates prediction horizon for testing
 test_start_idx: 0  # Indicates starting point from which data from test file should be taken

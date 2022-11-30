@@ -20,33 +20,31 @@ def get_feature_label(feature):
     return label
 
 
-def convert_units_inplace(ground_truth, predictions_list, features):
-
+def convert_units_inplace(ground_truth, predictions_list):
+    ground_truth_dataset, ground_truth_features = ground_truth
     # Convert ground truth
-    for feature in features:
-        feature_idx = features.index(feature)
-
+    for feature in ground_truth_features:
+        feature_idx, = np.where(ground_truth_features == feature)
         if feature == 'angle':
-            ground_truth[:, feature_idx] *= 180.0 / np.pi
+            ground_truth_dataset[:, feature_idx] *= 180.0 / np.pi
         elif feature == 'angleD':
-            ground_truth[:, feature_idx] *= 180.0 / np.pi
+            ground_truth_dataset[:, feature_idx] *= 180.0 / np.pi
         elif feature == 'angle_cos':
             pass
         elif feature == 'angle_sin':
             pass
         elif feature == 'position':
-            ground_truth[:, feature_idx] *= 100.0
+            ground_truth_dataset[:, feature_idx] *= 100.0
         elif feature == 'positionD':
-            ground_truth[:, feature_idx] *= 100.0
+            ground_truth_dataset[:, feature_idx] *= 100.0
         else:
             pass
 
     # Convert predictions
     for i in range(len(predictions_list)):
+        predictions_array, features = predictions_list[i]
         for feature in features:
-            feature_idx = features.index(feature)
-
-            predictions_array = predictions_list[i]
+            feature_idx, = np.where(features == feature)
 
             if feature == 'angle':
                 predictions_array[:, :, feature_idx] *= 180.0/np.pi
@@ -63,4 +61,4 @@ def convert_units_inplace(ground_truth, predictions_list, features):
             else:
                 pass
 
-            predictions_list[i] = predictions_array
+            predictions_list[i][0] = predictions_array
