@@ -71,7 +71,7 @@ class quadratic_boundary_grad(cost_function_base):
             ),
             self.lib.float32,
         )
-        return terminal_cost
+        return self.lib.reshape(terminal_cost, (-1, 1))
 
     # cost of changing control to fast
     def _control_change_rate_cost(self, u, u_prev):

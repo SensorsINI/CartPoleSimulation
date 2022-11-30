@@ -52,7 +52,7 @@ class default(cost_function_base):
 
         :param terminal_states: Reference to numpy array of terminal states of all rollouts
         :type terminal_states: np.ndarray
-        :return: One terminal cost per rollout
+        :return: One terminal cost per rollout, has shape (batch_size x 1)
         :rtype: np.ndarray
         """
         terminal_cost = 10000 * self.lib.cast(
@@ -63,7 +63,7 @@ class default(cost_function_base):
             ),
             self.lib.float32,
         )
-        return terminal_cost
+        return self.lib.reshape(terminal_cost, (-1, 1))
 
     # cost of changing control to fast
     def _control_change_rate_cost(self, u, u_prev):
