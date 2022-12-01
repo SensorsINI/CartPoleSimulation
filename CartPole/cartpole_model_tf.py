@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 import numpy as np
 import tensorflow as tf
-from ..others.globals_and_utils import create_rng, load_config
-from ..others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
+from others.globals_and_utils import create_rng, load_config
+from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, g, k, m, u_max,
                               v_max)
 from SI_Toolkit.Functions.TF.Compile import CompileTF
