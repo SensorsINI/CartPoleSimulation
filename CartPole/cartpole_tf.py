@@ -14,8 +14,8 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
 config = load_config("config.yml")
 
 k = tf.convert_to_tensor(k)
-M = tf.convert_to_tensor(M)
-m = tf.convert_to_tensor(m)
+M_cart = tf.convert_to_tensor(M)
+m_pole = tf.convert_to_tensor(m)
 g = tf.convert_to_tensor(g)
 J_fric = tf.convert_to_tensor(J_fric)
 M_fric = tf.convert_to_tensor(M_fric)
@@ -113,7 +113,7 @@ def _cartpole_fine_integration_tf(angle, angleD,
                                   position, positionD,
                                   u, t_step,
                                   intermediate_steps, k=k,
-                                  M=M, m=m,
+                                  M_cart=M, m_pole=m,
                                   g=g, J_fric=J_fric,
                                   M_fric=M_fric, L=L):
     #print('test 6')
@@ -141,7 +141,7 @@ def _cartpole_fine_integration_tf(angle, angleD,
 
 @CompileTF
 def cartpole_fine_integration_tf(s, u, t_step, intermediate_steps,
-                                 k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+                                 k=k, M_cart=M, m_pole=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
     #print('test 5')
     (
         angle, angleD, position, positionD, angle_cos, angle_sin
@@ -156,7 +156,7 @@ def cartpole_fine_integration_tf(s, u, t_step, intermediate_steps,
         t_step=t_step,
         intermediate_steps=intermediate_steps,
         L=L,
-        k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric
+        k=k, M_cart=M, m_pole=m, g=g, J_fric=J_fric, M_fric=M_fric
     )
 
     ### TODO: This is ugly! But I don't know how to resolve it...

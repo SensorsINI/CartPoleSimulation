@@ -22,11 +22,12 @@ class default(cost_function_base):
     # cost for distance from track edge
     def _distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
-        return (
-            (position - self.controller.target_position) / (2.0 * TrackHalfLength)
-        ) ** 2 + self.lib.cast(
-            self.lib.abs(position) > 0.90 * TrackHalfLength, self.lib.float32
-        ) * 1.0e7  # Soft constraint: Do not crash into border
+        return 0
+        #return (
+        #    (position - self.controller.target_position) / (2.0 * TrackHalfLength)
+        #) ** 2 + self.lib.cast(
+        #    self.lib.abs(position) > 0.90 * TrackHalfLength, self.lib.float32
+        #) * 1.0e7  # Soft constraint: Do not crash into border
 
     # cost for difference from upright position
     def _E_pot_cost(self, angle):
@@ -55,7 +56,7 @@ class default(cost_function_base):
         terminal_cost = 10000 * self.lib.cast(
             (self.lib.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
             | (
-                self.lib.abs(terminal_states[:, POSITION_IDX] - self.controller.target_position)
+                0*self.lib.abs(terminal_states[:, POSITION_IDX] - self.controller.target_position)
                 > 0.1 * TrackHalfLength
             ),
             self.lib.float32,

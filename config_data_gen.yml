@@ -31,4 +31,4 @@ save_mode: 'online'  # It was intended to save memory usage, but it doesn't seem
 # Show popup window in the end with summary of experiment?
 show_summary_plots: False
 show_controller_report: False
-number_of_experiments: 10  # How many experiments will be generated
+number_of_experiments: 1  # How many experiments will be generated
