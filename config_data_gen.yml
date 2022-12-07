@@ -1,7 +1,7 @@
 controller: mpc
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
 seed: 1998   # If not assign random seed based on datetime is used
-length_of_experiment: 3600  # Length of each experiment in s:
+length_of_experiment: 30  # Length of each experiment in s:
 split: [0.8, 0.1]  # Train/Val/(Test) split - only matters if you run it in ML Pipeline mode
 random_initial_state:
   # Unassigned variables will be randomly initialized (see below)
