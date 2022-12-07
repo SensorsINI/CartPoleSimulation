@@ -2,6 +2,10 @@ import os
 import timeit
 from time import sleep
 
+import cProfile
+import pstats
+from memory_profiler import profile
+
 import numpy as np
 
 from CartPole import CartPole
@@ -143,6 +147,7 @@ def generate_random_initial_state(init_state_stub, init_limits, rng):
 
     return initial_state_post
 
+#@profile
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     config = load_config("config_data_gen.yml")
 
@@ -204,17 +209,17 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
         # Uncommenting this block will save a file profiling_stats.txt in top-level directory
         # Visualize bottlenecks and code runtime using
         # snakeviz profiling_stats.txt
-        # with cProfile.Profile() as pr:
-        #     CartPoleInstance.run_cartpole_random_experiment(
-        #         csv=csv,
-        #         save_mode=save_mode
-        #     )
-        # with open('profiling_stats.txt', 'w', newline='') as stream:
-        #     stats = Stats(pr, stream=stream)
-        #     stats.strip_dirs()
-        #     stats.sort_stats('time')
-        #     stats.dump_stats('.prof_stats')
-        #     stats.print_stats()
+        #with cProfile.Profile() as pr:
+        #    CartPoleInstance.run_cartpole_random_experiment(
+        #        csv=csv,
+        #        save_mode=save_mode
+        #    )
+        #with open('profiling_stats.txt', 'w', newline='') as stream:
+        #    stats = pstats.Stats(pr, stream=stream)
+        #    stats.strip_dirs()
+        #    stats.sort_stats('time')
+        #    stats.dump_stats('.prof_stats')
+        #    stats.print_stats()
         ###################################
 
         CartPoleInstance.run_cartpole_random_experiment(
