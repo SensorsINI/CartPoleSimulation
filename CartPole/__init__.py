@@ -246,6 +246,7 @@ class CartPole(EnvironmentBatched):
     # from a state at time t to a state at t+dt
     # We assume this function is called for the first time to calculate first time step
     # @profile(precision=4)
+    #@profile
     def update_state(self):
 
         self.update_parameters()
