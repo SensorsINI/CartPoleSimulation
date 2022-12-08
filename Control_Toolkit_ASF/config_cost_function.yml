@@ -5,8 +5,8 @@ cost_function_name_default: default
 
 CartPole:
   default:
-    dd_weight: 600.0
-    ep_weight: 20000.0
+    dd_weight: 000.0      # distance difference
+    ep_weight: 20000.0    # energy potential
     ekp_weight: 80.0
     ekc_weight: 80.0
     cc_weight: 0.0
