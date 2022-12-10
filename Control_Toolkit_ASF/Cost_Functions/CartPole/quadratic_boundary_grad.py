@@ -19,6 +19,7 @@ ep_weight = config["CartPole"]["quadratic_boundary_grad"]["ep_weight"]
 ekp_weight = config["CartPole"]["quadratic_boundary_grad"]["ekp_weight"]
 ccrc_weight = config["CartPole"]["quadratic_boundary_grad"]["ccrc_weight"]
 R = config["CartPole"]["quadratic_boundary_grad"]["R"]
+discount_factor = config["CartPole"]["quadratic_boundary_grad"]["discount_factor"]
 
 
 class quadratic_boundary_grad(cost_function_base):
@@ -104,3 +105,12 @@ class quadratic_boundary_grad(cost_function_base):
             ccrc = ccrc_weight * self._control_change_rate_cost(u, u_prev)
         stage_cost = dd + ep + cc + ccrc
         return stage_cost, dd, ep, cc, ccrc
+    
+    def get_trajectory_cost(self, state_horizon: TensorType, inputs: TensorType, previous_input: TensorType = None) -> TensorType:
+        stage_costs = self.get_stage_cost(state_horizon[:, :-1, :], inputs, previous_input)  # Select all but last state of the horizon
+        gamma = discount_factor * self.lib.ones_like(stage_costs)
+        gamma = self.lib.cumprod(gamma, 1)
+
+        terminal_costs = self.get_terminal_cost(state_horizon[:, -1, :])
+        total_cost = self.lib.mean(self.lib.concat([gamma * stage_costs, terminal_costs], 1), 1)  # Mean across the MPC horizon dimension
+        return total_cost
