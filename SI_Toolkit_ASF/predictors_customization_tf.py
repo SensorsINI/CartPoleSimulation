@@ -20,8 +20,6 @@ STATE_INDICES_TF = tf.lookup.StaticHashTable(
 class next_state_predictor_ODE_tf():
 
     def __init__(self, dt, intermediate_steps, batch_size=1, disable_individual_compilation=False):
-        self.s = tf.convert_to_tensor(create_cartpole_state())
-
         self.intermediate_steps = tf.convert_to_tensor(intermediate_steps, dtype=tf.int32)
         self.t_step = tf.convert_to_tensor(dt / float(self.intermediate_steps), dtype=tf.float32)
 
@@ -42,7 +40,7 @@ class next_state_predictor_ODE_tf():
         else:
             pole_half_length = tf.convert_to_tensor(params, dtype=tf.float32)
 
-        Q = tf.squeeze(Q, axis=1)  # Removes features dimension, specific for cartpole as it has only one control input
+        Q = Q[..., 0]  # Removes features dimension, specific for cartpole as it has only one control input
         u = Q2u_tf(Q)
         s_next = cartpole_fine_integration_tf(s, u=u, t_step=self.t_step, intermediate_steps=self.intermediate_steps, L=pole_half_length)
 
