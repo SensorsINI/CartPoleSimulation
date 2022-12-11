@@ -23,8 +23,8 @@ from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.others.environment import EnvironmentBatched
 from Control_Toolkit.others.globals_and_utils import (
     get_available_controller_names, get_available_optimizer_names, get_controller_name, get_optimizer_name, import_controller_by_name)
-from others.globals_and_utils import MockSpace, create_rng, load_config
-from others.p_globals import (P_GLOBALS, J_fric, L, m_cart, M_fric, TrackHalfLength,
+from others.globals_and_utils import MockSpace, create_rng, load_config, load_or_reload_config_if_modified
+from others.p_globals import (CARTPOLE_PHYSICAL_CONSTANTS, J_fric, L, m_cart, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
                               g, k, m_pole, u_max, v_max)
 # Interpolate function to create smooth random track
@@ -425,6 +425,7 @@ class CartPole(EnvironmentBatched):
 
     def edge_bounce(self):
         # Elastic collision at edges
+        # TODO should be semielastic
         self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = edge_bounce_numba(
             self.s[ANGLE_IDX],
             np.cos(self.s[ANGLE_IDX]),
@@ -531,6 +532,7 @@ class CartPole(EnvironmentBatched):
 
                 writer.writerow(['#'])
                 writer.writerow(['# Parameters:'])
+                (P_GLOBALS, _) = load_or_reload_config_if_modified("config.yml")
                 for k in P_GLOBALS.__dict__:
                     writer.writerow(['# ' + k + ': ' + str(getattr(P_GLOBALS, k))])
                 writer.writerow(['#'])

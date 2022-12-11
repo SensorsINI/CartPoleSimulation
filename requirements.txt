@@ -32,5 +32,6 @@ tensorflow
 do-mpc==4.1.1
 casadi
 nni
+munch
 
 -e ./SI_Toolkit

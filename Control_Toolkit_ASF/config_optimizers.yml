@@ -3,7 +3,7 @@ cem-tf:
   mpc_horizon: 40                       # steps
   cem_outer_it: 3                    #how many outer iterations to use
   cem_initial_action_stdev: 0.5
-  num_rollouts: 200          #how many rollouts per outer cem iteration
+  batch_size: 200          #how many rollouts per outer cem iteration
   cem_stdev_min: 0.01
   cem_best_k: 40
   warmup: false
@@ -12,7 +12,7 @@ cem-gmm-tf:
   seed: null                          # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
   cem_outer_it: 3                    #how many outer iterations to use
-  num_rollouts: 200          #how many rollouts per outer cem iteration
+  batch_size: 200          #how many rollouts per outer cem iteration
   cem_stdev_min: 0.01
   cem_initial_action_stdev: 0.5
   cem_best_k: 40
@@ -20,7 +20,7 @@ cem-naive-grad-tf:
   seed: null                          # If null, random seed based on datetime is used
   mpc_horizon: 35                       # steps
   cem_outer_it: 1                       # how many outer iterations to use
-  num_rollouts: 200                     # how many rollouts per outer cem iteration
+  batch_size: 200                     # how many rollouts per outer cem iteration
   cem_stdev_min: 0.1
   cem_initial_action_stdev: 0.5
   cem_best_k: 40
@@ -33,7 +33,7 @@ cem-grad-bharadhwaj-tf:
   adam_beta_1: 0.9
   adam_beta_2: 0.999
   adam_epsilon: 1.0e-08
-  num_rollouts: 32
+  batch_size: 32
   cem_best_k: 8
   cem_outer_it: 2
   cem_initial_action_stdev: 2
@@ -50,7 +50,7 @@ gradient-tf:
   adam_epsilon: 1.0e-07
   rtol: 1.0e-3
   gradient_steps: 5
-  num_rollouts: 40
+  batch_size: 40
   initial_action_stdev: 0.5
   gradmax_clip: 5
   warmup: false
@@ -63,7 +63,7 @@ mppi-optimize-tf:
   adam_epsilon: 1.0e-7                  #default: 1.0e-7
   gradmax_clip: 1000
   mpc_horizon: 35                       # steps
-  num_rollouts: 400                     # Number of Monte Carlo samples
+  batch_size: 400                     # Number of Monte Carlo samples
   cc_weight: 1.0
   R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in cost functions config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
   LBD: 100.0                            # Cost parameter lambda
@@ -82,7 +82,7 @@ dist-adam-resamp2-tf:
   adam_epsilon: 1.0e-08
   gradmax_clip: 5
   rtol: 1.0e-3
-  num_rollouts: 32
+  batch_size: 32
   opt_keep_k: 8
   outer_its: 2
   resamp_per: 10
@@ -99,7 +99,7 @@ rpgd-tf:
   adam_epsilon: 1.0e-08
   gradmax_clip: 5
   rtol: 1.0e-3
-  num_rollouts: 32
+  batch_size: 32
   opt_keep_k: 8
   outer_its: 2
   resamp_per: 10
@@ -117,7 +117,7 @@ rpgd-me-tf:
   maximum_entropy_alpha: 0.0
   gradmax_clip: 10
   rtol: 1.0e-3
-  num_rollouts: 32
+  batch_size: 32
   opt_keep_k: 0
   outer_its: 25
   resamp_per: 1
@@ -136,7 +136,7 @@ rpgd-ml-tf:
   maximum_entropy_alpha: 0.1
   gradmax_clip: 10
   rtol: 1.0e-3
-  num_rollouts: 32
+  batch_size: 32
   opt_keep_k: 8
   outer_its: 5
   resamp_per: 1
@@ -153,7 +153,7 @@ rpgd-particle-tf:
   adam_epsilon: 1.0e-08
   gradmax_clip: 10
   rtol: 1.0e-3
-  num_rollouts: 32
+  batch_size: 32
   opt_keep_k: 8
   outer_its: 5
   resamp_per: 1
@@ -163,7 +163,7 @@ rpgd-particle-tf:
 mppi-var-tf:
   seed: null                          # If null, random seed based on datetime is used
   mpc_horizon: 35                       # steps
-  num_rollouts: 400                     # Number of Monte Carlo samples
+  batch_size: 400                     # Number of Monte Carlo samples
   period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   cc_weight: 1.0
   R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in cost functions config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
@@ -179,7 +179,7 @@ mppi-var-tf:
 mppi:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                       # steps
-  num_rollouts: 3500                    # Number of Monte Carlo samples
+  batch_size: 320                    # Number of Monte Carlo samples
   cc_weight: 1.0
   R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in cost functions config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
   LBD: 100.0                            # Cost parameter lambda
@@ -190,4 +190,4 @@ mppi:
 random-action-tf:
   seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                      # steps
-  num_rollouts: 320
+  batch_size: 320

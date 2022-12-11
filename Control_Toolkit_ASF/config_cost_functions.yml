@@ -1,4 +1,4 @@
-cost_function_name_default: default
+cost_function_name_default: cartpole_trajectory_cost
 # Default value is used if controller does not specify a cost_function_specification (leave empty)
 # Cost functions are grouped by environment name in a folder within Control_Toolkit_ASF.Cost_Functions
 # Check CartPoleSimulation/config.yml to learn more on how cost_functions are selected TODO I don't see any more information there, and which config.yml is this referring to?
@@ -31,11 +31,10 @@ CartPole:
     cc_weight: 1.0
     ccrc_weight: 1.0
     R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in optimizer config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
-  cartpole_trajectory_cost:
-    dd_weight: 5000.0
-    ep_weight: 20000
-    ekp_weight: 80.0
-    ekc_weight: 20.0
-    cc_weight: 1.0
-    ccrc_weight: 1.0
-    R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in optimizer config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
+  cartpole_trajectory_cost: # values must be float or they are cast to int type, which might not work for some ops
+    cart_pos_weight: 1000.
+    pole_angle_weight: 1000.
+    cart_vel_weight: 1.
+    pole_swing_weight: 1.
+    control_cost_weight: 1.
+    control_cost_change_weight: 1.

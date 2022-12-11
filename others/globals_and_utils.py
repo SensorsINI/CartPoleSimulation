@@ -13,8 +13,12 @@ from typing import Tuple, Optional
 import dictdiffer as dictdiffer
 import yaml
 from generallibrary import print_link, print_link_to_obj # for logging links to source code in logging output for pycharm clicking, see https://stackoverflow.com/questions/26300594/print-code-link-into-pycharms-console
+from munch import Munch, DefaultMunch
+from numba import jit
 
 from Control_Toolkit.others.globals_and_utils import get_logger
+from SI_Toolkit.computation_library import ComputationLibrary
+
 log=get_logger(__name__)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0' # all TF messages
@@ -133,10 +137,12 @@ def input_with_timeout(prompt, timeout=30):
             signal.alarm(0) # cancel alarm
 
 def yes_or_no(question, default='y', timeout=None):
-    """ Get y/n answer with default choice and optional timeout
+    """ Get y/n answer with default choice and optional timeout from terminal input.
+
     :param question: prompt
     :param default: the default choice, i.e. 'y' or 'n'
     :param timeout: the timeout in seconds, default is None
+
     :returns: True or False
     """
     if default is not None and (default!='y' and default!='n'):
@@ -189,7 +195,8 @@ def load_config(filename: str) -> dict:
         config = yaml.load(open(filename), Loader=yaml.FullLoader)
     return config
 
-def load_or_reload_config_if_modified(filepath:str, every:int=1)->Tuple[dict,Optional[dict]]:
+
+def load_or_reload_config_if_modified(filepath:str, every:int=1, target_obj=None)->Tuple[Munch,Optional[dict]]:
     """
     Reloads a YAML config if the yaml file was modified since runtime started or since last reloaded.
     The initial call will store the config in a private dict to return on subsequent calls.
@@ -197,15 +204,17 @@ def load_or_reload_config_if_modified(filepath:str, every:int=1)->Tuple[dict,Opt
     Only modified entries are returned in changes. Added or deleted items are not returned.
 
     :param filepath the relative path to file. Generate for call with e.g. os.path.join("Control_Toolkit_ASF", "config_cost_functions.yml")
+    :param target_obj: an optional object into which the config is assigned for (possibly) use in tensorflow
     :param every: only check every this many times we are invoked
 
     :returns: (config,changes)
-        config: the original config if file has not been modified
+        config: nested Munch of the original config if file has not been modified
             since startup or last reload time,
-            otherwise the reloaded config.
-        changes: a dict of key,value of modified config entries in format dict(['a.b.c',new_value], ...)
-
-
+            otherwise the reloaded config Munch
+            The entries are accessed by name, e.g. "CartPole.default.ddweight".
+            See https://github.com/Infinidat/munch.
+        changes: a dict of key,value of modified config entries in format dict([key,new_value], ...),
+            where key is the final element of path a.b..c.key that is in the nested yaml config file
     """
     counter=0
     if filepath in load_or_reload_config_if_modified.counter:
@@ -214,7 +223,7 @@ def load_or_reload_config_if_modified(filepath:str, every:int=1)->Tuple[dict,Opt
     else:
         load_or_reload_config_if_modified.counter[filepath] =1
     if filepath in load_or_reload_config_if_modified.cached_configs and counter>0 and counter%every!=0:
-        return (load_or_reload_config_if_modified.cached_configs[filepath],False) # if not checking this time, return cached config
+        return (load_or_reload_config_if_modified.cached_configs[filepath],None) # if not checking this time, return cached config
     try:
         fp=Path(filepath)
         mtime=fp.stat().st_mtime # get mod time
@@ -223,21 +232,27 @@ def load_or_reload_config_if_modified(filepath:str, every:int=1)->Tuple[dict,Opt
                 or ((filepath in load_or_reload_config_if_modified.cached_configs) and mtime > load_or_reload_config_if_modified.mtimes[filepath]):
             # if loading first time, or we have loaded and the file has been modified since we loaded it, then reload it and flag that it was modified (globally)
             changes = None
-            new_config = yaml.load(open(filepath), Loader=yaml.FullLoader)
+            new_config = yaml.load(open(filepath), Loader=yaml.FullLoader) # loads a nested dict of config file
+            new_config_obj=DefaultMunch.fromDict(new_config)
+            # now check if there are any changes compared with cached config
             if filepath in load_or_reload_config_if_modified.cached_configs:
                 old_config=load_or_reload_config_if_modified.cached_configs[filepath]
                 diff=dictdiffer.diff(new_config,old_config) # https://github.com/inveniosoftware/dictdiffer https://stackoverflow.com/questions/32815640/how-to-get-the-difference-between-two-dictionaries-in-python
-                for (type,path,(new,old)) in diff:
+                for (type,path,change) in diff:
                     if type=='change':
+                        (new,old)=change
                         log.info(f'{path} changed: old/new {old}/{new}')
                         if changes is None:
                             changes=dict()
-                        changes[path]=new
+                        key=path.split('.')[-1]
+                        changes[key]=new
 
             load_or_reload_config_if_modified.mtimes[filepath]=mtime
-            load_or_reload_config_if_modified.cached_configs[filepath]=new_config
+            load_or_reload_config_if_modified.cached_configs[filepath]=new_config_obj
             log.info(f'(re)loaded modified config (File "{filepath}")') # format (File "XXX") generates pycharm link to file in console output
-            return (new_config,changes) # it was modified, so return changes dict
+            if not changes is None and not target_obj is None:
+                update_attributes(changes, target_obj)
+            return (new_config_obj,changes) # it was modified, so return changes dict
         else:
             return (load_or_reload_config_if_modified.cached_configs[filepath], None) # return previous config and None for changes
     except Exception as e:
@@ -248,6 +263,35 @@ load_or_reload_config_if_modified.cached_configs=dict()
 load_or_reload_config_if_modified.mtimes=dict()
 load_or_reload_config_if_modified.start_time=time.time()
 load_or_reload_config_if_modified.counter=dict()
+
+import numbers
+
+
+def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
+    """ Update scalar float32 attributes in compiled code (tensorflow JIT) that have changed, i.e. copy them to the compiled/GPU instance.
+
+    After this call, such attribute values are available to the TF function as self.key, where key is the key used in dict.
+
+    Used in various controllers in Control_Toolkit/Control_Toolkit_ASF_Template/Controllers.
+
+    :param updated_attributes: a dict with string keys and scalar numeric value attribute to set.
+    :param target_obj: the object into which we set the attribute.
+
+    """
+    for property, new_value in updated_attributes.items():
+        if hasattr(target_obj, property) :  # make sure it is mutable if we want to set it
+            target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value, target_obj.lib.float32))
+        else:
+            log.warning(
+                f'updated tensorflow attribute {property} does not exist in {target_obj}, setting it for first time')
+            if target_obj.lib is None or type(new_value) is str:
+                setattr(target_obj, property, new_value)
+            else:
+                # just set the attribute, don't assign in (like =) since some immutable objects cannot be assigned
+                if isinstance(new_value,numbers.Integral):
+                    setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.int32))
+                else:
+                    setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.float32))
 
 
 class MockSpace:

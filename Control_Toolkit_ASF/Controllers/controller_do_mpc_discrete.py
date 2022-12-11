@@ -9,6 +9,7 @@ from CartPole.cartpole_model import (Q2u, TrackHalfLength,
 from CartPole.state_utilities import cartpole_state_vector_to_namespace
 from Control_Toolkit.Controllers import template_controller
 from SI_Toolkit.computation_library import NumpyLibrary, TensorType
+from others.globals_and_utils import update_attributes
 
 
 def mpc_next_state(s, u, dt):
@@ -146,7 +147,7 @@ class controller_do_mpc_discrete(template_controller):
         return self.tvp_template
 
     def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
-        self.update_attributes(updated_attributes)
+        update_attributes(updated_attributes,self)
 
         s = cartpole_state_vector_to_namespace(s)
 

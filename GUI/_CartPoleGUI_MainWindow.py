@@ -14,7 +14,8 @@ import time
 import sys
 
 from others.p_globals import (
-    k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength,
+    # k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias,
+    TrackHalfLength,
 )
 
 # region Imports needed to create layout of the window in __init__ method
@@ -791,9 +792,16 @@ class MainWindow(QMainWindow):
 
         # Set user-provided initial values for state (or its part) of the CartPole
         # Search implementation for more detail
-        # The following line is important as it let the user to set with the slider the starting target position
+        # The following line is important as it let the user set with the slider the starting target position
         # After the slider was reset at the end of last experiment
         # With the small sliders he can also adjust starting initial_state
+        self.initial_state = create_cartpole_state()
+        # don't reset the slider on restart experiment
+        # self.initial_position_slider.setValue(0)
+        # self.initial_angle_slider.setValue(0)
+        # reset state to slider values on restart
+        self.initial_state[ANGLE_IDX] = self.initial_angle_slider.value() / 100.
+        self.initial_state[POSITION_IDX] = self.initial_position_slider.value() / 1000.
         self.reset_variables(2, s=np.copy(self.initial_state), target_position=self.CartPoleInstance.target_position)
 
         if self.simulator_mode == 'Random Experiment':
@@ -832,9 +840,14 @@ class MainWindow(QMainWindow):
 
         self.CartPoleInstance.use_pregenerated_target_position = False
         self.initial_state = create_cartpole_state()
-        self.initial_position_slider.setValue(0)
-        self.initial_angle_slider.setValue(0)
+        # don't reset the slider on restart experiment
+        # self.initial_position_slider.setValue(0)
+        # self.initial_angle_slider.setValue(0)
+        # reset state to slider values on restart
+        self.initial_state[ANGLE_IDX] = self.initial_angle_slider.value() / 100.
+        self.initial_state[POSITION_IDX] = self.initial_position_slider.value() / 1000.
         self.CartPoleInstance.s = self.initial_state
+
 
         # Some controllers may collect they own statistics about their usage and print it after experiment terminated
         if self.simulator_mode != 'Replay':

@@ -9,7 +9,7 @@ import yaml
 from CartPole.cartpole_model import Q2u, cartpole_ode_namespace
 from CartPole.state_utilities import cartpole_state_vector_to_namespace
 from Control_Toolkit.Controllers import template_controller
-from others.globals_and_utils import create_rng
+from others.globals_and_utils import create_rng, update_attributes
 from SI_Toolkit.computation_library import NumpyLibrary, TensorType
 
 
@@ -137,7 +137,7 @@ class controller_do_mpc(template_controller):
 
 
     def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
-        self.update_attributes(updated_attributes)
+        update_attributes(updated_attributes,self)
 
         s = cartpole_state_vector_to_namespace(s)
 

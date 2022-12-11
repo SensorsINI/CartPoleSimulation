@@ -26,6 +26,8 @@ from Control_Toolkit.Controllers import template_controller
 from matplotlib.widgets import Slider
 from numba import jit
 from numpy.random import SFC64, Generator
+
+from others.globals_and_utils import update_attributes
 from others.p_globals import TrackHalfLength
 from scipy.interpolate import interp1d
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
@@ -462,7 +464,7 @@ class controller_mppi_cartpole(template_controller):
         :return: A normed control value in the range [-1.0, 1.0]
         :rtype: np.float32
         """
-        self.update_attributes(updated_attributes)
+        update_attributes(updated_attributes,self)
 
         self.s = s
 

@@ -24,7 +24,7 @@ class default(cost_function_base):
         :param previous_input: previous control input, can be used to compute cost of changing control input
         :return: Tensor of [rollout, timestamp] over all rollouts and horizon timesteps
         """
-        config=load_or_reload_config_if_modified(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"),every=1)
+        (config,reloaded)=load_or_reload_config_if_modified(os.path.join("Control_Toolkit_ASF", "config_cost_functions.yml"),every=1)
         self.dd_weight = config["CartPole"]["default"]["dd_weight"]
         self.cc_weight = config["CartPole"]["default"]["cc_weight"]
         self.ep_weight = config["CartPole"]["default"]["ep_weight"]
@@ -36,7 +36,7 @@ class default(cost_function_base):
         ccrc = 0 # compute the control change cost
         angle=states[:, :, ANGLE_IDX]
         angleD=states[:,:,ANGLED_IDX]
-        ep = self.ep_weight * angleD # make pole spin
+        ep = self.ep_weight * self._E_pot_cost(angle)
         # if previous_input is not None:
         #     ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
 
