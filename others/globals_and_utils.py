@@ -196,7 +196,7 @@ def load_config(filename: str) -> dict:
     return config
 
 
-def load_or_reload_config_if_modified(filepath:str, every:int=1, target_obj=None)->Tuple[Munch,Optional[dict]]:
+def load_or_reload_config_if_modified(filepath:str, every:int=30, target_obj=None)->Tuple[Munch,Optional[dict]]:
     """
     Reloads a YAML config if the yaml file was modified since runtime started or since last reloaded.
     The initial call will store the config in a private dict to return on subsequent calls.
