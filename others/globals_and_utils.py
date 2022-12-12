@@ -292,7 +292,11 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
             else:
                 log.warning(f'attribute "{property}" has unknown object type {type(new_value)}; cannot assign it')
             if objtype:
-                target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value,objtype))
+                try:
+                    target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value,objtype))
+                except ValueError:
+                    log.warning(f'target attribute "{property}" is probably float type but in config file it is int. Add a trailing "." to the number "{new_value}"')
+                    target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value, target_obj.lib.to_variable(float(new_value), target_obj.lib.float32)))
         else:
             log.info(
                 f'updated tensorflow attribute {property} does not exist in {target_obj}, setting it for first time')
