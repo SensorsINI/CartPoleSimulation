@@ -50,47 +50,47 @@ class cartpole_trajectory_cost(cost_function_base):
 
         :returns: Tensor of [rollout, timestamp] over all rollouts and horizon timesteps
         """
-        # print("test") # only prints once since TF graph is only built once, and not rebuilt if arguments do not change
 
-        dd = 0 # self.dd_weight * self._distance_difference_cost(states[:, :, POSITION_IDX]) # compute cart position target distance cost
-        control_cost = 0 # self.cc_weight * self.R*self._CC_cost(inputs) # compute the cart acceleration control cost
         control_change_cost = 0 # compute the control change cost
-        ep=0 # pole angle cost
+
         position=states[:, :, POSITION_IDX]
         positionD=states[:, :, POSITIOND_IDX]
         angle=states[:, :, ANGLE_IDX]
         angleD=states[:,:,ANGLED_IDX]
         gui_target_position=self.controller.target_position # GUI slider position
         gui_target_equilibrium=self.controller.target_equilibrium # GUI switch +1 or -1 to make pole target up or down position
+
         input_shape=self.lib.shape(states)
         num_rollouts=input_shape[0]
         num_timesteps=input_shape[1]
         trajectory_cost=self.lib.zeros((num_rollouts,num_timesteps))
         target_trajectory=self.controller.target_trajectory # [state, timestep]
+
+        # True to use only final state to compute cost, False to sum costs over entire trajectory
+        use_terminal_state_only=self.use_terminal_state_only
+
         # "angle", "angleD", "angle_cos", "angle_sin", "position", "positionD"
         cost_weights=(self.pole_angle_weight, self.pole_swing_weight, self.pole_angle_weight, self.pole_angle_weight, self.cart_pos_weight, self.cart_vel_weight)
         for i in range(NUM_STATES):
             if not self.lib.any(self.lib.isnan(target_trajectory[i,0])): # to skip a state, the first timestep is NaN
                 state_i=states[:,:,i] # matrix [rollout,timestep] for this state element
                 trajectory_i=target_trajectory[i,:] # timestep vector for this state element
-                zerodiffs=self.lib.zeros((num_rollouts, num_timesteps-1))
-                terminaldiffs=state_i[:,-1]-trajectory_i[-1]
-                terminaldiffs_unsqueezed=self.lib.unsqueeze(terminaldiffs,1)
-                diff=self.lib.concat((zerodiffs,terminaldiffs_unsqueezed),1) # -1 is terminal state, subtracts time vector trajectory_i from each time row i of state
+                if use_terminal_state_only==1:
+                    zerodiffs=self.lib.zeros((num_rollouts, num_timesteps-1))
+                    terminaldiffs=state_i[:,-1]-trajectory_i[-1]
+                    terminaldiffs_unsqueezed=self.lib.unsqueeze(terminaldiffs,1)
+                    diff=self.lib.concat((zerodiffs,terminaldiffs_unsqueezed),1) # -1 is terminal state, subtracts time vector trajectory_i from each time row i of state
+                else:
+                    diff=state_i-trajectory_i
                 diffabs=self.lib.abs(diff) # make it unsigned error matrix [rollout, timestep], in this case just last timestep of rollout
                 # don't do sum here, it is done in get_trajectory_cost() caller
                 # sums=self.lib.sum(diff2,1) # sums over the time dimension, leaving column vector of rollouts
                 trajectory_cost+=cost_weights[i]*diffabs
-        # control_cost_weight: 1.0
-        # control_cost_change_weight: 1.0
 
-        # ep = self.ep_weight * angleD # make pole spin
         if previous_input is not None:
             control_change_cost = self.control_cost_change_weight * self._control_change_rate_cost(inputs, previous_input)
         control_cost = self.control_cost_weight *self._CC_cost(inputs) # compute the cart acceleration control cost
-        # if self.controller.target_positions_vector[0] > 0: # TODO why is potential cost positive for this case and negative otherwise?
-        #     stage_cost = dd + ep + cc + ccrc
-        # else:
+
         stage_cost = trajectory_cost +control_cost + control_change_cost # hack to bring in GUI stuff to cost
 
         return stage_cost

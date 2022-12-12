@@ -33,16 +33,19 @@ CartPole:
     R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in optimizer config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
   cartpole_trajectory_cost: # values must be float or they are cast to int type, which might not work for some ops
     policy:  balance  # spin  balance shimmy cartonly
-    cart_pos_weight: 1000.
-    pole_angle_weight: 1000.0
-    cart_vel_weight: 1.0
-    pole_swing_weight: 100.0
-    control_cost_weight: 1.0
-    control_cost_change_weight: 100.
+    use_terminal_state_only: 1
+    cart_pos_weight: 1e3
+    pole_angle_weight: 1e3
+    cart_vel_weight: 1e1
+    pole_swing_weight: 1e1
+    control_cost_weight: 1e0
+    control_cost_change_weight: 1e0
     # shimmy does a sinusoidal dance of cart around target position with period in seconds and amplitude in meters
     shimmy_per: 1.
     shimmy_amp: .2
     # cartonly only controls cart position, pole is ignored. Trajectory is triangular with amp and per
     cartonly_amp: .2
     cartonly_per: 1.
+    # spin
+    spin_rev_period_sec: 2.
 
