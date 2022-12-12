@@ -1,5 +1,5 @@
 
-predictors_specifications_testing: ['I_love_control', 'I_love_control_too', 'GRU-6IN-32H1-32H2-5OUT-2']
+predictors_specifications_testing: ['SGP_10', 'SGP_100']
 
 # predictors_specifications may be a names from the list of predictors in config_predictors.yml (assuming specification make sense)
 # It can be a names of networks or GPs e.g. 'GRU-6IN-32H1-32H2-5OUT-0' to be used for test
@@ -11,7 +11,7 @@ predictors_specifications_testing: ['I_love_control', 'I_love_control_too', 'GRU
 
 test_file: 'Experiment-1.csv'
 
-path_to_testfile: './SI_Toolkit_ASF/Experiments/Experiment-2/Recordings/Test/'
+path_to_testfile: './SI_Toolkit_ASF/Experiments/Pretrained-RNN-1/Recordings/Test/'
 
 features_to_plot: [ 'angle',      # Only to indicate what odd to be displayed in Brunton Test
                     'angleD',
