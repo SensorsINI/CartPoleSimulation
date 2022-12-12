@@ -32,9 +32,10 @@ CartPole:
     ccrc_weight: 1.0
     R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in optimizer config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
   cartpole_trajectory_cost: # values must be float or they are cast to int type, which might not work for some ops
+    policy:  balance  # spin  balance
     cart_pos_weight: 1000.
-    pole_angle_weight: 1000.
-    cart_vel_weight: 1.
-    pole_swing_weight: 1.
-    control_cost_weight: 1.
-    control_cost_change_weight: 1.
+    pole_angle_weight: 1000.0
+    cart_vel_weight: 1.0
+    pole_swing_weight: 100.0
+    control_cost_weight: 1.0
+    control_cost_change_weight: 1.0
