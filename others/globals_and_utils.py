@@ -299,7 +299,7 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
                     log.error(f'target attribute "{property}" is probably float type but in config file it is int. Add a trailing "." to the number "{new_value}"')
                     # target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value, target_obj.lib.to_variable(float(new_value), target_obj.lib.float32)))
         else:
-            log.debug(
+            log.warning(
                 f'updated tensorflow attribute {property} does not exist in {target_obj}, setting it for first time')
             if target_obj.lib is None:
                 setattr(target_obj, property, new_value)

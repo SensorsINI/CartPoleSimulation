@@ -35,9 +35,9 @@ CartPole:
     policy:  balance  # spin  balance shimmy cartonly
     use_terminal_state_only: 1
     cart_pos_weight: 1e3
-    pole_angle_weight: 1e3
+    pole_angle_weight: 3e3
     cart_vel_weight: 1e1
-    pole_swing_weight: 1e1
+    pole_swing_weight: 1e2
     control_cost_weight: 1e0
     control_cost_change_weight: 1e0
     # shimmy does a sinusoidal dance of cart around target position with period in seconds and amplitude in meters
@@ -47,5 +47,5 @@ CartPole:
     cartonly_amp: .2
     cartonly_per: 1.
     # spin
-    spin_rev_period_sec: 2.
+    spin_rev_period_sec: 1e-1 # must set quite small period to achieve spin from stop, e.g. 1/10 second
 
