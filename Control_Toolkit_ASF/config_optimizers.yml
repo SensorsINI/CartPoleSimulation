@@ -69,7 +69,6 @@ mppi-optimize-tf:
   LBD: 100.0                            # Cost parameter lambda
   NU: 1000.0                            # Exploration variance
   SQRTRHOINV: 0.02
-  GAMMA: 1.00                           # Future cost discount
   period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   optim_steps: 10
 dist-adam-resamp2-tf:
@@ -192,7 +191,6 @@ mppi-var-tf:
   LBD_mc: 10.0                          # Cost parameter lambda
   SQRTRHOINV_mc: 0.002                  # Sampling variance
   NU_mc: 20.0                           # Exploration variance
-  GAMMA: 1.00                           # Future cost discount
   LR: 1000                              # Learning rate for adaption of variance, !!! Set to 0 to retrieve a mppi version in accordance with mppi paper
   STDEV_min: 0.01                       # Maximal variance for sampling
   STDEV_max: 10                         # Minimal sampling variance for sampling
@@ -206,7 +204,6 @@ mppi:
   LBD: 100.0                            # Cost parameter lambda
   NU: 1000.0                            # Exploration variance
   SQRTRHOINV: 0.03                      # Sampling variance
-  GAMMA: 1.00                           # Future cost discount
   period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
 random-action-tf:
   seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)

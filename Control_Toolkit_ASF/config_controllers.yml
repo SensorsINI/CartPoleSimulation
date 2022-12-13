@@ -23,7 +23,6 @@ mppi-cartpole:
   LBD: 100.0                            # Cost parameter lambda
   NU: 1000.0                            # Exploration variance
   SQRTRHOINV: 0.02                      # Sampling variance
-  GAMMA: 1.00                           # Future cost discount
   SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
   controller_logging: False                        # Collect and show detailed insights into the controller's behavior
   WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
