@@ -1,9 +1,9 @@
 library: 'TF'  # TF or Pytorch
 modeling:
-  NET_NAME: 'GRU-32H1-32H2'
+  NET_NAME: 'GRU-64H1'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Pretrained-RNN-1/'
+  path_to_experiment: 'Experiment-16/'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
 
 training_default:
