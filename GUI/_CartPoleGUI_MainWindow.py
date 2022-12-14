@@ -572,7 +572,7 @@ class MainWindow(QMainWindow):
 
                 # Terminate thread if random experiment reached its maximal length
                 if (
-                        (self.CartPoleInstance.use_pregenerated_target_position is True)
+                        self.CartPoleInstance.use_pregenerated_target_position
                         and
                         (self.CartPoleInstance.time >= self.CartPoleInstance.t_max_pre)
                 ):
@@ -618,11 +618,12 @@ class MainWindow(QMainWindow):
                 line = line[0]
                 if line[:len('# Controller: ')] == '# Controller: ':
                     controller_set = self.CartPoleInstance.set_controller(line[len('# Controller: '):].rstrip("\n"))
-                    optimizer_set = self.CartPoleInstance.set_optimizer(line[len('# Optimizer: '):].rstrip("\n"))
                     if controller_set:
                         self.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
                     else:
                         self.rbs_controllers[1].setChecked(True) # Set first, but not manual stabilization
+                elif line[:len('# Optimizer: ')] == '# Optimizer: ':
+                    optimizer_set = self.CartPoleInstance.set_optimizer(line[len('# Optimizer: '):].rstrip("\n"))
                     if optimizer_set:
                         self.rbs_optimizers[self.CartPoleInstance.optimizer_idx].setChecked(True)
                     else:
@@ -1062,7 +1063,7 @@ class MainWindow(QMainWindow):
             self.threadpool.start(worker)
 
         else:
-            self.PhysicalCartPoleDriverInstance.terminate_experiment = True
+            self.terminate_experiment = True
 
 
         self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
