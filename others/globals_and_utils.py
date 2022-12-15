@@ -17,7 +17,7 @@ from munch import Munch, DefaultMunch
 from numba import jit
 
 from Control_Toolkit.others.globals_and_utils import get_logger
-from SI_Toolkit.computation_library import ComputationLibrary
+from SI_Toolkit.computation_library import ComputationLibrary, TensorType
 
 log=get_logger(__name__)
 
