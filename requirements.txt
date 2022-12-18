@@ -32,6 +32,7 @@ tensorflow
 do-mpc==4.1.1
 casadi
 nni
-munch
+munch # https://github.com/Infinidat/munch
+pypref # https://bachiraoun.github.io/pypref/
 
 -e ./SI_Toolkit
