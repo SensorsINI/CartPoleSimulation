@@ -269,9 +269,12 @@ import numbers
 
 
 def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
-    """ Update scalar float32 attributes in compiled code (tensorflow JIT) that have changed, i.e. copy them to the compiled/GPU instance.
+    """ Update attributes in compiled code (tensorflow JIT) that have changed, i.e. copy them to the compiled/GPU instance.
 
     After this call, such attribute values are available to the TF function as self.key, where key is the key used in dict.
+
+    Note that this attribute will NOT be accessible the compiled TF code if it has been declared ahead of time. I.e., do not define e.g. self.a=something and then
+    expect config a: to be picked up by the compiled code. It must be set for the first time by update_attributes!
 
     Used in various controllers in Control_Toolkit/Control_Toolkit_ASF_Template/Controllers.
 
@@ -300,17 +303,19 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
                     # target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value, target_obj.lib.to_variable(float(new_value), target_obj.lib.float32)))
         else:
             log.warning(
-                f'updated tensorflow attribute {property} does not exist in {target_obj}, setting it for first time')
+                f"updated tensorflow attribute '{property}' does not exist in {target_obj.__class__.__name__}, setting it for first time")
             if target_obj.lib is None:
                 setattr(target_obj, property, new_value)
             else:
                 # just set the attribute, don't assign in (like =) since some immutable objects cannot be assigned
                 if isinstance(new_value,numbers.Integral):
                     setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.int32))
-                if isinstance(new_value, str):
+                elif isinstance(new_value, str):
                     setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.string))
-                else:
+                elif isinstance(new_value,numbers.Real) or isinstance(new_value,np.ndarray):
                     setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.float32))
+                else:
+                    log.warning(f'type "{type(new_value)}" of attribute "{property}" is not settable type, must be int, float (or np.ndarray), or string')
 
 
 class MockSpace:
