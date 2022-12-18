@@ -57,6 +57,10 @@ except:
     pass
 from GUI._ControllerGUI_NoiseOptionsWindow import NoiseOptionsWindow
 
+# from __future__ import print_function
+from pypref import Preferences
+prefs=Preferences(filename="cartpole-prefs.py") # store and retrieve sticky values
+
 
 # Class implementing the main window of CartPole GUI
 class MainWindow(QMainWindow):
@@ -403,6 +407,7 @@ class MainWindow(QMainWindow):
         l_text = QHBoxLayout()
         textbox_title = QLabel('CSV file name:')
         self.textbox = QLineEdit()
+        self.textbox.setText(prefs.get('last-csv-file','cartpole-history.csv'))
         l_text.addWidget(textbox_title)
         l_text.addWidget(self.textbox)
         layout.addLayout(l_text)
@@ -593,6 +598,7 @@ class MainWindow(QMainWindow):
                                                        decimals=2))
             self.CartPoleInstance.save_history_csv(csv_name=csv_name,
                                                    mode='save offline')
+            prefs.update_preferences({'last-csv-file':csv_name})
 
         self.experiment_or_replay_thread_terminated = True
 
@@ -614,22 +620,28 @@ class MainWindow(QMainWindow):
         history_pd, filepath = self.CartPoleInstance.load_history_csv(csv_name=csv_name)
 
         # Set cartpole in the right mode (just to ensure slider behaves properly)
+        optimizer_set=False
+        controller_set=False
         with open(filepath, newline='') as f:
             reader = csv.reader(f)
             for line in reader:
                 line = line[0]
-                if line[:len('# Controller: ')] == '# Controller: ':
-                    controller_set = self.CartPoleInstance.set_controller(line[len('# Controller: '):].rstrip("\n"))
-                    optimizer_set = self.CartPoleInstance.set_optimizer(line[len('# Optimizer: '):].rstrip("\n"))
+                if 'Controller:' in line:
+                    s = line.split()[-1]
+                    controller_set = self.CartPoleInstance.set_controller(s)
                     if controller_set:
                         self.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
                     else:
                         self.rbs_controllers[1].setChecked(True) # Set first, but not manual stabilization
+                elif 'Optimizer:' in line:
+                    s=line.split()[-1]
+                    optimizer_set = self.CartPoleInstance.set_optimizer(s)
                     if optimizer_set:
                         self.rbs_optimizers[self.CartPoleInstance.optimizer_idx].setChecked(True)
                     else:
                         self.rbs_optimizers[1].setChecked(True)
-                    self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)    
+                    self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)
+                if optimizer_set and controller_set:
                     break
 
         # Augment the experiment history with simulation time step size
