@@ -33,19 +33,24 @@ CartPole:
     R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in optimizer config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
   cartpole_trajectory_cost: # values must be float or they are cast to int type, which might not work for some ops
     policy:  balance  # spin  balance shimmy cartonly
-    use_terminal_state_only: 1
-    cart_pos_weight: 1e3
-    pole_angle_weight: 3e3
-    cart_vel_weight: 1e1
-    pole_swing_weight: 1e2
-    control_cost_weight: 1e0
-    control_cost_change_weight: 1e0
+    use_terminal_state_only: 0 # set to 1 to only measure cost at the final state of rollout horizon
+    # tobi cannot get conditional branch to work for following option in cartpole_trajectory_cost.py
+#    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
+    terminal_cost_factor: 10 # how much to weight up the terminal state costs compared to the rest of the rollout
+
+    cart_pos_weight: 1e3 # weight on cart pos error
+    pole_angle_weight: 1e3
+    cart_vel_weight: 1e0
+    pole_swing_weight: 1e2 # cart angle derivative weight
+    control_cost_weight: 1e0 # cost of control
+    control_cost_change_weight: 1e0 # cost of changing control
     # shimmy does a sinusoidal dance of cart around target position with period in seconds and amplitude in meters
     shimmy_per: 1.
     shimmy_amp: .2
     # cartonly only controls cart position, pole is ignored. Trajectory is triangular with amp and per
     cartonly_amp: .2
-    cartonly_per: 1.
+    cartonly_per: 2.
+    cartonly_duty_cycle: 1. # set to .5 for triangle, 0 or 1 for sawtooth
     # spin
-    spin_rev_period_sec: 1e-1 # must set quite small period to achieve spin from stop, e.g. 1/10 second
+    spin_rev_period_sec: 1e0 # must set quite small period to achieve spin from stop, e.g. 1/10 second
 

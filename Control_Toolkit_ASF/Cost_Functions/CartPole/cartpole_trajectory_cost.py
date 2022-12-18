@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import tensorflow
 from yaml import safe_load
 
@@ -20,7 +21,7 @@ log=get_logger(__name__)
 # weights=config.CartPole.cartpole_trajectory_cost
 # log.info(f'starting MPC cartpole trajectory cost weights={weights}')  # only runs once
 
-
+import tensorflow as tf
 
 class cartpole_trajectory_cost(cost_function_base):
 
@@ -33,9 +34,7 @@ class cartpole_trajectory_cost(cost_function_base):
         :param config: the dict of configuration for this cost function.  The caller can modify the config to change behavior during runtime.
 
          """
-
         super().__init__(controller, ComputationLib)
-
 
     def get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
         """
@@ -82,7 +81,18 @@ class cartpole_trajectory_cost(cost_function_base):
                     diff=self.lib.concat((zerodiffs,terminaldiffs_unsqueezed),1) # -1 is terminal state, subtracts time vector trajectory_i from each time row i of state
                 else:
                     diff=state_i-trajectory_i
-                diffabs=self.lib.abs(diff) # make it unsigned error matrix [rollout, timestep], in this case just last timestep of rollout
+
+                # make it unsigned error matrix [rollout, timestep], in this case just last timestep of rollout if use_terminal_state_only==1
+                # diffabs=self.lib.zeros_like(diff) # needed for tf.compile
+                # # dist_norm=self.distance_norm
+                # def abs(x): return tf.abs(x)
+                # def mse(x): return tf.pow(x,2)
+                # def rmse(x): return tf.sqrt(tf.pow(x,2))
+                # branch_fns={0:abs, 1: rmse, 2: mse}
+                # dist_branch=tf.constant(self.distance_norm, tf.int32)
+                # tf.switch_case(dist_branch, branch_fns)
+                diffabs=self.lib.sqrt(self.lib.pow(diff,2)) # self.lib.pow(diff,2)
+
                 # don't do sum here, it is done in get_trajectory_cost() caller
                 # sums=self.lib.sum(diff2,1) # sums over the time dimension, leaving column vector of rollouts
                 trajectory_cost+=cost_weights[i]*diffabs

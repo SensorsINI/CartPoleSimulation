@@ -532,9 +532,9 @@ class CartPole(EnvironmentBatched):
 
                 writer.writerow(['#'])
                 writer.writerow(['# Parameters:'])
-                (P_GLOBALS, _) = load_or_reload_config_if_modified("config.yml")
-                for k in P_GLOBALS.__dict__:
-                    writer.writerow(['# ' + k + ': ' + str(getattr(P_GLOBALS, k))])
+                c = load_config("config.yml")
+                for k,v in c.items():
+                    writer.writerow(['# ' + k + ': ' + str(v)])
                 writer.writerow(['#'])
 
                 writer.writerow(['# Data:'])
