@@ -12,6 +12,7 @@ cartpole:
   v_max: 0.8  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented in model, but needed for MPC
   cart_length: 4.4e-2  # m, checked by Marcin&Asude
   usable_track_length: 44.0e-2  # m, checked by Marcin&Asude
+  bounce_elasticity: 1.0  # Coefficient in range [0.0...1.0]. 0 means inelastic bounce. 1 means elastic. In between means partially elastic.
   controlDisturbance: 0.0  # disturbance, as factor of u_max # I used 0.2-0.5 for data collection
   controlBias: 0.0  # bias of control input
   g: 9.81  # absolute value of gravity acceleration, m/s^2

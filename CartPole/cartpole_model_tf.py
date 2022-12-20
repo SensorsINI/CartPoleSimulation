@@ -5,7 +5,7 @@ import tensorflow as tf
 from others.globals_and_utils import create_rng, load_config
 from others.p_globals import (J_fric, L, m_cart, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, g, k, m_pole, u_max,
-                              v_max)
+                              v_max, bounce_elasticity)
 from SI_Toolkit.Functions.TF.Compile import CompileTF
 
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
@@ -137,10 +137,11 @@ def cartpole_ode(s: np.ndarray, u: float,
 
 def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L=L):
     if position >= TrackHalfLength or -position >= TrackHalfLength:  # Without abs to compile with tensorflow
-        angleD -= 2 * (positionD * angle_cos) / L
+        angleD -= (1.0 + bounce_elasticity) * positionD * angle_cos * (2.0 / L)
         angle += angleD * t_step
         positionD = -positionD
         position += positionD * t_step
+        positionD = positionD * bounce_elasticity
     return angle, angleD, position, positionD
 
 

@@ -26,7 +26,7 @@ from Control_Toolkit.others.globals_and_utils import (
 from others.globals_and_utils import MockSpace, create_rng, load_config, load_or_reload_config_if_modified
 from others.p_globals import (CARTPOLE_PHYSICAL_CONSTANTS, J_fric, L, m_cart, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
-                              g, k, m_pole, u_max, v_max)
+                              g, k, m_pole, u_max, v_max, bounce_elasticity)
 # Interpolate function to create smooth random track
 from scipy.interpolate import BPoly, interp1d
 # Run range() automatically adding progress bar in terminal
@@ -911,8 +911,8 @@ class CartPole(EnvironmentBatched):
             pass
 
         # reset global variables
-        global k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
-        k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
+        global k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength, bounce_elasticity
+        k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...], bounce_elasticity[...] = export_globals()
 
         self.time = 0.0
         if reset_mode == 0:  # Don't change it
@@ -953,7 +953,7 @@ class CartPole(EnvironmentBatched):
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
+                self.Q = self.controller.step(self.s, time=self.time, updated_attributes={"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
 
             self.u = Q2u(self.Q)  # Calculate CURRENT control input
             self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)  # Calculate CURRENT second derivatives
@@ -1183,9 +1183,7 @@ class CartPole(EnvironmentBatched):
         # Remove ticks on the y-axes
         AxSlider.yaxis.set_major_locator(plt.NullLocator())  # NullLocator is used to disable ticks on the Figures
 
-        if self.controller_name == 'manual-stabilization':
-            pass
-        else:
+        if self.controller_name != 'manual-stabilization':
             locs = np.array([-50.0, -37.5, -25.0, -12.5, - 0.0, 12.5, 25.0, 37.5, 50.0])/50.0
             labels = [str(np.around(np.array(x * TrackHalfLength), 3)) for x in locs]
             AxSlider.xaxis.set_major_locator(plt.FixedLocator(locs))

@@ -5,7 +5,7 @@ from yaml import safe_load
 
 from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.others.globals_and_utils import get_logger
-from SI_Toolkit.computation_library import TensorType
+from SI_Toolkit.computation_library import ComputationLibrary, TensorType
 from Control_Toolkit.Cost_Functions import cost_function_base
 
 from others.globals_and_utils import load_config, load_or_reload_config_if_modified

@@ -62,7 +62,7 @@ def edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L
     position_bounced = tf.TensorArray(tf.float32, size=tf.size(position), dynamic_size=False)
     positionD_bounced = tf.TensorArray(tf.float32, size=tf.size(positionD), dynamic_size=False)
 
-    for i in tf.range(tf.size(position)):
+    for i in tf.range(tf.size(position)):  # TODO: Make this a batched operation
         angle_i, angleD_i, position_i, positionD_i = edge_bounce_tf(angle[i], angle_cos[i], angleD[i], position[i],
                                                                     positionD[i],
                                                                     t_step, L)
