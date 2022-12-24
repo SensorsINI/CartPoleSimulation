@@ -24,12 +24,12 @@ class controller_pid(template_controller):
         self.I_position = config["controller"]["pid"]["I_position"]
         self.D_position = config["controller"]["pid"]["D_position"]
 
-    def step(self, s: np.ndarray, target_position: np.ndarray, time=None):
+    def step(self, state: np.ndarray, target_position: np.ndarray, time=None):
         error = -np.array([
-            [s[cartpole_state_varname_to_index('position')] - target_position],
-            [s[cartpole_state_varname_to_index('positionD')]],
-            [s[cartpole_state_varname_to_index('angle')]],
-            [s[cartpole_state_varname_to_index('angleD')]]
+            [state[cartpole_state_varname_to_index('position')] - target_position],
+            [state[cartpole_state_varname_to_index('positionD')]],
+            [state[cartpole_state_varname_to_index('angle')]],
+            [state[cartpole_state_varname_to_index('angleD')]]
         ])
 
         positionCMD = self.P_position * error[0, :] + self.D_position * error[1]

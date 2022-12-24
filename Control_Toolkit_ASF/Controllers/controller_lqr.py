@@ -81,11 +81,11 @@ class controller_lqr(template_controller):
         self.X = X
         self.eigVals = eigVals
 
-    def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
+    def step(self, state: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
         update_attributes(updated_attributes,self)
         
         state = np.array(
-            [[s[POSITION_IDX] - self.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
+            [[state[POSITION_IDX] - self.target_position], [state[POSITIOND_IDX]], [state[ANGLE_IDX]], [state[ANGLED_IDX]]])
 
         Q = np.dot(-self.K, state).item()
 

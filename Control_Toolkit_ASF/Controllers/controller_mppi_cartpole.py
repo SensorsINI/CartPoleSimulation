@@ -454,11 +454,11 @@ class controller_mppi_cartpole(template_controller):
 
         return delta_u
 
-    def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
+    def step(self, state: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
         """Perform controller step
 
-        :param s: State passed to controller after system has evolved for one step
-        :type s: np.ndarray
+        :param state: State passed to controller after system has evolved for one step
+        :type state: np.ndarray
         :param time: Time in seconds that has passed in the current experiment, defaults to None
         :type time: float, optional
         :return: A normed control value in the range [-1.0, 1.0]
@@ -466,7 +466,7 @@ class controller_mppi_cartpole(template_controller):
         """
         update_attributes(updated_attributes,self)
 
-        self.s = s
+        self.s = state
 
         self.iteration += 1
 
@@ -529,8 +529,8 @@ class controller_mppi_cartpole(template_controller):
 
         ):
             self.warm_up_countdown -= 1
-            if abs(s[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small
-                Q = self.auxiliary_controller.step(s, self.target_position)
+            if abs(state[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small
+                Q = self.auxiliary_controller.step(state, self.target_position)
             else:
                 Q = self.rng_mppi_rnn.uniform(-1, 1)  # Apply random input to let RNN "feel" the system behaviour
         else:

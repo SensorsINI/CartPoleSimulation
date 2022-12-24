@@ -130,9 +130,9 @@ class controller_mpc_opti(template_controller):
 
         return cost
 
-    def step(self, s, target_position, time=None):
+    def step(self, state, target_position, time=None):
 
-        self.s = s
+        self.s = state
         self.target_position = target_position
 
         opti = casadi.Opti()

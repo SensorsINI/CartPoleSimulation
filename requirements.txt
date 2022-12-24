@@ -34,5 +34,6 @@ casadi
 nni
 munch # https://github.com/Infinidat/munch
 pypref # https://bachiraoun.github.io/pypref/
+ruamel.yaml # to load yml files with numbers in scientific notation
 
 -e ./SI_Toolkit

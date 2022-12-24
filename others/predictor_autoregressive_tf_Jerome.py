@@ -85,7 +85,7 @@ class predictor_autoregressive_tf:
 
     # Predict (Euler: 6.8ms, RNN:10.5ms)
     @CompileTF
-    def predict_tf(self, initial_state, Q):
+    def predict_tf(self, initial_state, Q, time:float=None):
         # assert tf.rank(Q) == 3
         # Select States
 

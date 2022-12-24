@@ -136,16 +136,16 @@ class controller_do_mpc(template_controller):
         return self.tvp_template
 
 
-    def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
+    def step(self, state: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
         update_attributes(updated_attributes,self)
 
-        s = cartpole_state_vector_to_namespace(s)
+        state = cartpole_state_vector_to_namespace(state)
 
-        self.x0['s.position'] = s.position
-        self.x0['s.positionD'] = s.positionD
+        self.x0['s.position'] = state.position
+        self.x0['s.positionD'] = state.positionD
 
-        self.x0['s.angle'] = s.angle
-        self.x0['s.angleD'] = s.angleD
+        self.x0['s.angle'] = state.angle
+        self.x0['s.angleD'] = state.angleD
 
         self.tvp_template['_tvp', :, 'target_position'] = self.target_position
 

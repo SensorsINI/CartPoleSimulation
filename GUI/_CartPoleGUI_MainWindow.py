@@ -1,6 +1,7 @@
 """
 Main window (and main class) of CartPole GUI
 """
+from typing import Any
 
 # Necessary only for debugging in Visual Studio Code IDE
 try:
@@ -59,7 +60,15 @@ from GUI._ControllerGUI_NoiseOptionsWindow import NoiseOptionsWindow
 
 # from __future__ import print_function
 from pypref import Preferences
-prefs=Preferences(filename="cartpole-prefs.py") # store and retrieve sticky values
+from pypref import SinglePreferences as PREF
+class MyPreferences(PREF):
+    # *args and **kwargs can be replace by fixed arguments
+    def put(self,key:str, value:Any):
+        self.update_preferences({key:value})
+
+prefs=MyPreferences() # store and retrieve sticky values
+
+
 
 
 # Class implementing the main window of CartPole GUI
@@ -317,12 +326,12 @@ class MainWindow(QMainWindow):
         ip = QHBoxLayout()  # Layout for initial position sliders
         self.initial_position_slider = QSlider(orientation=Qt.Orientation.Horizontal)
         self.initial_position_slider.setRange(-int(float(1000*TrackHalfLength)), int(float(1000*TrackHalfLength)))
-        self.initial_position_slider.setValue(0)
+        self.initial_position_slider.setValue(prefs.get('initial-position',0))
         self.initial_position_slider.setSingleStep(1)
         self.initial_position_slider.valueChanged.connect(self.update_initial_position)
         self.initial_angle_slider = QSlider(orientation=Qt.Orientation.Horizontal)
         self.initial_angle_slider.setRange(-int(float(100*np.pi)), int(float(100*np.pi)))
-        self.initial_angle_slider.setValue(0)
+        self.initial_angle_slider.setValue(prefs.get('initial-angle',0))
         self.initial_angle_slider.setSingleStep(1)
         self.initial_angle_slider.valueChanged.connect(self.update_initial_angle)
         ip.addWidget(QLabel("Initial position:"))
@@ -598,7 +607,7 @@ class MainWindow(QMainWindow):
                                                        decimals=2))
             self.CartPoleInstance.save_history_csv(csv_name=csv_name,
                                                    mode='save offline')
-            prefs.update_preferences({'last-csv-file':csv_name})
+            prefs.put('last-csv-file',csv_name)
 
         self.experiment_or_replay_thread_terminated = True
 
@@ -1245,9 +1254,11 @@ class MainWindow(QMainWindow):
 
     def update_initial_position(self, value: str):
         self.initial_state[POSITION_IDX] = float(value) / 1000.0
+        prefs.put('initial-position',value)
 
     def update_initial_angle(self, value: str):
         self.initial_state[ANGLE_IDX] = float(value) / 100.0
+        prefs.put('initial-angle',value)
 
     # endregion
 

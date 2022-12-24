@@ -13,7 +13,9 @@ from typing import Tuple, Optional
 import dictdiffer as dictdiffer
 import ruamel.yaml as yaml # correctly supports scientific notation for numbers, see https://stackoverflow.com/questions/30458977/yaml-loads-5e-6-as-string-and-not-a-number
 # import yaml
-from generallibrary import print_link, print_link_to_obj # for logging links to source code in logging output for pycharm clicking, see https://stackoverflow.com/questions/26300594/print-code-link-into-pycharms-console
+import warnings
+warnings.simplefilter('ignore', yaml.error.UnsafeLoaderWarning)
+# from generallibrary import print_link, print_link_to_obj # for logging links to source code in logging output for pycharm clicking, see https://stackoverflow.com/questions/26300594/print-code-link-into-pycharms-console
 from munch import Munch, DefaultMunch
 from numba import jit
 
@@ -233,7 +235,7 @@ def load_or_reload_config_if_modified(filepath:str, every:int=30, target_obj=Non
                 or ((filepath in load_or_reload_config_if_modified.cached_configs) and mtime > load_or_reload_config_if_modified.mtimes[filepath]):
             # if loading first time, or we have loaded and the file has been modified since we loaded it, then reload it and flag that it was modified (globally)
             changes = None
-            new_config = yaml.load(open(filepath)) # loads a nested dict of config file
+            new_config = yaml.load(open(filepath),Loader=yaml.Loader) # loads a nested dict of config file, set loader explicitly to suppress warning about unsafe loader
             new_config_obj=DefaultMunch.fromDict(new_config)
             # now check if there are any changes compared with cached config
             if filepath in load_or_reload_config_if_modified.cached_configs:
@@ -302,7 +304,7 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
                     log.error(f'target attribute "{property}" is probably float type but in config file it is int. Add a trailing "." to the number "{new_value}"')
                     # target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value, target_obj.lib.to_variable(float(new_value), target_obj.lib.float32)))
         else:
-            log.warning(
+            log.info(
                 f"updated tensorflow attribute '{property}' does not exist in {target_obj.__class__.__name__}, setting it for first time")
             if target_obj.lib is None:
                 setattr(target_obj, property, new_value)
