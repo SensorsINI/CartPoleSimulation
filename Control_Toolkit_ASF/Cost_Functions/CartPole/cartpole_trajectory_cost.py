@@ -9,7 +9,7 @@ from yaml import safe_load
 from CartPole import state_utilities
 from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.others.globals_and_utils import get_logger
-from Control_Toolkit_ASF.Cost_Functions.CartPole.cartpole_trajectory_generator import generate_cartpole_trajectory
+import Control_Toolkit_ASF.Cost_Functions.CartPole.cartpole_trajectory_generator
 from GUI import gui_default_params
 from SI_Toolkit.computation_library import TensorType, ComputationLibrary
 from Control_Toolkit.Cost_Functions import cost_function_base
@@ -83,9 +83,6 @@ class cartpole_trajectory_cost(cost_function_base):
 
 
         trajectory_cost=self.lib.zeros((num_rollouts,num_timesteps))
-
-        # True to use only final state to compute cost, False to sum costs over entire trajectory
-        use_terminal_state_only=self.use_terminal_state_only
 
         # "angle", "angleD", "angle_cos", "angle_sin", "position", "positionD"
         cost_weights=(self.pole_angle_weight, self.pole_swing_weight, self.pole_angle_weight, self.pole_angle_weight, self.cart_pos_weight, self.cart_vel_weight)

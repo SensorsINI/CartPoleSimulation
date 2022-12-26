@@ -32,26 +32,34 @@ CartPole:
     ccrc_weight: 1.0
     R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in optimizer config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
   cartpole_trajectory_cost: # values must be float or they are cast to int type, which might not work for some ops
-    policy:  shimmy # spin  balance shimmy cartonly
-    use_terminal_state_only: 0 # set to 1 to only measure cost at the final state of rollout horizon
+    policy:  dance # dance (follow csv file) spin  balance shimmy cartonly
+
     # tobi cannot get conditional branch to work for following option in cartpole_trajectory_cost.py
 #    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
     terminal_cost_factor: 30e+0 # how much to weight up the terminal state costs compared to the rest of the rollout
     stage_cost_factor: 1e+0 # how much to weight up the state costs
 
+    # cost weightings for the different state components
     cart_pos_weight: 1e5 # weight on cart pos error
     pole_angle_weight: 1e4
     cart_vel_weight: 1e0
     pole_swing_weight: 1e2 # cart angle derivative weight
-    control_cost_weight: 1e0 # cost of control
+    control_cost_weight: 1e-1 # cost of control
     control_cost_change_weight: 1e0 # cost of changing control
+
+    # balance
+    balance_dir: up # 1 or up, -1 or down, multiplied by target_equilibrium
+
     # shimmy does a sinusoidal dance of cart around target position with period in seconds and amplitude in meters
-    shimmy_per: 9e-1
+    shimmy_freq_hz: 1.1
     shimmy_amp: 3e-2
+
     # cartonly only controls cart position, pole is ignored. Trajectory is triangular with amp and per
     cartonly_amp: .2
-    cartonly_per: 2.
+    cartonly_freq_hz: .5
     cartonly_duty_cycle: .9 # set to .5 for triangle, 0 or 1 for sawtooth
+
     # spin
-    spin_rev_period_sec: 5e-1 # must set quite small period to achieve spin from stop, e.g. 1/10 second
+    spin_dir: ccw # 1 or cw, -1 or ccw
+    spin_freq_hz: 2. # negative to spin other direction, must set at least 1hz
 
