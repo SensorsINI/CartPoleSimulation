@@ -1,0 +1,11 @@
+# cartpole dancer dance sequence
+duration, cartpos, policy, option, freq, amp
+2,  0, balance, up
+4, .1, spin, cw, 2, .1
+4, -.1,  spin,ccw, 2, .1
+4, 0, balance, up
+4, 0, shimmy,, 2, .05
+4, 0, balance, up
+4, 0, cartonly,.9, 2, .1
+4, 0, balance, down
+
