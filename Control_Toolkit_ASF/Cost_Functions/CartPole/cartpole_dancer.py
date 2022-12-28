@@ -7,7 +7,6 @@ from others.globals_and_utils import get_logger
 
 log = get_logger(__name__)
 
-
 class cartpole_dancer:
     def __init__(self):
         fp = 'Control_Toolkit_ASF/Cost_Functions/CartPole/cartpole_dance.csv'  # os.path.join('Control_Toolkit_ASF','Cost_Functios','cartpole_dance.csv')
@@ -22,6 +21,8 @@ class cartpole_dancer:
         self.CARTPOS = 'cartpos'
         self.FREQ = 'freq'
         self.AMP = 'amp'
+        self.FREQ2 = 'freq2'
+        self.AMP2 = 'amp2'
 
         self._reset_fields()
 
@@ -35,6 +36,8 @@ class cartpole_dancer:
         self.cartpos = None
         self.freq = None
         self.amp = None
+        self.freq2 = None
+        self.amp2 = None
 
     def start(self, time: float):
         """ Starts the dance now at time time"""
@@ -68,3 +71,5 @@ class cartpole_dancer:
         self.cartpos = float(self.current_row[self.CARTPOS])
         self.freq = float(self.current_row[self.FREQ]) if self.current_row[self.FREQ] else None
         self.amp = float(self.current_row[self.AMP]) if self.current_row[self.AMP] else None
+        self.freq2 = float(self.current_row[self.FREQ2]) if self.current_row[self.FREQ] else None
+        self.amp2 = float(self.current_row[self.AMP2]) if self.current_row[self.AMP] else None
