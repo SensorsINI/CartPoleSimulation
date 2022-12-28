@@ -11,8 +11,8 @@ import numpy as np
 
 from typing import Optional, Tuple, Union
 
-from others.globals_and_utils import load_config, my_logger
-logger = my_logger(__name__)
+from others.globals_and_utils import load_config, get_logger
+logger = get_logger(__name__)
 
 # FIXME: Set reset properly
 # FIXME: set random position - pregenerate

@@ -26,6 +26,8 @@ from Control_Toolkit.Controllers import template_controller
 from matplotlib.widgets import Slider
 from numba import jit
 from numpy.random import SFC64, Generator
+
+from others.globals_and_utils import update_attributes
 from others.p_globals import TrackHalfLength
 from scipy.interpolate import interp1d
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
@@ -42,14 +44,14 @@ config_mppi_cartpole = config_controller["mppi-cartpole"]
 
 """Timestep and sampling settings"""
 mpc_horizon = config_mppi_cartpole["mpc_horizon"]
-num_rollouts = config_mppi_cartpole["num_rollouts"]
+batch_size = config_mppi_cartpole["batch_size"]
 update_every = config_mppi_cartpole["update_every"]
 predictor_specification = config_mppi_cartpole["predictor_specification"]
 dt = config_data_gen["dt"]["control"]
 
 """Define Predictor"""
 predictor = PredictorWrapper()
-predictor.configure(batch_size=num_rollouts, horizon=mpc_horizon, dt=dt, predictor_specification=predictor_specification)
+predictor.configure(batch_size=batch_size, horizon=mpc_horizon, dt=dt, predictor_specification=predictor_specification)
 
 if predictor.predictor_config['predictor_type'] == 'neural':
     MODEL_NAME = predictor.predictor_config['model_name']
@@ -178,7 +180,7 @@ def trajectory_rollouts(
     :type S_tile_k: np.ndarray
     :param u: Vector of nominal inputs computed in previous iteration
     :type u: np.ndarray
-    :param delta_u: Array containing all input perturbation samples. Shape (num_rollouts x horizon_steps)
+    :param delta_u: Array containing all input perturbation samples. Shape (batch_size x horizon_steps)
     :type delta_u: np.ndarray
     :param u_prev: Array with nominal inputs from previous iteration. Used to compute cost of control change
     :type u_prev: np.ndarray
@@ -187,7 +189,7 @@ def trajectory_rollouts(
 
     :return: S_tilde_k - Array filled with a cost for each rollout trajectory
     """
-    initial_state = np.tile(s, (num_rollouts, 1))
+    initial_state = np.tile(s, (batch_size, 1))
 
     s_horizon = predictor.predict(initial_state, (u + delta_u)[..., np.newaxis])[:, :, : len(STATE_INDICES)]
 
@@ -220,7 +222,7 @@ def trajectory_rollouts(
         # (1 x mpc_horizon)
         LOGS.get("states").append(
             np.copy(s_horizon[:, :-1, :])
-        )  # num_rollouts x mpc_horizon x STATE_VARIABLES
+        )  # batch_size x mpc_horizon x STATE_VARIABLES
 
     return S_tilde_k
 
@@ -232,7 +234,8 @@ def q(
     u_prev: np.ndarray,
     target_position: np.float32,
 ) -> np.ndarray:
-    """Stage cost function. Computes stage-cost elementwise for all rollouts and all trajectory steps at once.
+    """Stage cost function, i.e. the cost for a particular timestep.
+    Computes stage-cost elementwise for all rollouts and all trajectory steps at once.
 
     :param s: Current states of all rollouts
     :type s: np.ndarray
@@ -327,9 +330,9 @@ def update_inputs(u: np.ndarray, S: np.ndarray, delta_u: np.ndarray):
 
     :param u: Sampling mean / warm started control inputs of size (,mpc_horizon)
     :type u: np.ndarray
-    :param S: Cost array of size (num_rollouts)
+    :param S: Cost array of size (batch_size)
     :type S: np.ndarray
-    :param delta_u: The input perturbations that had been used, shape (num_rollouts x mpc_horizon)
+    :param delta_u: The input perturbations that had been used, shape (batch_size x mpc_horizon)
     :type delta_u: np.ndarray
     """
     u += reward_weighted_average(S, delta_u)
@@ -368,8 +371,8 @@ class controller_mppi_cartpole(template_controller):
         self.s_horizon = np.zeros((), dtype=np.float32)
         self.u = np.zeros((mpc_horizon), dtype=np.float32)
         self.u_prev = np.zeros_like(self.u, dtype=np.float32)
-        self.delta_u = np.zeros((num_rollouts, mpc_horizon), dtype=np.float32)
-        self.S_tilde_k = np.zeros((num_rollouts), dtype=np.float32)
+        self.delta_u = np.zeros((batch_size, mpc_horizon), dtype=np.float32)
+        self.S_tilde_k = np.zeros((batch_size), dtype=np.float32)
 
         self.wash_out_len = WASH_OUT_LEN
         self.warm_up_countdown = self.wash_out_len
@@ -403,7 +406,7 @@ class controller_mppi_cartpole(template_controller):
             - "interpolated" - Sample a new independent perturbation every 10th MPC horizon step. Interpolate in between the samples
             - "iid" - Sample independent and identically distributed samples of a Gaussian distribution
         :type sampling_type: str, optional
-        :return: Independent perturbation samples of shape (num_rollouts x horizon_steps)
+        :return: Independent perturbation samples of shape (batch_size x horizon_steps)
         :rtype: np.ndarray
         """
         """
@@ -412,23 +415,23 @@ class controller_mppi_cartpole(template_controller):
         If random_walk is true, each row represents a 1D random walk with Gaussian steps.
         """
         if sampling_type == "random_walk":
-            delta_u = np.empty((num_rollouts, mpc_horizon), dtype=np.float32)
+            delta_u = np.empty((batch_size, mpc_horizon), dtype=np.float32)
             delta_u[:, 0] = stdev * self.rng_mppi.standard_normal(
-                size=(num_rollouts,), dtype=np.float32
+                size=(batch_size,), dtype=np.float32
             )
             for i in range(1, mpc_horizon):
                 delta_u[:, i] = delta_u[:, i - 1] + stdev * self.rng_mppi.standard_normal(
-                    size=(num_rollouts,), dtype=np.float32
+                    size=(batch_size,), dtype=np.float32
                 )
         elif sampling_type == "uniform":
-            delta_u = np.empty((num_rollouts, mpc_horizon), dtype=np.float32)
+            delta_u = np.empty((batch_size, mpc_horizon), dtype=np.float32)
             for i in range(0, mpc_horizon):
                 delta_u[:, i] = self.rng_mppi.uniform(
-                    low=-1.0, high=1.0, size=(num_rollouts,)
+                    low=-1.0, high=1.0, size=(batch_size,)
                 ).astype(np.float32)
         elif sampling_type == "repeated":
             delta_u = np.tile(
-                stdev * self.rng_mppi.standard_normal(size=(num_rollouts, 1), dtype=np.float32),
+                stdev * self.rng_mppi.standard_normal(size=(batch_size, 1), dtype=np.float32),
                 (1, mpc_horizon),
             )
         elif sampling_type == "interpolated":
@@ -437,33 +440,33 @@ class controller_mppi_cartpole(template_controller):
             t = np.arange(start=0, stop=range_stop, step=step)
             t_interp = np.arange(start=0, stop=range_stop, step=1)
             t_interp = np.delete(t_interp, t)
-            delta_u = np.zeros(shape=(num_rollouts, range_stop), dtype=np.float32)
+            delta_u = np.zeros(shape=(batch_size, range_stop), dtype=np.float32)
             delta_u[:, t] = stdev * self.rng_mppi.standard_normal(
-                size=(num_rollouts, t.size), dtype=np.float32
+                size=(batch_size, t.size), dtype=np.float32
             )
             f = interp1d(t, delta_u[:, t])
             delta_u[:, t_interp] = f(t_interp)
             delta_u = delta_u[:, :mpc_horizon]
         else:
             delta_u = stdev * self.rng_mppi.standard_normal(
-                size=(num_rollouts, mpc_horizon), dtype=np.float32
+                size=(batch_size, mpc_horizon), dtype=np.float32
             )
 
         return delta_u
 
-    def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
+    def step(self, state: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
         """Perform controller step
 
-        :param s: State passed to controller after system has evolved for one step
-        :type s: np.ndarray
+        :param state: State passed to controller after system has evolved for one step
+        :type state: np.ndarray
         :param time: Time in seconds that has passed in the current experiment, defaults to None
         :type time: float, optional
         :return: A normed control value in the range [-1.0, 1.0]
         :rtype: np.float32
         """
-        self.update_attributes(updated_attributes)
+        update_attributes(updated_attributes,self)
 
-        self.s = s
+        self.s = state
 
         self.iteration += 1
 
@@ -509,8 +512,8 @@ class controller_mppi_cartpole(template_controller):
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     # FIXME: Problaby you can reduce it!
 
-                    rollout_trajectory = predictor.predict(np.tile(self.s, (num_rollouts, 1)),
-                        np.tile(self.u[np.newaxis, :, np.newaxis], (num_rollouts, 1, 1))
+                    rollout_trajectory = predictor.predict(np.tile(self.s, (batch_size, 1)),
+                        np.tile(self.u[np.newaxis, :, np.newaxis], (batch_size, 1, 1))
                     )[0, ...]
                 LOGS.get("nominal_rollouts").append(np.copy(rollout_trajectory[:-1, :]))
 
@@ -526,8 +529,8 @@ class controller_mppi_cartpole(template_controller):
 
         ):
             self.warm_up_countdown -= 1
-            if abs(s[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small
-                Q = self.auxiliary_controller.step(s, self.target_position)
+            if abs(state[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small
+                Q = self.auxiliary_controller.step(state, self.target_position)
             else:
                 Q = self.rng_mppi_rnn.uniform(-1, 1)  # Apply random input to let RNN "feel" the system behaviour
         else:
@@ -563,7 +566,7 @@ class controller_mppi_cartpole(template_controller):
         # self.u = zeros_like(self.u)
 
         # Prepare predictor for next timestep
-        Q_update = np.tile(Q, (num_rollouts, 1, 1))
+        Q_update = np.tile(Q, (batch_size, 1, 1))
         predictor.update(Q_update, self.s)
 
         return Q  # normed control input in the range [-1,1]
@@ -585,7 +588,7 @@ class controller_mppi_cartpole(template_controller):
             ### Plot the average state cost per iteration
             ctglgs = np.stack(
                 LOGS.get("cost_to_go"), axis=0
-            )  # ITERATIONS x num_rollouts
+            )  # ITERATIONS x batch_size
             NUM_ITERATIONS = np.shape(ctglgs)[0]
             time_axis = update_every * dt * np.arange(start=0, stop=np.shape(ctglgs)[0])
             plt.figure(num=2, figsize=(16, 9))
@@ -697,7 +700,7 @@ class controller_mppi_cartpole(template_controller):
                     )
 
             # Prepare data
-            # shape(slgs) = ITERATIONS x num_rollouts x mpc_horizon x STATE_VARIABLES
+            # shape(slgs) = ITERATIONS x batch_size x mpc_horizon x STATE_VARIABLES
             slgs = np.stack(LOGS.get("states"), axis=0)
             wrap_angle_rad_inplace(slgs[:, :, :, ANGLE_IDX])
             # shape(iplgs) = ITERATIONS x mpc_horizon
@@ -734,7 +737,7 @@ class controller_mppi_cartpole(template_controller):
             )
 
             # Normalize cost to go to use as opacity in plot
-            # shape(ctglgs) = ITERATIONS x num_rollouts
+            # shape(ctglgs) = ITERATIONS x batch_size
             ctglgs = np.divide(ctglgs.T, np.max(np.abs(ctglgs), axis=1)).T
 
             # This function updates the plot when a new iteration is selected

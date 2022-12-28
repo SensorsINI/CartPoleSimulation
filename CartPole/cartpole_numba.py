@@ -5,7 +5,7 @@ from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, AN
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad_inplace
 
 from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
+    k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
 )
 
 _cartpole_ode_numba = jit(_cartpole_ode, nopython=True, cache=True, fastmath=True)
@@ -21,10 +21,10 @@ wrap_angle_rad_inplace_numba = jit(wrap_angle_rad_inplace, nopython=True, cache=
 
 @jit(nopython=True, cache=True, fastmath=True)
 def cartpole_ode_numba(s: np.ndarray, u: float,
-                 k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+                       k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
     angleDD, positionDD = _cartpole_ode_numba(
         s[..., ANGLE_COS_IDX], s[..., ANGLE_SIN_IDX], s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u,
-        k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L
+        k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L
     )
     return angleDD, positionDD
 
@@ -46,12 +46,12 @@ def cartpole_integration_numba(angle, angleD, angleDD, position, positionD, posi
 
 # @jit(nopython=True, cache=True, fastmath=True)  # This seems to make the function slower, I don't know why.
 def cartpole_fine_integration_numba(angle, angleD, angle_cos, angle_sin, position, positionD, u, t_step, intermediate_steps,
-                              k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+                                    k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
     for _ in range(intermediate_steps):
         # Find second derivative for CURRENT "k" step (same as in input).
         # State and u in input are from the same timestep, output is belongs also to THE same timestep ("k")
         angleDD, positionDD = _cartpole_ode_numba(angle_cos, angle_sin, angleD, positionD, u,
-                                                  k, M, m, g, J_fric, M_fric, L)
+                                                  k, m_cart, m_pole, g, J_fric, M_fric, L)
 
         # Find NEXT "k+1" state [angle, angleD, position, positionD]
         angle, angleD, position, positionD = cartpole_integration_numba(angle, angleD, angleDD, position, positionD,
@@ -69,7 +69,7 @@ def cartpole_fine_integration_numba(angle, angleD, angle_cos, angle_sin, positio
 
 
 def cartpole_fine_integration_s_numba(s, u, t_step, intermediate_steps,
-                              k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+                                      k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
 
     if s.ndim == 1:
         s = s[np.newaxis, :]
@@ -90,7 +90,7 @@ def cartpole_fine_integration_s_numba(s, u, t_step, intermediate_steps,
         t_step=t_step,
         intermediate_steps=intermediate_steps,
         L=L,
-        k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric
+        k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric
     )
 
     return s_next

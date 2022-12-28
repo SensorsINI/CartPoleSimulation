@@ -14,7 +14,7 @@ from CartPole.cartpole_model import s0, u_max
 from CartPole.state_utilities import (ANGLE_IDX, ANGLED_IDX, POSITION_IDX,
                                       POSITIOND_IDX)
 from Control_Toolkit.Controllers import template_controller
-from others.globals_and_utils import create_rng
+from others.globals_and_utils import create_rng, update_attributes
 
 config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 actuator_noise = config["cartpole"]["actuator_noise"]
@@ -81,11 +81,11 @@ class controller_lqr(template_controller):
         self.X = X
         self.eigVals = eigVals
 
-    def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
-        self.update_attributes(updated_attributes)
+    def step(self, state: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
+        update_attributes(updated_attributes,self)
         
         state = np.array(
-            [[s[POSITION_IDX] - self.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
+            [[state[POSITION_IDX] - self.target_position], [state[POSITIOND_IDX]], [state[ANGLE_IDX]], [state[ANGLED_IDX]]])
 
         Q = np.dot(-self.K, state).item()
 

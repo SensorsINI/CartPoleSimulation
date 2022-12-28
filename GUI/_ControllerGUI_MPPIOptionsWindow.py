@@ -34,7 +34,7 @@ class MPPIOptionsWindow(QWidget):
         super(MPPIOptionsWindow, self).__init__()
 
         self.horizon_steps = controller_mppi_cartpole.mpc_horizon
-        self.num_rollouts = controller_mppi_cartpole.num_rollouts
+        self.batch_size = controller_mppi_cartpole.batch_size
         self.dd_weight = controller_mppi_cartpole.dd_weight
         self.ep_weight = controller_mppi_cartpole.ep_weight
         self.ekp_weight = controller_mppi_cartpole.ekp_weight * 1.0e1
@@ -73,13 +73,13 @@ class MPPIOptionsWindow(QWidget):
 
         slider = QSlider(orientation=Qt.Orientation.Horizontal)
         slider.setRange(10, 3000)
-        slider.setValue(self.num_rollouts)
+        slider.setValue(self.batch_size)
         slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         slider.setTickInterval(10)
         slider.setSingleStep(10)
         rollouts_options_layout.addWidget(slider)
 
-        slider.valueChanged.connect(self.num_rollouts_changed)
+        slider.valueChanged.connect(self.batch_size_changed)
 
         ### Set Cost Weights
         cost_weight_layout = QVBoxLayout()
@@ -261,9 +261,9 @@ class MPPIOptionsWindow(QWidget):
         controller_mppi_cartpole.mpc_horizon = self.horizon_steps
         self.update_slider_labels()
 
-    def num_rollouts_changed(self, val: int):
-        self.num_rollouts = val
-        controller_mppi_cartpole.num_rollouts = self.num_rollouts
+    def batch_size_changed(self, val: int):
+        self.batch_size = val
+        controller_mppi_cartpole.batch_size = self.batch_size
         self.update_slider_labels()
 
     def dd_weight_changed(self, val: int):
@@ -330,7 +330,7 @@ class MPPIOptionsWindow(QWidget):
             f"Horizon: {self.horizon_steps} steps = {round(self.horizon_steps * controller_mppi_cartpole.dt, 2)} s"
         )
         self.rollouts_label.setText(
-            f"Rollouts: {self.num_rollouts}"
+            f"Rollouts: {self.batch_size}"
         )
         self.dd_weight_label.setText(
             f"Distance difference cost weight: {round(self.dd_weight, 2)}"

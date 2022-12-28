@@ -1,6 +1,7 @@
 """
 Main window (and main class) of CartPole GUI
 """
+from typing import Any
 
 # Necessary only for debugging in Visual Studio Code IDE
 try:
@@ -14,7 +15,8 @@ import time
 import sys
 
 from others.p_globals import (
-    k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength,
+    # k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias,
+    TrackHalfLength,
 )
 
 # region Imports needed to create layout of the window in __init__ method
@@ -55,6 +57,18 @@ try:
 except:
     pass
 from GUI._ControllerGUI_NoiseOptionsWindow import NoiseOptionsWindow
+
+# from __future__ import print_function
+from pypref import Preferences
+from pypref import SinglePreferences as PREF
+class MyPreferences(PREF):
+    # *args and **kwargs can be replace by fixed arguments
+    def put(self,key:str, value:Any):
+        self.update_preferences({key:value})
+
+prefs=MyPreferences() # store and retrieve sticky values
+
+
 
 
 # Class implementing the main window of CartPole GUI
@@ -145,15 +159,17 @@ class MainWindow(QMainWindow):
         # endregion
 
         # region - Change geometry of the main window
-        self.setGeometry(300, 300, 2500, 1000)
+        self.setGeometry(300, 100, 1000, 800) # origin x,y size w,h
         # endregion
 
         # region - Matplotlib figures (CartPole drawing and Slider)
         # Draw Figure
         self.fig = Figure(figsize=(25, 10))  # Regulates the size of Figure in inches, before scaling to window size.
+        from matplotlib import gridspec
+        gs = gridspec.GridSpec(2,1, height_ratios=[4, 1]) # make pole plot 4 times larger than cart target position plot
         self.canvas = FigureCanvas(self.fig)
-        self.fig.AxCart = self.canvas.figure.add_subplot(211)
-        self.fig.AxSlider = self.canvas.figure.add_subplot(212)
+        self.fig.AxCart = self.canvas.figure.add_subplot(gs[0])
+        self.fig.AxSlider = self.canvas.figure.add_subplot(gs[1])
         self.fig.AxSlider.set_ylim(0, 1)
 
         self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
@@ -310,12 +326,12 @@ class MainWindow(QMainWindow):
         ip = QHBoxLayout()  # Layout for initial position sliders
         self.initial_position_slider = QSlider(orientation=Qt.Orientation.Horizontal)
         self.initial_position_slider.setRange(-int(float(1000*TrackHalfLength)), int(float(1000*TrackHalfLength)))
-        self.initial_position_slider.setValue(0)
+        self.initial_position_slider.setValue(prefs.get('initial-position',0))
         self.initial_position_slider.setSingleStep(1)
         self.initial_position_slider.valueChanged.connect(self.update_initial_position)
         self.initial_angle_slider = QSlider(orientation=Qt.Orientation.Horizontal)
         self.initial_angle_slider.setRange(-int(float(100*np.pi)), int(float(100*np.pi)))
-        self.initial_angle_slider.setValue(0)
+        self.initial_angle_slider.setValue(prefs.get('initial-angle',0))
         self.initial_angle_slider.setSingleStep(1)
         self.initial_angle_slider.valueChanged.connect(self.update_initial_angle)
         ip.addWidget(QLabel("Initial position:"))
@@ -400,6 +416,7 @@ class MainWindow(QMainWindow):
         l_text = QHBoxLayout()
         textbox_title = QLabel('CSV file name:')
         self.textbox = QLineEdit()
+        self.textbox.setText(prefs.get('last-csv-file','cartpole-history.csv'))
         l_text.addWidget(textbox_title)
         l_text.addWidget(self.textbox)
         layout.addLayout(l_text)
@@ -461,8 +478,7 @@ class MainWindow(QMainWindow):
 
         # region -- Checkbox: Decide how the cartpole should be displayed
         self.cb_show_hanging_pole = QCheckBox('Show hanging pole', self)
-        if self.CartPoleInstance.show_hanging_pole:
-            self.cb_show_hanging_pole.toggle()
+        self.cb_show_hanging_pole.setChecked(self.CartPoleInstance.show_hanging_pole)
         self.cb_show_hanging_pole.toggled.connect(self.cb_show_hanging_pole_f)
         l_cb.addWidget(self.cb_show_hanging_pole)
 
@@ -591,6 +607,7 @@ class MainWindow(QMainWindow):
                                                        decimals=2))
             self.CartPoleInstance.save_history_csv(csv_name=csv_name,
                                                    mode='save offline')
+            prefs.put('last-csv-file',csv_name)
 
         self.experiment_or_replay_thread_terminated = True
 
@@ -612,22 +629,28 @@ class MainWindow(QMainWindow):
         history_pd, filepath = self.CartPoleInstance.load_history_csv(csv_name=csv_name)
 
         # Set cartpole in the right mode (just to ensure slider behaves properly)
+        optimizer_set=False
+        controller_set=False
         with open(filepath, newline='') as f:
             reader = csv.reader(f)
             for line in reader:
                 line = line[0]
-                if line[:len('# Controller: ')] == '# Controller: ':
-                    controller_set = self.CartPoleInstance.set_controller(line[len('# Controller: '):].rstrip("\n"))
-                    optimizer_set = self.CartPoleInstance.set_optimizer(line[len('# Optimizer: '):].rstrip("\n"))
+                if 'Controller:' in line:
+                    s = line.split()[-1]
+                    controller_set = self.CartPoleInstance.set_controller(s)
                     if controller_set:
                         self.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
                     else:
                         self.rbs_controllers[1].setChecked(True) # Set first, but not manual stabilization
+                elif 'Optimizer:' in line:
+                    s=line.split()[-1]
+                    optimizer_set = self.CartPoleInstance.set_optimizer(s)
                     if optimizer_set:
                         self.rbs_optimizers[self.CartPoleInstance.optimizer_idx].setChecked(True)
                     else:
                         self.rbs_optimizers[1].setChecked(True)
-                    self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)    
+                    self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)
+                if optimizer_set and controller_set:
                     break
 
         # Augment the experiment history with simulation time step size
@@ -790,9 +813,16 @@ class MainWindow(QMainWindow):
 
         # Set user-provided initial values for state (or its part) of the CartPole
         # Search implementation for more detail
-        # The following line is important as it let the user to set with the slider the starting target position
+        # The following line is important as it let the user set with the slider the starting target position
         # After the slider was reset at the end of last experiment
         # With the small sliders he can also adjust starting initial_state
+        self.initial_state = create_cartpole_state()
+        # don't reset the slider on restart experiment
+        # self.initial_position_slider.setValue(0)
+        # self.initial_angle_slider.setValue(0)
+        # reset state to slider values on restart
+        self.initial_state[ANGLE_IDX] = self.initial_angle_slider.value() / 100.
+        self.initial_state[POSITION_IDX] = self.initial_position_slider.value() / 1000.
         self.reset_variables(2, s=np.copy(self.initial_state), target_position=self.CartPoleInstance.target_position)
 
         if self.simulator_mode == 'Random Experiment':
@@ -831,9 +861,14 @@ class MainWindow(QMainWindow):
 
         self.CartPoleInstance.use_pregenerated_target_position = False
         self.initial_state = create_cartpole_state()
-        self.initial_position_slider.setValue(0)
-        self.initial_angle_slider.setValue(0)
+        # don't reset the slider on restart experiment
+        # self.initial_position_slider.setValue(0)
+        # self.initial_angle_slider.setValue(0)
+        # reset state to slider values on restart
+        self.initial_state[ANGLE_IDX] = self.initial_angle_slider.value() / 100.
+        self.initial_state[POSITION_IDX] = self.initial_position_slider.value() / 1000.
         self.CartPoleInstance.s = self.initial_state
+
 
         # Some controllers may collect they own statistics about their usage and print it after experiment terminated
         if self.simulator_mode != 'Replay':
@@ -1061,8 +1096,8 @@ class MainWindow(QMainWindow):
             # Execute
             self.threadpool.start(worker)
 
-        else:
-            self.PhysicalCartPoleDriverInstance.terminate_experiment = True
+        elif hasattr(self.PhysicalCartPoleDriverInstance,'terminate_experiment'):
+            self.PhysicalCartPoleDriverInstance.terminate_experiment = True  # TODO not all things have terminate_experiment, throws NoneType exception
 
 
         self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
@@ -1219,9 +1254,11 @@ class MainWindow(QMainWindow):
 
     def update_initial_position(self, value: str):
         self.initial_state[POSITION_IDX] = float(value) / 1000.0
+        prefs.put('initial-position',value)
 
     def update_initial_angle(self, value: str):
         self.initial_state[ANGLE_IDX] = float(value) / 100.0
+        prefs.put('initial-angle',value)
 
     # endregion
 

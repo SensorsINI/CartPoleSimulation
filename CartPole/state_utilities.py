@@ -6,6 +6,9 @@ STATE_VARIABLES = np.sort(
     ["angle", "angleD", "angle_cos", "angle_sin", "position", "positionD",]
 )
 
+NUM_STATES:int=len(STATE_VARIABLES)
+
+# dict[state_name, index], e.g. STATE_INDICES['angle']=0
 STATE_INDICES = {x: np.where(STATE_VARIABLES == x)[0][0] for x in STATE_VARIABLES}
 
 CONTROL_INPUTS = np.sort(["Q"])
@@ -13,12 +16,12 @@ CONTROL_INPUTS = np.sort(["Q"])
 CONTROL_INDICES = {x: np.where(CONTROL_INPUTS == x)[0][0] for x in CONTROL_INPUTS}
 
 """Define indices of values in state statically"""
-ANGLE_IDX = STATE_INDICES["angle"].item()
-ANGLED_IDX = STATE_INDICES["angleD"].item()
-POSITION_IDX = STATE_INDICES["position"].item()
-POSITIOND_IDX = STATE_INDICES["positionD"].item()
-ANGLE_COS_IDX = STATE_INDICES["angle_cos"].item()
-ANGLE_SIN_IDX = STATE_INDICES["angle_sin"].item()
+ANGLE_IDX = STATE_INDICES["angle"].item() # Pole angle in radians. 0 means pole is upright. Clockwise angle rotation is defined as negative.
+ANGLED_IDX = STATE_INDICES["angleD"].item() # Angular velocity of pole in rad/s, CCW is positive.
+POSITION_IDX = STATE_INDICES["position"].item() # Horizontal position of pole in meters.
+POSITIOND_IDX = STATE_INDICES["positionD"].item() # Horizontal velocity of pole in m/s. Cart movement to the right is positive.
+ANGLE_COS_IDX = STATE_INDICES["angle_cos"].item() # cos of angle, vertical means 1 and -1 means hanging down
+ANGLE_SIN_IDX = STATE_INDICES["angle_sin"].item() # sin of angle, 0 upright and hanging, +1 for leftwards, -1 for rightwards
 
 
 def create_cartpole_state(state: dict = {}, dtype=None) -> np.ndarray:
@@ -28,18 +31,22 @@ def create_cartpole_state(state: dict = {}, dtype=None) -> np.ndarray:
     Input parameters are passed as a dict with the following possible keys. Other keys are ignored.
     Unset key-value pairs are initialized to 0.
 
-    :param angle: Pole angle. 0 means pole is upright. Clockwise angle rotation is defined as negative.
-    :param angleD: Angular velocity of pole.
-    :param position: Horizontal position of pole.
-    :param positionD: Horizontal velocity of pole. Cart movement to the right is positive.
+    :param angle: Pole angle in radians. 0 means pole is upright. Clockwise angle rotation is defined as negative.
+    :param angleD: Angular velocity of pole in rad/s, CCW is positive.
+    :param position: Horizontal position of pole in meters.
+    :param positionD: Horizontal velocity of pole in m/s. Cart movement to the right is positive.
 
     :returns: A numpy.ndarray with values filled in order set by STATE_VARIABLES
     """
+    initial_pole_angle=0 # set to zero to start upright, np.pi to hang down
+
+    state['angle']=initial_pole_angle
+
     state["angle_cos"] = (
-        np.cos(state["angle"]) if "angle" in state.keys() else np.cos(0.0)
+        np.cos(state["angle"]) if "angle" in state.keys() else np.cos(initial_pole_angle)
     )
     state["angle_sin"] = (
-        np.sin(state["angle"]) if "angle" in state.keys() else np.sin(0.0)
+        np.sin(state["angle"]) if "angle" in state.keys() else np.sin(initial_pole_angle)
     )
 
     if dtype is None:
@@ -48,6 +55,7 @@ def create_cartpole_state(state: dict = {}, dtype=None) -> np.ndarray:
     s = np.zeros_like(STATE_VARIABLES, dtype=np.float32)
     for i, v in enumerate(STATE_VARIABLES):
         s[i] = state.get(v) if v in state.keys() else s[i]
+
     return s
 
 

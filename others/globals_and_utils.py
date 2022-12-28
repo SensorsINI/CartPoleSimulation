@@ -7,8 +7,22 @@ import math
 import os
 import time
 from datetime import datetime
-from typing import Tuple
-import yaml
+from pathlib import Path
+from typing import Tuple, Optional
+
+import dictdiffer as dictdiffer
+import ruamel.yaml as yaml # correctly supports scientific notation for numbers, see https://stackoverflow.com/questions/30458977/yaml-loads-5e-6-as-string-and-not-a-number
+# import yaml
+import warnings
+warnings.simplefilter('ignore', yaml.error.UnsafeLoaderWarning)
+# from generallibrary import print_link, print_link_to_obj # for logging links to source code in logging output for pycharm clicking, see https://stackoverflow.com/questions/26300594/print-code-link-into-pycharms-console
+from munch import Munch, DefaultMunch
+from numba import jit
+
+from Control_Toolkit.others.globals_and_utils import get_logger
+from SI_Toolkit.computation_library import ComputationLibrary, TensorType
+
+log=get_logger(__name__)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0' # all TF messages
 
@@ -126,10 +140,12 @@ def input_with_timeout(prompt, timeout=30):
             signal.alarm(0) # cancel alarm
 
 def yes_or_no(question, default='y', timeout=None):
-    """ Get y/n answer with default choice and optional timeout
+    """ Get y/n answer with default choice and optional timeout from terminal input.
+
     :param question: prompt
     :param default: the default choice, i.e. 'y' or 'n'
     :param timeout: the timeout in seconds, default is None
+
     :returns: True or False
     """
     if default is not None and (default!='y' and default!='n'):
@@ -156,42 +172,7 @@ def yes_or_no(question, default='y', timeout=None):
         if reply[0].lower() == 'n':
             return False
 
-class CustomFormatter(logging.Formatter):
-    """Logging Formatter to add colors and count warning / errors"""
 
-    grey = "\x1b[38;21m"
-    yellow = "\x1b[33;21m"
-    red = "\x1b[31;21m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
-
-    FORMATS = {
-        logging.DEBUG: grey + format + reset,
-        logging.INFO: grey + format + reset,
-        logging.WARNING: yellow + format + reset,
-        logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset
-    }
-
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
-
-
-def my_logger(name):
-    # logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-    logger = logging.getLogger(name)
-    logger.setLevel(LOGGING_LEVEL)
-    # create console handler
-    ch = logging.StreamHandler()
-    ch.setFormatter(CustomFormatter())
-    logger.addHandler(ch)
-    return logger
-
-
-log=my_logger(__name__)
 
 
 def create_rng(id: str, seed: str, use_tf: bool=False):
@@ -212,10 +193,131 @@ def load_config(filename: str) -> dict:
     :type filename: str
     """
     try:
-        config = yaml.load(open(os.path.join("CartPoleSimulation", filename), "r"), Loader=yaml.FullLoader)
+        config = yaml.load(open(os.path.join("CartPoleSimulation", filename), "r"))
     except FileNotFoundError:
-        config = yaml.load(open(filename), Loader=yaml.FullLoader)
+        config = yaml.load(open(filename))
     return config
+
+
+def load_or_reload_config_if_modified(filepath:str, every:int=30, target_obj=None)->Tuple[Munch,Optional[dict]]:
+    """
+    Reloads a YAML config if the yaml file was modified since runtime started or since last reloaded.
+    The initial call will store the config in a private dict to return on subsequent calls.
+
+    Only modified entries are returned in changes. Added or deleted items are not returned.
+
+    :param filepath the relative path to file. Generate for call with e.g. os.path.join("Control_Toolkit_ASF", "config_cost_functions.yml")
+    :param target_obj: an optional object into which the config is assigned for (possibly) use in tensorflow
+    :param every: only check every this many times we are invoked
+
+    :returns: (config,changes)
+        config: nested Munch of the original config if file has not been modified
+            since startup or last reload time,
+            otherwise the reloaded config Munch
+            The entries are accessed by name, e.g. "CartPole.default.ddweight".
+            See https://github.com/Infinidat/munch.
+        changes: a dict of key,value of modified config entries in format dict([key,new_value], ...),
+            where key is the final element of path a.b..c.key that is in the nested yaml config file
+    """
+    counter=0
+    if filepath in load_or_reload_config_if_modified.counter:
+        load_or_reload_config_if_modified.counter[filepath]+=1
+        counter=load_or_reload_config_if_modified.counter[filepath]
+    else:
+        load_or_reload_config_if_modified.counter[filepath] =1
+    if filepath in load_or_reload_config_if_modified.cached_configs and counter>0 and counter%every!=0:
+        return (load_or_reload_config_if_modified.cached_configs[filepath],None) # if not checking this time, return cached config
+    try:
+        fp=Path(filepath)
+        mtime=fp.stat().st_mtime # get mod time
+
+        if ((not (filepath in load_or_reload_config_if_modified.cached_configs))) \
+                or ((filepath in load_or_reload_config_if_modified.cached_configs) and mtime > load_or_reload_config_if_modified.mtimes[filepath]):
+            # if loading first time, or we have loaded and the file has been modified since we loaded it, then reload it and flag that it was modified (globally)
+            changes = None
+            new_config = yaml.load(open(filepath),Loader=yaml.Loader) # loads a nested dict of config file, set loader explicitly to suppress warning about unsafe loader
+            new_config_obj=DefaultMunch.fromDict(new_config)
+            # now check if there are any changes compared with cached config
+            if filepath in load_or_reload_config_if_modified.cached_configs:
+                old_config=load_or_reload_config_if_modified.cached_configs[filepath]
+                diff=dictdiffer.diff(new_config,old_config) # https://github.com/inveniosoftware/dictdiffer https://stackoverflow.com/questions/32815640/how-to-get-the-difference-between-two-dictionaries-in-python
+                for (type,path,change) in diff:
+                    if type=='change':
+                        (new,old)=change
+                        log.info(f'{path} changed: old/new {old}/{new}')
+                        if changes is None:
+                            changes=dict()
+                        key=path.split('.')[-1]
+                        changes[key]=new
+
+            load_or_reload_config_if_modified.mtimes[filepath]=mtime
+            load_or_reload_config_if_modified.cached_configs[filepath]=new_config_obj
+            log.debug(f'(re)loaded modified config (File "{filepath}")') # format (File "XXX") generates pycharm link to file in console output
+            if not changes is None and not target_obj is None:
+                update_attributes(changes, target_obj)
+            return (new_config_obj,changes) # it was modified, so return changes dict
+        else:
+            return (load_or_reload_config_if_modified.cached_configs[filepath], None) # return previous config and None for changes
+    except Exception as e:
+        logging.error(f'could not reload {filepath}: got exception {e}')
+        raise e
+
+load_or_reload_config_if_modified.cached_configs=dict()
+load_or_reload_config_if_modified.mtimes=dict()
+load_or_reload_config_if_modified.start_time=time.time()
+load_or_reload_config_if_modified.counter=dict()
+
+import numbers
+
+
+def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
+    """ Update attributes in compiled code (tensorflow JIT) that have changed, i.e. copy them to the compiled/GPU instance.
+
+    After this call, such attribute values are available to the TF function as self.key, where key is the key used in dict.
+
+    Note that this attribute will NOT be accessible the compiled TF code if it has been declared ahead of time. I.e., do not define e.g. self.a=something and then
+    expect config a: to be picked up by the compiled code. It must be set for the first time by update_attributes!
+
+    Used in various controllers in Control_Toolkit/Control_Toolkit_ASF_Template/Controllers.
+
+    :param updated_attributes: a dict with string keys and scalar numeric value attribute to set.
+    :param target_obj: the object into which we set the attribute.
+
+    """
+    for property, new_value in updated_attributes.items():
+        if hasattr(target_obj, property) :  # make sure it is mutable if we want to set it
+            objtype=None
+            if isinstance(new_value,numbers.Integral):
+                objtype=target_obj.lib.int32
+            elif isinstance(new_value,numbers.Real):
+                objtype=target_obj.lib.float32
+            elif isinstance(new_value,str):
+                objtype=target_obj.lib.string
+            elif isinstance(new_value,np.ndarray):
+                objtype=target_obj.lib.float32  # todo assuming all np arrays should go to float 32 here
+            else:
+                log.warning(f'attribute "{property}" has unknown object type {type(new_value)}; cannot assign it')
+            if objtype:
+                try:
+                    target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value,objtype))
+                except ValueError:
+                    log.error(f'target attribute "{property}" is probably float type but in config file it is int. Add a trailing "." to the number "{new_value}"')
+                    # target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value, target_obj.lib.to_variable(float(new_value), target_obj.lib.float32)))
+        else:
+            log.info(
+                f"updated tensorflow attribute '{property}' does not exist in {target_obj.__class__.__name__}, setting it for first time")
+            if target_obj.lib is None:
+                setattr(target_obj, property, new_value)
+            else:
+                # just set the attribute, don't assign in (like =) since some immutable objects cannot be assigned
+                if isinstance(new_value,numbers.Integral):
+                    setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.int32))
+                elif isinstance(new_value, str):
+                    setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.string))
+                elif isinstance(new_value,numbers.Real) or isinstance(new_value,np.ndarray):
+                    setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.float32))
+                else:
+                    log.warning(f'type "{type(new_value)}" of attribute "{property}" is not settable type, must be int, float (or np.ndarray), or string')
 
 
 class MockSpace:

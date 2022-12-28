@@ -10,7 +10,7 @@ from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import ANGLE_IDX, POSITION_IDX
 
 # load constants from config file
-config = safe_load(open(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"), "r"))
+config = safe_load(open(os.path.join("Control_Toolkit_ASF", "config_cost_functions.yml"), "r"))
 
 dd_weight = config["CartPole"]["quadratic_boundary"]["dd_weight"]
 cc_weight = config["CartPole"]["quadratic_boundary"]["cc_weight"]

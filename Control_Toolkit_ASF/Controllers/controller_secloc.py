@@ -36,12 +36,12 @@ class controller_secloc(template_controller):
         self.interpolation = interp1d([-self.motor_map,self.motor_map], [1,-1])
         self.step_idx = 0
 
-    def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
+    def step(self, state: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
         self.update_attributes(updated_attributes)
         # Read the cartpole state s = ["angle", "angleD", "angle_cos", "angle_sin", "position", "positionD"]
         # angle: pole UP -> 0, then +/-pi
         print(f"***** Step #{self.step_idx} *****")
-        pole_angle = s[0]
+        pole_angle = state[0]
         print(f"Current pole angle value: {pole_angle} radians. left/right --> +/- pi. Pole UP --> angle=0")
         print("Update the potentiometer event based sensor using the cartpole sate")
         self.potentiometer.update(signal_in= pole_angle)

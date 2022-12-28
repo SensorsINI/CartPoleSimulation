@@ -1,13 +1,13 @@
 mpc:
-  optimizer: rpgd-tf
+  optimizer: mppi
   predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
-  cost_function_specification: default  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary"
+  cost_function_specification: cartpole_trajectory_cost  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary"
   computation_library: tensorflow  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.
   controller_logging: true
 mppi-cartpole:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
-  mpc_horizon: 35                       # steps
-  num_rollouts: 3500                    # Number of Monte Carlo samples
+  mpc_horizon: 30                       # steps
+  batch_size: 3500                  # Number of Monte Carlo samples
   update_every: 1                       # Cost weighted update of inputs every ... steps
   predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
   cost_function_specification: default  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary"
@@ -47,7 +47,6 @@ custom-mpc-scipy:
   controller_logging: True
 do-mpc-discrete:
   mpc_horizon: 50                       # steps
-  num_rollouts: 1
   # Initial positions
   position_init: 0.0
   positionD_init: 0.0
@@ -57,7 +56,6 @@ do-mpc-discrete:
 do-mpc:
   seed: null                          # If null, random seed based on datetime is used
   mpc_horizon: 50                       # steps
-  num_rollouts: 1
   # Perturbation factors:
   # Change of output from optimal
   p_Q: 0.00

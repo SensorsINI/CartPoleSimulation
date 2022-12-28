@@ -10,8 +10,8 @@ from CartPole.state_utilities import (
 )
 from others.p_globals import (
     k as param_k,
-    M as param_M,
-    m as param_m,
+    m_cart as param_M,
+    m_pole as param_m,
     g as param_g,
     J_fric as param_J_fric,
     M_fric as param_M_fric,
@@ -24,7 +24,7 @@ from sympy.utilities.lambdify import lambdify, implemented_function
 
 
 x, v, t, o, u = sym.symbols("x,v,t,o,u")
-k, M, m, L, J_fric, M_fric, g = sym.symbols("k,M,m,L,J_fric,M_fric,g")
+k, m_cart, m_pole, L, J_fric, M_fric, g = sym.symbols("k,M,m,L,J_fric,M_fric,g")
 
 xD = v
 tD = o
@@ -38,10 +38,10 @@ xo = sym.diff(xD, o, 1)
 xu = sym.diff(xD, u, 1)
 
 vx = sym.diff(vD, x, 1)
-vv = lambdify((x, v, t, o, u, k, M, m, L, J_fric, M_fric, g), sym.diff(vD, v, 1), "numpy")
-vt = lambdify((x, v, t, o, u, k, M, m, L, J_fric, M_fric, g), sym.diff(vD, t, 1), "numpy")
-vo = lambdify((x, v, t, o, u, k, M, m, L, J_fric, M_fric, g), sym.diff(vD, o, 1), "numpy")
-vu = lambdify((x, v, t, o, u, k, M, m, L, J_fric, M_fric, g), sym.diff(vD, u, 1), "numpy")
+vv = lambdify((x, v, t, o, u, k, m_cart, m_pole, L, J_fric, M_fric, g), sym.diff(vD, v, 1), "numpy")
+vt = lambdify((x, v, t, o, u, k, m_cart, m_pole, L, J_fric, M_fric, g), sym.diff(vD, t, 1), "numpy")
+vo = lambdify((x, v, t, o, u, k, m_cart, m_pole, L, J_fric, M_fric, g), sym.diff(vD, o, 1), "numpy")
+vu = lambdify((x, v, t, o, u, k, m_cart, m_pole, L, J_fric, M_fric, g), sym.diff(vD, u, 1), "numpy")
 
 tx = sym.diff(tD, x, 1)
 tv = sym.diff(tD, v, 1)
@@ -50,10 +50,10 @@ to = sym.diff(tD, o, 1)
 tu = sym.diff(tD, u, 1)
 
 ox = sym.diff(oD, x, 1)
-ov = lambdify((x, v, t, o, u, k, M, m, L, J_fric, M_fric, g), sym.diff(oD, v, 1), "numpy")
-ot = lambdify((x, v, t, o, u, k, M, m, L, J_fric, M_fric, g), sym.diff(oD, t, 1), "numpy")
-oo = lambdify((x, v, t, o, u, k, M, m, L, J_fric, M_fric, g), sym.diff(oD, o, 1), "numpy")
-ou = lambdify((x, v, t, o, u, k, M, m, L, J_fric, M_fric, g), sym.diff(oD, u, 1), "numpy")
+ov = lambdify((x, v, t, o, u, k, m_cart, m_pole, L, J_fric, M_fric, g), sym.diff(oD, v, 1), "numpy")
+ot = lambdify((x, v, t, o, u, k, m_cart, m_pole, L, J_fric, M_fric, g), sym.diff(oD, t, 1), "numpy")
+oo = lambdify((x, v, t, o, u, k, m_cart, m_pole, L, J_fric, M_fric, g), sym.diff(oD, o, 1), "numpy")
+ou = lambdify((x, v, t, o, u, k, m_cart, m_pole, L, J_fric, M_fric, g), sym.diff(oD, u, 1), "numpy")
 
 
 def cartpole_jacobian(s: Union[np.ndarray, SimpleNamespace], u: float):

@@ -23,6 +23,8 @@ typing-extensions
 PyQt6
 tensorflow-probability
 Pillow
+# generallibrary # print links in logging output https://stackoverflow.com/questions/26300594/print-code-link-into-pycharms-console
+dictdiffer
 
 torch
 tensorflow
@@ -30,5 +32,8 @@ tensorflow
 do-mpc==4.1.1
 casadi
 nni
+munch # https://github.com/Infinidat/munch
+pypref # https://bachiraoun.github.io/pypref/
+ruamel.yaml # to load yml files with numbers in scientific notation
 
 -e ./SI_Toolkit

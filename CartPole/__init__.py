@@ -13,6 +13,8 @@ import os
 import traceback
 # Import module to get a current time and date used to name the files containing the history of simulations
 from datetime import datetime
+from typing import Optional
+
 # To detect the latest csv file
 
 import numpy as np
@@ -21,10 +23,10 @@ from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.others.environment import EnvironmentBatched
 from Control_Toolkit.others.globals_and_utils import (
     get_available_controller_names, get_available_optimizer_names, get_controller_name, get_optimizer_name, import_controller_by_name)
-from others.globals_and_utils import MockSpace, create_rng, load_config
-from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
+from others.globals_and_utils import MockSpace, create_rng, load_config, load_or_reload_config_if_modified
+from others.p_globals import (CARTPOLE_PHYSICAL_CONSTANTS, J_fric, L, m_cart, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
-                              g, k, m, u_max, v_max)
+                              g, k, m_pole, u_max, v_max)
 # Interpolate function to create smooth random track
 from scipy.interpolate import BPoly, interp1d
 # Run range() automatically adding progress bar in terminal
@@ -140,7 +142,7 @@ class CartPole(EnvironmentBatched):
         # region Variables controlling operation of the program - should not be modified directly
         self.save_flag = False  # Signalizes that the current time step should be saved
         self.csv_filepath = None  # Where to save the experiment history.
-        self.controller = None  # Placeholder for the currently used controller function
+        self.controller:template_controller = Optional[None]  # Placeholder for the currently used controller function
         self.controller_name = ''  # Placeholder for the currently used controller name
         self.optimizer_name = ''  # Placeholder for the currently used optimizer name
         self.controller_idx = None  # Placeholder for the currently used controller index
@@ -196,7 +198,7 @@ class CartPole(EnvironmentBatched):
         self.slider_max = 1.0
         self.slider_value = 0.0
 
-        self.show_hanging_pole = False
+        self.show_hanging_pole = True
 
         self.physical_to_graphics = None
         self.graphics_to_physical = None
@@ -423,6 +425,7 @@ class CartPole(EnvironmentBatched):
 
     def edge_bounce(self):
         # Elastic collision at edges
+        # TODO should be semielastic
         self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = edge_bounce_numba(
             self.s[ANGLE_IDX],
             np.cos(self.s[ANGLE_IDX]),
@@ -433,10 +436,12 @@ class CartPole(EnvironmentBatched):
             L=L,
         )
 
-    # Determine the dimensionless [-1,1] value of the motor power Q
-    # This function should be called for the first time to calculate 0th time step
-    # Otherwise it goes out of sync with saving
+
     def Update_Q(self):
+        """ Determine the dimensionless [-1,1] value of the motor power Q
+        This function should be called for the first time to calculate 0th time step
+        Otherwise it goes out of sync with saving,
+    """
         # Calculate time steps from last update
         # The counter should be initialized at max-1 to start with a control input update
         self.dt_controller_steps_counter += 1
@@ -448,7 +453,7 @@ class CartPole(EnvironmentBatched):
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s_with_noise_and_latency, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
+                self.Q = self.controller.step(self.s_with_noise_and_latency, self.time, updated_attributes= {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
 
             self.dt_controller_steps_counter = 0
 
@@ -527,8 +532,9 @@ class CartPole(EnvironmentBatched):
 
                 writer.writerow(['#'])
                 writer.writerow(['# Parameters:'])
-                for k in P_GLOBALS.__dict__:
-                    writer.writerow(['# ' + k + ': ' + str(getattr(P_GLOBALS, k))])
+                c = load_config("config.yml")
+                for k,v in c.items():
+                    writer.writerow(['# ' + k + ': ' + str(v)])
                 writer.writerow(['#'])
 
                 writer.writerow(['# Data:'])
@@ -905,8 +911,8 @@ class CartPole(EnvironmentBatched):
             pass
 
         # reset global variables
-        global k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
-        k[...], M[...], m[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
+        global k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
+        k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
 
         self.time = 0.0
         if reset_mode == 0:  # Don't change it
