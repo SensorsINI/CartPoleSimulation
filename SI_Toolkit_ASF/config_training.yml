@@ -3,7 +3,7 @@ modeling:
   NET_NAME: 'GRU-64H1'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Experiment-16/'
+  path_to_experiment: 'Experiment-1/'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
 
 training_default:

@@ -9,9 +9,9 @@ predictors_specifications_testing: ['1_layer_gru_64', '2_layer_gru', 'ODE_TF']
 # Where multiple ODE models are available, one can specify the name after colon e.g. ["ODE_TF:simple", "ODE:st"]
 # In this case name from predictor_config is getting overwritten
 
-test_file: 'Experiment.csv'
+test_file: 'Experiment-1.csv'
 
-path_to_testfile: './SI_Toolkit_ASF/Experiments/Experiment-16/Recordings/Test/'
+path_to_testfile: './SI_Toolkit_ASF/Experiments/Experiment-1/Recordings/Test/'
 
 test_len: 'max'
 test_max_horizon: 50  # Indicates prediction horizon for testing
