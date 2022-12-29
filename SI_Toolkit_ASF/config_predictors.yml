@@ -1,4 +1,4 @@
-predictor_name_default: '2_layer_gru'
+predictor_name_default: '1_layer_gru_64'
 # If controller does not specify predictor_specification (leave empty)
 # a predictor from "predictors:predictor_name_default" from below is loaded
 # Check config.yml and config_testing.yml to learn more on how predictors are selected
@@ -29,12 +29,6 @@ predictors:
     predictor_type: 'neural'  # Possible options are: 'neural', 'GP', 'ODE, 'ODE_TF'
     model_name: 'GRU-6IN-32H1-32H2-5OUT-0'
     path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-16/Models/'
-    update_before_predicting: True
-  
-  3_layer_gru:
-    predictor_type: 'neural'  # Possible options are: 'neural', 'GP', 'ODE, 'ODE_TF'
-    model_name: 'GRU-6IN-16H1-16H2-16H3-5OUT-0'
-    path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-15/Models/'
     update_before_predicting: True
   
   1_layer_gru_64:
