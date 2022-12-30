@@ -63,7 +63,7 @@ class cartpole_trajectory_generator:
             self._prev_dance_policy=policy
 
 
-            cost_function.cartpos=self.cartpole_dancer.cartpos
+            gui_target_position=self.cartpole_dancer.cartpos
             if policy=='spin':
                 cost_function.spin_dir=self.cartpole_dancer.option
                 cost_function.spin_freq_hz=self.cartpole_dancer.freq
@@ -86,9 +86,9 @@ class cartpole_trajectory_generator:
         if policy == 'spin':  # spin pole CW or CCW depending on target_equilibrium up or down
             spin_dir_factor=1
             if cost_function.spin_dir=='cw':
-                spin_dir_factor=1
-            elif cost_function.spin_dir=='ccw':
                 spin_dir_factor=-1
+            elif cost_function.spin_dir=='ccw':
+                spin_dir_factor=+1
             else:
                 log.warning(f'spin_dir value of "{cost_function.spin_dir} must be "cw" or "ccw"')
             horizon_endtime = float(mpc_horizon) * dt

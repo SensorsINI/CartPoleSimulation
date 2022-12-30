@@ -71,8 +71,16 @@ prefs=MyPreferences() # store and retrieve sticky values
 
 
 
+
 # Class implementing the main window of CartPole GUI
 class MainWindow(QMainWindow):
+
+    # class instance variable to let controllers etc put status into the window
+    CartPoleGuiStatusText:QLabel= None
+
+    def set_status_text(text: str) -> None:
+        if not MainWindow.CartPoleGuiStatusText is None:
+            MainWindow.CartPoleGuiStatusText.setText(text)
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
@@ -158,6 +166,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         # endregion
 
+
         # region - Change geometry of the main window
         self.setGeometry(300, 100, 1000, 800) # origin x,y size w,h
         # endregion
@@ -177,6 +186,9 @@ class MainWindow(QMainWindow):
         # Attach figure to the layout
         lf = QVBoxLayout()
         lf.addWidget(self.canvas)
+
+        MainWindow.CartPoleGuiStatusText = QLabel('(status)')
+        layout.addWidget(MainWindow.CartPoleGuiStatusText)
 
         # endregion
 
@@ -1279,6 +1291,7 @@ class MainWindow(QMainWindow):
             self.CartPoleInstance.s[ANGLED_IDX] += .6
         elif self.sender().text() == "Right":
             self.CartPoleInstance.s[ANGLED_IDX] -= .6
+
 
     # endregion
 

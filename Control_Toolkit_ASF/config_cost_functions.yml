@@ -32,7 +32,7 @@ CartPole:
     ccrc_weight: 1.0
     R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in optimizer config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
   cartpole_trajectory_cost: # values must be float or they are cast to int type, which might not work for some ops
-    policy:  shimmy # dance (follow csv file) spin  balance shimmy cartonly
+    policy:  dance # dance (follow csv file) spin  balance shimmy cartonly
 
     # tobi cannot get conditional branch to work for following option in cartpole_trajectory_cost.py
 #    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
