@@ -1062,7 +1062,8 @@ class MainWindow(QMainWindow):
             self.threadpool.start(worker)
 
         else:
-            self.PhysicalCartPoleDriverInstance.terminate_experiment = True
+            if self.PhysicalCartPoleDriverInstance:
+                self.PhysicalCartPoleDriverInstance.terminate_experiment = True
 
 
         self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
