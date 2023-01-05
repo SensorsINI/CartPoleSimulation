@@ -141,8 +141,7 @@ def cartpole_ode(s: np.ndarray, u: float,
 
 # @tf.function
 def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L=L, cart_bounce_factor=cart_bounce_factor):
-    """ Models bounce at edge of cart track. Very simple complete elastic bounce currently.
-    TODO add some absorption
+    """ Models bounce at edge of cart track. Very simple elastic bounce currently.
 
     :param angle: Pole angle in radians. 0 means pole is upright. Clockwise angle rotation is defined as negative.
     :param angle_cos:
@@ -179,7 +178,7 @@ def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L=L, cart
 def edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L=L):
     for i in range(position.size):
         angle[i], angleD[i], position[i], positionD[i] = edge_bounce(angle[i], angle_cos[i], angleD[i], position[i], positionD[i],
-                                                                     t_step, L)
+                                                                     t_step, L) # see cartpole_tf.py; note we no longer need the edge_bounce wrapper because edge bounce compiles as tf code
     return angle, angleD, position, positionD
 
 

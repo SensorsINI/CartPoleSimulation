@@ -132,6 +132,7 @@ def _cartpole_fine_integration_tf(angle, angleD,
         # TODO it is currently commented out in master branch
         angle_cos = tf.cos(angle)
         angle, angleD, position, positionD = edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L, cart_bounce_factor)
+        # # note we no longer need the edge_bounce wrapper because edge_bounce compiles as tf code
 
         # angle_cos = tf.cos(angle)
         angle_sin = tf.sin(angle)
