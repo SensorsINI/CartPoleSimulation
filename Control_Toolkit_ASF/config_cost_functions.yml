@@ -32,19 +32,19 @@ CartPole:
     ccrc_weight: 1.0
     R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in optimizer config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
   cartpole_trajectory_cost: # values must be float or they are cast to int type, which might not work for some ops
-    policy:  dance # dance (follow csv file) spin  balance shimmy cartonly
+    policy:  spin # dance (follow csv file) spin  balance shimmy cartonly
 
     # tobi cannot get conditional branch to work for following option in cartpole_trajectory_cost.py
 #    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
-    terminal_cost_factor: 30e+0 # how much to weight up the terminal state costs compared to the rest of the rollout
+    terminal_cost_factor: 35e+0 # how much to weight up the terminal state costs compared to the rest of the rollout
     stage_cost_factor: 1e+0 # how much to weight up the state costs
 
     # cost weightings for the different state components
-    cart_pos_weight: 1e5 # weight on cart pos error
+    cart_pos_weight: 7e4 # weight on cart pos error
     pole_angle_weight: 1e4
     cart_vel_weight: 1e0
-    pole_swing_weight: 1e2 # cart angle derivative weight
-    control_cost_weight: 1e-1 # cost of control
+    pole_swing_weight: 3e3 # cart angle derivative weight
+    control_cost_weight: 1e0 # cost of control
     control_cost_change_weight: 1e0 # cost of changing control
 
     # balance
@@ -59,11 +59,11 @@ CartPole:
 #    shimmy_plot: 0 # to plot the shimmy function
 
     # cartonly only controls cart position, pole is ignored. Trajectory is triangular with amp and per
-    cartonly_amp: .2
-    cartonly_freq_hz: .5
-    cartonly_duty_cycle: .9 # set to .5 for triangle, 0 or 1 for sawtooth
+    cartonly_amp: .15
+    cartonly_freq_hz: .2
+    cartonly_duty_cycle: .5 # set to .5 for triangle, 0 or 1 for sawtooth
 
     # spin
     spin_dir: ccw # 1 or cw, -1 or ccw
-    spin_freq_hz: 2. # negative to spin other direction, must set at least 1hz
+    spin_freq_hz: 4. # negative to spin other direction, must set at least 1hz
 

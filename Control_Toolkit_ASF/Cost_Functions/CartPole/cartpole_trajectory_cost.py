@@ -124,13 +124,11 @@ class cartpole_trajectory_cost(cost_function_base):
         return stage_cost*self.stage_cost_factor
 
     # cost for distance from cart track edge
-    def _distance_difference_cost(self, position):
+    def _track_edge_barrier(self, position):
         """Compute penalty for distance of cart to the target position"""
-        return (
-            (position - self.controller.target_position) / (2.0 * TrackHalfLength)
-        ) ** 2 + self.lib.cast(
-            self.lib.abs(position) > 0.90 * TrackHalfLength, self.lib.float32
-        ) * 1.0e7  # Soft constraint: Do not crash into border
+        return self.lib.cast(
+            self.lib.abs(position) > 0.9 * TrackHalfLength, self.lib.float32
+        ) * 1.0e8  # Soft constraint: Do not crash into border
 
     # actuation cost
     def _CC_cost(self, u):
@@ -165,7 +163,9 @@ class cartpole_trajectory_cost(cost_function_base):
             else:
                 terminal_cost+=0.
 
-        return terminal_cost*self.terminal_cost_factor
+        terminal_traj_costs= terminal_cost*self.terminal_cost_factor
+        terminal_traj_edge_barrier_cost=self._track_edge_barrier(terminal_states[:,state_utilities.POSITION_IDX])
+        return (terminal_traj_costs+terminal_traj_edge_barrier_cost )
 
     # cost of changing control too fast
     def _control_change_rate_cost(self, u, u_prev):

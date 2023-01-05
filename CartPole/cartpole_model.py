@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import numpy as np
 from others.globals_and_utils import create_rng, load_config
 from others.p_globals import (J_fric, L, m_cart, M_fric, TrackHalfLength,
-                              controlBias, controlDisturbance, g, k, m_pole, u_max, v_max)
+                              controlBias, controlDisturbance, g, k, m_pole, u_max, v_max, cart_bounce_factor)
 
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
@@ -30,8 +30,8 @@ https://sharpneat.sourceforge.io/research/cart-pole/cart-pole-equations.html
 Should be the same up to the angle-direction-convention and notation changes.
 
 The convention:
-Pole upright position defines 0 angle
-Cart movement to the right is positive
+Pole upright position defines 0 angle, units of angle is in radians
+Cart movement to the right is positive, units are meters
 Clockwise angle rotation is defined as negative
 
 Required angle convention for CartPole GUI: CLOCK-NEG
@@ -146,12 +146,25 @@ def cartpole_ode(s: np.ndarray, u: float,
 
     return angleDD, positionDD
 
-def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L=L):
+def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L=L, cart_bounce_factor=cart_bounce_factor):
+    """ Models bounce at edge of cart track. Very simple complete elastic bounce currently.
+    TODO add some absorption
+
+    :param angle:
+    :param angle_cos:
+    :param angleD:
+    :param position:
+    :param positionD:
+    :param t_step: the timestep in seconds
+    :param L: the pole length
+
+    :returns: angle, angleD, position, positionD
+    """
     if position >= TrackHalfLength or -position >= TrackHalfLength:  # Without abs to compile with tensorflow
-        angleD -= 2 * (positionD * angle_cos) / L
-        angle += angleD * t_step
-        positionD = -positionD
-        position += positionD * t_step
+        angleD -= 2 * (positionD * angle_cos) / L # TODO why this formula???
+        angle += angleD * t_step # update angle according to new derivative of angle
+        positionD = -cart_bounce_factor*positionD # perfect bounce
+        position += positionD * t_step # step back the amount of bounce
     return angle, angleD, position, positionD
 
 

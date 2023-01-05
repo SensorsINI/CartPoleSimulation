@@ -1,6 +1,6 @@
 import tensorflow as tf
 from others.globals_and_utils import create_rng, load_config
-from others.p_globals import (J_fric, L, m_cart, M_fric, TrackHalfLength,
+from others.p_globals import (J_fric, L, m_cart, M_fric, TrackHalfLength,cart_bounce_factor,
                               controlBias, controlDisturbance, g, k, m_pole, u_max,
                               v_max)
 from SI_Toolkit.Functions.TF.Compile import CompileTF
@@ -25,11 +25,12 @@ u_max = tf.convert_to_tensor(u_max)
 controlDisturbance = tf.convert_to_tensor(controlDisturbance)
 controlBias = tf.convert_to_tensor(controlBias)
 TrackHalfLength = tf.convert_to_tensor(TrackHalfLength)
+cart_bounce_factor = tf.convert_to_tensor(cart_bounce_factor)
 
 rng = create_rng(__name__, config["cartpole"]["seed"])
 
 ###
-# FIXME: Currently tf predictor is not modeling edge bounce!
+# TODO: Currently tf predictor is not modeling edge bounce!
 ###
 
 
@@ -56,7 +57,7 @@ edge_bounce_wrapper_tf = edge_bounce_wrapper
 
 
 @CompileTF
-def edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L=L):
+def edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L=L, cart_bounce_factor=cart_bounce_factor):
     angle_bounced = tf.TensorArray(tf.float32, size=tf.size(angle), dynamic_size=False)
     angleD_bounced = tf.TensorArray(tf.float32, size=tf.size(angleD), dynamic_size=False)
     position_bounced = tf.TensorArray(tf.float32, size=tf.size(position), dynamic_size=False)
@@ -65,7 +66,7 @@ def edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L
     for i in tf.range(tf.size(position)):
         angle_i, angleD_i, position_i, positionD_i = edge_bounce_tf(angle[i], angle_cos[i], angleD[i], position[i],
                                                                     positionD[i],
-                                                                    t_step, L)
+                                                                    t_step, L, cart_bounce_factor=cart_bounce_factor)
         angle_bounced = angle_bounced.write(i, angle_i)
         angleD_bounced = angleD_bounced.write(i, angleD_i)
         position_bounced = position_bounced.write(i, position_i)
@@ -128,10 +129,11 @@ def _cartpole_fine_integration_tf(angle, angleD,
                                                                      positionDD, t_step, )
 
         # The edge bounce calculation seems to be too much for a GPU to tackle
-        # angle_cos = tf.cos(angle)
-        # angle, angleD, position, positionD = edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L)
-
+        # TODO it is currently commented out in master branch
         angle_cos = tf.cos(angle)
+        angle, angleD, position, positionD = edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L, cart_bounce_factor)
+
+        # angle_cos = tf.cos(angle)
         angle_sin = tf.sin(angle)
 
         angle = wrap_angle_rad(angle_sin, angle_cos)

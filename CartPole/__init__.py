@@ -24,7 +24,7 @@ from Control_Toolkit.others.environment import EnvironmentBatched
 from Control_Toolkit.others.globals_and_utils import (
     get_available_controller_names, get_available_optimizer_names, get_controller_name, get_optimizer_name, import_controller_by_name)
 from others.globals_and_utils import MockSpace, create_rng, load_config, load_or_reload_config_if_modified
-from others.p_globals import (CARTPOLE_PHYSICAL_CONSTANTS, J_fric, L, m_cart, M_fric, TrackHalfLength,
+from others.p_globals import (CARTPOLE_PHYSICAL_CONSTANTS, J_fric, L, m_cart, M_fric, TrackHalfLength, cart_bounce_factor,
                               controlBias, controlDisturbance, export_globals,
                               g, k, m_pole, u_max, v_max)
 # Interpolate function to create smooth random track
@@ -911,8 +911,8 @@ class CartPole(EnvironmentBatched):
             pass
 
         # reset global variables
-        global k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
-        k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
+        global k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength, cart_bounce_factor
+        k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...], cart_bounce_factor[...] = export_globals()
 
         self.time = 0.0
         if reset_mode == 0:  # Don't change it

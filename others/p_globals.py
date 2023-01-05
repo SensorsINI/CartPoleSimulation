@@ -43,7 +43,8 @@ def export_globals():
     np.array(CARTPOLE_PHYSICAL_CONSTANTS.u_max, dtype=np.float32),
     np.array(CARTPOLE_PHYSICAL_CONSTANTS.controlDisturbance, dtype=np.float32),
     np.array(CARTPOLE_PHYSICAL_CONSTANTS.controlBias, dtype=np.float32),
-    np.array(CARTPOLE_PHYSICAL_CONSTANTS.TrackHalfLength, dtype=np.float32)
+    np.array(CARTPOLE_PHYSICAL_CONSTANTS.TrackHalfLength, dtype=np.float32),
+    np.array(CARTPOLE_PHYSICAL_CONSTANTS.cart_bounce_factor, dtype=np.float32)
 )
 
-k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength = export_globals()
+k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength, cart_bounce_factor = export_globals()

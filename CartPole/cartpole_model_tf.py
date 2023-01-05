@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import numpy as np
 import tensorflow as tf
 from others.globals_and_utils import create_rng, load_config
-from others.p_globals import (J_fric, L, m_cart, M_fric, TrackHalfLength,
+from others.p_globals import (J_fric, L, m_cart, M_fric, TrackHalfLength, cart_bounce_factor,
                               controlBias, controlDisturbance, g, k, m_pole, u_max,
                               v_max)
 from SI_Toolkit.Functions.TF.Compile import CompileTF
@@ -26,6 +26,7 @@ u_max = tf.convert_to_tensor(u_max)
 controlDisturbance = tf.convert_to_tensor(controlDisturbance)
 controlBias = tf.convert_to_tensor(controlBias)
 TrackHalfLength = tf.convert_to_tensor(TrackHalfLength)
+cart_bounce_factor = tf.convert_to_tensor(cart_bounce_factor)
 
 
 rng = create_rng(__name__, config["cartpole"]["seed"])
@@ -71,7 +72,10 @@ def _cartpole_ode(ca, sa, angleD, positionD, u,
     Calculates current values of second derivative of angle and position
     from current value of angle and position, and their first derivatives
 
-    :param angle, angleD, position, positionD: Essential state information of cart
+    :param angle, angleD, position, positionD:
+          Pole angle in radians. 0 means pole is upright. Clockwise angle rotation is defined as negative.
+          Cart position is in meters, 0 at middle of track, positive to rightwards.
+          Essential state information of cart
     :param u: Force applied on cart in unnormalized range
 
     :returns: angular acceleration, horizontal acceleration
@@ -135,12 +139,40 @@ def cartpole_ode(s: np.ndarray, u: float,
     )
     return angleDD, positionDD
 
-def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L=L):
-    if position >= TrackHalfLength or -position >= TrackHalfLength:  # Without abs to compile with tensorflow
-        angleD -= 2 * (positionD * angle_cos) / L
-        angle += angleD * t_step
-        positionD = -positionD
-        position += positionD * t_step
+# @tf.function
+def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L=L, cart_bounce_factor=cart_bounce_factor):
+    """ Models bounce at edge of cart track. Very simple complete elastic bounce currently.
+    TODO add some absorption
+
+    :param angle: Pole angle in radians. 0 means pole is upright. Clockwise angle rotation is defined as negative.
+    :param angle_cos:
+    :param angleD: rad/s. Positive means CCW rotation
+    :param position: meters, 0 at middle of table, positive rightwards
+    :param positionD: m/w, positive rightwards
+    :param t_step: the timestep in seconds
+    :param L: the pole length in meters
+    :param cart_bounce_factor: fraction of cart speed after bounce from edge
+
+    :returns: angle, angleD, position, positionD
+    """
+
+    i=tf.greater_equal(tf.abs(position),TrackHalfLength) # find those rollouts that go past edge of track
+
+    # for those that do, update the swing according to this dynamics
+    angleD = tf.where(i,angleD-2 * (positionD * angle_cos) / L, angleD) # TODO why this formula???
+    # don't update angle since the euler step will already do it
+    # angle = angle+angleD * t_step # update angle according to new derivative of angle
+    # and the cart velocity is reversed with some absorption
+    positionD = tf.where(i,-cart_bounce_factor*positionD,positionD) # imperfect bounce
+    # don't update position since Euler step will do it
+    # position = position+positionD * t_step  # step back the amount of bounce
+
+    # following is old serial code
+    # if position >= TrackHalfLength or -position >= TrackHalfLength:  # Without abs to compile with tensorflow
+    #     angleD -= 2 * (positionD * angle_cos) / L # TODO why this formula???
+    #     angle += angleD * t_step # update angle according to new derivative of angle
+    #     positionD = -cart_bounce_factor*positionD # perfect bounce
+    #     position += positionD * t_step # step back the amount of bounce
     return angle, angleD, position, positionD
 
 

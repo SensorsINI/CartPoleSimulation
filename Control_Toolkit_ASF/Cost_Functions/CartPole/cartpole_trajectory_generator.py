@@ -5,7 +5,7 @@ from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.Cost_Functions import cost_function_base
 from Control_Toolkit.others.globals_and_utils import get_logger
 from Control_Toolkit_ASF.Cost_Functions.CartPole.cartpole_dancer import cartpole_dancer
-from GUI import gui_default_params
+from GUI import gui_default_params, MainWindow
 from SI_Toolkit.computation_library import TensorType
 import tensorflow as tf
 import matplotlib
@@ -93,11 +93,10 @@ class cartpole_trajectory_generator:
                 log.warning(f'spin_dir value of "{cost_function.spin_dir} must be "cw" or "ccw"')
             horizon_endtime = float(mpc_horizon) * dt
             times = np.linspace(0, horizon_endtime, num=mpc_horizon)
-            s_per_rev_target = spin_dir_factor/cost_function.spin_freq_hz
-            rad_per_s_target = gui_target_equilibrium * 2 * np.pi / s_per_rev_target # note direction of spin from target_equilibrium
+            rad_per_s_target = spin_dir_factor*gui_target_equilibrium * 2 * np.pi * cost_function.spin_freq_hz # note direction of spin from target_equilibrium
             rad_per_dt = rad_per_s_target * dt
-            current_angle = state[state_utilities.ANGLE_IDX]
-            angle_trajectory=current_angle +  times * rad_per_dt
+            # current_angle = state[state_utilities.ANGLE_IDX]
+            # angle_trajectory=current_angle +  times * rad_per_dt
             traj[state_utilities.POSITION_IDX] = gui_target_position
             # traj[state_utilities.ANGLE_COS_IDX, :] = np.cos(angle_trajectory)
             # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(angle_trajectory)
@@ -181,4 +180,30 @@ class cartpole_trajectory_generator:
         else:
             log.error(f'cost policy "{policy}" is unknown')
 
+        self.set_status_text(time,state,cost_function)
         return traj
+
+    def set_status_text(self, time: float, state: np.ndarray, cost_function: cost_function_base) -> None:
+        policy = cost_function.policy
+        if policy=='dance':
+            return # status of cartpole GUI set by dancer
+        gui_target_position = float(cost_function.target_position)  # GUI slider position
+        gui_target_equilibrium = float(cost_function.target_equilibrium)  # GUI switch +1 or -1 to make pole target up or down position
+
+        if policy=='balance':
+            dir=self.decode_string(cost_function.balance_dir)
+            s= f'Dance: balance/{dir} pos={gui_target_position:.1f}m'
+        elif policy=='spin':
+            dir=self.decode_string(cost_function.spin_dir)
+            s= f'Dance: spin/{dir} pos={gui_target_position:.1f}m freq={float(cost_function.spin_freq_hz):.1f}Hz'
+        elif policy=='shimmy':
+            s= f'Dance: shimmy pos={gui_target_position:.1f}m freq={float(cost_function.shimmy_freq_hz):.1f}Hz amp={float(cost_function.shimmy_amp):.1f}Hz'
+        elif policy=='cartonly':
+            s= f'Dance: cartonly pos={gui_target_position:.1f}m freq={float(cost_function.cartonly_freq_hz):.1f}Hz amp={float(cost_function.cartonly_amp):.1f}Hz'
+        else:
+            s= f'unknown/not implemented string'
+
+        MainWindow.set_status_text(s)
+
+    def decode_string(self,tfstring:tf.Variable):
+        return tfstring.numpy().decode('utf-8')

@@ -105,11 +105,11 @@ class cartpole_dancer:
             return None
 
     def format_step(self, time:float) -> str:
-        if self.freq and self.freq2 and self.amp and self.amp2:
+        if not self.freq is  None and not self.freq2 is None and not self.amp is None and not self.amp2 is None:
             return f'Dance: {self.policy}/{self.option} t={(time-self.time_step_started):.1f}/{self.duration:.1f}s pos={self.cartpos:.1f}m f0/f1={self.freq:.1f}/{self.freq2:.1f}Hz a0/a1={self.amp:.2f}/{self.amp2:.2f}m'
-        elif self.freq and self.amp:
+        elif not self.freq  is None and not self.amp is None:
             return f'Dance: {self.policy}/{self.option} t={(time-self.time_step_started):.1f}/{self.duration:.1f}s pos={self.cartpos:.1f}m freq={self.freq:.1f}Hz amp={self.amp:.2f}m'
-        elif self.freq:
+        elif not self.freq is None:
             return f'Dance: {self.policy}/{self.option} t={(time-self.time_step_started):.1f}/{self.duration:.1f} pos={self.cartpos:.1f}m freq={self.freq:.1f}Hz'
         else:
             return f'Dance: {self.policy}/{self.option} t={(time-self.time_step_started):.1f}/{self.duration:.1f}s pos={self.cartpos:.1f}m'
