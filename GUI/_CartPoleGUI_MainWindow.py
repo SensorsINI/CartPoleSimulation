@@ -79,6 +79,14 @@ class MainWindow(QMainWindow):
     CartPoleGuiStatusText:QLabel= None
 
     def set_status_text(text: str) -> None:
+        """ Sets the text at top of GUI window. Any class can use this via the static class method, e.g. like this:
+
+                MainWindow.set_status_text(self.format_step(time))
+
+        (the self.format_step(time) call formats the current dance step text)
+
+        :param str: the string to show
+        """
         if not MainWindow.CartPoleGuiStatusText is None:
             MainWindow.CartPoleGuiStatusText.setText(text)
 
