@@ -1,5 +1,6 @@
 import csv
 from pathlib import Path
+from typing import Dict
 
 from GUI import MainWindow
 from others.globals_and_utils import get_logger
@@ -15,7 +16,13 @@ except:
     pass
 
 class cartpole_dancer:
+    """ Reads steps from CSV file for cartpole dancer
+    """
+
     def __init__(self):
+        """ Constructs the dance reader, opening the CSV file
+
+        """
         csv.register_dialect('cartpole-dancer', skipinitialspace=True)
         self.fp = 'Control_Toolkit_ASF/Cost_Functions/CartPole/cartpole_dance.csv'  # os.path.join('Control_Toolkit_ASF','Cost_Functios','cartpole_dance.csv')
         self.fpath = Path(self.fp)
@@ -33,7 +40,7 @@ class cartpole_dancer:
 
         self._reset_fields()
 
-    def _reset_fields(self):
+    def _reset_fields(self) -> None:
         self.time_step_started = float(0)
         self.current_row = None
         self._started = False
@@ -46,7 +53,7 @@ class cartpole_dancer:
         self.freq2 = None
         self.amp2 = None
 
-    def start(self, time: float):
+    def start(self, time: float) -> None:
         """ Starts the dance now at time time"""
 
         self._reset_fields()
@@ -61,7 +68,13 @@ class cartpole_dancer:
         self._started = True
         self.row_iterator = self.reader.__iter__()
 
-    def step(self, time: float):
+    def step(self, time: float)-> Dict:
+        """ Does next time step, reading the csv for next step if the current one's duration has timed out
+
+        :param time: the current simulation time in seconds
+
+        :returns: the current step row of cartpole_dance.csv as dict of column name -> value
+        """
         if not self._started:
             raise Exception('cartpole_dancer must be start()ed before calling step()')
         if self.duration is None or time >= self.time_step_started + self.duration:
@@ -69,7 +82,14 @@ class cartpole_dancer:
         MainWindow.set_status_text(self.format_step(time))
         return self.current_row
 
-    def _read_next_step(self, time: float):
+    def _read_next_step(self, time: float) ->None:
+        """ Reads next step from CSV file, reloading file from start if it has been modified since it was last read.
+        Plays a beep when the step changes.
+
+        :param time: the current time in seconds
+
+        :returns: None
+        """
         try:
             # check if file modified, if so, restart whole dance
             mtime = self.fpath.stat().st_mtime
@@ -105,6 +125,12 @@ class cartpole_dancer:
             return None
 
     def format_step(self, time:float) -> str:
+        """ Formats the current step for display in GUI main window status line
+
+        :param time: the current time in seconds
+
+        :returns: the step string
+        """
         if not self.freq is  None and not self.freq2 is None and not self.amp is None and not self.amp2 is None:
             return f'Dance: {self.policy}/{self.option} t={(time-self.time_step_started):.1f}/{self.duration:.1f}s pos={self.cartpos:.1f}m f0/f1={self.freq:.1f}/{self.freq2:.1f}Hz a0/a1={self.amp:.2f}/{self.amp2:.2f}m'
         elif not self.freq  is None and not self.amp is None:
