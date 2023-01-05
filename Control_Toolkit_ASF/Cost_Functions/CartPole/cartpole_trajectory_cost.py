@@ -29,6 +29,11 @@ log=get_logger(__name__)
 import tensorflow as tf
 
 class cartpole_trajectory_cost(cost_function_base):
+    """ Computes the rollout costs for cartpole dancer.
+    The state trajectories are computed from the current timestep according to desired 'step" type.
+    The costs are weighted according to config_cost_functions.yml values for various state components, e.g. cart position, pole swing velocity, etc.
+
+    """
 
     def __init__(self, controller: template_controller, ComputationLib: "type[ComputationLibrary]",
                  config: dict = None) -> None:
