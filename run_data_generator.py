@@ -147,7 +147,7 @@ def generate_random_initial_state(init_state_stub, init_limits, rng):
 
     return initial_state_post
 
-#@profile
+@profile
 def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     config = load_config("config_data_gen.yml")
 

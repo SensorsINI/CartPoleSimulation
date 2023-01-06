@@ -1,5 +1,5 @@
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: ./Experiment_Recordings/
-controller: mpc
+controller: neural-imitator-tf
 dt:
   control: 0.02
   saving: 0.02
@@ -7,7 +7,7 @@ dt:
 length_of_experiment: 30
 number_of_experiments: 1
 random_initial_state:
-  angle: -2.9670597283903604
+  angle: 0.785398
   angleD: null
   init_limits:
     angle:
