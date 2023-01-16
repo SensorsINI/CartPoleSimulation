@@ -1,4 +1,4 @@
-cost_function_name_default: cartpole_trajectory_cost
+cost_function_name_default: cartpole_dancer_cost
 # Default value is used if controller does not specify a cost_function_specification (leave empty)
 # Cost functions are grouped by environment name in a folder within Control_Toolkit_ASF.Cost_Functions
 # Check CartPoleSimulation/config.yml to learn more on how cost_functions are selected TODO I don't see any more information there, and which config.yml is this referring to?
@@ -31,21 +31,31 @@ CartPole:
     cc_weight: 1.0
     ccrc_weight: 1.0
     R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in optimizer config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
-  cartpole_trajectory_cost: # values must be float or they are cast to int type, which might not work for some ops
-    policy:  spin # dance (follow csv file) spin  balance shimmy cartonly
+  cartpole_dancer_cost: # values must be float or they are cast to int type, which might not work for some ops
+    # the policy (dance step or move to control). It is trailed by an int to code the policy as an int for tensorflow XLA compiled code.
+    # e.g. dance0 will create (in update_attributes call) policy='dance' and policy_number=0
+    # this hack is to allow branching in XLA code that lacks string compare operator
+    # see others\globals_and_utilities.py\update_attributes method
+    policy:  spin2 # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4
 
-    # tobi cannot get conditional branch to work for following option in cartpole_trajectory_cost.py
+    # tobi cannot get conditional branch to work for following option in cartpole_dancer_cost.py
 #    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
     terminal_cost_factor: 35e+0 # how much to weight up the terminal state costs compared to the rest of the rollout
     stage_cost_factor: 1e+0 # how much to weight up the state costs
 
-    # cost weightings for the different state components
+    # cost weightings for the different state components for following desired cart state trajectory
     cart_pos_weight: 7e4 # weight on cart pos error
-    pole_angle_weight: 1e4
-    cart_vel_weight: 1e0
-    pole_swing_weight: 3e3 # cart angle derivative weight
+    pole_angle_weight: 1e4 # weight on difference of angle
+    cart_vel_weight: 1e0 # weight on difference of cart velocity
+    pole_swing_weight: 5e7 # cart angle derivative weight
+
+    # following weight the control and its change
     control_cost_weight: 1e0 # cost of control
     control_cost_change_weight: 1e0 # cost of changing control
+
+    # following weight pole energies
+#    pole_energy_potential_weight: 0. Energy_potential weight, ep is maximized by upright pole, minimized by hanging pole. Make it positive for upright pole.
+    pole_energy_total_weight: 1e6 # energy_total is sum of kinetic and potential energy
 
     # balance
     balance_dir: up # 1 or up, -1 or down, multiplied by target_equilibrium

@@ -199,7 +199,7 @@ def load_config(filename: str) -> dict:
     return config
 
 
-def load_or_reload_config_if_modified(filepath:str, every:int=30, target_obj=None)->Tuple[Munch,Optional[dict]]:
+def load_or_reload_config_if_modified(filepath:str, every:int=5, target_obj=None)->Tuple[Munch,Optional[dict]]:
     """
     Reloads a YAML config if the yaml file was modified since runtime started or since last reloaded.
     The initial call will store the config in a private dict to return on subsequent calls.
@@ -280,7 +280,9 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
 
     Used in various controllers in Control_Toolkit/Control_Toolkit_ASF_Template/Controllers.
 
-    :param updated_attributes: a dict with string keys and scalar numeric value attribute to set.
+    :param updated_attributes: a dict [key,value] with string key 'attribute' (aka property) and scalar numeric value or string value to set.
+        If the value is a string and it ends with an intteger, e.g. 'spin0', then the
+        attribute is set to 'spin' and attrribute_number is set to the int value of the number.
     :param target_obj: the object into which we set the attribute.
 
     """
@@ -297,15 +299,27 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
                 objtype=target_obj.lib.float32  # todo assuming all np arrays should go to float 32 here
             else:
                 log.warning(f'attribute "{property}" has unknown object type {type(new_value)}; cannot assign it')
-            if objtype:
+            if not objtype is None and objtype!=target_obj.lib.string:
                 try:
                     target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value,objtype))
                 except ValueError:
                     log.error(f'target attribute "{property}" is probably float type but in config file it is int. Add a trailing "." to the number "{new_value}"')
                     # target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value, target_obj.lib.to_variable(float(new_value), target_obj.lib.float32)))
+            else: # string type; if it ends with int, then also assign a name_number variable
+                val_int = new_value[-1]
+                if val_int.isdigit():
+                    val_str = new_value[:-1]
+                    property_number_name = property + '_number'
+                    target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(val_str, objtype))
+                    target_obj.lib.assign(getattr(target_obj, property_number_name),
+                                          target_obj.lib.to_variable(int(val_int), target_obj.lib.int32))
+                else: # just assign it if it does not end with digit
+                    target_obj.lib.assign(getattr(target_obj, property),
+                                          target_obj.lib.to_variable(new_value, objtype))
+
         else:
-            log.info(
-                f"updated tensorflow attribute '{property}' does not exist in {target_obj.__class__.__name__}, setting it for first time")
+            log.debug(
+                f"tensorflow attribute '{property}' does not exist in {target_obj.__class__.__name__}, setting it for first time")
             if target_obj.lib is None:
                 setattr(target_obj, property, new_value)
             else:
@@ -313,7 +327,16 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
                 if isinstance(new_value,numbers.Integral):
                     setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.int32))
                 elif isinstance(new_value, str):
-                    setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.string))
+                    # create a string tensor with base name, and another tf.variable named name_number, e.g. policy='dance' and policy_number=0
+                    val_int=new_value[-1]
+                    if val_int.isdigit():
+                        val_str = new_value[:-1]
+                        property_number_name = property + '_number'
+                        setattr(target_obj, property,target_obj.lib.to_variable(val_str, target_obj.lib.string)) # set string var
+                        setattr(target_obj, property_number_name,target_obj.lib.to_variable(int(val_int), target_obj.lib.int32)) # set int code var
+                        log.debug(f"setting tensorflow attribute '{property}={val_str}' and {property_number_name}={int(val_int)}")
+                    else:  # just assign it if it does not end with digit
+                        setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.string))
                 elif isinstance(new_value,numbers.Real) or isinstance(new_value,np.ndarray):
                     setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.float32))
                 else:

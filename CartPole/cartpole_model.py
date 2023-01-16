@@ -148,7 +148,6 @@ def cartpole_ode(s: np.ndarray, u: float,
 
 def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L=L, cart_bounce_factor=cart_bounce_factor):
     """ Models bounce at edge of cart track. Very simple complete elastic bounce currently.
-    TODO add some absorption
 
     :param angle:
     :param angle_cos:
@@ -162,9 +161,9 @@ def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L=L, cart
     """
     if position >= TrackHalfLength or -position >= TrackHalfLength:  # Without abs to compile with tensorflow
         angleD -= 2 * (positionD * angle_cos) / L # TODO why this formula???
-        angle += angleD * t_step # update angle according to new derivative of angle
+        # angle += angleD * t_step # update angle according to new derivative of angle
         positionD = -cart_bounce_factor*positionD # perfect bounce
-        position += positionD * t_step # step back the amount of bounce
+        # position += positionD * t_step # step back the amount of bounce
     return angle, angleD, position, positionD
 
 

@@ -47,6 +47,7 @@ class cartpole_dancer:
         self.duration = None
         self.option = None
         self.policy = None
+        self.policy_number = None
         self.cartpos = None
         self.freq = None
         self.amp = None
@@ -108,7 +109,8 @@ class cartpole_dancer:
             return self.step(time)
         try:
             self.duration = float(self.current_row[self.DURATION])
-            self.policy = self.current_row[self.POLICY]
+            self.policy = self.current_row[self.POLICY][:-1] # the dqnce step 'policy" column has entries like balance1, spin2, etc
+            self.policy_number=int(self.current_row[self.POLICY][-1])
             self.option = self.current_row[self.OPTION]
             self.cartpos = float(self.current_row[self.CARTPOS])
             self.freq = self.convert_float(self.FREQ)

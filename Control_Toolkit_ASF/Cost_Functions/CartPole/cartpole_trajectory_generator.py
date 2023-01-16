@@ -42,7 +42,7 @@ class cartpole_trajectory_generator:
         traj = np.full(shape=(state_utilities.NUM_STATES, mpc_horizon),
                        fill_value=np.nan)  # use numpy not tf, too hard to work with immutable tensors
 
-        policy = cost_function.policy
+        policy:str = cost_function.policy
         dancer_current_step=None
         if policy is None:
             raise RuntimeError(f'set policy in config_self.controller.cost_function_wrapper.cost_functions.yml')
@@ -63,6 +63,7 @@ class cartpole_trajectory_generator:
             self._prev_dance_policy=policy
 
 
+            cost_function.policy_number=self.cartpole_dancer.policy_number
             gui_target_position=self.cartpole_dancer.cartpos
             if policy=='spin':
                 cost_function.spin_dir=self.cartpole_dancer.option
@@ -83,7 +84,7 @@ class cartpole_trajectory_generator:
                 cost_function.cartonly_duty_cycle=float(self.cartpole_dancer.option)
 
 
-        if policy == 'spin':  # spin pole CW or CCW depending on target_equilibrium up or down
+        if policy== 'spin':  # spin pole CW or CCW depending on target_equilibrium up or down
             spin_dir_factor=1
             if cost_function.spin_dir=='cw':
                 spin_dir_factor=-1
@@ -103,7 +104,7 @@ class cartpole_trajectory_generator:
             # traj[state_utilities.ANGLE_IDX, :] = angle_trajectory
             traj[state_utilities.ANGLED_IDX, :] = rad_per_s_target # 1000 rad/s is arbitrary, not sure if this is best target
             # traj[state_utilities.POSITIOND_IDX, :] = 0
-        elif policy == 'balance':  # balance upright or down at desired cart position
+        elif policy=='balance':  # balance upright or down at desired cart position
             up_down=1
             if cost_function.balance_dir=='up':
                 up_down=1
@@ -118,7 +119,7 @@ class cartpole_trajectory_generator:
             # traj[state_utilities.ANGLE_IDX, :] = target_angle
             # traj[state_utilities.ANGLED_IDX, :] = 0
             # traj[state_utilities.POSITIOND_IDX, :] = 0
-        elif policy == 'shimmy':  # cart follows a desired cart position shimmy while keeping pole up or down
+        elif policy=='shimmy':  # cart follows a desired cart position shimmy while keeping pole up or down
             # shimmy is an (optional) ramp from freq to freq2 and amp to amp2
             if time>self._time_policy_changed+cost_function.shimmy_duration:
                 self._time_policy_changed=time # reset shimmy and start over if doing it from fixed shimmy policy in yml
@@ -161,7 +162,7 @@ class cartpole_trajectory_generator:
             # traj[state_utilities.ANGLE_IDX, :] = target_angle
             # traj[state_utilities.ANGLED_IDX, :] = 0
             traj[state_utilities.POSITIOND_IDX, :] = cartpos_d
-        elif policy == 'cartonly':  # cart follows the trajectory, pole ignored
+        elif policy=='cartonly':  # cart follows the trajectory, pole ignored
             per = 1./cost_function.cartonly_freq_hz  # seconds
             amp = cost_function.cartonly_amp  # meters
             horizon_endtime = time + mpc_horizon * dt
@@ -184,7 +185,7 @@ class cartpole_trajectory_generator:
         return traj
 
     def set_status_text(self, time: float, state: np.ndarray, cost_function: cost_function_base) -> None:
-        policy = cost_function.policy
+        policy:str = cost_function.policy
         if policy=='dance':
             return # status of cartpole GUI set by dancer
         gui_target_position = float(cost_function.target_position)  # GUI slider position
@@ -192,14 +193,14 @@ class cartpole_trajectory_generator:
 
         if policy=='balance':
             dir=self.decode_string(cost_function.balance_dir)
-            s= f'Dance: balance/{dir} pos={gui_target_position:.1f}m'
+            s= f'Policy: balance/{dir} pos={gui_target_position:.1f}m'
         elif policy=='spin':
             dir=self.decode_string(cost_function.spin_dir)
-            s= f'Dance: spin/{dir} pos={gui_target_position:.1f}m freq={float(cost_function.spin_freq_hz):.1f}Hz'
+            s= f'Policy: spin/{dir} pos={gui_target_position:.1f}m freq={float(cost_function.spin_freq_hz):.1f}Hz'
         elif policy=='shimmy':
-            s= f'Dance: shimmy pos={gui_target_position:.1f}m freq={float(cost_function.shimmy_freq_hz):.1f}Hz amp={float(cost_function.shimmy_amp):.1f}Hz'
+            s= f'Policy: shimmy pos={gui_target_position:.1f}m freq={float(cost_function.shimmy_freq_hz):.1f}Hz amp={float(cost_function.shimmy_amp):.1f}Hz'
         elif policy=='cartonly':
-            s= f'Dance: cartonly pos={gui_target_position:.1f}m freq={float(cost_function.cartonly_freq_hz):.1f}Hz amp={float(cost_function.cartonly_amp):.1f}Hz'
+            s= f'Policy: cartonly pos={gui_target_position:.1f}m freq={float(cost_function.cartonly_freq_hz):.1f}Hz amp={float(cost_function.cartonly_amp):.1f}Hz'
         else:
             s= f'unknown/not implemented string'
 
