@@ -40,6 +40,8 @@ from CartPole.noise_adder import NoiseAdder
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 
+from Control_Toolkit_ASF.Controllers.controller_neural_imitator_tf import controller_neural_imitator_tf
+
 # region Imported modules
 
 try:
@@ -71,17 +73,20 @@ font = {'size': 22}
 rc('font', **font)
 # endregion
 
-# endregion
-
-import yaml
-
+config2 = load_config("config_data_gen.yml")
 config = load_config("config.yml")
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
+experiment_length = config2["length_of_experiment"]
+dt = config2["dt"]["saving"]
 
+temp = 0
 
 class CartPole(EnvironmentBatched):
     num_states = 6
     num_acions = 1
+
+    # attribute to compare neural_imitator and mppi
+    mppi_Q_pred_from_neural_imitator = 0.0
 
     def __init__(self, initial_state=s0, path_to_experiment_recordings=None):
         self.config = config["cartpole"]
@@ -255,10 +260,19 @@ class CartPole(EnvironmentBatched):
     # @profile(precision=4)
     def update_state(self):
 
-        self.update_parameters()
-
         # Update the total time of the simulation
         self.step_time()
+
+        """ UNCOMMENT IF YOU WANT TO HAVE CHANGING POLE LENGTH OR EQUILIBRIUM"""
+        # Update pole length
+        # if (self.time >= experiment_length/2 and abs(self.time - experiment_length/2) <= dt):
+        #     self.update_parameters()
+
+        # if (self.time >= experiment_length/3 and self.time <= (experiment_length/3+3.0)) or (self.time >= 2*experiment_length/3 and self.time <= (2*experiment_length/3+3.0)):
+        #     self.target_equilibrium = -1.0
+        # else:
+        #     self.target_equilibrium = 1.0
+        """ ---- END ----"""
 
         # Update target position depending on the mode of operation
         self.update_target_position()
@@ -310,7 +324,7 @@ class CartPole(EnvironmentBatched):
         self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
 
     def cartpole_ode(self):
-        self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u)
+        self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)
 
     def Q2u(self):
         self.u = Q2u(self.Q)
@@ -408,6 +422,9 @@ class CartPole(EnvironmentBatched):
                 # The target_position is not always meaningful
                 # If it is not meaningful all values in this column are set to 0
                 self.dict_history['target_position'].append(self.target_position)
+                self.dict_history['target_equilibrium'].append(self.target_equilibrium)
+
+                self.dict_history['mppi_Q_pred_from_neural_imitator'].append(self.mppi_Q_pred_from_neural_imitator)
 
                 try:
                     for key, value in self.controller.controller_data_for_csv.items():
@@ -435,8 +452,11 @@ class CartPole(EnvironmentBatched):
                                      'u': [self.u],
 
                                      'target_position': [self.target_position],
+                                     'target_equilibrium': [self.target_equilibrium],
 
                                      'pole_length': [self.pole_length],
+                                     'mppi_Q_pred_from_neural_imitator': [self.mppi_Q_pred_from_neural_imitator],
+
                                      }
 
                 try:
@@ -490,13 +510,28 @@ class CartPole(EnvironmentBatched):
             else:  # in this case slider gives a target position, lqr regulator
                 self.Q = self.controller.step(self.s_with_noise_and_latency, self.time)
 
+                ''' Needed to eventually save mppi predictions to compare with neural imitator'''
+                if isinstance(self.controller, controller_neural_imitator_tf):
+                    self.mppi_Q_pred_from_neural_imitator = self.controller.mppi_Q_predictions
+
             self.dt_controller_steps_counter = 0
 
     def update_parameters(self):
         ...
-        # Example code incrementing Cart mass at each iteration
-        # global L
-        # L[...] = L*0.9999
+        # Example code incrementing Cart pole length at each iteration
+        global L
+
+        # if temp[...] == 0:
+        #     L[...] = 0.5
+        #     temp[...] += 1
+        # else:
+        #     L[...] = 0.85/2
+
+        L[...] = 0.7
+
+
+        # L[...] = np.random.uniform(0.2, 0.9)
+        # L[...] = 0.9
 
 
     # endregion
@@ -970,7 +1005,10 @@ class CartPole(EnvironmentBatched):
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s, self.time)
+                if isinstance(self.controller, controller_neural_imitator_tf):
+                    self.Q = self.controller.step(self.s, self.time, target_equilibrium=self.target_equilibrium)
+                else:
+                    self.Q = self.controller.step(self.s, self.time)
 
             self.u = Q2u(self.Q)  # Calculate CURRENT control input
             self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)  # Calculate CURRENT second derivatives
@@ -997,7 +1035,9 @@ class CartPole(EnvironmentBatched):
                                  'u': [self.u],
 
                                  'target_position': [self.target_position],
+                                 'target_equilibrium': [self.target_equilibrium],
                                  'pole_length': [self.pole_length],
+                                 'mppi_Q_pred_from_neural_imitator': [self.mppi_Q_pred_from_neural_imitator],
 
                                  }
             try:
