@@ -5,9 +5,10 @@ from typing import Dict
 from GUI import MainWindow
 from others.globals_and_utils import get_logger
 
-
+SONG='file:///g:/downloads/01 Sookie_ Sookie.mp3'
 
 # import os
+import vlc
 
 log = get_logger(__name__)
 try:
@@ -38,6 +39,8 @@ class cartpole_dancer:
         self.FREQ2 = 'freq2'
         self.AMP2 = 'amp2'
 
+        self.song_player = vlc.MediaPlayer(SONG)
+
         self._reset_fields()
 
     def _reset_fields(self) -> None:
@@ -60,6 +63,7 @@ class cartpole_dancer:
         self._reset_fields()
         self.mtime = self.fpath.stat().st_mtime
 
+
         if self.csvfile:
             self.csvfile.close()
         self.csvfile = open(self.fp, 'r')
@@ -68,6 +72,14 @@ class cartpole_dancer:
         self.time_step_started = float(time)
         self._started = True
         self.row_iterator = self.reader.__iter__()
+        self.song_player.play()
+
+    def stop(self)->None:
+        self.song_player.stop()
+
+    def pause(self)->None:
+        pass # todo implement pause
+
 
     def step(self, time: float)-> Dict:
         """ Does next time step, reading the csv for next step if the current one's duration has timed out
