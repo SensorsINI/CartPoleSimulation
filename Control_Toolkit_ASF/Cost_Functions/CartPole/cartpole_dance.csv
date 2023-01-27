@@ -1,14 +1,14 @@
 # cartpole dancer dance sequence
 # policies can be balance1, spin2, shimmy3, cartonly4
 duration, cartpos, policy, option, freq, amp, freq2, amp2
-3,  0, balance1, up,,,,
-8, .1, spin2, cw, 5,,,
+4,  0, balance1, up,,,,
+6, .1, spin2, cw, 5,,,
 #1,  0, balance1, up,,,,
-8, -.1,  spin2,ccw, 5,,,
+6, -.1,  spin2,ccw, 5,,,
 2, -.1, balance1, up,,,,
-10, 0, shimmy3,up, 2, .05, 1, .1
+6, 0, shimmy3,up, 2, .05, 1, .1
 1,  0, balance1, up,,,,
-10, 0, shimmy3,up, 3, .001, 3, .1
+8, 0, shimmy3,up, 3, .001, 3, .1
 1.5, .15, balance1, up,,,,
 1.5, -.15, balance1, up,,,,
 #2, 0, balance1, up,,,,

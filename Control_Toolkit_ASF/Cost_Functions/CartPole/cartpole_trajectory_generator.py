@@ -63,11 +63,18 @@ class cartpole_trajectory_generator:
             self._prev_dance_policy=policy
 
 
-            cost_function.policy_number=self.cartpole_dancer.policy_number
+            # must assign for TF/XLA to see the policy number in the compiled cost function. BS...
+            cost_function.lib.assign(getattr(cost_function, 'policy_number'),
+                                  cost_function.lib.to_variable(self.cartpole_dancer.policy_number, cost_function.lib.int32))
             gui_target_position=self.cartpole_dancer.cartpos
             if policy=='spin':
                 cost_function.spin_dir=self.cartpole_dancer.option
-                cost_function.spin_freq_hz=self.cartpole_dancer.freq
+                spin_dir_number=1 if cost_function.spin_dir=='cw' else -1
+                # hack to get int value for TF cost function use
+                cost_function.lib.assign(getattr(cost_function, 'spin_dir_number'),
+                                         cost_function.lib.to_variable(spin_dir_number,
+                                                                       cost_function.lib.int32))
+                # cost_function.spin_freq_hz=self.cartpole_dancer.freq
             elif policy=='balance':
                 cost_function.balance_dir=self.cartpole_dancer.option
             elif policy=='shimmy':
@@ -85,25 +92,26 @@ class cartpole_trajectory_generator:
 
 
         if policy== 'spin':  # spin pole CW or CCW depending on target_equilibrium up or down
-            spin_dir_factor=1
-            if cost_function.spin_dir=='cw':
-                spin_dir_factor=-1
-            elif cost_function.spin_dir=='ccw':
-                spin_dir_factor=+1
-            else:
-                log.warning(f'spin_dir value of "{cost_function.spin_dir} must be "cw" or "ccw"')
-            horizon_endtime = float(mpc_horizon) * dt
-            times = np.linspace(0, horizon_endtime, num=mpc_horizon)
-            rad_per_s_target = spin_dir_factor*gui_target_equilibrium * 2 * np.pi * cost_function.spin_freq_hz # note direction of spin from target_equilibrium
-            rad_per_dt = rad_per_s_target * dt
-            # current_angle = state[state_utilities.ANGLE_IDX]
-            # angle_trajectory=current_angle +  times * rad_per_dt
-            traj[state_utilities.POSITION_IDX] = gui_target_position
-            # traj[state_utilities.ANGLE_COS_IDX, :] = np.cos(angle_trajectory)
-            # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(angle_trajectory)
-            # traj[state_utilities.ANGLE_IDX, :] = angle_trajectory
-            traj[state_utilities.ANGLED_IDX, :] = rad_per_s_target # 1000 rad/s is arbitrary, not sure if this is best target
-            # traj[state_utilities.POSITIOND_IDX, :] = 0
+            pass
+            # spin_dir_factor=1
+            # if cost_function.spin_dir=='cw':
+            #     spin_dir_factor=-1
+            # elif cost_function.spin_dir=='ccw':
+            #     spin_dir_factor=+1
+            # else:
+            #     log.warning(f'spin_dir value of "{cost_function.spin_dir} must be "cw" or "ccw"')
+            # horizon_endtime = float(mpc_horizon) * dt
+            # times = np.linspace(0, horizon_endtime, num=mpc_horizon)
+            # rad_per_s_target = spin_dir_factor*gui_target_equilibrium * 2 * np.pi * cost_function.spin_freq_hz # note direction of spin from target_equilibrium
+            # rad_per_dt = rad_per_s_target * dt
+            # # current_angle = state[state_utilities.ANGLE_IDX]
+            # # angle_trajectory=current_angle +  times * rad_per_dt
+            # traj[state_utilities.POSITION_IDX] = gui_target_position
+            # # traj[state_utilities.ANGLE_COS_IDX, :] = np.cos(angle_trajectory)
+            # # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(angle_trajectory)
+            # # traj[state_utilities.ANGLE_IDX, :] = angle_trajectory
+            # traj[state_utilities.ANGLED_IDX, :] = rad_per_s_target # 1000 rad/s is arbitrary, not sure if this is best target
+            # # traj[state_utilities.POSITIOND_IDX, :] = 0
         elif policy=='balance':  # balance upright or down at desired cart position
             up_down=1
             if cost_function.balance_dir=='up':
@@ -196,7 +204,7 @@ class cartpole_trajectory_generator:
             s= f'Policy: balance/{dir} pos={gui_target_position:.1f}m'
         elif policy=='spin':
             dir=self.decode_string(cost_function.spin_dir)
-            s= f'Policy: spin/{dir} pos={gui_target_position:.1f}m freq={float(cost_function.spin_freq_hz):.1f}Hz'
+            s= f'Policy: spin/{dir}*up/down pos={gui_target_position:.1f}m'
         elif policy=='shimmy':
             s= f'Policy: shimmy pos={gui_target_position:.1f}m freq={float(cost_function.shimmy_freq_hz):.1f}Hz amp={float(cost_function.shimmy_amp):.1f}Hz'
         elif policy=='cartonly':

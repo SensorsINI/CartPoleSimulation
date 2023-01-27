@@ -5,6 +5,7 @@
 import logging
 import math
 import os
+import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -268,6 +269,20 @@ load_or_reload_config_if_modified.start_time=time.time()
 load_or_reload_config_if_modified.counter=dict()
 
 import numbers
+import re
+
+def extract_int(new_value)-> (str,int):
+    """  Extracts (possibly signed) int from trailing part of string, e.g. 'ccw-1' -> -1
+
+    :param new_value: str input
+    :returns: s,n: leading string and trailing int value or None
+    """
+    str_pat='[a-zA-Z]+'
+    int_pat='[-+]?[0-9]+$'
+    string_name=re.search(str_pat,new_value).group(0)
+    int_match=re.search(int_pat, new_value)
+    int_val=int(int_match.group(0)) if int_match else None
+    return string_name,int_val
 
 
 def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
@@ -306,13 +321,12 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
                     log.error(f'target attribute "{property}" is probably float type but in config file it is int. Add a trailing "." to the number "{new_value}"')
                     # target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value, target_obj.lib.to_variable(float(new_value), target_obj.lib.float32)))
             else: # string type; if it ends with int, then also assign a name_number variable
-                val_int = new_value[-1]
-                if val_int.isdigit():
-                    val_str = new_value[:-1]
+                val_str,val_int = extract_int(new_value)
+                if isinstance(val_int,int):
                     property_number_name = property + '_number'
                     target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(val_str, objtype))
                     target_obj.lib.assign(getattr(target_obj, property_number_name),
-                                          target_obj.lib.to_variable(int(val_int), target_obj.lib.int32))
+                                          target_obj.lib.to_variable(val_int, target_obj.lib.int32))
                 else: # just assign it if it does not end with digit
                     target_obj.lib.assign(getattr(target_obj, property),
                                           target_obj.lib.to_variable(new_value, objtype))
@@ -328,12 +342,11 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
                     setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.int32))
                 elif isinstance(new_value, str):
                     # create a string tensor with base name, and another tf.variable named name_number, e.g. policy='dance' and policy_number=0
-                    val_int=new_value[-1]
-                    if val_int.isdigit():
-                        val_str = new_value[:-1]
+                    val_str,val_int = extract_int(new_value)
+                    if isinstance(val_int,int):
                         property_number_name = property + '_number'
                         setattr(target_obj, property,target_obj.lib.to_variable(val_str, target_obj.lib.string)) # set string var
-                        setattr(target_obj, property_number_name,target_obj.lib.to_variable(int(val_int), target_obj.lib.int32)) # set int code var
+                        setattr(target_obj, property_number_name,target_obj.lib.to_variable(val_int, target_obj.lib.int32)) # set int code var
                         log.debug(f"setting tensorflow attribute '{property}={val_str}' and {property_number_name}={int(val_int)}")
                     else:  # just assign it if it does not end with digit
                         setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.string))

@@ -77,7 +77,8 @@ class cartpole_dancer:
         :returns: the current step row of cartpole_dance.csv as dict of column name -> value
         """
         if not self._started:
-            raise Exception('cartpole_dancer must be start()ed before calling step()')
+            log.warning('cartpole_dancer must be start()ed before calling step() - calling start now')
+            self.start(time)
         if self.duration is None or time >= self.time_step_started + self.duration:
             self._read_next_step(time)
         MainWindow.set_status_text(self.format_step(time))
@@ -102,7 +103,7 @@ class cartpole_dancer:
             self.current_row = self.reader.__next__()
             log.debug(f'At time={time:.1f} new dance step is {self.current_row}')
             if winsound:
-                winsound.Beep(1000,200) # beep
+                winsound.Beep(1000,300) # beep
 
         except StopIteration:
             self.start(time)
@@ -110,7 +111,7 @@ class cartpole_dancer:
         try:
             self.duration = float(self.current_row[self.DURATION])
             self.policy = self.current_row[self.POLICY][:-1] # the dqnce step 'policy" column has entries like balance1, spin2, etc
-            self.policy_number=int(self.current_row[self.POLICY][-1])
+            self.policy_number=int(self.current_row[self.POLICY][-1]) # todo not sufficient for XLA / TF compiled code to see this variable change
             self.option = self.current_row[self.OPTION]
             self.cartpos = float(self.current_row[self.CARTPOS])
             self.freq = self.convert_float(self.FREQ)

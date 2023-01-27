@@ -36,26 +36,31 @@ CartPole:
     # e.g. dance0 will create (in update_attributes call) policy='dance' and policy_number=0
     # this hack is to allow branching in XLA code that lacks string compare operator
     # see others\globals_and_utilities.py\update_attributes method
-    policy:  spin2 # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4
+    policy:  dance0  # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4
 
     # tobi cannot get conditional branch to work for following option in cartpole_dancer_cost.py
 #    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
-    terminal_cost_factor: 35e+0 # how much to weight up the terminal state costs compared to the rest of the rollout
+    terminal_cost_factor: 10e+0 # how much to weight up the terminal state costs compared to the rest of the rollout
     stage_cost_factor: 1e+0 # how much to weight up the state costs
 
     # cost weightings for the different state components for following desired cart state trajectory
-    cart_pos_weight: 7e4 # weight on cart pos error
-    pole_angle_weight: 1e4 # weight on difference of angle
+    cart_pos_weight: 1e5 # weight on cart pos error
+    pole_angle_weight: 1e5 # weight on difference of angle
     cart_vel_weight: 1e0 # weight on difference of cart velocity
-    pole_swing_weight: 5e7 # cart angle derivative weight
+    upright_pole_energy_multiple_to_count_spin_direction_cost: 1.5
+    pole_swing_weight: 1e5 # cart angle derivative weight
+    pole_energy_total_weight: 1e5 # energy_total is sum of kinetic and potential energy
 
     # following weight the control and its change
-    control_cost_weight: 1e0 # cost of control
+    control_cost_weight: 1e3 # cost of control
     control_cost_change_weight: 1e0 # cost of changing control
 
+    # spin
+    spin_dir: ccw-1 # cw+1 ccw-1 1 or cw, -1 or ccw
+#    spin_freq_hz: 4. # negative to spin other direction, must set at least 1hz
     # following weight pole energies
 #    pole_energy_potential_weight: 0. Energy_potential weight, ep is maximized by upright pole, minimized by hanging pole. Make it positive for upright pole.
-    pole_energy_total_weight: 1e6 # energy_total is sum of kinetic and potential energy
+
 
     # balance
     balance_dir: up # 1 or up, -1 or down, multiplied by target_equilibrium
@@ -73,7 +78,4 @@ CartPole:
     cartonly_freq_hz: .2
     cartonly_duty_cycle: .5 # set to .5 for triangle, 0 or 1 for sawtooth
 
-    # spin
-    spin_dir: ccw # 1 or cw, -1 or ccw
-    spin_freq_hz: 4. # negative to spin other direction, must set at least 1hz
 
