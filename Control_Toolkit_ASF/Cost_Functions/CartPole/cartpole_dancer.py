@@ -2,18 +2,27 @@ import csv
 from pathlib import Path
 from typing import Dict
 
-from GUI import MainWindow
+from PyQt6 import QtCore
+
+from GUI import CartPoleMainWindow
 from others.globals_and_utils import get_logger
 
-SONG='file:///g:/downloads/01 Sookie_ Sookie.mp3'
+SONG='others/Media/01 Sookie_ Sookie.mp3'
 
-# import os
-import vlc
+import os
+try:
+    import vlc
+except Exception as e:
+    raise Exception(f'{e}: pip install python-vlc and install VLC (https://www.videolan.org/vlc/) to your system. Y'
+                    f'ou may need to restart your python IDE. See also https://stackoverflow.com/questions/59014318/filenotfounderror-could-not-find-module-libvlc-dll ;'
+                    f'you might need 64 bit version of VLC since default installs 32-bit version')
+import sys
 
 log = get_logger(__name__)
 try:
     import winsound
 except:
+    log.warning('winsound is not available - will not play beeps when dance step changes')
     pass
 
 class cartpole_dancer:
@@ -39,9 +48,34 @@ class cartpole_dancer:
         self.FREQ2 = 'freq2'
         self.AMP2 = 'amp2'
 
-        self.song_player = vlc.MediaPlayer(SONG)
+        if not os.path.exists(SONG):
+            raise FileNotFoundError(f'{SONG} not found, cannot play music')
+
+        self.song_player:vlc.MediaPlayer = vlc.MediaPlayer(SONG)
+        em = self.song_player.event_manager()
+        em.event_attach(vlc.EventType.MediaPlayerEndReached, self.start)
+        self.paused=False
+        self.signal_handler_added=False
+        self.first_step_run=False
+        self.state:str='running' # set by signals emitted by CartPoleMainWindow, set to running initially so that we read the first row of CSV to compute trajectory for init
+        CartPoleMainWindow.CartPoleMainWindowInstance.CartPoleSimulationStateSignal.connect(self.process_signal)
+
 
         self._reset_fields()
+        self.reload_csv()
+        self.paused=False
+        self.time_step_started = float(0)
+
+
+    def reload_csv(self):
+        self.mtime = self.fpath.stat().st_mtime
+        if self.csvfile:
+            self.csvfile.close()
+        self.csvfile = open(self.fp, 'r')
+        self.reader = csv.DictReader(filter(lambda row: row[0] != '#', self.csvfile),
+                                     dialect='cartpole-dancer')  # https://stackoverflow.com/questions/14158868/python-skip-comment-lines-marked-with-in-csv-dictreader
+        self._started = True
+        self.row_iterator = self.reader.__iter__()
 
     def _reset_fields(self) -> None:
         self.time_step_started = float(0)
@@ -61,25 +95,31 @@ class cartpole_dancer:
         """ Starts the dance now at time time"""
 
         self._reset_fields()
-        self.mtime = self.fpath.stat().st_mtime
-
-
-        if self.csvfile:
-            self.csvfile.close()
-        self.csvfile = open(self.fp, 'r')
-        self.reader = csv.DictReader(filter(lambda row: row[0] != '#', self.csvfile),
-                                     dialect='cartpole-dancer')  # https://stackoverflow.com/questions/14158868/python-skip-comment-lines-marked-with-in-csv-dictreader
+        self.reload_csv()
         self.time_step_started = float(time)
         self._started = True
-        self.row_iterator = self.reader.__iter__()
         self.song_player.play()
 
     def stop(self)->None:
         self.song_player.stop()
 
     def pause(self)->None:
-        pass # todo implement pause
+        self.paused=True
+        self.song_player.pause()
 
+    def process_signal(self, signal:str):
+        """ Process signal from CartPoleMainWindow
+
+        :param signal: the string state, 'running', 'paused', 'stopped'
+        """
+        log.debug(f'got signal "{signal}"')
+        self.state=signal
+        if self.state=='paused':
+            self.pause()
+        elif self.state=='stopped':
+            self.stop()
+        elif self.state=='running':
+            self.start(0)
 
     def step(self, time: float)-> Dict:
         """ Does next time step, reading the csv for next step if the current one's duration has timed out
@@ -88,12 +128,14 @@ class cartpole_dancer:
 
         :returns: the current step row of cartpole_dance.csv as dict of column name -> value
         """
-        if not self._started:
-            log.warning('cartpole_dancer must be start()ed before calling step() - calling start now')
-            self.start(time)
-        if self.duration is None or time >= self.time_step_started + self.duration:
-            self._read_next_step(time)
-        MainWindow.set_status_text(self.format_step(time))
+
+        if self.state=='running':
+            if not self._started:
+                log.warning('cartpole_dancer must be start()ed before calling step() - calling start now')
+                self.start(time)
+            if self.duration is None or time >= self.time_step_started + self.duration:
+                self._read_next_step(time)
+            CartPoleMainWindow.set_status_text(self.format_step(time))
         return self.current_row
 
     def _read_next_step(self, time: float) ->None:
@@ -114,7 +156,7 @@ class cartpole_dancer:
             self.time_step_started=time
             self.current_row = self.reader.__next__()
             log.debug(f'At time={time:.1f} new dance step is {self.current_row}')
-            if winsound:
+            if 'winsound' in sys.modules:
                 winsound.Beep(1000,300) # beep
 
         except StopIteration:

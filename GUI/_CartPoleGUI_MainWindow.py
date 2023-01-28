@@ -25,7 +25,7 @@ from others.p_globals import (
 from PyQt6.QtWidgets import QMainWindow, QRadioButton, QApplication, QSlider, QVBoxLayout, \
     QHBoxLayout, QLabel, QPushButton, QWidget, QCheckBox, \
     QLineEdit, QMessageBox, QComboBox, QButtonGroup, QFrame
-from PyQt6.QtCore import QThreadPool, QTimer, Qt
+from PyQt6.QtCore import QThreadPool, QTimer, Qt, pyqtSignal, QObject, QRunnable
 # The main drawing functionalities are implemented in CartPole Class
 # Some more functions needed for interaction of matplotlib with PyQt6
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -73,10 +73,24 @@ prefs=MyPreferences() # store and retrieve sticky values
 
 
 # Class implementing the main window of CartPole GUI
-class MainWindow(QMainWindow):
+class CartPoleMainWindow(QMainWindow):
 
     # class instance variable to let controllers etc put status into the window
     CartPoleGuiStatusText:QLabel= None
+
+    # class variable to allow objects to check if simulation is running, stopped, etc
+    CartPoleGuiSimulationState:str='stopped' # 'running', 'paused'
+
+    # signal that emits CartPoleGuiSimulationState when simulation 'running' 'stopped' 'paused' state changes
+    # to use this signal, in class init, connect a method to process the signal, e.g.
+    #         CartPoleMainWindow.CartPoleMainWindowInstance.CartPoleSimulationStateSignal.connect(self.process_signal)
+    # the process_signal(str) method gets passed one of the string signals when the main gui button is pressed.
+    # note that you MUST use the CartPoleMainWindow.CartPoleMainWindowInstance.CartPoleSimulationStateSignal signal that is bound by PyQt inside the *instance* of CartPoleMainWindow;
+    # do not try to bind to the unbound class variable CartPoleMainWindow.CartPoleSimulationStateSignal
+    CartPoleSimulationStateSignal:pyqtSignal=pyqtSignal(str)
+
+    # class variable to access the one main window from any subclass, set in init
+    CartPoleMainWindowInstance:QMainWindow=None
 
     def set_status_text(text: str) -> None:
         """ Sets the text at top of GUI window. Any class can use this via the static class method, e.g. like this:
@@ -87,12 +101,13 @@ class MainWindow(QMainWindow):
 
         :param str: the string to show
         """
-        if not MainWindow.CartPoleGuiStatusText is None:
-            MainWindow.CartPoleGuiStatusText.setText(text)
+        if not CartPoleMainWindow.CartPoleGuiStatusText is None:
+            CartPoleMainWindow.CartPoleGuiStatusText.setText(text)
 
-    def __init__(self, *args, **kwargs):
-        super(MainWindow, self).__init__(*args, **kwargs)
-
+    def __init__(self, parent=None, *args, **kwargs):
+        super(CartPoleMainWindow, self).__init__(parent, *args, **kwargs)
+        CartPoleMainWindow.CartPoleMainWindowInstance=self
+        # QObject.__init__(self)
         # region Create CartPole instance and load initial settings
 
         # Create CartPole instance
@@ -195,8 +210,8 @@ class MainWindow(QMainWindow):
         lf = QVBoxLayout()
         lf.addWidget(self.canvas)
 
-        MainWindow.CartPoleGuiStatusText = QLabel('(status)')
-        layout.addWidget(MainWindow.CartPoleGuiStatusText)
+        CartPoleMainWindow.CartPoleGuiStatusText = QLabel('(status)')
+        layout.addWidget(CartPoleMainWindow.CartPoleGuiStatusText)
 
         # endregion
 
@@ -599,6 +614,7 @@ class MainWindow(QMainWindow):
             pass
 
         self.looper.start_loop()
+
         while not self.terminate_experiment_or_replay_thread:
             if self.pause_experiment_or_replay_thread:
                 time.sleep(0.1)
@@ -776,6 +792,7 @@ class MainWindow(QMainWindow):
             else:
                 self.start_thread()
             self.start_or_stop_action = "STOP!"
+            self.set_simulation_state('running')
 
         # If "START! / STOP!" button in "STOP!" mode...
         elif self.start_or_stop_action == 'STOP!':
@@ -790,7 +807,17 @@ class MainWindow(QMainWindow):
                 # It is implemented this way, because thread my terminate not only due "STOP!" button
                 # (e.g. replay thread when whole experiment is replayed)
             self.start_or_stop_action = "START!"
-        
+            self.set_simulation_state('stopped')
+
+    def set_simulation_state(self, state):
+        """ Used by CartPoleMainWindow to send signals to listeners for simulation state.
+        A signal is emitted on self.CartPoleSimulationStateSignal
+
+        :param state: the str state
+        """
+        CartPoleMainWindow.CartPoleGuiSimulationState = state
+        self.CartPoleSimulationStateSignal.emit(CartPoleMainWindow.CartPoleGuiSimulationState)
+
     def pause_unpause_button(self):
         if self.simulator_mode == 'Physical CP':
             if self.pause_or_unpause_action == 'PAUSE' and self.start_or_stop_action == 'STOP!':
@@ -807,10 +834,14 @@ class MainWindow(QMainWindow):
                 self.pause_or_unpause_action = 'UNPAUSE'
                 self.pause_experiment_or_replay_thread = True
                 self.bp.setText("UNPAUSE")
+                self.set_simulation_state('paused')
+
             elif self.pause_or_unpause_action == 'UNPAUSE' and self.start_or_stop_action == 'STOP!':
                 self.pause_or_unpause_action = 'PAUSE'
                 self.pause_experiment_or_replay_thread = False
                 self.bp.setText("PAUSE")
+                self.set_simulation_state('running')
+
 
     # Run thread. works for all simulator modes.
     def start_thread(self):
@@ -869,8 +900,10 @@ class MainWindow(QMainWindow):
         elif self.simulator_mode == 'Slider-Controlled Experiment' or self.simulator_mode == 'Random Experiment':
             worker = Worker(self.experiment_thread)
         worker.signals.finished.connect(self.finish_thread)
+
         # Execute
         self.threadpool.start(worker)
+        # worker.my_worker_signal.emit('start')
 
     # finish_threads works for all simulation modes
     # Some lines mya be redundant for replay,

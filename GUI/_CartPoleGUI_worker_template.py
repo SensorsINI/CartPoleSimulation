@@ -14,6 +14,10 @@ class WorkerSignals(QObject):
 
 class Worker(QRunnable):
 
+    # register to this signal to be updated about simulation start/stop/pause
+    my_worker_signal=pyqtSignal(str)
+
+
     def __init__(self, fn, *args, **kwargs):
         super(Worker, self).__init__()
 

@@ -18,7 +18,7 @@ if os.path.isdir('./Driver'):
     os.chdir("Driver")
 
 # Import custom made elements of GUI
-from GUI._CartPoleGUI_MainWindow import MainWindow
+from GUI._CartPoleGUI_MainWindow import CartPoleMainWindow
 
 # This piece of code gives a custom ID to our application
 # It is essential for packaging
@@ -48,7 +48,7 @@ def run_gui():
     # Set the default icon to use for all the windows of our application
     app.setWindowIcon(QIcon('GUI/gui_icon.ico'))  # GUI Icon, feel free to change
     # Create an instance of the GUI window.
-    window = MainWindow()
+    window = CartPoleMainWindow()
     window.show()
     # Next line hands the control over to Python GUI
     app.exec()

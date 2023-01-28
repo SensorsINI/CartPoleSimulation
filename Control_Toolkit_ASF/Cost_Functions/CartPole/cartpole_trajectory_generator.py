@@ -5,7 +5,7 @@ from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.Cost_Functions import cost_function_base
 from Control_Toolkit.others.globals_and_utils import get_logger
 from Control_Toolkit_ASF.Cost_Functions.CartPole.cartpole_dancer import cartpole_dancer
-from GUI import gui_default_params, MainWindow
+from GUI import gui_default_params, CartPoleMainWindow
 from SI_Toolkit.computation_library import TensorType
 import tensorflow as tf
 import matplotlib
@@ -53,6 +53,9 @@ class cartpole_trajectory_generator:
         else:
             self._policy_changed=False
         self._prev_policy=policy
+
+        if self._policy_changed and self._prev_policy=='dance' and policy!='dance':
+            self.cartpole_dancer.stop() # stop music
 
         if policy=='dance':
             if self._policy_changed:
@@ -212,7 +215,8 @@ class cartpole_trajectory_generator:
         else:
             s= f'unknown/not implemented string'
 
-        MainWindow.set_status_text(s)
+        CartPoleMainWindow.set_status_text(s)
 
     def decode_string(self,tfstring:tf.Variable):
+        if isinstance(tfstring,str): return tfstring.decode('utf-8')
         return tfstring.numpy().decode('utf-8')

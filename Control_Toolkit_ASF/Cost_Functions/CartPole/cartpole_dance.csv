@@ -8,7 +8,7 @@ duration, cartpos, policy, option, freq, amp, freq2, amp2
 3, -.1, balance1, up,,,,
 6, 0, shimmy3,up, 2, .05, 1, .1
 1,  0, balance1, up,,,,
-8, 0, shimmy3,up, 3, .001, 3, .1
+8, 0, shimmy3,up, 1, .001, 1, .1
 1.5, .15, balance1, up,,,,
 1.5, -.15, balance1, up,,,,
 #2, 0, balance1, up,,,,
