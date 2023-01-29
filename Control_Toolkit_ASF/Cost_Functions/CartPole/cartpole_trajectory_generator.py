@@ -87,7 +87,7 @@ class cartpole_trajectory_generator:
                 cost_function.shimmy_amp=self.cartpole_dancer.amp
                 cost_function.shimmy_freq2_hz=self.cartpole_dancer.freq2
                 cost_function.shimmy_amp2=self.cartpole_dancer.amp2
-                cost_function.shimmy_duration=self.cartpole_dancer.duration
+                cost_function.shimmy_duration=self.cartpole_dancer.endtime
 
 
             elif policy=='cartonly':

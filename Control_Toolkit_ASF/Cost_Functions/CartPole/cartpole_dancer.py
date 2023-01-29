@@ -8,6 +8,8 @@ from GUI import CartPoleMainWindow
 from others.globals_and_utils import get_logger
 
 SONG='others/Media/01 Sookie_ Sookie.mp3'
+CSV='Control_Toolkit_ASF/Cost_Functions/CartPole/cartpole_dance-sookie-sookie.csv'
+SONG_PLAYBACK_RATE=0.55 # rate to match song speed compared to real time simulation rate
 
 import os
 try:
@@ -34,12 +36,12 @@ class cartpole_dancer:
 
         """
         csv.register_dialect('cartpole-dancer', skipinitialspace=True)
-        self.fp = 'Control_Toolkit_ASF/Cost_Functions/CartPole/cartpole_dance.csv'  # os.path.join('Control_Toolkit_ASF','Cost_Functios','cartpole_dance.csv')
+        self.fp = CSV  # os.path.join('Control_Toolkit_ASF','Cost_Functios','cartpole_dance.csv')
         self.fpath = Path(self.fp)
         self.csvfile=None
         self.mtime = self.fpath.stat().st_mtime
 
-        self.DURATION = 'duration'
+        self.ENDTIME = 'endtime'
         self.POLICY = 'policy'
         self.OPTION = 'option'
         self.CARTPOS = 'cartpos'
@@ -52,9 +54,11 @@ class cartpole_dancer:
             raise FileNotFoundError(f'{SONG} not found, cannot play music')
 
         self.song_player:vlc.MediaPlayer = vlc.MediaPlayer(SONG)
+        if self.song_player.set_rate(SONG_PLAYBACK_RATE)==-1:
+            log.warning('could not set playback rate for song')
         em = self.song_player.event_manager()
-        em.event_attach(vlc.EventType.MediaPlayerEndReached, self.start)
-        self.signal_handler_added=False
+        em.event_attach(vlc.EventType.MediaPlayerEndReached, self.start) # restart dance when song restarts
+
         self.first_step_run=False  # used to avoid starting playing music when dance is configured in config_cost_functions but simulation not running
         self.state:str='running' # set by signals emitted by CartPoleMainWindow, set to running initially so that we read the first row of CSV to compute trajectory for init
         CartPoleMainWindow.CartPoleMainWindowInstance.CartPoleSimulationStateSignal.connect(self.process_signal)
@@ -64,6 +68,7 @@ class cartpole_dancer:
         self.reload_csv()
         self.paused=False
         self.time_step_started = float(0)
+        self.time_dance_started = float(0)
 
 
     def reload_csv(self):
@@ -76,10 +81,11 @@ class cartpole_dancer:
         self.row_iterator = self.reader.__iter__()
 
     def reset_fields(self) -> None:
+        self.time_dance_started = float(0)
         self.time_step_started = float(0)
         self.current_row = None
         self.started = False
-        self.duration = None
+        self.endtime = None
         self.option = None
         self.policy = None
         self.policy_number = None
@@ -95,6 +101,7 @@ class cartpole_dancer:
         self.reset_fields()
         self.reload_csv()
         self.time_step_started = float(time)
+        self.time_dance_started = float(time)
         self.started = True
         self.paused=False
         if CartPoleMainWindow.CartPoleGuiSimulationState=='running':
@@ -135,7 +142,7 @@ class cartpole_dancer:
             if not self.started:
                 log.warning('cartpole_dancer must be start()ed before calling step() - calling start now')
                 self.start(time)
-            if self.duration is None or time >= self.time_step_started + self.duration:
+            if self.endtime is None or time >=  self.time_dance_started+self.endtime:
                 self._read_next_step(time)
             CartPoleMainWindow.set_status_text(self.format_step(time))
         return self.current_row
@@ -167,7 +174,7 @@ class cartpole_dancer:
             self.step(time)
             return
         try:
-            self.duration = float(self.current_row[self.DURATION])
+            self.endtime = float(self.current_row[self.ENDTIME])
             self.policy = self.current_row[self.POLICY][:-1] # the dqnce step 'policy" column has entries like balance1, spin2, etc
             self.policy_number=int(self.current_row[self.POLICY][-1]) # todo not sufficient for XLA / TF compiled code to see this variable change
             self.option = self.current_row[self.OPTION]
@@ -192,11 +199,13 @@ class cartpole_dancer:
 
         :returns: the step string
         """
+        duration=self.endtime-self.time_step_started
+        timestr=f't={(time):.1f}/{self.endtime:.1f}s (dur={duration:.1f}s)'
         if not self.freq is  None and not self.freq2 is None and not self.amp is None and not self.amp2 is None:
-            return f'Dance: {self.policy}/{self.option} t={(time-self.time_step_started):.1f}/{self.duration:.1f}s pos={self.cartpos:.1f}m f0/f1={self.freq:.1f}/{self.freq2:.1f}Hz a0/a1={self.amp:.2f}/{self.amp2:.2f}m'
+            return f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m f0/f1={self.freq:.1f}/{self.freq2:.1f}Hz a0/a1={self.amp:.2f}/{self.amp2:.2f}m'
         elif not self.freq  is None and not self.amp is None:
-            return f'Dance: {self.policy}/{self.option} t={(time-self.time_step_started):.1f}/{self.duration:.1f}s pos={self.cartpos:.1f}m freq={self.freq:.1f}Hz amp={self.amp:.2f}m'
+            return f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m freq={self.freq:.1f}Hz amp={self.amp:.2f}m'
         elif not self.freq is None:
-            return f'Dance: {self.policy}/{self.option} t={(time-self.time_step_started):.1f}/{self.duration:.1f} pos={self.cartpos:.1f}m freq={self.freq:.1f}Hz'
+            return f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m freq={self.freq:.1f}Hz'
         else:
-            return f'Dance: {self.policy}/{self.option} t={(time-self.time_step_started):.1f}/{self.duration:.1f}s pos={self.cartpos:.1f}m'
+            return f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m'

@@ -1,0 +1,12 @@
+# cartpole dancer dance sequence for song sookie-sookie grant green
+# policies can be balance1, spin2, shimmy3, cartonly4
+endtime, cartpos, policy, option, freq, amp, freq2, amp2
+5.4,  0, balance1, up,,,,
+12, -.05, shimmy3,up, 1.5, .03, 1.5, .03
+25, +.05, shimmy3,up, 1.5, .1, 1.5, .1
+33, .05, spin2, cw, 5,,,
+41, -.05, spin2, ccw, 5,,,
+56, 0, shimmy3,up, 2, .03, 2, .1
+67, 0, cartonly4,.4, 2, .1,,
+3, 0, balance1, down,,,,
+
