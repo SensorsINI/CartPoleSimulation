@@ -100,23 +100,8 @@ class cartpole_dancer_cost(cost_function_base):
                         self.lib.isnan(target_trajectory[i, 0])):  # to skip a state, the first timestep is NaN
                     state_i = states[:, :, i]  # matrix [rollout,timestep] for this state element
                     trajectory_i = target_trajectory[i, :]  # timestep vector for this state element
-                    # if use_terminal_state_only==1:
-                    #     zerodiffs=self.lib.zeros((num_rollouts, num_timesteps-1))
-                    #     terminaldiffs=state_i[:,-1]-trajectory_i[-1]
-                    #     terminaldiffs_unsqueezed=self.lib.unsqueeze(terminaldiffs,1)
-                    #     diff=self.lib.concat((zerodiffs,terminaldiffs_unsqueezed),1) # -1 is terminal state, subtracts time vector trajectory_i from each time row i of state
-                    # else:
                     diff = state_i - trajectory_i
 
-                    # make it unsigned error matrix [rollout, timestep], in this case just last timestep of rollout if use_terminal_state_only==1
-                    # diffabs=self.lib.zeros_like(diff) # needed for tf.compile
-                    # # dist_norm=self.distance_norm
-                    # def abs(x): return tf.abs(x)
-                    # def mse(x): return tf.pow(x,2)
-                    # def rmse(x): return tf.sqrt(tf.pow(x,2))
-                    # branch_fns={0:abs, 1: rmse, 2: mse}
-                    # dist_branch=tf.constant(self.distance_norm, tf.int32)
-                    # tf.switch_case(dist_branch, branch_fns)
                     diffabs = self.dist(diff)
 
                     # don't do sum here, it is done in get_trajectory_cost() caller
@@ -143,7 +128,7 @@ class cartpole_dancer_cost(cost_function_base):
             # compute the cart position cost as distance from desired cart position
             pos_states = states[:, :, state_utilities.POSITION_IDX]
             gui_target_position = self.target_position  # GUI slider position
-            pos_cost =  self.dist(pos_states - gui_target_position)*more_than_spin_energy_mask
+            pos_cost =  self.dist(pos_states - gui_target_position)*more_than_spin_energy_mask # only count pos cost if the pole is not spinning, otherwise the pole cannot swing up
             # total stage cost is sum of energy of pole spin, direction of spin, and cart position
             stage_costs =  -self.pole_energy_total_weight * spin_cost_energy + -self.pole_swing_weight *spin_cost_spin_direction + self.cart_pos_weight * pos_cost
 
@@ -177,7 +162,7 @@ class cartpole_dancer_cost(cost_function_base):
         # gui_target_position=self.target_position # GUI slider position
         gui_target_equilibrium = self.target_equilibrium  # GUI switch +1 or -1 to make pole target up or down position
 
-        terminal_cost = self.lib.zeros((terminal_states.shape[0],))  # make a zero vector with length number of rollouts
+        # terminal_cost = self.lib.zeros((terminal_states.shape[0],))  # make a zero vector with length number of rollouts
         # target_trajectory_terminal_state_vector = self.target_trajectory[:, -1]  # take final state as target
         # if not self.lib.equal(self.policy_number, 2):  # if not spin cost
         #     # "angle", "angleD", "angle_cos", "angle_sin", "position", "positionD"
@@ -209,16 +194,17 @@ class cartpole_dancer_cost(cost_function_base):
         #     terminal_cost = terminal_cost_energy + terminal_cost_spin
 
 
-        terminal_traj_costs = terminal_cost * self.terminal_cost_factor
+        # terminal_traj_costs = terminal_cost * self.terminal_cost_factor
         terminal_traj_edge_barrier_cost =  self.terminal_cost_factor * self._track_edge_barrier(terminal_states[:, state_utilities.POSITION_IDX])
-        return (terminal_traj_costs + terminal_traj_edge_barrier_cost)
+        # return (terminal_traj_costs + terminal_traj_edge_barrier_cost)
+        return (terminal_traj_edge_barrier_cost)
 
     # cost for distance from cart track edge
     def _track_edge_barrier(self, position):
         """Compute penalty for distance of cart to the target position"""
         return self.lib.cast(
-            self.lib.abs(position) > 0.9 * TrackHalfLength, self.lib.float32
-        ) * 1.0e9  # Soft constraint: Do not crash into border
+            self.lib.abs(position) > self.track_length_fraction * TrackHalfLength, self.lib.float32
+        ) * self.track_edge_barrier_cost # Soft constraint: Do not crash into border
 
     # actuation cost
     def _CC_cost(self, u):
@@ -243,7 +229,7 @@ class cartpole_dancer_cost(cost_function_base):
 
         :param cosangle: the cosine of pole angle (1 when upright)
 
-        :returns: the energy
+        :returns: the pole potential energy in Joules, it is zero when pole is hanging down
         """
         return ((1+cosangle)/2) * m_pole * L * 9.8 * 0.5  # hopefully this is height of COM potential gravitational energy
 
@@ -252,6 +238,6 @@ class cartpole_dancer_cost(cost_function_base):
 
          :param angleD: time derivative of pole angle in rad/s
 
-         :returns: the kinetic energy
+         :returns: the kinetic energy in Joules
          """
         return (1. / 3.) * m_pole * L * L * (angleD ** 2)

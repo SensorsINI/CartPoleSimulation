@@ -42,6 +42,8 @@ CartPole:
 #    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
     terminal_cost_factor: 10e+0 # how much to weight up the terminal state costs compared to the rest of the rollout
     stage_cost_factor: 1e+0 # how much to weight up the state costs
+    track_edge_barrier_cost: 1e9 # how much to penalize cart at edge of track
+    track_length_fraction: 0.9 # fraction of half track length to allow free movement of cart before hitting barrier function
 
     # cost weightings for the different state components for following desired cart state trajectory
     cart_pos_weight: 1e5 # weight on cart pos error
