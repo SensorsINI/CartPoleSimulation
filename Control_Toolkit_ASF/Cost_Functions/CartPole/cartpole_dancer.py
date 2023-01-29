@@ -54,14 +54,13 @@ class cartpole_dancer:
         self.song_player:vlc.MediaPlayer = vlc.MediaPlayer(SONG)
         em = self.song_player.event_manager()
         em.event_attach(vlc.EventType.MediaPlayerEndReached, self.start)
-        self.paused=False
         self.signal_handler_added=False
-        self.first_step_run=False
+        self.first_step_run=False  # used to avoid starting playing music when dance is configured in config_cost_functions but simulation not running
         self.state:str='running' # set by signals emitted by CartPoleMainWindow, set to running initially so that we read the first row of CSV to compute trajectory for init
         CartPoleMainWindow.CartPoleMainWindowInstance.CartPoleSimulationStateSignal.connect(self.process_signal)
 
 
-        self._reset_fields()
+        self.reset_fields()
         self.reload_csv()
         self.paused=False
         self.time_step_started = float(0)
@@ -74,13 +73,12 @@ class cartpole_dancer:
         self.csvfile = open(self.fp, 'r')
         self.reader = csv.DictReader(filter(lambda row: row[0] != '#', self.csvfile),
                                      dialect='cartpole-dancer')  # https://stackoverflow.com/questions/14158868/python-skip-comment-lines-marked-with-in-csv-dictreader
-        self._started = True
         self.row_iterator = self.reader.__iter__()
 
-    def _reset_fields(self) -> None:
+    def reset_fields(self) -> None:
         self.time_step_started = float(0)
         self.current_row = None
-        self._started = False
+        self.started = False
         self.duration = None
         self.option = None
         self.policy = None
@@ -94,14 +92,17 @@ class cartpole_dancer:
     def start(self, time: float) -> None:
         """ Starts the dance now at time time"""
 
-        self._reset_fields()
+        self.reset_fields()
         self.reload_csv()
         self.time_step_started = float(time)
-        self._started = True
-        self.song_player.play()
+        self.started = True
+        self.paused=False
+        if CartPoleMainWindow.CartPoleGuiSimulationState=='running':
+            self.song_player.play() # only play if simulator running
 
     def stop(self)->None:
         self.song_player.stop()
+        self.started=False
 
     def pause(self)->None:
         self.paused=True
@@ -119,7 +120,8 @@ class cartpole_dancer:
         elif self.state=='stopped':
             self.stop()
         elif self.state=='running':
-            self.start(0)
+            if self.started:
+                self.start(0) # only start (song) if dance has been started, don't play if e.g. policy is balance
 
     def step(self, time: float)-> Dict:
         """ Does next time step, reading the csv for next step if the current one's duration has timed out
@@ -130,7 +132,7 @@ class cartpole_dancer:
         """
 
         if self.state=='running':
-            if not self._started:
+            if not self.started:
                 log.warning('cartpole_dancer must be start()ed before calling step() - calling start now')
                 self.start(time)
             if self.duration is None or time >= self.time_step_started + self.duration:
@@ -160,8 +162,10 @@ class cartpole_dancer:
                 winsound.Beep(1000,300) # beep
 
         except StopIteration:
+            log.info(f'restarting dance at time={time}s')
             self.start(time)
-            return self.step(time)
+            self.step(time)
+            return
         try:
             self.duration = float(self.current_row[self.DURATION])
             self.policy = self.current_row[self.POLICY][:-1] # the dqnce step 'policy" column has entries like balance1, spin2, etc

@@ -27,7 +27,7 @@ Pillow
 dictdiffer
 
 torch
-tensorflow
+tensorflow==2.10 # need 2.10 since 2.11 changes some things like Adam optimzer
 
 do-mpc==4.1.1
 casadi

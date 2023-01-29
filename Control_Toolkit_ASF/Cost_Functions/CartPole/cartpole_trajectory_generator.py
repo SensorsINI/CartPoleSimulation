@@ -1,3 +1,5 @@
+from pydoc import text
+
 import numpy as np
 
 from CartPole import state_utilities
@@ -218,5 +220,5 @@ class cartpole_trajectory_generator:
         CartPoleMainWindow.set_status_text(s)
 
     def decode_string(self,tfstring:tf.Variable):
-        if isinstance(tfstring,str): return tfstring.decode('utf-8')
+        if isinstance(tfstring,str): return text.encode().decode('utf-8')
         return tfstring.numpy().decode('utf-8')
