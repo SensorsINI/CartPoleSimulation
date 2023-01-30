@@ -107,7 +107,6 @@ def Q2u_tf(Q):
 #                               tf.TensorSpec(shape=[], dtype=tf.float32), tf.TensorSpec(shape=[], dtype=tf.float32),
 #                               tf.TensorSpec(shape=[], dtype=tf.float32), tf.TensorSpec(shape=[], dtype=tf.float32),
 #                               tf.TensorSpec(shape=[], dtype=tf.float32), tf.TensorSpec(shape=[], dtype=tf.float32)])
-@CompileTF
 def _cartpole_fine_integration_tf(angle, angleD,
                                   angle_cos, angle_sin,
                                   position, positionD,
@@ -139,10 +138,9 @@ def _cartpole_fine_integration_tf(angle, angleD,
     return angle, angleD, position, positionD, angle_cos, angle_sin
 
 
-@CompileTF
 def cartpole_fine_integration_tf(s, u, t_step, intermediate_steps,
                                  k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
-    #print('test 5')
+
     (
         angle, angleD, position, positionD, angle_cos, angle_sin
     ) = _cartpole_fine_integration_tf(
