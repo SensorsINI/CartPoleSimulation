@@ -311,7 +311,7 @@ class CartPole(EnvironmentBatched):
         self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
 
     def cartpole_ode(self):
-        self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u)
+        self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)
 
     def Q2u(self):
         self.u = Q2u(self.Q)
