@@ -17,12 +17,14 @@ log=get_logger(__name__)
 class cartpole_trajectory_generator:
 
     def __init__(self):
-        self.cartpole_dancer=cartpole_dancer()
         self._prev_policy=None
         self._prev_dance_policy=None
         self._time_policy_changed=None # when the new dance step started
         self.shimmy_function=None # used for ramp of shimmy
         self._policy_changed=False
+        self.controller=None
+        self.cost_function=None # set by each generate_trajectory, used by contained classes, e.g. cartpole_dancer, to access config values
+        self.cartpole_dancer=cartpole_dancer()
 
     def generate_cartpole_trajectory(self, time: float, state: np.ndarray, controller:template_controller, cost_function: cost_function_base) -> TensorType:
         """ Computes the desired future state trajectory at this time.
@@ -36,6 +38,8 @@ class cartpole_trajectory_generator:
         It is an np.ndarray[states,timesteps] with NaN as at least first entries of each state for don't care states, and otherwise the desired future state values.
 
         """
+        self.controller=controller
+        self.cost_function=cost_function
         dt = gui_default_params.controller_update_interval
         mpc_horizon = controller.optimizer.mpc_horizon
         gui_target_position = cost_function.target_position  # GUI slider position
@@ -61,7 +65,7 @@ class cartpole_trajectory_generator:
 
         if policy=='dance':
             if self._policy_changed:
-                self.cartpole_dancer.start(time)
+                self.cartpole_dancer.start(time,  self)
             self.cartpole_dancer.step(time=time)
 
             policy=self.cartpole_dancer.policy
@@ -88,6 +92,7 @@ class cartpole_trajectory_generator:
                 cost_function.shimmy_freq2_hz=self.cartpole_dancer.freq2
                 cost_function.shimmy_amp2=self.cartpole_dancer.amp2
                 cost_function.shimmy_duration=self.cartpole_dancer.endtime
+                cost_function.shimmy_dir=self.cartpole_dancer.option
 
 
             elif policy=='cartonly':
@@ -134,6 +139,13 @@ class cartpole_trajectory_generator:
             # traj[state_utilities.POSITIOND_IDX, :] = 0
         elif policy=='shimmy':  # cart follows a desired cart position shimmy while keeping pole up or down
             # shimmy is an (optional) ramp from freq to freq2 and amp to amp2
+            up_down=1
+            if cost_function.shimmy_dir=='up':
+                up_down=1
+            elif cost_function.shimmy_dir=='down':
+                up_down=-1
+            else:
+                log.warning(f'balance_dir value of "{cost_function.balance_dir} must be "up" or "down"')
             if time>self._time_policy_changed+cost_function.shimmy_duration:
                 self._time_policy_changed=time # reset shimmy and start over if doing it from fixed shimmy policy in yml
                 log.debug(f'shimmy restarted at time={time}')
@@ -168,7 +180,7 @@ class cartpole_trajectory_generator:
             #     # plt.draw()
             #     plt.show()
 
-            target_angle = np.pi * (1 - gui_target_equilibrium) / 2  # either 0 for up and pi for down
+            target_angle = np.pi * (1 - gui_target_equilibrium*up_down) / 2  # either 0 for up and pi for down
             traj[state_utilities.POSITION_IDX] = gui_target_position + cartpos
             traj[state_utilities.ANGLE_COS_IDX, :] = np.cos(target_angle)
             # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(target_angle)

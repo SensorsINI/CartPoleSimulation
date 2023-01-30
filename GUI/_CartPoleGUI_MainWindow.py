@@ -106,6 +106,7 @@ class CartPoleMainWindow(QMainWindow):
 
     def __init__(self, parent=None, *args, **kwargs):
         super(CartPoleMainWindow, self).__init__(parent, *args, **kwargs)
+        self.speedup_measured = None  # filled in by actual measured speedup relative to real wall clock
         CartPoleMainWindow.CartPoleMainWindowInstance=self
         # QObject.__init__(self)
         # region Create CartPole instance and load initial settings
@@ -1014,9 +1015,10 @@ class CartPoleMainWindow(QMainWindow):
 
             mean_dt_real = np.mean(self.looper.circ_buffer_dt_real)
             if mean_dt_real > 0:
+                self.speedup_measured=self.CartPoleInstance.dt_simulation / mean_dt_real
                 self.labSpeedUp.setText('Speed-up (measured): x{:.2f}'
-                                        .format(self.CartPoleInstance.dt_simulation / mean_dt_real))
-            sleep(0.1)
+                                        .format(self.speedup_measured))
+            sleep(0.5) # rate of label update is 2Hz which is fast enough
 
     # Function to measure the time of simulation as experienced by user
     # It corresponds to the time of simulation according to equations only if real time mode is on

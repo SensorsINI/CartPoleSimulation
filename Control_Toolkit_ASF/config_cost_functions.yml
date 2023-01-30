@@ -49,7 +49,7 @@ CartPole:
     cart_pos_weight: 1e5 # weight on cart pos error
     pole_angle_weight: 1e5 # weight on difference of angle
     cart_vel_weight: 1e0 # weight on difference of cart velocity
-    upright_pole_energy_multiple_to_count_spin_direction_cost: 1.5
+    upright_pole_energy_multiple_to_count_spin_direction_cost: 1.25 # pole must have this excess total energy before we start counting spin direction energy
     pole_swing_weight: 1e5 # cart angle derivative weight
     pole_energy_total_weight: 1e5 # energy_total is sum of kinetic and potential energy
 
@@ -73,6 +73,7 @@ CartPole:
     shimmy_freq2_hz: 2.
     shimmy_amp2: .025
     shimmy_duration: 8. # for shimmy that lasts a finite time and ramps from freq to freq2 and amp to amp2
+    shimmy_dir: up # up, down
 #    shimmy_plot: 0 # to plot the shimmy function
 
     # cartonly only controls cart position, pole is ignored. Trajectory is triangular with amp and per
@@ -80,4 +81,6 @@ CartPole:
     cartonly_freq_hz: .2
     cartonly_duty_cycle: .5 # set to .5 for triangle, 0 or 1 for sawtooth
 
-
+    dance_song_file: 'others/Media/Rolling_Stones_Satisfaction.mp3' # no spaces or special chars, no / . - etc....
+    dance_csv_file: 'Control_Toolkit_ASF/Cost_Functions/CartPole/cartpole_dance-satisfaction.csv'
+    dance_song_playback_rate: 0.55 # rate to match song speed compared to real time simulation rate

@@ -10,10 +10,11 @@ import warnings
 class loop_timer():
     """ Simple game loop timer that sleeps for leftover time (if any) at end of each iteration"""
     LOG_INTERVAL_SEC = 10
-    NUM_SAMPLES = 1000
+    NUM_SAMPLES = 200 # last few seconds
 
     def __init__(self, rate_hz: float = None, dt_target: float = None, do_diagnostics: bool = False) -> None:
-        """ Make a new loop_timer, specifying the target frame rate in Hz or time interval dt_target in seconds
+        """ Make a new loop_timer, specifying the target frame rate in Hz or time interval dt_target in seconds.
+        The actual average rate can be obtained from np.mean(self.looper.circ_buffer_dt_real).
 
         :param rate_hz: the target loop rate in Hz. The rate can be changed anytime by modifying rate_hz.
         :param dt_target: the time interval dt in seconds. It can be changed anytime by modifying dt.
@@ -40,7 +41,7 @@ class loop_timer():
         self.last_log_time = 0
         self.circ_buffer_dt = deque(iterable=np.zeros(self.NUM_SAMPLES), maxlen=self.NUM_SAMPLES)
         self.circ_buffer_leftover = deque(iterable=np.zeros(self.NUM_SAMPLES), maxlen=self.NUM_SAMPLES)
-        self.circ_buffer_dt_real = deque(iterable=np.zeros(50), maxlen=50)
+        self.circ_buffer_dt_real = deque(iterable=np.zeros(self.NUM_SAMPLES), maxlen=self.NUM_SAMPLES)
 
     @property
     def rate_hz(self):
@@ -52,6 +53,9 @@ class loop_timer():
 
     @rate_hz.setter
     def rate_hz(self, new_rate):
+        """ Sets the target loop rate.
+        :param new_rate: the target rate in Hz
+        """
         if new_rate is None:
             self._rate_hz = None
         elif new_rate > 0.0:
@@ -62,6 +66,9 @@ class loop_timer():
 
     @dt_target.setter
     def dt_target(self, new_dt):
+        """ Set the target delta time
+        :param new_dt: the new target delta time in seconds for each loop iteration
+        """
         if new_dt is None:
             self._dt_target = None
         elif new_dt > 0.0:

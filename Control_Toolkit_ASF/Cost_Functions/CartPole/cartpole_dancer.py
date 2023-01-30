@@ -4,12 +4,15 @@ from typing import Dict
 
 from PyQt6 import QtCore
 
+from Control_Toolkit.Controllers import template_controller
 from GUI import CartPoleMainWindow
 from others.globals_and_utils import get_logger
 
-SONG='others/Media/01 Sookie_ Sookie.mp3'
-CSV='Control_Toolkit_ASF/Cost_Functions/CartPole/cartpole_dance-sookie-sookie.csv'
-SONG_PLAYBACK_RATE=0.55 # rate to match song speed compared to real time simulation rate
+# SONG='others/Media/01 Sookie_ Sookie.mp3'
+# CSV='Control_Toolkit_ASF/Cost_Functions/CartPole/cartpole_dance-sookie-sookie.csv'
+# SONG="others/Media/Rolling_Stones_Satisfaction.mp3"
+# CSV='Control_Toolkit_ASF/Cost_Functions/CartPole/cartpole_dance-satisfaction.csv'
+# SONG_PLAYBACK_RATE=0.55 # rate to match song speed compared to real time simulation rate
 
 import os
 try:
@@ -27,6 +30,8 @@ except:
     log.warning('winsound is not available - will not play beeps when dance step changes')
     pass
 
+UPDATE_INTERVAL=10 # update interval for status text and song rate update
+
 class cartpole_dancer:
     """ Reads steps from CSV file for cartpole dancer
     """
@@ -35,11 +40,12 @@ class cartpole_dancer:
         """ Constructs the dance reader, opening the CSV file
 
         """
+        self.song_file_name = None
+        self.song_player = None
+        self.row_iterator = None
+        self.reader = None
+        self.csvfile = None
         csv.register_dialect('cartpole-dancer', skipinitialspace=True)
-        self.fp = CSV  # os.path.join('Control_Toolkit_ASF','Cost_Functios','cartpole_dance.csv')
-        self.fpath = Path(self.fp)
-        self.csvfile=None
-        self.mtime = self.fpath.stat().st_mtime
 
         self.ENDTIME = 'endtime'
         self.POLICY = 'policy'
@@ -50,32 +56,41 @@ class cartpole_dancer:
         self.FREQ2 = 'freq2'
         self.AMP2 = 'amp2'
 
-        if not os.path.exists(SONG):
-            raise FileNotFoundError(f'{SONG} not found, cannot play music')
-
-        self.song_player:vlc.MediaPlayer = vlc.MediaPlayer(SONG)
-        if self.song_player.set_rate(SONG_PLAYBACK_RATE)==-1:
-            log.warning('could not set playback rate for song')
-        em = self.song_player.event_manager()
-        em.event_attach(vlc.EventType.MediaPlayerEndReached, self.start) # restart dance when song restarts
-
         self.first_step_run=False  # used to avoid starting playing music when dance is configured in config_cost_functions but simulation not running
         self.state:str='running' # set by signals emitted by CartPoleMainWindow, set to running initially so that we read the first row of CSV to compute trajectory for init
         CartPoleMainWindow.CartPoleMainWindowInstance.CartPoleSimulationStateSignal.connect(self.process_signal)
 
-
+        self.csv_file_name = None
+        self.csv_file_path = None
+        self.mtime = None
         self.reset_fields()
-        self.reload_csv()
         self.paused=False
         self.time_step_started = float(0)
         self.time_dance_started = float(0)
 
+        self.cartpole_trajectory_generator = None # set in start()
+        self.iteration_counter=0 # to reduce some updates
 
-    def reload_csv(self):
-        self.mtime = self.fpath.stat().st_mtime
+    def reload_csv_and_song(self):
+        self.csv_file_name = bytes.decode(self.cartpole_trajectory_generator.cost_function.dance_csv_file.numpy())
+        if not os.path.exists(self.csv_file_name):
+            raise FileNotFoundError(f'CSV file for dance {self.cartpole_trajectory_generator.cost_function.dance_song_file} not found, cannot play music')
+        self.csv_file_path = Path(self.csv_file_name)
+        self.mtime = self.csv_file_path.stat().st_mtime
+
+        self.song_file_name=bytes.decode(self.cartpole_trajectory_generator.cost_function.dance_song_file.numpy())
+        if not os.path.exists(self.song_file_name):
+            raise FileNotFoundError(f'mp3/wave file for dance {self.song_file_name} not found, cannot play music')
+        self.song_player:vlc.MediaPlayer = vlc.MediaPlayer(self.song_file_name)
+
+        if self.song_player.set_rate(self.cartpole_trajectory_generator.cost_function.dance_song_playback_rate)==-1:
+            log.warning('could not set playback rate for song')
+        em = self.song_player.event_manager()
+        em.event_attach(vlc.EventType.MediaPlayerEndReached, self.start) # restart dance when song restarts
+        self.mtime = self.csv_file_path.stat().st_mtime
         if self.csvfile:
             self.csvfile.close()
-        self.csvfile = open(self.fp, 'r')
+        self.csvfile = open(self.csv_file_name, 'r')
         self.reader = csv.DictReader(filter(lambda row: row[0] != '#', self.csvfile),
                                      dialect='cartpole-dancer')  # https://stackoverflow.com/questions/14158868/python-skip-comment-lines-marked-with-in-csv-dictreader
         self.row_iterator = self.reader.__iter__()
@@ -95,11 +110,16 @@ class cartpole_dancer:
         self.freq2 = None
         self.amp2 = None
 
-    def start(self, time: float) -> None:
-        """ Starts the dance now at time time"""
+    def start(self, time: float=0.0, cartpole_trajectory_generator=None) -> None:
+        """ Starts the dance now at time in seconds
 
+        :param time: the current simulation time in seconds, 0 by default
+        :param cartpole_trajectory_generator: the trajectory generator, if not None it sets it for use by cartpole_dancer use
+        """
+        if cartpole_trajectory_generator:
+            self.cartpole_trajectory_generator=cartpole_trajectory_generator
         self.reset_fields()
-        self.reload_csv()
+        self.reload_csv_and_song()
         self.time_step_started = float(time)
         self.time_dance_started = float(time)
         self.started = True
@@ -144,7 +164,12 @@ class cartpole_dancer:
                 self.start(time)
             if self.endtime is None or time >=  self.time_dance_started+self.endtime:
                 self._read_next_step(time)
+        if self.iteration_counter % UPDATE_INTERVAL== 0:
+            if not CartPoleMainWindow.CartPoleMainWindowInstance.speedup_measured is None:
+                rate = CartPoleMainWindow.CartPoleMainWindowInstance.speedup_measured
+                self.song_player.set_rate(rate)  # TODO check effect on performance in vlc
             CartPoleMainWindow.set_status_text(self.format_step(time))
+        self.iteration_counter+=1
         return self.current_row
 
     def _read_next_step(self, time: float) ->None:
@@ -157,7 +182,7 @@ class cartpole_dancer:
         """
         try:
             # check if file modified, if so, restart whole dance
-            mtime = self.fpath.stat().st_mtime
+            mtime = self.csv_file_path.stat().st_mtime
             if mtime>self.mtime:
                 log.warning('cartpole_dance.csv modified, restarting dance')
                 self.start(time)

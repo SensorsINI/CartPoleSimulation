@@ -275,10 +275,14 @@ def extract_int(new_value)-> (str,int):
     """  Extracts (possibly signed) int from trailing part of string, e.g. 'ccw-1' -> -1
 
     :param new_value: str input
-    :returns: s,n: leading string and trailing int value or None
+    :returns: s,n: leading string and trailing int value or None. If new_value contains /, it is assumed a path and is returned as new_value,None
     """
     str_pat='[a-zA-Z]+'
     int_pat='[-+]?[0-9]+$'
+    sp_pat='\/' # file path string
+    if re.search(sp_pat,new_value):
+        log.debug(f'string {new_value} is a path, will not extract int from it')
+        return new_value,None
     string_name=re.search(str_pat,new_value).group(0)
     int_match=re.search(int_pat, new_value)
     int_val=int(int_match.group(0)) if int_match else None
