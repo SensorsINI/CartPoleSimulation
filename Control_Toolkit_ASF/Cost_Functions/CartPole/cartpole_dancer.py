@@ -165,9 +165,10 @@ class cartpole_dancer:
             if self.endtime is None or time >=  self.time_dance_started+self.endtime:
                 self._read_next_step(time)
         if self.iteration_counter % UPDATE_INTERVAL== 0:
-            if not CartPoleMainWindow.CartPoleMainWindowInstance.speedup_measured is None:
-                rate = CartPoleMainWindow.CartPoleMainWindowInstance.speedup_measured
-                self.song_player.set_rate(rate)  # TODO check effect on performance in vlc
+            # setting rate dynamically produces very choppy sound; we must ensure that we run fast enough for real time by optimizing code....
+            # if not CartPoleMainWindow.CartPoleMainWindowInstance.speedup_measured is None:
+            #     rate = CartPoleMainWindow.CartPoleMainWindowInstance.speedup_measured
+            #     self.song_player.set_rate(rate)  # TODO check effect on performance in vlc
             CartPoleMainWindow.set_status_text(self.format_step(time))
         self.iteration_counter+=1
         return self.current_row

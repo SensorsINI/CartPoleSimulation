@@ -83,4 +83,4 @@ CartPole:
 
     dance_song_file: 'others/Media/Rolling_Stones_Satisfaction.mp3' # no spaces or special chars, no / . - etc....
     dance_csv_file: 'Control_Toolkit_ASF/Cost_Functions/CartPole/cartpole_dance-satisfaction.csv'
-    dance_song_playback_rate: 0.55 # rate to match song speed compared to real time simulation rate
+    dance_song_playback_rate: 1. # rate to match song speed compared to real time simulation rate, we should set to 1 for song to sound native but code must run fast enough then
