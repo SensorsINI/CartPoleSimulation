@@ -614,21 +614,35 @@ class MainWindow(QMainWindow):
         # Set cartpole in the right mode (just to ensure slider behaves properly)
         with open(filepath, newline='') as f:
             reader = csv.reader(f)
+            controller_set = None
             for line in reader:
                 line = line[0]
                 if line[:len('# Controller: ')] == '# Controller: ':
                     controller_set = self.CartPoleInstance.set_controller(line[len('# Controller: '):].rstrip("\n"))
-                    optimizer_set = self.CartPoleInstance.set_optimizer(line[len('# Optimizer: '):].rstrip("\n"))
-                    if controller_set:
-                        self.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
-                    else:
-                        self.rbs_controllers[1].setChecked(True) # Set first, but not manual stabilization
-                    if optimizer_set:
-                        self.rbs_optimizers[self.CartPoleInstance.optimizer_idx].setChecked(True)
-                    else:
-                        self.rbs_optimizers[1].setChecked(True)
-                    self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)    
-                    break
+                    continue
+                elif not controller_set:
+                    continue
+                else:
+                    pass
+
+                if line[:len('# Optimizer MPC: ')] == '# Optimizer MPC: ':
+                    optimizer_set = self.CartPoleInstance.set_optimizer(line[len('# Optimizer MPC: '):].rstrip("\n"))
+                elif controller_set:
+                    optimizer_set = ''
+                else:
+                    continue
+
+
+                if controller_set:
+                    self.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
+                else:
+                    self.rbs_controllers[1].setChecked(True) # Set first, but not manual stabilization
+                if optimizer_set:
+                    self.rbs_optimizers[self.CartPoleInstance.optimizer_idx].setChecked(True)
+                else:
+                    self.rbs_optimizers[1].setChecked(True)
+                self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)
+                break
 
         # Augment the experiment history with simulation time step size
         dt = []
@@ -1013,30 +1027,32 @@ class MainWindow(QMainWindow):
 
     # Chose the controller method which should be used with the CartPole
     def RadioButtons_controller_selection(self):
-        # Change the mode variable depending on the Radiobutton state
-        for i in range(len(self.rbs_controllers)):
-            if self.rbs_controllers[i].isChecked():
-                self.CartPoleInstance.set_controller(controller_idx=i)
-        
-        self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)
+        if self.simulator_mode != 'Replay':
+            # Change the mode variable depending on the Radiobutton state
+            for i in range(len(self.rbs_controllers)):
+                if self.rbs_controllers[i].isChecked():
+                    self.CartPoleInstance.set_controller(controller_idx=i)
+
+            self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)
+
+            self.open_additional_controller_widget()
 
         # Reset the state of GUI and of the Cart instance after the mode has changed
         # TODO: Do I need the follwowing lines?
         self.reset_variables(0)
         self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
         self.canvas.draw()
-
-        self.open_additional_controller_widget()
         
     def update_rbs_optimizers_status(self, visible: bool):
         for rb in self.rbs_optimizers:
             rb.setEnabled(visible)
         
     def RadioButtons_optimizer_selection(self):
-        # Change the mode variable depending on the Radiobutton state
-        for i in range(len(self.rbs_optimizers)):
-            if self.rbs_optimizers[i].isChecked():
-                self.CartPoleInstance.set_optimizer(optimizer_idx=i)
+        if self.simulator_mode != 'Replay':
+            # Change the mode variable depending on the Radiobutton state
+            for i in range(len(self.rbs_optimizers)):
+                if self.rbs_optimizers[i].isChecked():
+                    self.CartPoleInstance.set_optimizer(optimizer_idx=i)
 
     # Chose the simulator mode - effect of start/stop button
     def RadioButtons_simulator_mode(self):
