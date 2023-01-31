@@ -3,8 +3,8 @@ from types import SimpleNamespace
 import numpy as np
 import tensorflow as tf
 from others.globals_and_utils import create_rng, load_config
-from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
-                              controlBias, controlDisturbance, g, k, m, u_max,
+from others.p_globals import (J_fric, L, m_cart, M_fric, TrackHalfLength,
+                              controlBias, controlDisturbance, g, k, m_pole, u_max,
                               v_max)
 from SI_Toolkit.Functions.TF.Compile import CompileTF
 
@@ -15,8 +15,8 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
 config = load_config("config.yml")
 
 k = tf.convert_to_tensor(k)
-M = tf.convert_to_tensor(M)
-m = tf.convert_to_tensor(m)
+m_cart = tf.convert_to_tensor(m_cart)
+m_pole = tf.convert_to_tensor(m_pole)
 g = tf.convert_to_tensor(g)
 J_fric = tf.convert_to_tensor(J_fric)
 M_fric = tf.convert_to_tensor(M_fric)
@@ -65,7 +65,7 @@ s0 = create_cartpole_state()
 
 
 def _cartpole_ode(ca, sa, angleD, positionD, u,
-                      k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+                  k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
 
     """
     Calculates current values of second derivative of angle and position
@@ -82,16 +82,16 @@ def _cartpole_ode(ca, sa, angleD, positionD, u,
     # g (gravitational acceleration) is positive (absolute value)
     # Checked independently by Marcin and Krishna
 
-    A = (k + 1.0) * (M + m) - m * (ca ** 2)
+    A = (k + 1.0) * (m_cart + m_pole) - m_pole * (ca ** 2)
     F_fric = - M_fric * positionD  # Force resulting from cart friction, notice that the mass of the cart is not explicitly there
     T_fric = - J_fric * angleD  # Torque resulting from pole friction
 
     positionDD = (
             (
-                    m * g * sa * ca  # Movement of the cart due to gravity
+                    m_pole * g * sa * ca  # Movement of the cart due to gravity
                     + ((T_fric * ca) / L)  # Movement of the cart due to pend' s friction in the joint
                     + (k + 1) * (
-                            - (m * L * (
+                            - (m_pole * L * (
                                         angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
                             + F_fric  # Braking of the cart due its friction
                             + u  # Effect of force applied to cart
@@ -107,7 +107,7 @@ def _cartpole_ode(ca, sa, angleD, positionD, u,
     # From experiment b = 20, a = 28
     angleDD = (
             (
-                    g * sa + positionDD * ca + T_fric / (m * L)
+                    g * sa + positionDD * ca + T_fric / (m_pole * L)
             ) / ((k + 1) * L)
     )
 
@@ -119,19 +119,19 @@ def _cartpole_ode(ca, sa, angleD, positionD, u,
 
 
 def cartpole_ode_namespace(s: SimpleNamespace, u: float,
-                           k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+                           k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
     angleDD, positionDD = _cartpole_ode(
         np.cos(s.angle), np.sin(s.angle), s.angleD, s.positionD, u,
-        k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L
+        k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L
     )
     return angleDD, positionDD
 
 
 def cartpole_ode(s: np.ndarray, u: float,
-                 k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+                 k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
     angleDD, positionDD = _cartpole_ode(
         s[..., ANGLE_COS_IDX], s[..., ANGLE_SIN_IDX], s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u,
-        k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L
+        k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L
     )
     return angleDD, positionDD
 

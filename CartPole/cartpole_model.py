@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 import numpy as np
 from others.globals_and_utils import create_rng, load_config
-from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
-                              controlBias, controlDisturbance, g, k, m, u_max, v_max)
+from others.p_globals import (J_fric, L, m_cart, M_fric, TrackHalfLength,
+                              controlBias, controlDisturbance, g, k, m_pole, u_max, v_max)
 
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
@@ -48,14 +48,23 @@ s0 = create_cartpole_state()
 
 
 def _cartpole_ode (ca, sa, angleD, positionD, u,
-                      k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+                   k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
 
     """
     Calculates current values of second derivative of angle and position
     from current value of angle and position, and their first derivatives
 
-    :param angle, angleD, position, positionD: Essential state information of cart
-    :param u: Force applied on cart in unnormalized range
+    :param angle, angleD, position, positionD: Essential state information of cart.
+        Angle is in radians, 0 vertical and increasing CCW.
+        position is in meters, 0 in middle of track and increasing to right.
+    :param m_cart and m_pole: masses in kg of cart and pole.
+    :param ca and sa: sin and cos of angle of pole.
+    :param g: gravity in m/s^2
+    :param J_fric and M_fric: friction coefficients in Nm per rad/s of pole  TODO check correct
+    :param  M_fric: friction coefficient of cart in N per m/s TODO check correct
+    :param L: length of pole in meters.
+
+    :param u: Force applied on cart in unnormalized range TODO what does this mean?
 
     :returns: angular acceleration, horizontal acceleration
     """
@@ -65,16 +74,16 @@ def _cartpole_ode (ca, sa, angleD, positionD, u,
     # g (gravitational acceleration) is positive (absolute value)
     # Checked independently by Marcin and Krishna
 
-    A = (k + 1) * (M + m) - m * (ca ** 2)
+    A = (k + 1) * (m_cart + m_pole) - m_pole * (ca ** 2)
     F_fric = - M_fric * positionD  # Force resulting from cart friction, notice that the mass of the cart is not explicitly there
     T_fric = - J_fric * angleD  # Torque resulting from pole friction
 
     positionDD = (
             (
-                    m * g * sa * ca  # Movement of the cart due to gravity
+                    m_pole * g * sa * ca  # Movement of the cart due to gravity
                     + ((T_fric * ca) / L)  # Movement of the cart due to pend' s friction in the joint
                     + (k + 1) * (
-                            - (m * L * (
+                            - (m_pole * L * (
                                         angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
                             + F_fric  # Braking of the cart due its friction
                             + u  # Effect of force applied to cart
@@ -90,7 +99,7 @@ def _cartpole_ode (ca, sa, angleD, positionD, u,
     # From experiment b = 20, a = 28
     angleDD = (
             (
-                    g * sa + positionDD * ca + T_fric / (m * L)
+                    g * sa + positionDD * ca + T_fric / (m_pole * L)
             ) / ((k + 1) * L)
     )
 
@@ -102,20 +111,39 @@ def _cartpole_ode (ca, sa, angleD, positionD, u,
 
 
 def cartpole_ode_namespace(s: SimpleNamespace, u: float,
-                           k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+                           k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
     angleDD, positionDD = _cartpole_ode(
         np.cos(s.angle), np.sin(s.angle), s.angleD, s.positionD, u,
-        k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L
+        k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L
     )
     return angleDD, positionDD
 
 
 def cartpole_ode(s: np.ndarray, u: float,
-                 k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+                 k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
     angleDD, positionDD = _cartpole_ode(
         s[..., ANGLE_COS_IDX], s[..., ANGLE_SIN_IDX], s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u,
-        k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L
+        k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L
     )
+    """
+    Calculates current values of second derivative of angle and position
+    from current value of angle and position, and their first derivatives
+
+    :param angle, angleD, position, positionD: Essential state information of cart.
+        Angle is in radians, 0 vertical and increasing CCW.
+        position is in meters, 0 in middle of track and increasing to right.
+    :param m_m_cart and m_pole: masses in kg of cart and pole.
+    :param ca and sa: sin and cos of angle of pole.
+    :param g: gravity in m/s^2
+    :param J_fric and M_fric: friction coefficients in Nm per rad/s of pole  TODO check correct
+    :param  M_fric: friction coefficient of cart in N per m/s TODO check correct
+    :param L: length of pole in meters.
+
+    :param u: Force applied on cart in unnormalized range TODO what does this mean?
+
+    :returns: angular acceleration in rad/s^2 positive CCW, horizontal acceleration in m/s^2 positive to right
+    """
+
     return angleDD, positionDD
 
 def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L=L):

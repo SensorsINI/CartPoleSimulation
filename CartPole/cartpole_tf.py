@@ -1,7 +1,7 @@
 import tensorflow as tf
 from others.globals_and_utils import create_rng, load_config
-from others.p_globals import (J_fric, L, M, M_fric, TrackHalfLength,
-                              controlBias, controlDisturbance, g, k, m, u_max,
+from others.p_globals import (J_fric, L, m_cart, M_fric, TrackHalfLength,
+                              controlBias, controlDisturbance, g, k, m_pole, u_max,
                               v_max)
 from SI_Toolkit.Functions.TF.Compile import CompileTF
 
@@ -14,8 +14,8 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
 config = load_config("config.yml")
 
 k = tf.convert_to_tensor(k)
-M = tf.convert_to_tensor(M)
-m = tf.convert_to_tensor(m)
+m_cart = tf.convert_to_tensor(m_cart)
+m_pole = tf.convert_to_tensor(m_pole)
 g = tf.convert_to_tensor(g)
 J_fric = tf.convert_to_tensor(J_fric)
 M_fric = tf.convert_to_tensor(M_fric)
@@ -112,7 +112,7 @@ def _cartpole_fine_integration_tf(angle, angleD,
                                   position, positionD,
                                   u, t_step,
                                   intermediate_steps, k=k,
-                                  M=M, m=m,
+                                  m_cart=m_cart, m_pole=m_pole,
                                   g=g, J_fric=J_fric,
                                   M_fric=M_fric, L=L):
     #print('test 6')
@@ -120,7 +120,7 @@ def _cartpole_fine_integration_tf(angle, angleD,
         # Find second derivative for CURRENT "k" step (same as in input).
         # State and u in input are from the same timestep, output is belongs also to THE same timestep ("k")
         angleDD, positionDD = _cartpole_ode_tf(angle_cos, angle_sin, angleD, positionD, u,
-                                               k, M, m, g, J_fric, M_fric, L)
+                                               k, m_cart, m_pole, g, J_fric, M_fric, L)
 
         # Find NEXT "k+1" state [angle, angleD, position, positionD]
         angle, angleD, position, positionD = cartpole_integration_tf(angle, angleD, angleDD, position, positionD,
@@ -139,8 +139,29 @@ def _cartpole_fine_integration_tf(angle, angleD,
 
 
 def cartpole_fine_integration_tf(s, u, t_step, intermediate_steps,
-                                 k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+                                 k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+    """
+    Calculates current values of second derivative of angle and position
+    from current value of angle and position, and their first derivatives
 
+    :param s: state of cartpole
+        Angle is in radians, 0 vertical and increasing CCW.
+        position is in meters, 0 in middle of track and increasing to right.
+    :param u: cart accelerator in m/s^2 positive rightwards
+    :param t_step: the timestep in seconds
+    :param intermediate_steps: TODO what is this?
+    :param k: TODO don't know what this is
+    :param m_cart and m_pole: masses in kg of cart and pole.
+    :param ca and sa: sin and cos of angle of pole.
+    :param g: gravity in m/s^2
+    :param J_fric and M_fric: friction coefficients in Nm per rad/s of pole  TODO check correct
+    :param  M_fric: friction coefficient of cart in N per m/s TODO check correct
+    :param L: length of pole in meters.
+
+    :param u: Force applied on cart in Newtons TODO check is this correct?
+
+    :returns: next state of s
+    """
     (
         angle, angleD, position, positionD, angle_cos, angle_sin
     ) = _cartpole_fine_integration_tf(
@@ -154,7 +175,7 @@ def cartpole_fine_integration_tf(s, u, t_step, intermediate_steps,
         t_step=t_step,
         intermediate_steps=intermediate_steps,
         L=L,
-        k=k, M=M, m=m, g=g, J_fric=J_fric, M_fric=M_fric
+        k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric
     )
 
     ### TODO: This is ugly! But I don't know how to resolve it...
