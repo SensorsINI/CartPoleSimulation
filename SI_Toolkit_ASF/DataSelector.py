@@ -131,8 +131,8 @@ class DataSelector:
                                     raw=False
                                     ):
 
-        if batch_size is None and self.args.batch_size is not None:
-            batch_size = self.args.batch_size
+        if batch_size is None and self.args.num_rollouts is not None:
+            batch_size = self.args.num_rollouts
 
         if inputs is None and self.args.inputs is not None:
             inputs = self.args.inputs

@@ -141,7 +141,6 @@ rpgd-me-param-tf:
   maximum_entropy_alpha: 0.0
   gradmax_clip: 10
   rtol: 1.0e-3
-  batch_size: 32
   opt_keep_k: 0
   num_rollouts: 32
   opt_keep_k_ratio: 0.25
@@ -162,7 +161,6 @@ rpgd-ml-tf:
   maximum_entropy_alpha: 0.1
   gradmax_clip: 10
   rtol: 1.0e-3
-  batch_size: 32
   opt_keep_k: 8
   num_rollouts: 32
   opt_keep_k_ratio: 0.25
@@ -181,7 +179,6 @@ rpgd-particle-tf:
   adam_epsilon: 1.0e-08
   gradmax_clip: 10
   rtol: 1.0e-3
-  batch_size: 32
   opt_keep_k: 8
   num_rollouts: 32
   opt_keep_k_ratio: 0.25
@@ -193,7 +190,6 @@ rpgd-particle-tf:
 mppi-var-tf:
   seed: null                          # If null, random seed based on datetime is used
   mpc_horizon: 35                       # steps
-  batch_size: 400                     # Number of Monte Carlo samples
   period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   cc_weight: 1.0
   R: 1.0                                # How much to punish Q
@@ -208,13 +204,12 @@ mppi-var-tf:
 mppi:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 25                       # steps
-  batch_size: 700                    # Number of Monte Carlo samples
+  num_rollouts: 700                    # Number of Monte Carlo samples
   cc_weight: 1.0
   R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in cost functions config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
   LBD: 1000.0                            # Cost parameter lambda
   NU: 100.0                            # Exploration variance
   SQRTRHOINV: 0.03                      # Sampling variance
-  GAMMA: 1.                           # Future cost discount
   period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
 random-action-tf:
   seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
