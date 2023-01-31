@@ -42,7 +42,7 @@ def convert_units_inplace(ground_truth, predictions_list):
 
     # Convert predictions
     for i in range(len(predictions_list)):
-        predictions_array, features = predictions_list[i]
+        predictions_array, features, _ = predictions_list[i]
         for feature in features:
             feature_idx, = np.where(features == feature)
 

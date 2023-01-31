@@ -1151,8 +1151,9 @@ class CartPoleMainWindow(QMainWindow):
             # Execute
             self.threadpool.start(worker)
 
-        elif hasattr(self.PhysicalCartPoleDriverInstance,'terminate_experiment'):
-            self.PhysicalCartPoleDriverInstance.terminate_experiment = True  # TODO not all things have terminate_experiment, throws NoneType exception
+        else:
+            if self.PhysicalCartPoleDriverInstance:
+                self.PhysicalCartPoleDriverInstance.terminate_experiment = True
 
 
         self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
