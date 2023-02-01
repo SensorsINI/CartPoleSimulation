@@ -2,9 +2,6 @@ import csv
 from pathlib import Path
 from typing import Dict
 
-from PyQt6 import QtCore
-
-from Control_Toolkit.Controllers import template_controller
 from GUI import CartPoleMainWindow
 from others.globals_and_utils import get_logger
 
@@ -58,7 +55,8 @@ class cartpole_dancer:
 
         self.first_step_run=False  # used to avoid starting playing music when dance is configured in config_cost_functions but simulation not running
         self.state:str='running' # set by signals emitted by CartPoleMainWindow, set to running initially so that we read the first row of CSV to compute trajectory for init
-        CartPoleMainWindow.CartPoleMainWindowInstance.CartPoleSimulationStateSignal.connect(self.process_signal)
+        if CartPoleMainWindow.CartPoleMainWindowInstance and CartPoleMainWindow.CartPoleMainWindowInstance.CartPoleSimulationStateSignal:
+            CartPoleMainWindow.CartPoleMainWindowInstance.CartPoleSimulationStateSignal.connect(self.process_signal)
 
         self.csv_file_name = None
         self.csv_file_path = None
