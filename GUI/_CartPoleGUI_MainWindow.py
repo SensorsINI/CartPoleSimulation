@@ -58,18 +58,9 @@ except:
     pass
 from GUI._ControllerGUI_NoiseOptionsWindow import NoiseOptionsWindow
 
-# from __future__ import print_function
-from pypref import SinglePreferences as PREF
-class MyPreferences(PREF):
-    # *args and **kwargs can be replaced by fixed arguments
-    def put(self,key:str, value:Any):
-        self.update_preferences({key:value})
+from others.prefs import MyPreferences
 
 prefs=MyPreferences() # store and retrieve sticky values
-
-
-
-
 
 # Class implementing the main window of CartPole GUI
 class CartPoleMainWindow(QMainWindow):
