@@ -59,10 +59,9 @@ except:
 from GUI._ControllerGUI_NoiseOptionsWindow import NoiseOptionsWindow
 
 # from __future__ import print_function
-from pypref import Preferences
 from pypref import SinglePreferences as PREF
 class MyPreferences(PREF):
-    # *args and **kwargs can be replace by fixed arguments
+    # *args and **kwargs can be replaced by fixed arguments
     def put(self,key:str, value:Any):
         self.update_preferences({key:value})
 

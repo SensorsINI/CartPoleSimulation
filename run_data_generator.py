@@ -1,3 +1,6 @@
+# runs experiments without interative (and slow) GUI showing cartpole state
+# see config_data_gen.yml
+
 import os
 import timeit
 from time import sleep
@@ -12,7 +15,7 @@ from others.globals_and_utils import create_rng, load_config
 from others.p_globals import TrackHalfLength
 
 # Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
-# On other OS you have to chose a different interactive backend.
+# On other OS you have to choose a different interactive backend.
 # from matplotlib import use
 # # use('TkAgg')
 # use('macOSX')
