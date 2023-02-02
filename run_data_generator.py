@@ -55,6 +55,10 @@ class random_experiment_setter:
         self.turning_points = config["turning_points"]["turning_points"]
         self.turning_points_period = config["turning_points"]["turning_points_period"]
 
+        self.change_target_equilibrium_every_x_second = config['change_target_equilibrium_every_x_second']
+
+        self.initial_target_equilibrium = config['initial_target_equilibrium']
+
         self.rng = create_rng(self.__class__.__name__, config["seed"])
         
     def set(self, CartPoleInstance: CartPole):
@@ -85,6 +89,15 @@ class random_experiment_setter:
         else:
             end_random_target_position_at = self.target_position_end
 
+        if self.initial_target_equilibrium == 'up' or self.initial_target_equilibrium == 1:
+            target_equilibrium = 1
+        elif self.initial_target_equilibrium == 'down' or self.initial_target_equilibrium == -1:
+            target_equilibrium = -1
+        elif self.initial_target_equilibrium == 'random':
+            target_equilibrium = int(2*np.random.binomial(1, 0.5)-1)
+        else:
+            Exception('{} is not a valid specification for target equilibrium'.format(self.initial_target_equilibrium))
+
         CartPoleInstance.setup_cartpole_random_experiment(
             # Initial state
             s0=initial_state,
@@ -106,6 +119,9 @@ class random_experiment_setter:
             end_random_target_position_at=end_random_target_position_at,
             turning_points=self.turning_points,
             used_track_fraction=self.track_fraction_usable_for_target_position,
+
+            target_equilibrium=target_equilibrium,
+            change_target_equilibrium_every_x_second=self.change_target_equilibrium_every_x_second,
         )
 
         return CartPoleInstance # ready to run a random experiment
