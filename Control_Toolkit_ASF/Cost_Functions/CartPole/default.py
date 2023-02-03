@@ -8,6 +8,7 @@ from others.globals_and_utils import load_config
 
 from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import ANGLE_IDX, POSITION_IDX
+from CartPole.cartpole_model import u_max
 
 # load constants from config file
 config = safe_load(open(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"), "r"))
@@ -19,6 +20,8 @@ ccrc_weight = config["CartPole"]["default"]["ccrc_weight"]
 R = config["CartPole"]["default"]["R"]
 
 class default(cost_function_base):
+    MAX_COST = dd_weight * 1.0e7 + ep_weight + cc_weight * R * (u_max ** 2)
+    
     # cost for distance from track edge
     def _distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
@@ -49,7 +52,7 @@ class default(cost_function_base):
 
         :param terminal_states: Reference to numpy array of terminal states of all rollouts
         :type terminal_states: np.ndarray
-        :return: One terminal cost per rollout
+        :return: One terminal cost per rollout, has shape (batch_size x 1)
         :rtype: np.ndarray
         """
         terminal_cost = 10000 * self.lib.cast(
@@ -60,7 +63,7 @@ class default(cost_function_base):
             ),
             self.lib.float32,
         )
-        return terminal_cost
+        return self.lib.reshape(terminal_cost, (-1, 1))
 
     # cost of changing control too fast
     def _control_change_rate_cost(self, u, u_prev):
@@ -77,7 +80,7 @@ class default(cost_function_base):
         return self.lib.sum((u - u_prev_vec) ** 2, 2)
 
     # all stage costs together
-    def get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
+    def _get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
         dd = dd_weight * self._distance_difference_cost(states[:, :, POSITION_IDX])
         ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX])
         cc = cc_weight * self._CC_cost(inputs)

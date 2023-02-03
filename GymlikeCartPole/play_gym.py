@@ -5,7 +5,7 @@ from Control_Toolkit.others.globals_and_utils import import_controller_by_name
 
 from GymlikeCartPole.CartPoleEnv_LTC import CartPoleEnv_LTC
 
-controller_name = "mppi-tf"
+controller_name = "mppi"
 controller_full_name = f"controller-{controller_name}".replace("-", "_")
 Controller = import_controller_by_name(controller_full_name)
 
