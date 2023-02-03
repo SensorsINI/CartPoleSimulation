@@ -1,4 +1,4 @@
-predictor_name_default: '1_layer_gru_64'
+predictor_name_default: 'I_love_control'
 # If controller does not specify predictor_specification (leave empty)
 # a predictor from "predictors:predictor_name_default" from below is loaded
 # Check config.yml and config_testing.yml to learn more on how predictors are selected
@@ -25,19 +25,13 @@ predictors:
 
   # ADD YOUR PREDICTORS BELOW
 
-  2_layer_gru:
+  I_love_control:
     predictor_type: 'neural'  # Possible options are: 'neural', 'GP', 'ODE, 'ODE_TF'
-    model_name: 'GRU-6IN-32H1-32H2-5OUT-0'
-    path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-16/Models/'
-    update_before_predicting: True
-  
-  1_layer_gru_64:
-    predictor_type: 'neural'  # Possible options are: 'neural', 'GP', 'ODE, 'ODE_TF'
-    model_name: 'GRU-6IN-64H1-5OUT-0'
-    path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-16/Models/'
+    model_name: 'GRU-6IN-32H1-32H2-5OUT-2'
+    path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-2/Models/'
     update_before_predicting: True
 
-  ODE_TF:
-    predictor_type: 'ODE_TF'
+  I_love_control_too:
+    predictor_type: 'ODE'
     model_name:
     intermediate_steps: 10
