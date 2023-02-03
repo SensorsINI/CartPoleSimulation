@@ -24,7 +24,7 @@ class default(cost_function_base):
         :param previous_input: previous control input, can be used to compute cost of changing control input
         :return: Tensor of [rollout, timestamp] over all rollouts and horizon timesteps
         """
-        (config,reloaded)=load_or_reload_config_if_modified(os.path.join("Control_Toolkit_ASF", "config_cost_functions.yml"),every=1)
+        (config,reloaded)=load_or_reload_config_if_modified(os.path.join("Control_Toolkit_ASF", "config_cost_functions.yml"),every=1,search_path=['CartPoleSimulation'])
         self.dd_weight = config["CartPole"]["default"]["dd_weight"]
         self.cc_weight = config["CartPole"]["default"]["cc_weight"]
         self.ep_weight = config["CartPole"]["default"]["ep_weight"]

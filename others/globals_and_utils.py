@@ -200,7 +200,7 @@ def load_config(filename: str) -> dict:
     return config
 
 
-def load_or_reload_config_if_modified(filepath:str, every:int=5, target_obj=None)->Tuple[Munch,Optional[dict]]:
+def load_or_reload_config_if_modified(filepath:str, every:int=5, target_obj=None, search_path:Optional[list]=None)->Tuple[Munch,Optional[dict]]:
     """
     Reloads a YAML config if the yaml file was modified since runtime started or since last reloaded.
     The initial call will store the config in a private dict to return on subsequent calls.
@@ -210,6 +210,7 @@ def load_or_reload_config_if_modified(filepath:str, every:int=5, target_obj=None
     :param filepath the relative path to file. Generate for call with e.g. os.path.join("Control_Toolkit_ASF", "config_cost_functions.yml")
     :param target_obj: an optional object into which the config is assigned for (possibly) use in tensorflow
     :param every: only check every this many times we are invoked
+    :param search_path: list of additional folders to search for the filepath, e.g. ['CartPoleSimulation'] (to handle invovation from another project). The relative path from cwd is always checked first.
 
     :returns: (config,changes)
         config: nested Munch of the original config if file has not been modified
@@ -229,8 +230,23 @@ def load_or_reload_config_if_modified(filepath:str, every:int=5, target_obj=None
     if filepath in load_or_reload_config_if_modified.cached_configs and counter>0 and counter%every!=0:
         return (load_or_reload_config_if_modified.cached_configs[filepath],None) # if not checking this time, return cached config
     try:
-        fp=Path(filepath)
-        mtime=fp.stat().st_mtime # get mod time
+        fp=None
+        mtime=None
+        if filepath in load_or_reload_config_if_modified.actual_path:
+            fp=Path(filepath)
+        else:
+            fp=Path(filepath)
+            if not fp.exists() and search_path:
+                for s in search_path:
+                    fp=Path(os.path.join(s,filepath))
+                    if fp.exists():
+                        filepath=fp.absolute()
+                        load_or_reload_config_if_modified.actual_path[filepath]=filepath
+                        break
+                if not fp.exists():
+                    raise FileNotFoundError(f'"{filepath}" does not exist on search path ".;{search_path}"; maybe path incorrect? os.getcwd()="{os.getcwd()}"')
+
+        mtime = fp.stat().st_mtime  # get modification time of config
 
         if ((not (filepath in load_or_reload_config_if_modified.cached_configs))) \
                 or ((filepath in load_or_reload_config_if_modified.cached_configs) and mtime > load_or_reload_config_if_modified.mtimes[filepath]):
@@ -267,6 +283,7 @@ load_or_reload_config_if_modified.cached_configs=dict()
 load_or_reload_config_if_modified.mtimes=dict()
 load_or_reload_config_if_modified.start_time=time.time()
 load_or_reload_config_if_modified.counter=dict()
+load_or_reload_config_if_modified.actual_path=dict()
 
 import numbers
 import re

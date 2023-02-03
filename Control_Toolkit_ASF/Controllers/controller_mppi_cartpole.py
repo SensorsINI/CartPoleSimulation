@@ -91,7 +91,6 @@ R = config_mppi_cartpole["R"]
 LBD = config_mppi_cartpole["LBD"]
 NU = config_mppi_cartpole["NU"]
 SQRTRHODTINV = config_mppi_cartpole["SQRTRHOINV"] * (1 / np.sqrt(dt))
-GAMMA = config_mppi_cartpole["GAMMA"]
 SAMPLING_TYPE = config_mppi_cartpole["SAMPLING_TYPE"]
 
 

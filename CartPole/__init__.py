@@ -23,9 +23,8 @@ from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.others.environment import EnvironmentBatched
 from Control_Toolkit.others.globals_and_utils import (
     get_available_controller_names, get_available_optimizer_names, get_controller_name, get_optimizer_name, import_controller_by_name)
-from others.globals_and_utils import MockSpace, create_rng, load_config
-from others.p_globals import (P_GLOBALS, J_fric, L, m_cart, M_fric, TrackHalfLength,
 from others.globals_and_utils import MockSpace, create_rng, load_config, load_or_reload_config_if_modified
+from others.logger import get_logger
 from others.p_globals import (CARTPOLE_PHYSICAL_CONSTANTS, J_fric, L, m_cart, M_fric, TrackHalfLength, cart_bounce_factor,
                               controlBias, controlDisturbance, export_globals,
                               g, k, m_pole, u_max, v_max)
@@ -43,6 +42,8 @@ from CartPole.load import get_full_paths_to_csvs, load_csv_recording
 from CartPole.noise_adder import NoiseAdder
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
+
+log=get_logger(__name__)
 
 # region Imported modules
 
@@ -910,8 +911,9 @@ class CartPole(EnvironmentBatched):
                 )
 
             else:
+                log.debug(f'configuring controller "{self.controller}"')
                 self.controller.configure()
-            
+
                 
         # Set the maximal allowed value of the slider - relevant only for GUI
         if self.controller_name == 'manual-stabilization':

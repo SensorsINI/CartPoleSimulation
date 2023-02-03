@@ -1,4 +1,4 @@
-cost_function_name_default: cartpole_dancer_cost
+cost_function_name_default: default
 # Default value is used if controller does not specify a cost_function_specification (leave empty)
 # Cost functions are grouped by environment name in a folder within Control_Toolkit_ASF.Cost_Functions
 # Check CartPoleSimulation/config.yml to learn more on how cost_functions are selected TODO I don't see any more information there, and which config.yml is this referring to?
@@ -31,12 +31,12 @@ CartPole:
     cc_weight: 1.0
     ccrc_weight: 1.0
     R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in optimizer config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
-  cartpole_dancer_cost: # values must be float or they are cast to int type, which might not work for some ops
+  cartpole_dancer_cost: # values must be explicitly float or scientific format if needed, since they are cast to int type if provided here as int, which might not work for some ops
     # the policy (dance step or move to control). It is trailed by an int to code the policy as an int for tensorflow XLA compiled code.
     # e.g. dance0 will create (in update_attributes call) policy='dance' and policy_number=0
     # this hack is to allow branching in XLA code that lacks string compare operator
     # see others\globals_and_utilities.py\update_attributes method
-    policy:  dance0  # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4
+    policy:  balance1  # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4
 
     # tobi cannot get conditional branch to work for following option in cartpole_dancer_cost.py
 #    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
