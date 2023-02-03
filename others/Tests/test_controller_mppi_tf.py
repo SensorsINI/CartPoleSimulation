@@ -1,5 +1,5 @@
 import numpy as np
-from Control_Toolkit.Controllers.controller_mpcport controller_mpc
+from Control_Toolkit.Controllers.controller_mpc import controller_mpc
 from others.globals_and_utils import MockSpace
 
 # speed test, which is activated if script is run directly and not as module
