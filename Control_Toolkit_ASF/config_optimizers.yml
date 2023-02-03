@@ -1,6 +1,6 @@
 cem-tf:
   seed: null                          # If null, random seed based on datetime is used
-  mpc_horizon: 35                       # steps
+  mpc_horizon: 40                       # steps
   cem_outer_it: 3                    #how many outer iterations to use
   cem_initial_action_stdev: 0.5
   num_rollouts: 200          #how many rollouts per outer cem iteration
@@ -10,7 +10,7 @@ cem-tf:
   warmup_iterations: 250
 cem-gmm-tf:
   seed: null                          # If null, random seed based on datetime is used
-  mpc_horizon: 35                       # steps
+  mpc_horizon: 40                       # steps
   cem_outer_it: 3                    #how many outer iterations to use
   num_rollouts: 200          #how many rollouts per outer cem iteration
   cem_stdev_min: 0.01
@@ -28,7 +28,7 @@ cem-naive-grad-tf:
   gradmax_clip: 10
 cem-grad-bharadhwaj-tf:
   seed: null                          # If null, random seed based on datetime is used
-  mpc_horizon: 35                       # steps
+  mpc_horizon: 50                       # steps
   learning_rate: 0.05
   adam_beta_1: 0.9
   adam_beta_2: 0.999
@@ -69,11 +69,12 @@ mppi-optimize-tf:
   LBD: 100.0                            # Cost parameter lambda
   NU: 1000.0                            # Exploration variance
   SQRTRHOINV: 0.02
+  GAMMA: 1.00                           # Future cost discount
   period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   optim_steps: 10
 dist-adam-resamp2-tf:
   seed: null                            # If null, random seed based on datetime is used
-  mpc_horizon: 35                       # steps
+  mpc_horizon: 40                       # steps
   period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   learning_rate: 0.05
   adam_beta_1: 0.9
@@ -82,7 +83,7 @@ dist-adam-resamp2-tf:
   gradmax_clip: 5
   rtol: 1.0e-3
   num_rollouts: 32
-  opt_keep_k_ratio: 0.25
+  opt_keep_k: 8
   outer_its: 2
   resamp_per: 10
   sample_stdev: 0.5
@@ -138,7 +139,7 @@ rpgd-me-param-tf:
   gradmax_clip: 10
   rtol: 1.0e-3
   num_rollouts: 32
-  opt_keep_k_ratio: 0.25
+  opt_keep_k: 0
   outer_its: 25
   resamp_per: 1
   sample_stdev: 0.5
@@ -146,7 +147,7 @@ rpgd-me-param-tf:
   warmup_iterations: 250
 rpgd-ml-tf:
   seed: null                            # If null, random seed based on datetime is used
-  mpc_horizon: 35                       # steps
+  mpc_horizon: 40                       # steps
   SAMPLING_DISTRIBUTION: uniform  # "normal" or "uniform"
   period_interpolation_inducing_points: 1                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   learning_rate: 0.01
@@ -157,7 +158,7 @@ rpgd-ml-tf:
   gradmax_clip: 10
   rtol: 1.0e-3
   num_rollouts: 32
-  opt_keep_k_ratio: 0.25
+  opt_keep_k: 8
   outer_its: 5
   resamp_per: 1
   sample_stdev: 0.5
@@ -165,7 +166,7 @@ rpgd-ml-tf:
   warmup_iterations: 250
 rpgd-particle-tf:
   seed: null                            # If null, random seed based on datetime is used
-  mpc_horizon: 35                       # steps
+  mpc_horizon: 40                       # steps
   period_interpolation_inducing_points: 1                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
   learning_rate: 0.01
   adam_beta_1: 0.9
@@ -174,7 +175,7 @@ rpgd-particle-tf:
   gradmax_clip: 10
   rtol: 1.0e-3
   num_rollouts: 32
-  opt_keep_k_ratio: 0.25
+  opt_keep_k: 8
   outer_its: 5
   resamp_per: 1
   sample_stdev: 0.5
@@ -191,6 +192,7 @@ mppi-var-tf:
   LBD_mc: 10.0                          # Cost parameter lambda
   SQRTRHOINV_mc: 0.002                  # Sampling variance
   NU_mc: 20.0                           # Exploration variance
+  GAMMA: 1.00                           # Future cost discount
   LR: 1000                              # Learning rate for adaption of variance, !!! Set to 0 to retrieve a mppi version in accordance with mppi paper
   STDEV_min: 0.01                       # Maximal variance for sampling
   STDEV_max: 10                         # Minimal sampling variance for sampling
@@ -204,8 +206,9 @@ mppi:
   LBD: 100.0                            # Cost parameter lambda
   NU: 1000.0                            # Exploration variance
   SQRTRHOINV: 0.03                      # Sampling variance
+  GAMMA: 1.00                           # Future cost discount
   period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
 random-action-tf:
   seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                      # steps
-  num_rollouts: 640
+  num_rollouts: 320

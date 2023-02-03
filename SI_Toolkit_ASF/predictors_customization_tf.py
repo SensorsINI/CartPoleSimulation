@@ -63,7 +63,7 @@ class predictor_output_augmentation_tf:
         indices_augmentation = []
         features_augmentation = []
 
-        if 'angle' not in outputs:
+        if 'angle' not in outputs and 'angle_sin' in outputs and 'angle_cos' in outputs:
             indices_augmentation.append(ANGLE_IDX)
             features_augmentation.append('angle')
         if 'angle_sin' not in outputs and 'angle' in outputs:

@@ -22,9 +22,9 @@ from Control_Toolkit.others.environment import EnvironmentBatched
 from Control_Toolkit.others.globals_and_utils import (
     get_available_controller_names, get_available_optimizer_names, get_controller_name, get_optimizer_name, import_controller_by_name)
 from others.globals_and_utils import MockSpace, create_rng, load_config
-from others.p_globals import (P_GLOBALS, J_fric, L, M, M_fric, TrackHalfLength,
+from others.p_globals import (P_GLOBALS, J_fric, L, m_cart, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, export_globals,
-                              g, k, m, u_max, v_max)
+                              g, k, m_pole, u_max, v_max)
 # Interpolate function to create smooth random track
 from scipy.interpolate import BPoly, interp1d
 # Run range() automatically adding progress bar in terminal
@@ -80,6 +80,9 @@ class CartPole(EnvironmentBatched):
     def __init__(self, initial_state=s0, path_to_experiment_recordings=None):
         self.config = config["cartpole"]
         self.rng_CartPole = create_rng(self.__class__.__name__, self.config["seed"])
+
+        self.time_L_last_change = None
+        self.start_changing_L = False
 
         if path_to_experiment_recordings is None:
             self.path_to_experiment_recordings = PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT
@@ -236,6 +239,9 @@ class CartPole(EnvironmentBatched):
         self.target_position = 0.0
         self.target_equilibrium = 1.0
 
+        self.change_target_equilibrium_every_x_second = np.inf
+        self.time_last_target_equilibrium_change = None
+
         # region Initialize CartPole in manual-stabilization mode
         self.set_controller(controller_name='manual-stabilization')
         # endregion
@@ -255,6 +261,8 @@ class CartPole(EnvironmentBatched):
 
         # Update target position depending on the mode of operation
         self.update_target_position()
+
+        self.update_target_equilibrium()
 
         # Calculate the next state
         self.cartpole_integration()
@@ -303,7 +311,7 @@ class CartPole(EnvironmentBatched):
         self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
 
     def cartpole_ode(self):
-        self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u)
+        self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)
 
     def Q2u(self):
         self.u = Q2u(self.Q)
@@ -323,6 +331,16 @@ class CartPole(EnvironmentBatched):
                 # This just fill the corresponding column in history with zeros
             else:
                 self.target_position = self.slider_value * TrackHalfLength  # Get target position from slider
+
+    def update_target_equilibrium(self):
+        if self.time_last_target_equilibrium_change is None:
+            self.time_last_target_equilibrium_change = self.time
+        elif self.target_equilibrium == -1 and (self.time-self.time_last_target_equilibrium_change) > self.change_target_equilibrium_every_x_second/4:
+            self.time_last_target_equilibrium_change = self.time
+            self.target_equilibrium = -1*self.target_equilibrium
+        elif self.target_equilibrium == 1 and (self.time-self.time_last_target_equilibrium_change) > self.change_target_equilibrium_every_x_second:
+            self.time_last_target_equilibrium_change = self.time
+            self.target_equilibrium = -1*self.target_equilibrium
 
     def block_pole_at_90_deg(self):
         if self.stop_at_90:
@@ -368,7 +386,9 @@ class CartPole(EnvironmentBatched):
                 # The target_position is not always meaningful
                 # If it is not meaningful all values in this column are set to 0
                 self.dict_history['target_position'].append(self.target_position)
+                self.dict_history['target_equilibrium'].append(self.target_equilibrium)
 
+                self.dict_history['L'].append(L)
                 try:
                     for key, value in self.controller.controller_data_for_csv.items():
                         self.dict_history[key].append(value[0])
@@ -396,6 +416,9 @@ class CartPole(EnvironmentBatched):
                                      'u': [self.u],
 
                                      'target_position': [self.target_position],
+                                     'target_equilibrium': [self.target_equilibrium],
+
+                                     'L': [L],
 
                                      }
 
@@ -731,6 +754,8 @@ class CartPole(EnvironmentBatched):
                                          end_random_target_position_at=None,
                                          turning_points=None,
                                          used_track_fraction=0.8,
+                                         target_equilibrium=None,
+                                         change_target_equilibrium_every_x_second=np.inf
                                          ):
 
         # Set time scales:
@@ -753,6 +778,8 @@ class CartPole(EnvironmentBatched):
         if end_random_target_position_at is not None: self.end_random_target_position_at = end_random_target_position_at
         if turning_points is not None: self.turning_points = turning_points
         if used_track_fraction is not None: self.used_track_fraction = used_track_fraction
+        if target_equilibrium is not None: self.target_equilibrium = target_equilibrium
+        if change_target_equilibrium_every_x_second is not None: self.change_target_equilibrium_every_x_second = change_target_equilibrium_every_x_second
 
         self.Generate_Random_Trace_Function()
         self.use_pregenerated_target_position = 1
@@ -908,8 +935,8 @@ class CartPole(EnvironmentBatched):
             pass
 
         # reset global variables
-        global k, M, m, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
-        k[...], M[...], m[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
+        global k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
+        k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
 
         self.time = 0.0
         if reset_mode == 0:  # Don't change it
@@ -977,6 +1004,9 @@ class CartPole(EnvironmentBatched):
                                  'u': [self.u],
 
                                  'target_position': [self.target_position],
+                                 'target_equilibrium': [self.target_equilibrium],
+
+                                 'L': [L],
 
                                  }
             try:

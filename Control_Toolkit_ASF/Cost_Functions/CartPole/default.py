@@ -65,9 +65,15 @@ class default(cost_function_base):
         )
         return self.lib.reshape(terminal_cost, (-1, 1))
 
-    # cost of changing control to fast
+    # cost of changing control too fast
     def _control_change_rate_cost(self, u, u_prev):
-        """Compute penalty of control jerk, i.e. difference to previous control input"""
+        """Compute penalty of control jerk, i.e. difference to previous control input
+
+        :poram u: the current control input (cart acceleration in dimensionless scale)
+        :param u_prev: the previous timesteps control input
+
+        :returns: the cost of changing control
+        """
         u_prev_vec = self.lib.concat(
             (self.lib.ones((u.shape[0], 1, u.shape[2])) * u_prev, u[:, :-1, :]), 1
         )

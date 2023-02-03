@@ -93,7 +93,7 @@ def Q2u_tf(Q):
             + controlBias
         ),  # Q is drive -1:1 range, add noise on control
         tf.float32
-    )   
+    )
 
     return u
 
@@ -110,7 +110,6 @@ def Q2u_tf(Q):
 #                               tf.TensorSpec(shape=[], dtype=tf.float32), tf.TensorSpec(shape=[], dtype=tf.float32),
 #                               tf.TensorSpec(shape=[], dtype=tf.float32), tf.TensorSpec(shape=[], dtype=tf.float32),
 #                               tf.TensorSpec(shape=[], dtype=tf.float32), tf.TensorSpec(shape=[], dtype=tf.float32)])
-
 def _cartpole_fine_integration_tf(angle, angleD,
                                   angle_cos, angle_sin,
                                   position, positionD,

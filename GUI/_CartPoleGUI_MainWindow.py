@@ -572,7 +572,7 @@ class MainWindow(QMainWindow):
 
                 # Terminate thread if random experiment reached its maximal length
                 if (
-                        self.CartPoleInstance.use_pregenerated_target_position
+                        (self.CartPoleInstance.use_pregenerated_target_position is True)
                         and
                         (self.CartPoleInstance.time >= self.CartPoleInstance.t_max_pre)
                 ):
@@ -618,18 +618,30 @@ class MainWindow(QMainWindow):
                 line = line[0]
                 if line[:len('# Controller: ')] == '# Controller: ':
                     controller_set = self.CartPoleInstance.set_controller(line[len('# Controller: '):].rstrip("\n"))
-                    if controller_set:
-                        self.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
-                    else:
-                        self.rbs_controllers[1].setChecked(True) # Set first, but not manual stabilization
-                elif line[:len('# Optimizer: ')] == '# Optimizer: ':
-                    optimizer_set = self.CartPoleInstance.set_optimizer(line[len('# Optimizer: '):].rstrip("\n"))
-                    if optimizer_set:
-                        self.rbs_optimizers[self.CartPoleInstance.optimizer_idx].setChecked(True)
-                    else:
-                        self.rbs_optimizers[1].setChecked(True)
-                    self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)    
-                    break
+                    continue
+                elif not controller_set:
+                    continue
+                else:
+                    pass
+
+                if line[:len('# Optimizer MPC: ')] == '# Optimizer MPC: ':
+                    optimizer_set = self.CartPoleInstance.set_optimizer(line[len('# Optimizer MPC: '):].rstrip("\n"))
+                elif controller_set:
+                    optimizer_set = ''
+                else:
+                    continue
+
+
+                if controller_set:
+                    self.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
+                else:
+                    self.rbs_controllers[1].setChecked(True) # Set first, but not manual stabilization
+                if optimizer_set:
+                    self.rbs_optimizers[self.CartPoleInstance.optimizer_idx].setChecked(True)
+                else:
+                    self.rbs_optimizers[1].setChecked(True)
+                self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)
+                break
 
         # Augment the experiment history with simulation time step size
         dt = []
@@ -1063,7 +1075,8 @@ class MainWindow(QMainWindow):
             self.threadpool.start(worker)
 
         else:
-            self.terminate_experiment = True
+            if self.PhysicalCartPoleDriverInstance:
+                self.PhysicalCartPoleDriverInstance.terminate_experiment = True
 
 
         self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
