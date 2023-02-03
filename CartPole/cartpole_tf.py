@@ -86,11 +86,14 @@ def Q2u_tf(Q):
 
     In future there might be implemented here a more sophisticated model of a motor driving CartPole
     """
-    u = tf.convert_to_tensor(u_max, dtype=tf.float32) * (
-        Q
-        + tf.convert_to_tensor(controlDisturbance * rng.standard_normal(size=Q.shape), dtype=tf.float32)
-        + tf.convert_to_tensor(controlBias, dtype=tf.float32)
-    )  # Q is drive -1:1 range, add noise on control
+    u = tf.convert_to_tensor(
+        u_max * (
+            Q
+            + controlDisturbance * rng.standard_normal(size=Q.shape)
+            + controlBias
+        ),  # Q is drive -1:1 range, add noise on control
+        tf.float32
+    )
 
     return u
 
