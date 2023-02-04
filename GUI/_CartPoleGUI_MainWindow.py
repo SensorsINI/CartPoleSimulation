@@ -572,7 +572,7 @@ class MainWindow(QMainWindow):
 
                 # Terminate thread if random experiment reached its maximal length
                 if (
-                        (self.CartPoleInstance.use_pregenerated_target_position is True)
+                        self.CartPoleInstance.use_pregenerated_target_position
                         and
                         (self.CartPoleInstance.time >= self.CartPoleInstance.t_max_pre)
                 ):
