@@ -23,8 +23,8 @@ def _noise_derivative(dt):
 sigma_Q = 0.1
 
 # Trial to calculate the std from physical cartpole
-# ANGLE_ADC_RANGE = 4095  # Range of angle values #
-# ANGLE_NORMALIZATION_FACTOR = 2 * np.pi / ANGLE_ADC_RANGE
+# ANGLE_360_DEG_IN_ADC_UNITS = 4271.34  # Range of angle values #
+# ANGLE_NORMALIZATION_FACTOR = 2 * np.pi / ANGLE_360_DEG_IN_ADC_UNITS
 #
 # TRACK_LENGTH = 0.396  # Total usable track length in meters
 # POSITION_ENCODER_RANGE = 4660  # This is an empirical approximation
