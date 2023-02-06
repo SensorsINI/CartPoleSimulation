@@ -1,6 +1,6 @@
 from time import sleep
 
-from others.globals_and_utils import load_config, get_logger
+from others.globals_and_utils import load_config
 from Control_Toolkit.others.globals_and_utils import import_controller_by_name
 
 from GymlikeCartPole.CartPoleEnv_LTC import CartPoleEnv_LTC
@@ -11,7 +11,8 @@ Controller = import_controller_by_name(controller_full_name)
 
 config = load_config("config.yml")
 
-logger = get_logger(__name__)
+from get_logger import get_logger
+log = get_logger(__name__)
 
 env = CartPoleEnv_LTC()
 controller = Controller(env.CartPoleInstance, **{**config["controller"][controller_name], **{"num_control_inputs": config["cartpole"]["num_control_inputs"]}})
@@ -23,7 +24,7 @@ for k in range(1000):
     action = controller.step(state)
     # action = env.action_space.sample()  # take a random action
     state, reward, done, _ = env.step(action)
-    logger.info(f"Iteration {k}: Reward = {reward}")
+    log.info(f"Iteration {k}: Reward = {reward}")
     if done:
         break
 env.close()

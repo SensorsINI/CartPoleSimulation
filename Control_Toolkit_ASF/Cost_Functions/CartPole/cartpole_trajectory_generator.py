@@ -5,7 +5,6 @@ import numpy as np
 from CartPole import state_utilities
 from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.Cost_Functions import cost_function_base
-from Control_Toolkit.others.globals_and_utils import get_logger
 from Control_Toolkit_ASF.Cost_Functions.CartPole.cartpole_dancer import cartpole_dancer
 from GUI import gui_default_params, CartPoleMainWindow
 from SI_Toolkit.computation_library import TensorType
@@ -13,7 +12,9 @@ import tensorflow as tf
 import matplotlib
 import matplotlib.pyplot as plt
 
-log=get_logger(__name__)
+from get_logger import get_logger
+log = get_logger(__name__)
+
 class cartpole_trajectory_generator:
 
     def __init__(self):

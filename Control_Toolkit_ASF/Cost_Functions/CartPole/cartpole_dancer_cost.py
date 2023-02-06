@@ -8,7 +8,6 @@ from yaml import safe_load
 
 from CartPole import state_utilities
 from Control_Toolkit.Controllers import template_controller
-from Control_Toolkit.others.globals_and_utils import get_logger
 import Control_Toolkit_ASF.Cost_Functions.CartPole.cartpole_trajectory_generator
 from GUI import gui_default_params
 from SI_Toolkit.computation_library import TensorType, ComputationLibrary
@@ -19,6 +18,7 @@ from others.globals_and_utils import load_config, load_or_reload_config_if_modif
 from CartPole.cartpole_model import TrackHalfLength, L, m_pole
 from CartPole.state_utilities import NUM_STATES, ANGLE_IDX, POSITION_IDX, POSITIOND_IDX, ANGLED_IDX
 
+from get_logger import get_logger
 log = get_logger(__name__)
 
 
@@ -82,7 +82,7 @@ class cartpole_dancer_cost(cost_function_base):
         # angle=states[:, :, ANGLE_IDX]
         # angleD=states[:,:,ANGLED_IDX]
 
-        gui_target_equilibrium = self.target_equilibrium  # GUI switch +1 or -1 to make pole target up or down position
+        gui_target_equilibrium = self.target_equilibrium  # GUI switch +1 or -1 to make pole target up or down position, set by previous call that update_attributes this field
 
         input_shape = self.lib.shape(states)
         num_rollouts = input_shape[0]
