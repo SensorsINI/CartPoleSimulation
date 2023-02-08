@@ -9,10 +9,8 @@ from Control_Toolkit_ASF.Cost_Functions.CartPole.cartpole_dancer import cartpole
 from GUI import gui_default_params, CartPoleMainWindow
 from SI_Toolkit.computation_library import TensorType
 import tensorflow as tf
-import matplotlib
-import matplotlib.pyplot as plt
 
-from get_logger import get_logger
+from Control_Toolkit.others.get_logger import get_logger
 log = get_logger(__name__)
 
 class cartpole_trajectory_generator:

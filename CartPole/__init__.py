@@ -24,9 +24,9 @@ from Control_Toolkit.others.environment import EnvironmentBatched
 from Control_Toolkit.others.globals_and_utils import (
     get_available_controller_names, get_available_optimizer_names, get_controller_name, get_optimizer_name, import_controller_by_name)
 from others.globals_and_utils import MockSpace, create_rng, load_config
-from others.p_globals import (export_globals)
 from others.p_globals import (J_fric, L, m_cart, M_fric, TrackHalfLength,
-                              controlBias, controlDisturbance, g, k, m_pole, u_max, v_max,cart_bounce_factor)
+                              controlBias, controlDisturbance, g, k, m_pole, u_max, v_max, cart_bounce_factor,
+                              export_globals)
 # Interpolate function to create smooth random track
 from scipy.interpolate import BPoly, interp1d
 # Run range() automatically adding progress bar in terminal
@@ -42,7 +42,7 @@ from CartPole.noise_adder import NoiseAdder
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 
-from get_logger import get_logger
+from Control_Toolkit.others.get_logger import get_logger
 log = get_logger(__name__)
 
 # region Imported modules

@@ -9,9 +9,9 @@ from run_data_generator import random_experiment_setter
 
 import numpy as np
 
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
-from get_logger import get_logger
+from Control_Toolkit.others.get_logger import get_logger
 log = get_logger(__name__)
 
 # FIXME: Set reset properly

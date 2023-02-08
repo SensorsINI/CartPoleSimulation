@@ -11,7 +11,7 @@ Controller = import_controller_by_name(controller_full_name)
 
 config = load_config("config.yml")
 
-from get_logger import get_logger
+from Control_Toolkit.others.get_logger import get_logger
 log = get_logger(__name__)
 
 env = CartPoleEnv_LTC()

@@ -5,7 +5,6 @@
 import logging
 import math
 import os
-import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -18,11 +17,10 @@ import warnings
 warnings.simplefilter('ignore', yaml.error.UnsafeLoaderWarning)
 # from generallibrary import print_link, print_link_to_obj # for logging links to source code in logging output for pycharm clicking, see https://stackoverflow.com/questions/26300594/print-code-link-into-pycharms-console
 from munch import Munch, DefaultMunch
-from numba import jit
 
-from SI_Toolkit.computation_library import ComputationLibrary, TensorType
+from SI_Toolkit.computation_library import TensorType
 
-from get_logger import get_logger
+from Control_Toolkit.others.get_logger import get_logger
 log = get_logger(__name__)
 
 
@@ -231,6 +229,22 @@ def load_or_reload_config_if_modified(filepath:str, every:int=5, target_obj=None
     if filepath in load_or_reload_config_if_modified.cached_configs and counter>0 and counter%every!=0:
         return (load_or_reload_config_if_modified.cached_configs[filepath],None) # if not checking this time, return cached config
     try:
+        fp=None
+        mtime=None
+        if filepath in load_or_reload_config_if_modified.actual_path:
+            fp=Path(filepath)
+            mtime=fp.stat().st_mtime # get mod time
+        else:
+            fp=Path(filepath)
+            if not fp.exists() and search_path:
+                for s in search_path:
+                    fp=Path(os.path.join(s,filepath))
+                    if fp.exists():
+                        filepath=fp.absolute()
+                        load_or_reload_config_if_modified.actual_path[filepath]=filepath
+                        break
+                if not fp.exists():
+                    raise FileNotFoundError(f'"{filepath}" does not exist on search path ".;{search_path}"; maybe path incorrect? os.getcwd()="{os.getcwd()}"')
         fp=None
         mtime=None
         if filepath in load_or_reload_config_if_modified.actual_path:

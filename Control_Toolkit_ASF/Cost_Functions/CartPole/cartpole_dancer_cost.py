@@ -1,24 +1,14 @@
-import os
-
 import numpy as np
-import setuptools
-import tensorflow
-from torch import TensorType
-from yaml import safe_load
 
 from CartPole import state_utilities
 from Control_Toolkit.Controllers import template_controller
-import Control_Toolkit_ASF.Cost_Functions.CartPole.cartpole_trajectory_generator
-from GUI import gui_default_params
 from SI_Toolkit.computation_library import TensorType, ComputationLibrary
 from Control_Toolkit.Cost_Functions import cost_function_base
 
-from others.globals_and_utils import load_config, load_or_reload_config_if_modified
-
 from CartPole.cartpole_model import TrackHalfLength, L, m_pole
-from CartPole.state_utilities import NUM_STATES, ANGLE_IDX, POSITION_IDX, POSITIOND_IDX, ANGLED_IDX
+from CartPole.state_utilities import NUM_STATES
 
-from get_logger import get_logger
+from Control_Toolkit.others.get_logger import get_logger
 log = get_logger(__name__)
 
 
@@ -28,8 +18,6 @@ log = get_logger(__name__)
 # 
 # weights=config.CartPole.cartpole_dancer_cost
 # log.info(f'starting MPC cartpole trajectory cost weights={weights}')  # only runs once
-
-import tensorflow as tf
 
 
 class cartpole_dancer_cost(cost_function_base):
