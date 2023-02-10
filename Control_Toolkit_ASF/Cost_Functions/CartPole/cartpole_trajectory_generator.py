@@ -39,10 +39,12 @@ class cartpole_trajectory_generator:
         """
         self.controller=controller
         self.cost_function=cost_function
-        dt = gui_default_params.controller_update_interval
+        dt = gui_default_params.controller_update_interval # TODO fix for physical-cartpole which has CONTROL_PERIOD_MS in globals.py
+        # dt=CartPoleMainWindow.CartPoleMainWindowInstance.dt_simulation # todo figure out way to get from single place
         mpc_horizon = controller.optimizer.mpc_horizon
         gui_target_position = cost_function.target_position  # GUI slider position
         gui_target_equilibrium = cost_function.target_equilibrium  # GUI switch +1 or -1 to make pole target up or down position
+        # log.debug(f'dt={dt:.3f} mpc_horizon={mpc_horizon}')
 
         traj = np.full(shape=(state_utilities.NUM_STATES, mpc_horizon),
                        fill_value=np.nan)  # use numpy not tf, too hard to work with immutable tensors

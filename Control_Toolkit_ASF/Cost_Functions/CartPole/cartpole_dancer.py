@@ -37,8 +37,9 @@ class cartpole_dancer:
         """ Constructs the dance reader, opening the CSV file
 
         """
-        self.song_file_name = None
-        self.song_player = None
+        self.started = False
+        self.song_file_name:str = None
+        self.song_player:vlc.MediaPlayer = None
         self.row_iterator = None
         self.reader = None
         self.csvfile = None
@@ -70,16 +71,24 @@ class cartpole_dancer:
         self.iteration_counter=0 # to reduce some updates
 
     def reload_csv_and_song(self):
+        physical_cartpole_path='CartPoleSimulation' # for checking for media in CartPoleSimulation when running from physical-cartpole
         self.csv_file_name = bytes.decode(self.cartpole_trajectory_generator.cost_function.dance_csv_file.numpy())
         if not os.path.exists(self.csv_file_name):
-            raise FileNotFoundError(f'CSV file for dance {self.cartpole_trajectory_generator.cost_function.dance_song_file} not found, cannot play music')
+            self.csv_file_name=os.path.join(physical_cartpole_path,self.csv_file_name)
+            if not os.path.exists(self.csv_file_name):
+                raise FileNotFoundError(f'CSV file for dance {self.cartpole_trajectory_generator.cost_function.dance_song_file} not found, cannot play music')
         self.csv_file_path = Path(self.csv_file_name)
         self.mtime = self.csv_file_path.stat().st_mtime
 
         self.song_file_name=bytes.decode(self.cartpole_trajectory_generator.cost_function.dance_song_file.numpy())
         if not os.path.exists(self.song_file_name):
-            raise FileNotFoundError(f'mp3/wave file for dance {self.song_file_name} not found, cannot play music')
+            self.song_file_name=os.path.join(physical_cartpole_path,self.song_file_name)
+            if not os.path.exists(self.song_file_name):
+                raise FileNotFoundError(f'mp3/wave file for dance {self.song_file_name} not found, cannot play music')
+        if self.song_player:
+            self.song_player.release()
         self.song_player:vlc.MediaPlayer = vlc.MediaPlayer(self.song_file_name)
+        log.debug(f'loaded CSV {self.csv_file_name} and song {self.song_file_name}')
 
         if self.song_player.set_rate(self.cartpole_trajectory_generator.cost_function.dance_song_playback_rate)==-1:
             log.warning('could not set playback rate for song')
@@ -120,10 +129,11 @@ class cartpole_dancer:
         self.reload_csv_and_song()
         self.time_step_started = float(time)
         self.time_dance_started = float(time)
-        self.started = True
-        self.paused=False
-        if CartPoleMainWindow.CartPoleGuiSimulationState=='running':
-            self.song_player.play() # only play if simulator running
+        if ((CartPoleMainWindow.CartPoleMainWindowInstance) and CartPoleMainWindow.CartPoleGuiSimulationState=='running')\
+                or self.is_physical_cartpole_running_and_control_enabled():
+                self.song_player.play() # only play if simulator running or running physical cartpole
+                self.started = True
+                self.paused=False
 
     def stop(self)->None:
         self.song_player.stop()
@@ -233,3 +243,16 @@ class cartpole_dancer:
             return f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m freq={self.freq:.1f}Hz'
         else:
             return f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m'
+
+    def is_physical_cartpole_running_and_control_enabled(self):
+        """ super hack to determine if we are running physical cartpole and control is turned on"""
+        if 'DriverFunctions' in sys.modules:  # if this module exists in sys.modules, we can deduce that physical-cartpole is running
+            try:
+                physical_cartpole_instance = sys.modules[
+                    'DriverFunctions'].PhysicalCartPoleDriver.PhysicalCartPoleDriver.PhysicalCartPoleDriverInstance
+                if getattr(physical_cartpole_instance, 'controlEnabled') == True:
+                    log.debug(f'physical cartpole present and control enabled')
+                    return True
+            except Exception as e:
+                log.debug(f'Could not determine if control is enabled: {e}')
+                return False

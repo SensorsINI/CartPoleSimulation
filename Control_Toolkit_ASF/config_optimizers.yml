@@ -207,8 +207,8 @@ mppi:
   num_rollouts: 700                    # Number of Monte Carlo samples
   cc_weight: 1.0
   R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in cost functions config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
-  LBD: 1000.0                            # Cost parameter lambda
-  NU: 100.0                            # Exploration variance
+  LBD: 100.0                            # Cost parameter lambda
+  NU: 1000.0                            # Exploration variance
   SQRTRHOINV: 0.03                      # Sampling variance
   period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
 random-action-tf:
