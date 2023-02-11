@@ -38,7 +38,7 @@ class cartpole_dancer_cost(cost_function_base):
          """
         super().__init__(controller, ComputationLib)
         self.new_target_trajectory = None
-        dist_metric = 'abs'
+        dist_metric = 'mse'
         if dist_metric == 'rmse':
             self.dist = lambda x: self.lib.sqrt(self.lib.pow(x, 2))
         elif dist_metric == 'mse':

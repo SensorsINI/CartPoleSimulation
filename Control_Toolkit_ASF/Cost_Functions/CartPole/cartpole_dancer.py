@@ -131,17 +131,20 @@ class cartpole_dancer:
         self.time_dance_started = float(time)
         if ((CartPoleMainWindow.CartPoleMainWindowInstance) and CartPoleMainWindow.CartPoleGuiSimulationState=='running')\
                 or self.is_physical_cartpole_running_and_control_enabled():
-                self.song_player.play() # only play if simulator running or running physical cartpole
+                if self.song_player:
+                    self.song_player.play() # only play if simulator running or running physical cartpole
                 self.started = True
                 self.paused=False
 
     def stop(self)->None:
-        self.song_player.stop()
+        if self.song_player:
+            self.song_player.stop()
         self.started=False
 
     def pause(self)->None:
         self.paused=True
-        self.song_player.pause()
+        if self.song_player:
+            self.song_player.pause()
 
     def process_signal(self, signal:str):
         """ Process signal from CartPoleMainWindow

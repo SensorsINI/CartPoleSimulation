@@ -25,6 +25,11 @@ class cartpole_trajectory_generator:
         self.cost_function=None # set by each generate_trajectory, used by contained classes, e.g. cartpole_dancer, to access config values
         self.cartpole_dancer=cartpole_dancer()
 
+    def reset(self):
+        """ stops dance if it is going
+        """
+        self.cartpole_dancer.stop()
+
     def generate_cartpole_trajectory(self, time: float, state: np.ndarray, controller:template_controller, cost_function: cost_function_base) -> TensorType:
         """ Computes the desired future state trajectory at this time.
 
@@ -136,8 +141,8 @@ class cartpole_trajectory_generator:
             traj[state_utilities.ANGLE_COS_IDX, :] = np.cos(target_angle)
             # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(target_angle)
             # traj[state_utilities.ANGLE_IDX, :] = target_angle
-            # traj[state_utilities.ANGLED_IDX, :] = 0
-            # traj[state_utilities.POSITIOND_IDX, :] = 0
+            traj[state_utilities.ANGLED_IDX, :] = 0
+            traj[state_utilities.POSITIOND_IDX, :] = 0
         elif policy=='shimmy':  # cart follows a desired cart position shimmy while keeping pole up or down
             # shimmy is an (optional) ramp from freq to freq2 and amp to amp2
             up_down=1
@@ -186,7 +191,7 @@ class cartpole_trajectory_generator:
             traj[state_utilities.ANGLE_COS_IDX, :] = np.cos(target_angle)
             # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(target_angle)
             # traj[state_utilities.ANGLE_IDX, :] = target_angle
-            # traj[state_utilities.ANGLED_IDX, :] = 0
+            traj[state_utilities.ANGLED_IDX, :] = 0
             traj[state_utilities.POSITIOND_IDX, :] = cartpos_d
         elif policy=='cartonly':  # cart follows the trajectory, pole ignored
             per = 1./cost_function.cartonly_freq_hz  # seconds
