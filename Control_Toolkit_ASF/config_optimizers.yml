@@ -51,7 +51,6 @@ gradient-tf:
   rtol: 1.0e-3
   gradient_steps: 5
   num_rollouts: 40
-  initial_action_stdev: 0.5
   gradmax_clip: 5
   warmup: false
   warmup_iterations: 250
