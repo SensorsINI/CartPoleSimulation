@@ -3,6 +3,8 @@ import csv
 
 import os
 import glob
+from typing import Optional
+
 import pandas as pd
 
 def get_full_paths_to_csvs(default_locations='', csv_names=None):
@@ -87,7 +89,12 @@ def get_full_paths_to_csvs(default_locations='', csv_names=None):
 
 
 # load csv file with experiment recording (e.g. for replay)
-def load_csv_recording(file_path):
+def load_csv_recording(file_path:str)->pd.DataFrame:
+    """ Loads the recording CSV file
+    :param file_path: path to CSV including full filename with suffix
+
+    :returns: False if file not found or pd.DataFrame if found
+    """
     if isinstance(file_path, list):
         file_path = file_path[0]
 

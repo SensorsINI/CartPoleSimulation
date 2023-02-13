@@ -498,6 +498,11 @@ class CartPole(EnvironmentBatched):
 
     # This method saves the dictionary keeping the history of simulation to a .csv file
     def save_history_csv(self, csv_name=None, mode='init', length_of_experiment='unknown'):
+        """ Saves history of cartpole state and control
+        :param csv_name: the filename base, .csv is appended if it is not there. self.path_to_experiment_recordings is prepended for path
+        :param mode: the mode for saving, default is 'init' which makes the timestamped folder etc TODO what are these modes???????
+        :param length_of_experiment: the duration of this experiment in seconds, written to header of CSV
+        """
 
         if mode == 'init':
 
