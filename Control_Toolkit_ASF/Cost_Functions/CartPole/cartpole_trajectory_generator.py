@@ -1,3 +1,4 @@
+import time
 from pydoc import text
 
 import numpy as np
@@ -5,15 +6,23 @@ import numpy as np
 from CartPole import state_utilities
 from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.Cost_Functions import cost_function_base
+from CartPole import is_physical_cartpole_running_and_control_enabled
 from Control_Toolkit_ASF.Cost_Functions.CartPole.cartpole_dancer import cartpole_dancer
 from GUI import gui_default_params, CartPoleMainWindow
 from SI_Toolkit.computation_library import TensorType
 import tensorflow as tf
 
 from Control_Toolkit.others.get_logger import get_logger
+from others.globals_and_utils import update_attributes
+
 log = get_logger(__name__)
 
+
+
 class cartpole_trajectory_generator:
+
+    POLICIES=('balance','spin','shimmy','cartonly')
+    POLICIES_NUMBERED=('balance0','spin1','shimmy2','cartonly3') # for tensorflow scalar BS
 
     def __init__(self):
         self._prev_policy=None
@@ -24,6 +33,9 @@ class cartpole_trajectory_generator:
         self.controller=None
         self.cost_function=None # set by each generate_trajectory, used by contained classes, e.g. cartpole_dancer, to access config values
         self.cartpole_dancer=cartpole_dancer()
+        self.traj:np.ndarray=None # stores the latest trajectory, for later reference, e.g. for measuring model mismatch
+        self.start_time=0 # we cannot determine if we are running physical cartpole with this method since control is not running at start time.time() if is_physical_cartpole_running_and_control_enabled() else 0 # subtracted from all times for running physical cartpole to avoid numerical overflow
+        # log.debug(f'self.start_time={self.start_time:.1f}s')
 
     def reset(self):
         """ stops dance if it is going
@@ -39,7 +51,8 @@ class cartpole_trajectory_generator:
         :param state: the current state of the cartpole as 1d vector
 
         :returns: the target state trajectory of cartpole.
-        It is an np.ndarray[states,timesteps] with NaN as at least first entries of each state for don't care states, and otherwise the desired future state values.
+        It is np.ndarray[states,timesteps] with NaN as at least first entries of each state for don't care states, and otherwise the desired future state values.
+        The state components are ordered as in CartPole.state_utilities.STATE_VARIABLES
 
         """
         self.controller=controller
@@ -50,6 +63,7 @@ class cartpole_trajectory_generator:
         gui_target_position = cost_function.target_position  # GUI slider position
         gui_target_equilibrium = cost_function.target_equilibrium  # GUI switch +1 or -1 to make pole target up or down position
         # log.debug(f'dt={dt:.3f} mpc_horizon={mpc_horizon}')
+        time=time-self.start_time # account for 1970's time returned when running physical-cartpol
 
         traj = np.full(shape=(state_utilities.NUM_STATES, mpc_horizon),
                        fill_value=np.nan)  # use numpy not tf, too hard to work with immutable tensors
@@ -199,44 +213,79 @@ class cartpole_trajectory_generator:
             horizon_endtime = time + mpc_horizon * dt
             times = np.linspace(time, horizon_endtime, num=mpc_horizon)
             from scipy.signal import sawtooth
-            cartpos = amp * sawtooth((2 * np.pi / per) * times,
-                                     width=cost_function.cartonly_duty_cycle)  # width=.5 makes triangle https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.sawtooth.html
+            # sawtooth is out for now to avoid sharp turns at ends
+            # cartpos = amp * sawtooth((2 * np.pi / per) * times, width=cost_function.cartonly_duty_cycle)  # width=.5 makes triangle https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.sawtooth.html
+            cartpos = amp * np.sin((2 * np.pi / per) * times)  # width=.5 makes triangle https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.sawtooth.html
             cartvel = np.gradient(cartpos, dt)
-            traj[state_utilities.POSITION_IDX] = gui_target_position + cartpos
+            cartpos_vector = gui_target_position + cartpos
+            traj[state_utilities.POSITION_IDX] = cartpos_vector
             # target_angle=np.pi * (1-gui_target_equilibrium)/2 # either 0 for up and pi for down
-            # traj[state_utilities.ANGLE_COS_IDX, :] = np.cos(target_angle)
+            # traj[state_utilities.ANGLE_COS_IDX, :] = -1 # we must include some pole cost or else the pole can start to spin
             # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(target_angle)
             # traj[state_utilities.ANGLE_IDX, :] = target_angle
-            # traj[state_utilities.ANGLED_IDX, :] = 0
+            traj[state_utilities.ANGLED_IDX, :] = 0 # we must include some pole cost or else the pole can start to spin
             traj[state_utilities.POSITIOND_IDX, :] = cartvel
+            print(f'\rCARTPOS: time:{time:.1f}s gui_target_position: {gui_target_position*100:.1f}cm target: {cartpos_vector[0]*100:.1f}cm \033[K',end='') # magic string to go to start of line
         else:
             log.error(f'cost policy "{policy}" is unknown')
 
-        self.set_status_text(time,state,cost_function)
+        self.set_gui_status_text(time, state, cost_function) # update CartPoleSimulation GUI status line (if it exists)
+        self.traj=traj
         return traj
 
-    def set_status_text(self, time: float, state: np.ndarray, cost_function: cost_function_base) -> None:
-        policy:str = cost_function.policy
-        if policy=='dance':
-            return # status of cartpole GUI set by dancer
-        gui_target_position = float(cost_function.target_position)  # GUI slider position
-        gui_target_equilibrium = float(cost_function.target_equilibrium)  # GUI switch +1 or -1 to make pole target up or down position
-
-        if policy=='balance':
-            dir=self.decode_string(cost_function.balance_dir)
-            s= f'Policy: balance/{dir} pos={gui_target_position:.1f}m'
-        elif policy=='spin':
-            dir=self.decode_string(cost_function.spin_dir)
-            s= f'Policy: spin/{dir}*up/down pos={gui_target_position:.1f}m'
-        elif policy=='shimmy':
-            s= f'Policy: shimmy pos={gui_target_position:.1f}m freq={float(cost_function.shimmy_freq_hz):.1f}Hz amp={float(cost_function.shimmy_amp):.1f}Hz'
-        elif policy=='cartonly':
-            s= f'Policy: cartonly pos={gui_target_position:.1f}m freq={float(cost_function.cartonly_freq_hz):.1f}Hz amp={float(cost_function.cartonly_amp):.1f}Hz'
-        else:
-            s= f'unknown/not implemented string'
-
+    def set_gui_status_text(self, time: float, state: np.ndarray, cost_function: cost_function_base) -> None:
+        s = self.get_status_string(time, state, cost_function)
         CartPoleMainWindow.set_status_text(s)
 
+    def get_status_string(self, time, state, cost_function):
+        """ Returns a string describing current objective trajectory or control target"""
+        policy: str = cost_function.policy
+        if policy == 'dance':
+            return  # status of cartpole GUI set by dancer
+        gui_target_position = float(cost_function.target_position)  # GUI slider position
+        gui_target_equilibrium = float(
+            cost_function.target_equilibrium)  # GUI switch +1 or -1 to make pole target up or down position
+
+        if policy == 'balance':
+            dir = self.decode_string(cost_function.balance_dir)
+            s = f'Policy: balance/{dir} pos={gui_target_position:.1f}m'
+        elif policy == 'spin':
+            dir = self.decode_string(cost_function.spin_dir)
+            s = f'Policy: spin/{dir}*up/down pos={gui_target_position:.1f}m'
+        elif policy == 'shimmy':
+            s = f'Policy: shimmy pos={gui_target_position:.1f}m freq={float(cost_function.shimmy_freq_hz):.1f}Hz amp={float(cost_function.shimmy_amp):.1f}Hz'
+        elif policy == 'cartonly':
+            s = f'Policy: cartonly pos={gui_target_position:.1f}m freq={float(cost_function.cartonly_freq_hz):.1f}Hz amp={float(cost_function.cartonly_amp):.1f}Hz'
+        else:
+            s = f'unknown/not implemented string'
+        return s
+
+
     def decode_string(self,tfstring:tf.Variable):
-        if isinstance(tfstring,str): return text.encode().decode('utf-8')
+        """ Decodes tensorflow string to unicode python str.
+        :param tfstring: the tf.Variable with dtype 'string'.
+
+        :returns: If tfstring is tf.Variable, returns tfstring.numpy().decode('utf-8'). If tfstring is already str, returns result of tfstring.encode().decode('utf-8')
+        """
+        if isinstance(tfstring,str): return tfstring.encode().decode('utf-8')
         return tfstring.numpy().decode('utf-8')
+
+    def keyboard_input(self, c):
+        if c == 'M':  # switch dance step (mode)
+            newpol=self.next_policy()
+            update_attributes({'policy':newpol},self.cost_function)
+
+    def next_policy(self)->str:
+        curpolicy = self.decode_string(self.cost_function.policy)
+        ind=0
+        try:
+            ind=cartpole_trajectory_generator.POLICIES.index(curpolicy)+1
+            if ind==len(cartpole_trajectory_generator.POLICIES): ind=0
+        except ValueError as e:
+            log.error(f'error cycling policy {e}')
+        newpol=cartpole_trajectory_generator.POLICIES_NUMBERED[ind]
+        print(f'changed policy from {curpolicy} -> {newpol}')
+        return newpol
+
+    def print_keyboard_help(self):
+        print('M cycle dance policy')

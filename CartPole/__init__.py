@@ -10,6 +10,7 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 import csv
 # Import module to interact with OS
 import os
+import sys
 import traceback
 # Import module to get a current time and date used to name the files containing the history of simulations
 from datetime import datetime
@@ -1314,3 +1315,17 @@ class CartPole(EnvironmentBatched):
         return anim
 
     # endregion
+
+
+def is_physical_cartpole_running_and_control_enabled():
+    """ super hack to determine if we are running physical cartpole and control is turned on"""
+    if 'DriverFunctions' in sys.modules:  # if this module exists in sys.modules, we can deduce that physical-cartpole is running
+        try:
+            physical_cartpole_instance = sys.modules[
+                'DriverFunctions'].PhysicalCartPoleDriver.PhysicalCartPoleDriver.PhysicalCartPoleDriverInstance
+            if getattr(physical_cartpole_instance, 'controlEnabled') == True:
+                log.debug(f'physical cartpole present and control enabled')
+                return True
+        except Exception as e:
+            log.debug(f'Could not determine if control is enabled: {e}')
+            return False

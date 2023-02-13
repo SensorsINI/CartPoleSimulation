@@ -332,8 +332,8 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
     Used in various controllers in Control_Toolkit/Control_Toolkit_ASF_Template/Controllers.
 
     :param updated_attributes: a dict [key,value] with string key 'attribute' (aka property) and scalar numeric value or string value to set.
-        If the value is a string and it ends with an intteger, e.g. 'spin0', then the
-        attribute is set to 'spin' and attrribute_number is set to the int value of the number.
+        If the value is a string, and it ends with an intteger, e.g. 'spin0', then the
+        attribute is set to 'spin' and attribute_number is set to the int value of the number.
     :param target_obj: the object into which we set the attribute.
 
     """

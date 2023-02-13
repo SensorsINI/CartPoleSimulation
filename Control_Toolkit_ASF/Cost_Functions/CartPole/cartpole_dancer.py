@@ -2,6 +2,7 @@ import csv
 from pathlib import Path
 from typing import Dict
 
+from CartPole import is_physical_cartpole_running_and_control_enabled
 from GUI import CartPoleMainWindow
 from others.globals_and_utils import get_logger
 
@@ -130,7 +131,7 @@ class cartpole_dancer:
         self.time_step_started = float(time)
         self.time_dance_started = float(time)
         if ((CartPoleMainWindow.CartPoleMainWindowInstance) and CartPoleMainWindow.CartPoleGuiSimulationState=='running')\
-                or self.is_physical_cartpole_running_and_control_enabled():
+                or is_physical_cartpole_running_and_control_enabled():
                 if self.song_player:
                     self.song_player.play() # only play if simulator running or running physical cartpole
                 self.started = True
@@ -246,16 +247,3 @@ class cartpole_dancer:
             return f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m freq={self.freq:.1f}Hz'
         else:
             return f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m'
-
-    def is_physical_cartpole_running_and_control_enabled(self):
-        """ super hack to determine if we are running physical cartpole and control is turned on"""
-        if 'DriverFunctions' in sys.modules:  # if this module exists in sys.modules, we can deduce that physical-cartpole is running
-            try:
-                physical_cartpole_instance = sys.modules[
-                    'DriverFunctions'].PhysicalCartPoleDriver.PhysicalCartPoleDriver.PhysicalCartPoleDriverInstance
-                if getattr(physical_cartpole_instance, 'controlEnabled') == True:
-                    log.debug(f'physical cartpole present and control enabled')
-                    return True
-            except Exception as e:
-                log.debug(f'Could not determine if control is enabled: {e}')
-                return False
