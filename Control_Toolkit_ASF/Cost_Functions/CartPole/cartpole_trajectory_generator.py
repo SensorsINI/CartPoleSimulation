@@ -21,8 +21,8 @@ log = get_logger(__name__)
 
 class cartpole_trajectory_generator:
 
-    POLICIES=('balance','spin','shimmy','cartonly')
-    POLICIES_NUMBERED=('balance0','spin1','shimmy2','cartonly3') # for tensorflow scalar BS
+    POLICIES=('balance','spin','shimmy','cartonly','cartwheel')
+    POLICIES_NUMBERED=('balance0','spin1','shimmy2','cartonly3','cartwheel4') # for tensorflow scalar BS
 
     def __init__(self):
         self._prev_policy=None
@@ -114,11 +114,13 @@ class cartpole_trajectory_generator:
                 cost_function.shimmy_duration=self.cartpole_dancer.endtime
                 cost_function.shimmy_dir=self.cartpole_dancer.option
 
-
             elif policy=='cartonly':
                 cost_function.cartonly_freq_hz=self.cartpole_dancer.freq
                 cost_function.cartonly_amp=self.cartpole_dancer.amp
                 cost_function.cartonly_duty_cycle=float(self.cartpole_dancer.option)
+
+            elif policy=='cartwheel':
+                cost_function.cartwheel_cycles=self.cartpole_dancer.amp
 
 
         if policy== 'spin':  # spin pole CW or CCW depending on target_equilibrium up or down
@@ -225,7 +227,19 @@ class cartpole_trajectory_generator:
             # traj[state_utilities.ANGLE_IDX, :] = target_angle
             traj[state_utilities.ANGLED_IDX, :] = 0 # we must include some pole cost or else the pole can start to spin
             traj[state_utilities.POSITIOND_IDX, :] = cartvel
-            print(f'\rCARTPOS: time:{time:.1f}s gui_target_position: {gui_target_position*100:.1f}cm target: {cartpos_vector[0]*100:.1f}cm \033[K',end='') # magic string to go to start of line
+            # print(f'\rCARTPOS: time:{time:.1f}s gui_target_position: {gui_target_position*100:.1f}cm target: {cartpos_vector[0]*100:.1f}cm \033[K',end='') # magic string to go to start of line
+        elif policy=='cartwheel':
+            cycles=cost_function.cartwheel_cycles
+            horizon_endtime = time + mpc_horizon * dt
+            times = np.linspace(time, horizon_endtime, num=mpc_horizon)
+            traj[state_utilities.POSITION_IDX] = gui_target_position
+            # target_angle=np.pi * (1-gui_target_equilibrium)/2 # either 0 for up and pi for down
+            # traj[state_utilities.ANGLE_COS_IDX, :] = -1 # we must include some pole cost or else the pole can start to spin
+            # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(target_angle)
+            # traj[state_utilities.ANGLE_IDX, :] = target_angle
+            traj[state_utilities.ANGLED_IDX, :] = 0 # we must include some pole cost or else the pole can start to spin
+            traj[state_utilities.POSITIOND_IDX, :] = 0
+
         else:
             log.error(f'cost policy "{policy}" is unknown')
 

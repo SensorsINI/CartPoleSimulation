@@ -1,7 +1,8 @@
 from types import SimpleNamespace
 import numpy as np
 
-from others.globals_and_utils import load_or_reload_config_if_modified
+from others.globals_and_utils import load_or_reload_config_if_modified, get_logger
+log=get_logger(__name__)
 
 (config, _) = load_or_reload_config_if_modified("config.yml",search_path=['CartPoleSimulation']) # add search path in case run from physical-cartpole
 CARTPOLE_PHYSICAL_CONSTANTS=config.cartpole # take this branch as the constants of the robot
@@ -16,6 +17,8 @@ Iend=(1./3.)*pole_mass*pole_length**2
 g=9.8
 natural_period=2*np.pi*np.sqrt(Iend/(pole_mass*g*pole_length))
 CARTPOLE_PHYSICAL_CONSTANTS.NaturalPeriod=natural_period
+log.info(f'computed natural period of cartpole T={CARTPOLE_PHYSICAL_CONSTANTS.NaturalPeriod:.3f}s, natural frequency={1/CARTPOLE_PHYSICAL_CONSTANTS.NaturalPeriod:.3f}Hz')
+# tobi measured natural frequency of 1.08Hz, computed is 1.37Hz
 
 # Export variables as global
 def export_globals():

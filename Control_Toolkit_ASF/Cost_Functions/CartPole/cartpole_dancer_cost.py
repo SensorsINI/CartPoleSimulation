@@ -60,7 +60,7 @@ class cartpole_dancer_cost(cost_function_base):
         :param previous_input: previous control input, can be used to compute cost of changing control input
         :param time: the time in seconds, used for generating target trajectory now
 
-        :returns: Tensor of [rollout, timestamp] over all rollouts and horizon timesteps
+        :returns: Tensor of [rollout, timestep] over all rollouts and horizon timesteps
         """
 
         control_change_cost = 0  # compute the control change cost
@@ -124,75 +124,24 @@ class cartpole_dancer_cost(cost_function_base):
             control_change_cost = self.control_cost_change_weight * self._control_change_rate_cost(inputs, previous_input)
         control_cost = self.control_cost_weight * self._CC_cost(inputs)  # compute the cart acceleration control cost
 
-        stage_cost = stage_costs + control_cost + control_change_cost  # hack to bring in GUI stuff to cost
+        terminal_traj_edge_barrier_cost = self.track_edge_barrier_cost * self.track_edge_barrier(
+            states[:, :, state_utilities.POSITION_IDX])
+
+        stage_cost = stage_costs + terminal_traj_edge_barrier_cost + control_cost + control_change_cost   # result has dimension [num_rollouts, horizon]
 
         return stage_cost * self.stage_cost_factor
 
     # final stage cost
     def get_terminal_cost(self, terminal_states: TensorType):
-        """Calculate terminal cost of a set of trajectories
-
-        For the cartpole dancer, we ignore terminal cost for trajectory
-        and compute only track edge avoidance cost here, so that any rollout that ends with the cart hitting the track edge is culled.
-
-        Williams et al use an indicator function type of terminal cost the penelizes crashes in
-       Williams, Grady, Nolan Wagener, Brian Goldfain, Paul Drews, James M. Rehg, Byron Boots, and Evangelos A. Theodorou. 2017.
-       “Information Theoretic MPC for Model-Based Reinforcement Learning.”
-       In 2017 IEEE International Conference on Robotics and Automation (ICRA), 1714–21.
-       https://doi.org/10.1109/ICRA.2017.7989202, but our terminal cost does not use it.
-
-        :param terminal_states: tensor of terminal states of all rollouts, ordered by [rollout, state], e.g. [320,6]
-        :type terminal_states: np.ndarray
-        :return: One terminal cost per rollout
-        :rtype: np.ndarray
-        """
-
-        # gui_target_position=self.target_position # GUI slider position
-        gui_target_equilibrium = self.target_equilibrium  # GUI switch +1 or -1 to make pole target up or down position
-
-        # terminal_cost = self.lib.zeros((terminal_states.shape[0],))  # make a zero vector with length number of rollouts
-        # target_trajectory_terminal_state_vector = self.target_trajectory[:, -1]  # take final state as target
-        # if not self.lib.equal(self.policy_number, 2):  # if not spin cost
-        #     # "angle", "angleD", "angle_cos", "angle_sin", "position", "positionD"
-        #     cost_weights = (
-        #     self.pole_angle_weight, self.pole_swing_weight, self.pole_angle_weight, self.pole_angle_weight,
-        #     self.cart_pos_weight, self.cart_vel_weight)
-        #     for i in range(NUM_STATES):
-        #         terminal_state_i = terminal_states[:,
-        #                            i]  # matrix [rollout,timestep] for this state element, so this results in vector of e.g. N rollout terminals state angles
-        #         target_terminal_state_i = target_trajectory_terminal_state_vector[
-        #             i]  # timestep vector for this state element
-        #         if not self.lib.isnan(target_terminal_state_i):  # to skip a state, the first timestep is NaN
-        #             diff = terminal_state_i - target_terminal_state_i
-        #
-        #             diffabs = self.dist(diff)  # self.lib.pow(diff,2)
-        #
-        #             cost_i = cost_weights[i] * diffabs
-        #             terminal_cost += cost_i
-        #         else:
-        #             terminal_cost += 0.
-        # else:  # spin cost
-        #     terminal_state_angled = terminal_states[:, state_utilities.ANGLED_IDX]
-        #     terminal_state_cosangle = terminal_states[:, state_utilities.ANGLE_COS_IDX]
-        #     terminal_cost_energy = -self.pole_energy_total_weight * (
-        #                 self.pole_energy_kinetic(terminal_state_angled) + self.pole_energy_potential(
-        #             terminal_state_cosangle))
-        #     terminal_cost_spin = gui_target_equilibrium * self.pole_swing_weight * self.dist(terminal_state_angled)
-        #     # log.debug(f'spin costs. energy= {tf.math.reduce_mean(terminal_cost_energy):.1g} spin= {tf.math.reduce_mean(terminal_cost_spin):.1g}')
-        #     terminal_cost = terminal_cost_energy + terminal_cost_spin
-
-
-        # terminal_traj_costs = terminal_cost * self.terminal_cost_factor
-        terminal_traj_edge_barrier_cost =  self.terminal_cost_factor * self._track_edge_barrier(terminal_states[:, state_utilities.POSITION_IDX])
-        # return (terminal_traj_costs + terminal_traj_edge_barrier_cost)
-        return (terminal_traj_edge_barrier_cost)
+        """ returns 0; terminal cost and barrier cost computed in get_stage_cost()"""
+        return self.lib.zeros_like(terminal_states)
 
     # cost for distance from cart track edge
-    def _track_edge_barrier(self, position):
-        """Compute penalty for distance of cart to the target position"""
+    def track_edge_barrier(self, position):
+        """Soft constraint: Do not crash into border; returns a 1 for any rollout cart position state that exceeds the track edge boundary"""
         return self.lib.cast(
             self.lib.abs(position) > self.track_length_fraction * TrackHalfLength, self.lib.float32
-        ) * self.track_edge_barrier_cost # Soft constraint: Do not crash into border
+        )
 
     # actuation cost
     def _CC_cost(self, u):
