@@ -19,6 +19,9 @@ CARTPOLE_PHYSICAL_CONSTANTS.NaturalPeriod=natural_period
 
 # Export variables as global
 def export_globals():
+    """ Returns a tuple of cartpole physical constants where each element of tuple is a numpy scalar single element array.
+    We use it to accelerate numpy operations with these constants.
+    """
     return (
     np.array(CARTPOLE_PHYSICAL_CONSTANTS.k, dtype=np.float32),
     np.array(CARTPOLE_PHYSICAL_CONSTANTS.m_cart, dtype=np.float32),
@@ -32,7 +35,9 @@ def export_globals():
     np.array(CARTPOLE_PHYSICAL_CONSTANTS.controlDisturbance, dtype=np.float32),
     np.array(CARTPOLE_PHYSICAL_CONSTANTS.controlBias, dtype=np.float32),
     np.array(CARTPOLE_PHYSICAL_CONSTANTS.TrackHalfLength, dtype=np.float32),
-    np.array(CARTPOLE_PHYSICAL_CONSTANTS.cart_bounce_factor, dtype=np.float32)
+    np.array(CARTPOLE_PHYSICAL_CONSTANTS.cart_bounce_factor, dtype=np.float32),
+    np.array(CARTPOLE_PHYSICAL_CONSTANTS.NaturalPeriod, dtype=np.float32)
 )
 
-k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength, cart_bounce_factor = export_globals()
+# TODO why are these constants set here? They lose scope as soon as we leave this module
+k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength, cart_bounce_factor, NaturalPeriod = export_globals()

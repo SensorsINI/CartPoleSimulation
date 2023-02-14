@@ -26,7 +26,7 @@ from Control_Toolkit.others.globals_and_utils import (
     get_available_controller_names, get_available_optimizer_names, get_controller_name, get_optimizer_name, import_controller_by_name)
 from others.globals_and_utils import MockSpace, create_rng, load_config
 from others.p_globals import (J_fric, L, m_cart, M_fric, TrackHalfLength,
-                              controlBias, controlDisturbance, g, k, m_pole, u_max, v_max, cart_bounce_factor,
+                              controlBias, controlDisturbance, g, k, m_pole, u_max, v_max, cart_bounce_factor, NaturalPeriod,
                               export_globals)
 # Interpolate function to create smooth random track
 from scipy.interpolate import BPoly, interp1d
@@ -950,8 +950,10 @@ class CartPole(EnvironmentBatched):
             pass
 
         # reset global variables
-        global k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength, cart_bounce_factor
-        k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...], cart_bounce_factor[...] = export_globals()
+        global k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength, cart_bounce_factor, NaturalPeriod
+        # TODO why is ellipis object used here? https://stackoverflow.com/questions/772124/what-does-the-ellipsis-object-do
+        # these outputs of export_globals are numpy scalar arrays, i.e. each constant is a np.array with a single element
+        k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...], cart_bounce_factor[...], NaturalPeriod[...] = export_globals()
 
         self.time = 0.0
         if reset_mode == 0:  # Don't change it
