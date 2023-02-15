@@ -4,10 +4,9 @@
 # policies can be balance1, spin2, shimmy3, cartonly4
 endtime, cartpos, policy, option, freq, amp, freq2, amp2
 3, 0, balance1,up,,,,
-12, 0, shimmy3,up, 2.25, .02, 2.25, .02
-15, 0, shimmy3,up, 2.25, .04, 2.25, .04
+12, 0, shimmy3,up, 2.25, .08, 2.25, .08
 25, -.05, spin2, cw, 5,,,
 43, .05, spin2, ccw, 5,,,
-64, 0, shimmy3,down, 1.125, .04, 1.125, .04
-75 , .05, spin2, ccw, 5,,,
+48, 0, balance1,up,,,,
+64, 0, shimmy3,up,  2.25, .08, 2.25, .08
 
