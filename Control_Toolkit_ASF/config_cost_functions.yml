@@ -36,7 +36,7 @@ CartPole:
     # e.g. dance0 will create (in update_attributes call) policy='dance' and policy_number=0
     # this hack is to allow branching in XLA code that lacks string compare operator
     # see others\globals_and_utilities.py\update_attributes method
-    policy:  spin2  # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4
+    policy:  shimmy3  # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4
 
     # tobi cannot get conditional branch to work for following option in cartpole_dancer_cost.py
 #    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
@@ -47,7 +47,7 @@ CartPole:
     track_length_fraction: 0.8 # fraction of half track length to allow free movement of cart before hitting barrier function
 
     # cost weightings for the different state components for following desired cart state trajectory
-    cart_pos_weight: 1e7 # weight on cart pos error
+    cart_pos_weight: 2e7 # weight on cart pos error
     pole_angle_weight: 6e6 # weight on difference of angle
     cart_vel_weight: 1e4 # weight on difference of cart velocity
     pole_swing_weight: 3.5e+4 # cart angle derivative weight
@@ -59,7 +59,7 @@ CartPole:
     # spin
     spin_dir: cw+1  # cw+1 ccw-1 1 or cw, -1 or ccw
     upright_pole_energy_multiple_to_count_spin_direction_cost: 1.5 # pole must have this excess total energy before we start counting spin direction energy
-    spin_energy_weight: 2.5e+5 # cost factor only for spin behavior to weight the spin energy
+    spin_energy_weight: 1e6 # cost factor only for spin behavior to weight the spin energy
 
 
     # balance

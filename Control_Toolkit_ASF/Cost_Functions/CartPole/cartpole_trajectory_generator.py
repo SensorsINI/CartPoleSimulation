@@ -202,12 +202,12 @@ class cartpole_trajectory_generator:
             #     # plt.draw()
             #     plt.show()
 
-            target_angle = np.pi * (1 - gui_target_equilibrium*up_down) / 2  # either 0 for up and pi for down
+            # target_angle = np.pi * (1 - gui_target_equilibrium*up_down) / 2  # either 0 for up and pi for down
             traj[state_utilities.POSITION_IDX] = gui_target_position + cartpos
-            traj[state_utilities.ANGLE_COS_IDX, :] = np.cos(target_angle)
+            traj[state_utilities.ANGLE_IDX, :] = -np.arcsin(cartpos/a0) # keep pole pointing towards center of shimmy to minimize pole tip movement
+            # traj[state_utilities.ANGLE_COS_IDX, :] = np.cos(target_angle)
             # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(target_angle)
-            # traj[state_utilities.ANGLE_IDX, :] = target_angle
-            traj[state_utilities.ANGLED_IDX, :] = 0
+            traj[state_utilities.ANGLED_IDX, :] = np.gradient(traj[state_utilities.ANGLE_IDX, :])
             traj[state_utilities.POSITIOND_IDX, :] = cartpos_d
         elif policy=='cartonly':  # cart follows the trajectory, pole ignored
             per = 1./cost_function.cartonly_freq_hz  # seconds

@@ -80,26 +80,9 @@ class cartpole_dancer_cost(cost_function_base):
         num_timesteps = input_shape[1]
         target_trajectory = self.target_trajectory
 
-        stage_costs = self.lib.zeros((num_rollouts, num_timesteps))
-        if not self.lib.equal(self.policy_number, 2):  # if not spin from 'spin2' as policy
-            # states are "angle", "angleD", "angle_cos", "angle_sin", "position", "positionD"
-            cost_weights = (
-            self.pole_angle_weight, self.pole_swing_weight, self.pole_angle_weight, self.pole_angle_weight,
-            self.cart_pos_weight, self.cart_vel_weight)
-            for i in range(NUM_STATES):
-                if not self.lib.any(
-                        self.lib.isnan(target_trajectory[i, 0])):  # to skip a state, the first timestep is NaN
-                    state_i = states[:, :, i]  # matrix [rollout,timestep] for this state element
-                    trajectory_i = target_trajectory[i, :]  # timestep vector for this state element
-                    diff = state_i - trajectory_i
-
-                    diffabs = self.dist(diff)
-
-                    # don't do sum here, it is done in get_trajectory_cost() caller
-                    # sums=self.lib.sum(diff2,1) # sums over the time dimension, leaving column vector of rollouts
-                    cost_i = cost_weights[i] * diffabs
-                    stage_costs += cost_i
-        else:  # spin cost is based on total pole energy plus cart position plus rotation speed in cw or ccw direction
+        # dance step policies are: dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4
+        if self.lib.equal(self.policy_number, 2): # spin is special cost aimed to first get energy into pole, then make it spin in correct direction
+            # spin cost is based on total pole energy plus cart position plus rotation speed in cw or ccw direction
             # if the pole has sufficient energy for full rotations then we follow objective to just maximize the angular velocity in the cw or ccw direction.
             # when the pole has insufficient energy, we follow objective to maximize the total pole energy
             upright_pole_energy=self.pole_energy_potential(0) # energy of pole upright compared with hanging down (factor of 2), means pole can swing around all the way if total energy is larger than this
@@ -138,6 +121,26 @@ class cartpole_dancer_cost(cost_function_base):
             term_costs=self.spin_energy_weight *spin_cost_energy + self.cart_pos_weight * pos_cost
             term_costs=tf.expand_dims(term_costs,-1) # make it to e.g. [700,1] tensor
             stage_costs =  self.lib.concat([stage_costs,term_costs],1)
+
+        else:  # if not spin from 'spin2' as policy, i.e. all other policies, base cost on minimizing distance over rollout from some state vectors over horizon
+            # states are "angle", "angleD", "angle_cos", "angle_sin", "position", "positionD"
+            stage_costs = self.lib.zeros((num_rollouts, num_timesteps))
+            cost_weights = (
+            self.pole_angle_weight, self.pole_swing_weight, self.pole_angle_weight, self.pole_angle_weight,
+            self.cart_pos_weight, self.cart_vel_weight)
+            for i in range(NUM_STATES):
+                if not self.lib.any(
+                        self.lib.isnan(target_trajectory[i, 0])):  # to skip a state, the first timestep is NaN
+                    state_i = states[:, :, i]  # matrix [rollout,timestep] for this state element
+                    trajectory_i = target_trajectory[i, :]  # timestep vector for this state element
+                    diff = state_i - trajectory_i
+
+                    diffabs = self.dist(diff)
+
+                    # don't do sum here, it is done in get_trajectory_cost() caller
+                    # sums=self.lib.sum(diff2,1) # sums over the time dimension, leaving column vector of rollouts
+                    cost_i = cost_weights[i] * diffabs
+                    stage_costs += cost_i
 
         if previous_input is not None:
             control_change_cost = self.control_cost_change_weight * self._control_change_rate_cost(inputs, previous_input)
