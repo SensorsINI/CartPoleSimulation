@@ -72,7 +72,6 @@ CartPole:
     shimmy_amp2: .025
     shimmy_duration: 8. # for shimmy that lasts a finite time and ramps from freq to freq2 and amp to amp2
     shimmy_dir: up # up, down
-#    shimmy_plot: 0 # to plot the shimmy function
 
     # cartonly only controls cart position, pole is ignored. Trajectory is triangular with amp and per
     cartonly_amp: .15
