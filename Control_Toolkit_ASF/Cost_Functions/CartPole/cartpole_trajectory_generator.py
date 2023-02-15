@@ -192,7 +192,7 @@ class cartpole_trajectory_generator:
 
             cartpos=a0*np.sin(2*np.pi*f0*times)
             cartpos_d=np.gradient(cartpos,dt)
-            angle=-np.arcsin(cartpos/CARTPOLE_PHYSICAL_CONSTANTS.L)
+            angle=-np.arcsin(cartpos/(2*CARTPOLE_PHYSICAL_CONSTANTS.L)) # compute the angle towards the center of shimmy to keep head of pole fixed as well as possible. L is half of pole length.
             angle_d=np.gradient(angle,dt)
 
             traj[state_utilities.POSITION_IDX] = gui_target_position + cartpos

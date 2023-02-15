@@ -67,7 +67,7 @@ CartPole:
 
     # shimmy does a sinusoidal dance of cart around target position with period in seconds and amplitude in meters
     shimmy_freq_hz: 2.25
-    shimmy_amp: .1
+    shimmy_amp: .05
     shimmy_freq2_hz: 2.
     shimmy_amp2: .025
     shimmy_duration: 8. # for shimmy that lasts a finite time and ramps from freq to freq2 and amp to amp2
