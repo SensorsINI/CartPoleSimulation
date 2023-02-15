@@ -14,6 +14,7 @@ import tensorflow as tf
 
 from Control_Toolkit.others.get_logger import get_logger
 from others.globals_and_utils import update_attributes
+from others.p_globals import CARTPOLE_PHYSICAL_CONSTANTS
 
 log = get_logger(__name__)
 
@@ -160,54 +161,45 @@ class cartpole_trajectory_generator:
             traj[state_utilities.ANGLED_IDX, :] = 0
             traj[state_utilities.POSITIOND_IDX, :] = 0
         elif policy=='shimmy':  # cart follows a desired cart position shimmy while keeping pole up or down
-            # shimmy is an (optional) ramp from freq to freq2 and amp to amp2
-            up_down=1
-            if cost_function.shimmy_dir=='up':
-                up_down=1
-            elif cost_function.shimmy_dir=='down':
-                up_down=-1
-            else:
-                log.warning(f'balance_dir value of "{cost_function.balance_dir} must be "up" or "down"')
+            # # shimmy is an (optional) ramp from freq to freq2 and amp to amp2
+            # up_down=1
+            # if cost_function.shimmy_dir=='up':
+            #     up_down=1
+            # elif cost_function.shimmy_dir=='down':
+            #     up_down=-1
+            # else:
+            #     log.warning(f'balance_dir value of "{cost_function.balance_dir} must be "up" or "down"')
             if time>self._time_policy_changed+cost_function.shimmy_duration:
                 self._time_policy_changed=time # reset shimmy and start over if doing it from fixed shimmy policy in yml
                 log.debug(f'shimmy restarted at time={time}')
             shimmy_starttime=self._time_policy_changed
-            shimmy_endtime=self._time_policy_changed+cost_function.shimmy_duration
+            # shimmy_endtime=self._time_policy_changed+cost_function.shimmy_duration
             # compute times from current time to end of horizon
             horizon_endtime = time-shimmy_starttime + mpc_horizon * dt
             # time for shimmy must be relative to start of shimmy step for freq ramp to make sense
             times = np.linspace(time-shimmy_starttime, horizon_endtime, num=mpc_horizon)
-            time_frac=times/cost_function.shimmy_duration
+            # time_frac=times/cost_function.shimmy_duration
             f0 = cost_function.shimmy_freq_hz  # seconds
             a0 = cost_function.shimmy_amp  # meters
-            f1 = cost_function.shimmy_freq2_hz  # seconds
-            a1 = cost_function.shimmy_amp2  # meters
+            # f1 = cost_function.shimmy_freq2_hz  # seconds
+            # a1 = cost_function.shimmy_amp2  # meters
 
             # compute the shimmmy trajectory over the horizon
-            amps=a0+time_frac*(a1-a0)
-            freqs=f0+time_frac*(f1-f0)
+            # amps=a0+time_frac*(a1-a0)
+            # freqs=f0+time_frac*(f1-f0)
 
             # print(f'abs_time={time:.2f}, rel_time={times[0]:.2f} time_frac={time_frac[0]:.3f} amp={amps[0]:.3f} freq={freqs[0]:.2f}')
 
-            cartpos=amps*np.sin(2*np.pi*freqs*times)
+            cartpos=a0*np.sin(2*np.pi*f0*times)
             cartpos_d=np.gradient(cartpos,dt)
+            angle=-np.arcsin(cartpos/CARTPOLE_PHYSICAL_CONSTANTS.L)
+            angle_d=np.gradient(angle,dt)
 
-            # if cost_function.shimmy_plot==1:
-            #     # matplotlib.use('Qt5Agg')
-            #     f=plt.figure('shimmy')
-            #     plt.plot(times,cartpos, times,cartpos_d)
-            #     plt.legend(['cart pos','cart vel'])
-            #     plt.xlabel('time (s)')
-            #     plt.ylabel('m or m/s')
-            #     # plt.draw()
-            #     plt.show()
-
-            # target_angle = np.pi * (1 - gui_target_equilibrium*up_down) / 2  # either 0 for up and pi for down
             traj[state_utilities.POSITION_IDX] = gui_target_position + cartpos
-            traj[state_utilities.ANGLE_IDX, :] = -np.arcsin(cartpos/a0) # keep pole pointing towards center of shimmy to minimize pole tip movement
+            traj[state_utilities.ANGLE_IDX, :] = angle # keep pole pointing towards center of shimmy to minimize pole tip movement
             # traj[state_utilities.ANGLE_COS_IDX, :] = np.cos(target_angle)
             # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(target_angle)
-            traj[state_utilities.ANGLED_IDX, :] = np.gradient(traj[state_utilities.ANGLE_IDX, :])
+            traj[state_utilities.ANGLED_IDX, :] = angle_d
             traj[state_utilities.POSITIOND_IDX, :] = cartpos_d
         elif policy=='cartonly':  # cart follows the trajectory, pole ignored
             per = 1./cost_function.cartonly_freq_hz  # seconds
