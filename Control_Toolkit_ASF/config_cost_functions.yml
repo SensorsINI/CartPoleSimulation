@@ -41,7 +41,7 @@ CartPole:
     # tobi cannot get conditional branch to work for following option in cartpole_dancer_cost.py
 #    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
     terminal_cost_factor: 100e+0 # how much to weight up the terminal state costs compared to the rest of the rollout
-    terminal_safety_cost_factor: 100e+0 # how much to weight up the terminal state costs compared to the rest of the rollout
+    terminal_safety_cost_factor: 1e+2 # how much to weight up the terminal state costs compared to the rest of the rollout
     stage_cost_factor: 1e0 # how much to weight up the state costs
     track_edge_barrier_cost: 1e9 # how much to penalize cart at edge of track
     track_length_fraction: 0.8 # fraction of half track length to allow free movement of cart before hitting barrier function
@@ -58,12 +58,8 @@ CartPole:
 
     # spin
     spin_dir: cw+1  # cw+1 ccw-1 1 or cw, -1 or ccw
-    # spinC
-#    spin_freq_hz: 4. # negative to spin other direction, must set at least 1hz
-    # following weight pole energies
-#    pole_energy_potential_weight: 0. Energy_potential weight, ep is maximized by upright pole, minimized by hanging pole. Make it positive for upright pole.
-    upright_pole_energy_multiple_to_count_spin_direction_cost: 2.5 # pole must have this excess total energy before we start counting spin direction energy
-    pole_energy_total_weight: 2.5e+5 # energy_total is sum of kinetic and potential energy
+    upright_pole_energy_multiple_to_count_spin_direction_cost: 1.5 # pole must have this excess total energy before we start counting spin direction energy
+    spin_energy_weight: 2.5e+5 # cost factor only for spin behavior to weight the spin energy
 
 
     # balance

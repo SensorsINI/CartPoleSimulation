@@ -8,6 +8,8 @@ from Control_Toolkit.Cost_Functions import cost_function_base
 from CartPole.cartpole_model import TrackHalfLength, L, m_pole
 from CartPole.state_utilities import NUM_STATES
 
+import tensorflow as tf
+
 from Control_Toolkit.others.get_logger import get_logger
 log = get_logger(__name__)
 
@@ -53,6 +55,7 @@ class cartpole_dancer_cost(cost_function_base):
         Computes costs of all stages, i.e., costs of all rollouts for each timestep.
 
         :param states: Tensor of states [rollout, timestep, state].
+            states[:,0,:] are num_rollouts copies of current state.
             rollout dimension is the batch dimension of the rollouts, e.g. 1000 parallel rollouts.
             timestep dimension are the timesteps of each rollout, e.g. 50 timesteps.
             state is the state vector, defined by the STATE_INDICES in [state_utilities.py](../CartPole/state_utilities.py)
@@ -97,28 +100,44 @@ class cartpole_dancer_cost(cost_function_base):
                     cost_i = cost_weights[i] * diffabs
                     stage_costs += cost_i
         else:  # spin cost is based on total pole energy plus cart position plus rotation speed in cw or ccw direction
-            upright_pole_energy=2*self.pole_energy_potential(0) # energy of pole upright compared with hanging down (factor of 2), means pole can swing around all the way if total energy is larger than this
-            angleD_states = states[:, :, state_utilities.ANGLED_IDX]
-            cosangle_states = states[:, :, state_utilities.ANGLE_COS_IDX]
+            # if the pole has sufficient energy for full rotations then we follow objective to just maximize the angular velocity in the cw or ccw direction.
+            # when the pole has insufficient energy, we follow objective to maximize the total pole energy
+            upright_pole_energy=self.pole_energy_potential(0) # energy of pole upright compared with hanging down (factor of 2), means pole can swing around all the way if total energy is larger than this
+            current_pole_angle=states[0,0,state_utilities.ANGLE_IDX] # rad
+            current_pole_angleD=states[0,0,state_utilities.ANGLED_IDX] # rad/s
+
             # compute the total pole energy, which is sum of kinetic and potential energy of pole
-            spin_cost_energy = self.pole_energy_kinetic(angleD_states) + self.pole_energy_potential(cosangle_states)
-            # count the spin direction cost only if the total pole energy is some multiple of the upright pole energy
-            # spin direction cost is weighted by pole_swing_weight
-            # and measures the spin direction cost by the absolute pole angle derivative,
-            # but only for trajectories that have total energy larger than the upright pole energy by the multiple UPRIGHT_POLE_ENERGY_MULTIPLE_TO_COUNT_SPIN_DIRECTION_COST
-            less_than_spin_energy_mask = float(
-                spin_cost_energy < self.upright_pole_energy_multiple_to_count_spin_direction_cost * upright_pole_energy)
-            more_than_spin_energy_mask=1-less_than_spin_energy_mask
-            spin_cost_spin_direction =   -spin_cost_energy* more_than_spin_energy_mask\
-                            *float(self.lib.sign(angleD_states*float(self.spin_dir_number) * gui_target_equilibrium))
-            # only count energy of pole for trajectories that don't have sufficient energy to spin
-            spin_cost_energy = spin_cost_energy * less_than_spin_energy_mask
-            # compute the cart position cost as distance from desired cart position
-            pos_states = states[:, :, state_utilities.POSITION_IDX]
+            current_pole_potential_energy=self.pole_energy_potential(current_pole_angle)
+            current_pole_kinetic_energy=self.pole_energy_kinetic(current_pole_angleD)
+            current_pole_total_energy=current_pole_potential_energy+current_pole_kinetic_energy
+
+            # the cost tensor we will return
+            stage_costs=self.lib.zeros((num_rollouts,num_timesteps-1))
+
+            # now find the final state at end of horizon and try to get it to either have more energy or spinning faster in particular direction
+            # each of following is [num_rollouts] vector of angleD, cos_angle, and cart position
+            angleD_states = states[:, -1, state_utilities.ANGLED_IDX]
+            cosangle_states = states[:, -1, state_utilities.ANGLE_COS_IDX]
+            pos_states = states[:, -1, state_utilities.POSITION_IDX]
+
             gui_target_position = self.target_position  # GUI slider position
-            pos_cost =  self.dist(pos_states - gui_target_position)*more_than_spin_energy_mask # only count pos cost if the pole is not spinning, otherwise the pole cannot swing up
+            pos_cost =  self.dist(pos_states - gui_target_position) # num_rollouts vector
+
+            # compute the cost of spinning, the more energy, the lower the cost
+            spin_cost_energy = -(self.pole_energy_kinetic(angleD_states) + self.pole_energy_potential(cosangle_states))
+
+            if current_pole_total_energy>self.upright_pole_energy_multiple_to_count_spin_direction_cost * upright_pole_energy:
+                # pole is already spinning, multiply the spin energy by the actual direction of spinning and desired spin direction
+                actual_spin_dirs=self.lib.sign(angleD_states)
+                desired_spin_dir= -float(self.spin_dir_number) * gui_target_equilibrium # minus sign to get correct cost sign for cw/ccw rotation
+                spin_cost_energy=spin_cost_energy*desired_spin_dir*actual_spin_dirs
+
+            # compute the cart position cost as distance from desired cart position
             # total stage cost is sum of energy of pole spin, direction of spin, and cart position
-            stage_costs =  -self.pole_energy_total_weight * spin_cost_energy + -self.pole_swing_weight *spin_cost_spin_direction + self.cart_pos_weight * pos_cost
+            # the returned stage_costs is a tensor [num_rollouts, horizon] that has concatenated the terminal costs at end of horizon to the zero stage costs along the horizon
+            term_costs=self.spin_energy_weight *spin_cost_energy + self.cart_pos_weight * pos_cost
+            term_costs=tf.expand_dims(term_costs,-1) # make it to e.g. [700,1] tensor
+            stage_costs =  self.lib.concat([stage_costs,term_costs],1)
 
         if previous_input is not None:
             control_change_cost = self.control_cost_change_weight * self._control_change_rate_cost(inputs, previous_input)
@@ -127,9 +146,9 @@ class cartpole_dancer_cost(cost_function_base):
         terminal_traj_edge_barrier_cost = self.track_edge_barrier_cost * self.track_edge_barrier(
             states[:, :, state_utilities.POSITION_IDX])
 
-        stage_cost = stage_costs + terminal_traj_edge_barrier_cost + control_cost + control_change_cost   # result has dimension [num_rollouts, horizon]
+        stage_costs = stage_costs + terminal_traj_edge_barrier_cost + control_cost + control_change_cost   # result has dimension [num_rollouts, horizon]
 
-        return stage_cost * self.stage_cost_factor
+        return stage_costs * self.stage_cost_factor
 
     # final stage cost
     def get_terminal_cost(self, terminal_states: TensorType):
