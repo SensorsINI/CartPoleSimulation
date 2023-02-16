@@ -240,8 +240,9 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
         )
 
         gen_end = timeit.default_timer()
-        gen_dt = (gen_end - gen_start) * 1000.0
-        print('time to generate data: {} ms'.format(gen_dt))
+        gen_dt = (gen_end - gen_start)
+        print('time to generate data: {} ms'.format(gen_dt * 1000.0))
+        print('Speed-up: {}'.format(float(config['length_of_experiment'])/gen_dt))
 
         if show_controller_report:
             try:
