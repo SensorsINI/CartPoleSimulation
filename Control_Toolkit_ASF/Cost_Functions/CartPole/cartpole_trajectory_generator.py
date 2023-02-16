@@ -24,6 +24,7 @@ class cartpole_trajectory_generator:
 
     POLICIES=('balance','spin','shimmy','cartonly','cartwheel')
     POLICIES_NUMBERED=('balance0','spin1','shimmy2','cartonly3','cartwheel4') # for tensorflow scalar BS
+    CARTWHEEL_STATES={'before','during','after'}
 
     def __init__(self):
         self._prev_policy=None
@@ -35,8 +36,17 @@ class cartpole_trajectory_generator:
         self.cost_function=None # set by each generate_trajectory, used by contained classes, e.g. cartpole_dancer, to access config values
         self.cartpole_dancer=cartpole_dancer()
         self.traj:np.ndarray=None # stores the latest trajectory, for later reference, e.g. for measuring model mismatch
-        self.start_time=0 # we cannot determine if we are running physical cartpole with this method since control is not running at start time.time() if is_physical_cartpole_running_and_control_enabled() else 0 # subtracted from all times for running physical cartpole to avoid numerical overflow
+        self.start_time=0
+        # we cannot determine if we are running physical cartpole with following method since control is not running at start time.time()
+        # if is_physical_cartpole_running_and_control_enabled() else 0 # subtracted from all times for running physical cartpole to avoid numerical overflow
         # log.debug(f'self.start_time={self.start_time:.1f}s')
+
+        self.cartwheel_state=None
+        self.cartwheel_time_state_changed = None
+        self.set_cartwheel_state('before',self.start_time)
+        self.cartwheel_cycles_to_do=0
+        self.cartwheel_starttime = 0 # time that this particular cartwheel started
+        self.cartwheel_direction=None # 1 for cw, -1 for ccw
 
     def reset(self):
         """ stops dance if it is going
@@ -51,7 +61,7 @@ class cartpole_trajectory_generator:
         :param dt: the timestep in seconds
         :param state: the current state of the cartpole as 1d vector
 
-        :returns: the target state trajectory of cartpole.
+        :returns: the target state trajectory of cartpole, valid for steps that use this trajectory (spin does not use it)
         It is np.ndarray[states,timesteps] with NaN as at least first entries of each state for don't care states, and otherwise the desired future state values.
         The state components are ordered as in CartPole.state_utilities.STATE_VARIABLES
 
@@ -66,15 +76,16 @@ class cartpole_trajectory_generator:
         # log.debug(f'dt={dt:.3f} mpc_horizon={mpc_horizon}')
         time=time-self.start_time # account for 1970's time returned when running physical-cartpol
 
+        # initialize desired trajectory with NaN entries
         traj = np.full(shape=(state_utilities.NUM_STATES, mpc_horizon),
                        fill_value=np.nan)  # use numpy not tf, too hard to work with immutable tensors
 
-        policy:str = cost_function.policy
+        policy:str = bytes.decode(cost_function.policy.numpy()) # we really want a python str out of the policy so we can compare it using python previous policy
         dancer_current_step=None
         if policy is None:
             raise RuntimeError(f'set policy in config_self.controller.cost_function_wrapper.cost_functions.yml')
 
-        if self._prev_policy is None or self._prev_policy!=policy:
+        if self._prev_policy is None or policy!=self._prev_policy:
             self._time_policy_changed=time
             self._policy_changed=True
         else:
@@ -121,10 +132,11 @@ class cartpole_trajectory_generator:
                 cost_function.cartonly_duty_cycle=float(self.cartpole_dancer.option)
 
             elif policy=='cartwheel':
-                cost_function.cartwheel_cycles=self.cartpole_dancer.amp
+                self.cartwheel_cycles=self.cartpole_dancer.amp
 
 
         if policy== 'spin':  # spin pole CW or CCW depending on target_equilibrium up or down
+            # spin is handled entirely by a special cost function in cartpole_dancer_cost.py
             pass
             # spin_dir_factor=1
             # if cost_function.spin_dir=='cw':
@@ -221,16 +233,50 @@ class cartpole_trajectory_generator:
             traj[state_utilities.POSITIOND_IDX, :] = cartvel
             # print(f'\rCARTPOS: time:{time:.1f}s gui_target_position: {gui_target_position*100:.1f}cm target: {cartpos_vector[0]*100:.1f}cm \033[K',end='') # magic string to go to start of line
         elif policy=='cartwheel':
+            # cartwheel starts with balance, once balanced the cartwheels start, after the cartwheels we again balance
             cycles=cost_function.cartwheel_cycles
-            horizon_endtime = time + mpc_horizon * dt
-            times = np.linspace(time, horizon_endtime, num=mpc_horizon)
-            traj[state_utilities.POSITION_IDX] = gui_target_position
-            # target_angle=np.pi * (1-gui_target_equilibrium)/2 # either 0 for up and pi for down
-            # traj[state_utilities.ANGLE_COS_IDX, :] = -1 # we must include some pole cost or else the pole can start to spin
-            # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(target_angle)
-            # traj[state_utilities.ANGLE_IDX, :] = target_angle
-            traj[state_utilities.ANGLED_IDX, :] = 0 # we must include some pole cost or else the pole can start to spin
-            traj[state_utilities.POSITIOND_IDX, :] = 0
+            # determine state transitions
+            if self._policy_changed:
+                self.set_cartwheel_state('before',time)
+                self.cartwheel_cycles_to_do=np.abs(cost_function.cartwheel_cycles)
+                self.cartwheel_direction=np.sign(cost_function.cartwheel_cycles)
+
+            if self.cartwheel_state=='before':
+                # if before cartwheel, we need to get balanced
+                if self.is_pole_balanced(state):
+                    self.set_cartwheel_state('during',time)
+                    self.cartwheel_starttime=time
+            elif self.cartwheel_state=='during':
+                # during the cartwheel, we don't go to 'after' until at least time for a cartwheel plus we need to be balanced again
+                if time-self.cartwheel_starttime>cost_function.cartwheel_target_duration_s:
+                    if self.is_pole_balanced(state):
+                        self.cartwheel_cycles_to_do-=1
+                        self.cartwheel_starttime = time
+                        if self.cartwheel_cycles_to_do==0:
+                            self.set_cartwheel_state('after',time)
+                    elif time-self.cartwheel_starttime>2*cost_function.cartwheel_target_duration_s:
+                        log.debug('gave up trying to do this cartwheel, starting over')
+                        self.set_cartwheel_state('before',time)
+            elif self.cartwheel_state=='after':
+                pass # end state, don't get out of it except by starting a new cartwheel
+
+            if self.cartwheel_state=='before' or self.cartwheel_state=='after':
+                traj[state_utilities.POSITION_IDX] = gui_target_position
+                traj[state_utilities.ANGLE_COS_IDX, :] = 1
+                traj[state_utilities.ANGLED_IDX, :] = 0
+                traj[state_utilities.POSITIOND_IDX, :] = 0
+            elif self.cartwheel_state=='during':
+                traj[state_utilities.POSITION_IDX] = gui_target_position
+                traj[state_utilities.POSITIOND_IDX, :] = 0
+                # compute times from current time to end of horizon
+                horizon_endtime = time - self.cartwheel_starttime + mpc_horizon * dt
+                # time for step must be relative to start of step
+                times = np.linspace(time - self.cartwheel_starttime, horizon_endtime, num=mpc_horizon)
+
+                target_angle=self.cartwheel_direction*2*np.pi*times/cost_function.cartwheel_target_duration_s
+                traj[state_utilities.ANGLE_IDX, :] = target_angle
+                target_angled=np.gradient(target_angle,dt)
+                traj[state_utilities.ANGLED_IDX, :] = target_angled
 
         else:
             log.error(f'cost policy "{policy}" is unknown')
@@ -238,6 +284,19 @@ class cartpole_trajectory_generator:
         self.set_gui_status_text(time, state, cost_function) # update CartPoleSimulation GUI status line (if it exists)
         self.traj=traj
         return traj
+
+    def set_cartwheel_state(self,new_state:str,time:float):
+        """Sets the cartwheel state and the time the state changed if it did
+        """
+        if self.cartwheel_state is None or self.cartwheel_state!=new_state:
+            self.cartwheel_time_state_changed=time
+            log.info(f'changed state from {self.cartwheel_state}->{new_state} at t={time:.3f}')
+        self.cartwheel_state=new_state
+
+    def is_pole_balanced(self, state):
+        """ Returns True if angle and angle_d are sufficiently small"""
+        return np.abs(state[state_utilities.ANGLE_IDX])<self.cost_function.cartwheel_balance_angle_limit_deg*(np.pi/180)\
+                and np.abs(state[state_utilities.ANGLED_IDX])<self.cost_function.cartwheel_balance_angled_limit_deg_per_sec*(np.pi/180)
 
     def set_gui_status_text(self, time: float, state: np.ndarray, cost_function: cost_function_base) -> None:
         s = self.get_status_string(time, state, cost_function)
@@ -262,6 +321,8 @@ class cartpole_trajectory_generator:
             s = f'Policy: shimmy pos={gui_target_position:.1f}m freq={float(cost_function.shimmy_freq_hz):.1f}Hz amp={float(cost_function.shimmy_amp):.1f}Hz'
         elif policy == 'cartonly':
             s = f'Policy: cartonly pos={gui_target_position:.1f}m freq={float(cost_function.cartonly_freq_hz):.1f}Hz amp={float(cost_function.cartonly_amp):.1f}Hz'
+        elif policy == 'cartwheel':
+            s = f'Policy: cartwheel pos={gui_target_position:.1f}m state={self.cartwheel_state} cycles_to_do={self.cartwheel_cycles_to_do}'
         else:
             s = f'unknown/not implemented string'
         return s

@@ -284,7 +284,7 @@ def load_or_reload_config_if_modified(filepath:str, every:int=5, target_obj=None
 
             load_or_reload_config_if_modified.mtimes[filepath]=mtime
             load_or_reload_config_if_modified.cached_configs[filepath]=new_config_obj
-            log.debug(f'(re)loaded modified config (File "{filepath}")') # format (File "XXX") generates pycharm link to file in console output
+            log.debug(f"(re)loaded modified config (File '{filepath}')") # format (File "XXX") generates pycharm link to file in console output
             if not changes is None and not target_obj is None:
                 update_attributes(changes, target_obj)
             return (new_config_obj,changes) # it was modified, so return changes dict
@@ -368,8 +368,8 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
                                           target_obj.lib.to_variable(new_value, objtype))
 
         else:
-            log.debug(
-                f"tensorflow attribute '{property}' does not exist in {target_obj.__class__.__name__}, setting it for first time")
+            # log.debug(
+            #     f"tensorflow attribute '{property}' does not exist in {target_obj.__class__.__name__}, setting it for first time")
             if target_obj.lib is None:
                 setattr(target_obj, property, new_value)
             else:
