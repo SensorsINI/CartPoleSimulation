@@ -13,6 +13,7 @@ import os
 import traceback
 # Import module to get a current time and date used to name the files containing the history of simulations
 from datetime import datetime
+import timeit
 # To detect the latest csv file
 
 import numpy as np
@@ -242,6 +243,8 @@ class CartPole(EnvironmentBatched):
         self.change_target_equilibrium_every_x_second = np.inf
         self.time_last_target_equilibrium_change = None
 
+        self.Q_update_time = None
+
         # region Initialize CartPole in manual-stabilization mode
         self.set_controller(controller_name='manual-stabilization')
         # endregion
@@ -389,6 +392,9 @@ class CartPole(EnvironmentBatched):
                 self.dict_history['target_equilibrium'].append(self.target_equilibrium)
 
                 self.dict_history['L'].append(L)
+
+                self.dict_history['Q_update_time'].append(self.Q_update_time)
+
                 try:
                     for key, value in self.controller.controller_data_for_csv.items():
                         self.dict_history[key].append(value[0])
@@ -419,6 +425,8 @@ class CartPole(EnvironmentBatched):
                                      'target_equilibrium': [self.target_equilibrium],
 
                                      'L': [L],
+
+                                     'Q_update_time': [self.Q_update_time],
 
                                      }
 
@@ -471,7 +479,9 @@ class CartPole(EnvironmentBatched):
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
+                update_start = timeit.default_timer()
                 self.Q = self.controller.step(self.s_with_noise_and_latency, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
+                self.Q_update_time = timeit.default_timer()-update_start
 
             self.dt_controller_steps_counter = 0
 
@@ -1007,6 +1017,8 @@ class CartPole(EnvironmentBatched):
                                  'target_equilibrium': [self.target_equilibrium],
 
                                  'L': [L],
+
+                                 'Q_update_time': [self.Q_update_time],
 
                                  }
             try:
