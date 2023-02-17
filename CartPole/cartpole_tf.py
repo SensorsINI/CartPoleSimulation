@@ -26,8 +26,6 @@ controlDisturbance = tf.convert_to_tensor(controlDisturbance)
 controlBias = tf.convert_to_tensor(controlBias)
 TrackHalfLength = tf.convert_to_tensor(TrackHalfLength)
 
-rng = create_rng(__name__, config["cartpole"]["seed"])
-
 ###
 # FIXME: Currently tf predictor is not modeling edge bounce!
 ###
@@ -87,11 +85,7 @@ def Q2u_tf(Q):
     In future there might be implemented here a more sophisticated model of a motor driving CartPole
     """
     u = tf.convert_to_tensor(
-        u_max * (
-            Q
-            + controlDisturbance * rng.standard_normal(size=Q.shape)
-            + controlBias
-        ),  # Q is drive -1:1 range, add noise on control
+        u_max * Q,  # Q is drive -1:1 range, add noise on control
         tf.float32
     )
 

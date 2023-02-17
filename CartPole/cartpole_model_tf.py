@@ -28,9 +28,6 @@ controlBias = tf.convert_to_tensor(controlBias)
 TrackHalfLength = tf.convert_to_tensor(TrackHalfLength)
 
 
-rng = create_rng(__name__, config["cartpole"]["seed"])
-
-
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
 # INVOLVED IN THE PROJECT KNOW WHAT CHANGES YOU DID.
@@ -157,9 +154,7 @@ def Q2u(Q):
 
     In future there might be implemented here a more sophisticated model of a motor driving CartPole
     """
-    u = u_max * (
-        Q + controlDisturbance * rng.standard_normal(size=np.shape(Q), dtype=np.float32) + controlBias
-    )  # Q is drive -1:1 range, add noise on control
+    u = u_max * Q  # Q is drive -1:1 range
 
     return u
 
