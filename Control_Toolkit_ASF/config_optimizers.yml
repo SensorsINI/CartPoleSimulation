@@ -197,8 +197,8 @@ mppi-var-tf:
   max_grad_norm: 100000                 # max norm of gradient such that ||gradient||_2
 mppi:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
-  mpc_horizon: 35                       # steps
-  num_rollouts: 3500                    # Number of Monte Carlo samples
+  mpc_horizon: 40                       # steps
+  num_rollouts: 1000                    # Number of Monte Carlo samples
   cc_weight: 1.0
   R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in cost functions config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
   LBD: 100.0                            # Cost parameter lambda
