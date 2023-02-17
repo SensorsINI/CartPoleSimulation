@@ -73,6 +73,8 @@ rc('font', **font)
 config = load_config("config.yml")
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
+rng = create_rng(__name__, config["cartpole"]["seed"])
+
 
 class CartPole(EnvironmentBatched):
     num_states = 6
@@ -101,6 +103,8 @@ class CartPole(EnvironmentBatched):
         
         # Variables for control input and target position.
         self.u = 0.0  # Physical force acting on the cart
+        self.Q_applied = 0.0
+        self.Q_calculated = 0.0
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
 
         self.action_space = MockSpace(-1.0, 1.0, (1,), np.float32)
@@ -383,7 +387,8 @@ class CartPole(EnvironmentBatched):
                 self.dict_history['positionD'].append(self.s[POSITIOND_IDX])
                 self.dict_history['positionDD'].append(self.positionDD)
 
-                self.dict_history['Q'].append(self.Q)
+                self.dict_history['Q_calculated'].append(self.Q_calculated)
+                self.dict_history['Q_applied'].append(self.Q_applied)
                 self.dict_history['u'].append(self.u)
 
                 # The target_position is not always meaningful
@@ -418,7 +423,8 @@ class CartPole(EnvironmentBatched):
                                      'positionDD': [self.positionDD],
 
 
-                                     'Q': [self.Q],
+                                     'Q_calculated': [self.Q_calculated],
+                                     'Q_applied': [self.Q_applied],
                                      'u': [self.u],
 
                                      'target_position': [self.target_position],
@@ -477,12 +483,14 @@ class CartPole(EnvironmentBatched):
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                self.Q = self.slider_value
+                self.Q_applied = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
                 update_start = timeit.default_timer()
-                self.Q = self.controller.step(self.s_with_noise_and_latency, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
+                self.Q_calculated = self.controller.step(self.s_with_noise_and_latency, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
                 self.Q_update_time = timeit.default_timer()-update_start
+                self.Q_applied = self.Q_calculated + controlDisturbance * rng.standard_normal(size=np.shape(self.Q_calculated), dtype=np.float32) + controlBias
 
+            self.Q = self.Q_applied
             self.dt_controller_steps_counter = 0
 
     def update_parameters(self):
@@ -985,10 +993,14 @@ class CartPole(EnvironmentBatched):
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                self.Q = self.slider_value
+                self.Q_applied = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
+                self.Q_applied = self.controller.step(self.s, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
+                self.Q_applied = self.Q_calculated + controlDisturbance * rng.standard_normal(
+                    size=np.shape(self.Q_calculated), dtype=np.float32) + controlBias
 
+
+            self.Q = self.Q_applied
             self.u = Q2u(self.Q)  # Calculate CURRENT control input
             self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)  # Calculate CURRENT second derivatives
 
@@ -1010,7 +1022,8 @@ class CartPole(EnvironmentBatched):
                                  'positionD': [self.s[POSITIOND_IDX]],
                                  'positionDD': [self.positionDD],
 
-                                 'Q': [self.Q],
+                                 'Q_calculated': [self.Q_calculated],
+                                 'Q_applied': [self.Q_applied],
                                  'u': [self.u],
 
                                  'target_position': [self.target_position],
