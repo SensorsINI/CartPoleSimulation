@@ -40,8 +40,6 @@ CartPole:
 
     # tobi cannot get conditional branch to work for following option in cartpole_dancer_cost.py
 #    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
-    terminal_cost_factor: 100e+0 # how much to weight up the terminal state costs compared to the rest of the rollout
-    terminal_safety_cost_factor: 1e+2 # how much to weight up the terminal state costs compared to the rest of the rollout
     stage_cost_factor: 1e0 # how much to weight up the state costs
     track_edge_barrier_cost: 1e9 # how much to penalize cart at edge of track
     track_length_fraction: 0.8 # fraction of half track length to allow free movement of cart before hitting barrier function
@@ -66,7 +64,7 @@ CartPole:
     balance_dir: up # 1 or up, -1 or down, multiplied by target_equilibrium
 
     # shimmy does a sinusoidal dance of cart around target position with period in seconds and amplitude in meters
-    shimmy_freq_hz: 2.25
+    shimmy_freq_hz: 1.125
     shimmy_amp: .07
     shimmy_freq2_hz: 2.
     shimmy_amp2: .025
@@ -83,7 +81,10 @@ CartPole:
     dance_song_playback_rate: 1. # rate to match song speed compared to real time simulation rate, we should set to 1 for song to sound native but code must run fast enough then
 
     # cartwheel
-    cartwheel_cycles: -3 # positive cw, negative ccw
+    cartwheel_cycles: +1 # positive cw, negative ccw
     cartwheel_balance_angle_limit_deg: 5.0
-    cartwheel_balance_angled_limit_deg_per_sec: 10.0
-    cartwheel_target_duration_s: 1.2
+    cartwheel_balance_angled_limit_deg_per_sec: 5.0
+    cartwheel_freefall_angle_limit_deg: 45.
+    cartwheel_freefall_angled_limit_deg_per_sec: 100.
+    cartwheel_freefall_to_after_angle_limit_deg: 150.
+    cartwheel_target_duration_s: 1.1
