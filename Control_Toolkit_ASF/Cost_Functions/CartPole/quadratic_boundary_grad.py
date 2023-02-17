@@ -44,11 +44,8 @@ class quadratic_boundary_grad(cost_function_base):
     # cost for difference from upright position
     def _E_pot_cost(self, angle):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
-        if self.lib.cast(self.controller.target_equilibrium > 0, self.lib.bool):
-            return 0.25 * (1.0 + self.lib.cos(admissible_angle) - self.lib.cos(angle)) ** 8
-        else:
-            return 0.25 * (1.0 + self.lib.cos(admissible_angle) - self.lib.cos(angle+self.lib.pi)) ** 8
-    
+        return 0.25 * (1.0 + self.lib.cos(admissible_angle) - self.lib.cos(angle + (1.0-self.controller.target_equilibrium)*self.lib.pi/2.0)) ** 8
+
     def _E_kin_cost(self, angleD):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
         return angleD ** 2
