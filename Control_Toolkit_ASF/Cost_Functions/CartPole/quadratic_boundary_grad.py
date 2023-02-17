@@ -10,12 +10,17 @@ from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX
 from CartPole.cartpole_model import u_max
 
+import numpy as np
+
 #load constants from config file
 config = safe_load(open(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"), "r"))
 
 dd_weight = config["CartPole"]["quadratic_boundary_grad"]["dd_weight"]
+dd_terminal_weight = config["CartPole"]["quadratic_boundary_grad"]["dd_terminal_weight"]
 cc_weight = config["CartPole"]["quadratic_boundary_grad"]["cc_weight"]
 ep_weight = config["CartPole"]["quadratic_boundary_grad"]["ep_weight"]
+ep_terminal_weight = config["CartPole"]["quadratic_boundary_grad"]["ep_terminal_weight"]
+admissible_angle = np.deg2rad(config["CartPole"]["quadratic_boundary_grad"]["admissible_angle"], dtype=np.float32)
 ekp_weight = config["CartPole"]["quadratic_boundary_grad"]["ekp_weight"]
 ccrc_weight = config["CartPole"]["quadratic_boundary_grad"]["ccrc_weight"]
 R = config["CartPole"]["quadratic_boundary_grad"]["R"]
@@ -39,7 +44,10 @@ class quadratic_boundary_grad(cost_function_base):
     # cost for difference from upright position
     def _E_pot_cost(self, angle):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
-        return self.controller.target_equilibrium * 0.25 * (1.0 - self.lib.cos(angle)) ** 2
+        if self.lib.cast(self.controller.target_equilibrium > 0, self.lib.bool):
+            return 0.25 * (1.0 + self.lib.cos(admissible_angle) - self.lib.cos(angle)) ** 8
+        else:
+            return 0.25 * (1.0 + self.lib.cos(admissible_angle) - self.lib.cos(angle+self.lib.pi)) ** 8
     
     def _E_kin_cost(self, angleD):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
@@ -64,7 +72,15 @@ class quadratic_boundary_grad(cost_function_base):
         :return: One terminal cost per rollout
         :rtype: np.ndarray
         """
-        terminal_cost = 10000 * self.lib.cast(
+        dd_terminal = dd_terminal_weight * self._distance_difference_cost(
+            terminal_states[:, POSITION_IDX]
+        )
+
+        ep_terminal = ep_terminal_weight * self._E_pot_cost(terminal_states[:, ANGLE_IDX])
+
+        terminal_cost = dd_terminal + \
+                        ep_terminal + \
+                        10000 * self.lib.cast(
             (self.lib.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
             | (
                 self.lib.abs(terminal_states[:, POSITION_IDX] - self.controller.target_position)
