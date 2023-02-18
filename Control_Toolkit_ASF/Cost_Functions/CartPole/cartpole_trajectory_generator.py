@@ -2,6 +2,7 @@ import time
 from pydoc import text
 
 import numpy as np
+from matplotlib.pyplot import pause
 
 from CartPole import state_utilities
 from Control_Toolkit.Controllers import template_controller
@@ -24,7 +25,7 @@ class cartpole_trajectory_generator:
 
     POLICIES=('balance','spin','shimmy','cartonly','cartwheel')
     POLICIES_NUMBERED=('balance0','spin1','shimmy2','cartonly3','cartwheel4') # for tensorflow scalar BS
-    CARTWHEEL_STATES={'before','during','after'}
+    CARTWHEEL_STATES={'before','starting','during','after'}
 
     def __init__(self):
         self._prev_policy=None
@@ -41,17 +42,23 @@ class cartpole_trajectory_generator:
         # if is_physical_cartpole_running_and_control_enabled() else 0 # subtracted from all times for running physical cartpole to avoid numerical overflow
         # log.debug(f'self.start_time={self.start_time:.1f}s')
 
-        self.cartwheel_state=None
-        self.cartwheel_time_state_changed = None
-        self.set_cartwheel_state('before',self.start_time)
-        self.cartwheel_cycles_to_do=0
-        self.cartwheel_starttime = 0 # time that this particular cartwheel started
-        self.cartwheel_direction=None # 1 for cw, -1 for ccw
+        self.reset_cartwheel_state()
+
+    def reset_cartwheel_state(self):
+        self.cartwheel_state = 'before'
+        self.cartwheel_time_state_changed = 0
+        self.set_cartwheel_state('before', self.start_time)
+        self.cartwheel_cycles_to_do = 0
+        if not self.cost_function is None and hasattr(self.cost_function,'cartwheel_cycles'):
+            self.cartwheel_cycles_to_do=np.abs(self.cost_function.cartwheel_cycles)
+        self.cartwheel_starttime = 0  # time that this particular cartwheel started
+        self.cartwheel_direction = 1  # 1 for ccw (increasing angle), -1 for cw
 
     def reset(self):
         """ stops dance if it is going
         """
         self.cartpole_dancer.stop()
+        self.reset_cartwheel_state()
 
     def generate_cartpole_trajectory(self, time: float, state: np.ndarray, controller:template_controller, cost_function: cost_function_base) -> TensorType:
         """ Computes the desired future state trajectory at this time.
@@ -59,7 +66,7 @@ class cartpole_trajectory_generator:
         :param time: the scalar time in seconds
         :param horizon: the number of horizon steps
         :param dt: the timestep in seconds
-        :param state: the current state of the cartpole as 1d vector
+        :param state: the current state of the cartpole as 1d vector of current state components, e.g. the scalar angle state[state_utilities.ANGLE]
 
         :returns: the target state trajectory of cartpole, valid for steps that use this trajectory (spin does not use it)
         It is np.ndarray[states,timesteps] with NaN as at least first entries of each state for don't care states, and otherwise the desired future state values.
@@ -167,9 +174,12 @@ class cartpole_trajectory_generator:
                 log.warning(f'balance_dir value of "{cost_function.balance_dir} must be "up" or "down"')
             target_angle = np.pi * (1 - gui_target_equilibrium*up_down) / 2  # either 0 for up and pi for down
             traj[state_utilities.POSITION_IDX] = gui_target_position
-            traj[state_utilities.ANGLE_COS_IDX, :] = np.cos(target_angle)
             # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(target_angle)
-            # traj[state_utilities.ANGLE_IDX, :] = target_angle
+            if gui_target_equilibrium*up_down>0:
+                traj[state_utilities.ANGLE_IDX, :] = target_angle # for up, target angle zero, which is increases linearly with angle, unlike cos which only goes away from 1 like 1-angle^2
+            else:
+                traj[state_utilities.ANGLE_COS_IDX, :] = -1 # for down, avoid the 2pi cut ot +pi/-pi by targetting cos to as negative as possible
+
             traj[state_utilities.ANGLED_IDX, :] = 0
             traj[state_utilities.POSITIOND_IDX, :] = 0
         elif policy=='shimmy':  # cart follows a desired cart position shimmy while keeping pole up or down
@@ -234,49 +244,78 @@ class cartpole_trajectory_generator:
             # print(f'\rCARTPOS: time:{time:.1f}s gui_target_position: {gui_target_position*100:.1f}cm target: {cartpos_vector[0]*100:.1f}cm \033[K',end='') # magic string to go to start of line
         elif policy=='cartwheel':
             # cartwheel starts with balance, once balanced the cartwheels start, after the cartwheels we again balance
-            cycles=cost_function.cartwheel_cycles
+            # cartwheel_duration=cost_function.cartwheel_target_duration_s.numpy()
+            self.cartwheel_direction=np.sign(cost_function.cartwheel_cycles)
             # determine state transitions
+            angle = state[state_utilities.ANGLE_IDX]
+            angle_d = state[state_utilities.ANGLED_IDX]
+
             if self._policy_changed:
                 self.set_cartwheel_state('before',time)
                 self.cartwheel_cycles_to_do=np.abs(cost_function.cartwheel_cycles)
-                self.cartwheel_direction=np.sign(cost_function.cartwheel_cycles)
 
+            # first update state depending on cartwheel state, cartpole state, and time
             if self.cartwheel_state=='before':
                 # if before cartwheel, we need to get balanced
-                if self.is_pole_balanced(state):
-                    self.set_cartwheel_state('during',time)
+                if self.cartwheel_cycles_to_do>0 and self.is_pole_balanced(state):
+                    self.set_cartwheel_state('starting',time)
                     self.cartwheel_starttime=time
+            elif self.cartwheel_state=='starting':
+                # start the free fall in the correct direction using angle_d indicator function
+               # if pole is falling in correct direction and fast enough and has fallen enough move to free fall
+                if np.abs(angle_d)>self.cost_function.cartwheel_freefall_angle_limit_deg*np.pi/180\
+                        and np.sign(angle_d)==self.cartwheel_direction \
+                        and np.abs(angle)>self.cost_function.cartwheel_freefall_angled_limit_deg_per_sec*np.pi/180:
+                    self.cartwheel_cycles_to_do-=1
+                    self.set_cartwheel_state('during',time)
             elif self.cartwheel_state=='during':
-                # during the cartwheel, we don't go to 'after' until at least time for a cartwheel plus we need to be balanced again
-                if time-self.cartwheel_starttime>cost_function.cartwheel_target_duration_s:
-                    if self.is_pole_balanced(state):
-                        self.cartwheel_cycles_to_do-=1
-                        self.cartwheel_starttime = time
-                        if self.cartwheel_cycles_to_do==0:
-                            self.set_cartwheel_state('after',time)
-                    elif time-self.cartwheel_starttime>2*cost_function.cartwheel_target_duration_s:
-                        log.debug('gave up trying to do this cartwheel, starting over')
+                # during the cartwheel, we don't go to 'after' until the angle has exceeded some angle and spin speed
+                if np.abs(angle)>self.cost_function.cartwheel_freefall_to_after_angle_limit_deg*np.pi/180:
+                    if self.cartwheel_cycles_to_do>0:
                         self.set_cartwheel_state('before',time)
+                    else:
+                        self.set_cartwheel_state('after',time)
             elif self.cartwheel_state=='after':
                 pass # end state, don't get out of it except by starting a new cartwheel
 
-            if self.cartwheel_state=='before' or self.cartwheel_state=='after':
+            # now set the target trajectory objectives according to state
+            if self.cartwheel_state=='before' or self.cartwheel_state=='after':  # just get balanced again
                 traj[state_utilities.POSITION_IDX] = gui_target_position
-                traj[state_utilities.ANGLE_COS_IDX, :] = 1
+                traj[state_utilities.ANGLE_IDX, :] = 0
                 traj[state_utilities.ANGLED_IDX, :] = 0
                 traj[state_utilities.POSITIOND_IDX, :] = 0
-            elif self.cartwheel_state=='during':
+            elif self.cartwheel_state=='starting': # we just try to get the pole spinning the correct direction
                 traj[state_utilities.POSITION_IDX] = gui_target_position
                 traj[state_utilities.POSITIOND_IDX, :] = 0
-                # compute times from current time to end of horizon
-                horizon_endtime = time - self.cartwheel_starttime + mpc_horizon * dt
-                # time for step must be relative to start of step
-                times = np.linspace(time - self.cartwheel_starttime, horizon_endtime, num=mpc_horizon)
+                # traj[state_utilities.ANGLE_IDX, :] = self.cartwheel_direction*self.cost_function.cartwheel_freefall_angle_limit_deg*np.pi/180
+                # traj[state_utilities.ANGLE_COS_IDX, :] = cos_target_angle
+                # traj[state_utilities.ANGLE_SIN_IDX, :] = sin_target_angle
+                traj[state_utilities.ANGLED_IDX, :] = 1e6*self.cartwheel_direction
 
-                target_angle=self.cartwheel_direction*2*np.pi*times/cost_function.cartwheel_target_duration_s
-                traj[state_utilities.ANGLE_IDX, :] = target_angle
-                target_angled=np.gradient(target_angle,dt)
-                traj[state_utilities.ANGLED_IDX, :] = target_angled
+            elif self.cartwheel_state=='during': # free fall, just get the cart back to target position
+                traj[state_utilities.POSITION_IDX] = gui_target_position
+                traj[state_utilities.POSITIOND_IDX, :] = 0
+
+                # # compute times from current time to end of horizon
+                # horizon_endtime = time - self.cartwheel_starttime + mpc_horizon * dt
+                # # time for step must be relative to start of step
+                # times = np.linspace(time - self.cartwheel_starttime, horizon_endtime, num=mpc_horizon)
+                # target_angle=self.cartwheel_direction*2*np.pi*times/cartwheel_duration
+                # cartwheel_end_time=self.cartwheel_starttime+self.cartwheel_cycles_to_do*cartwheel_duration
+                # target_angle[times>cartwheel_end_time]=0
+                # target_angled=np.gradient(target_angle,dt)
+                # # import matplotlib.pyplot as plt
+                # # plt.plot(times,target_angle*180/np.pi)
+                # # plt.xlabel('time(s)')
+                # # plt.ylabel('target angle (deg)')
+                # # plt.show()
+                # # pause(.2)
+                # cos_target_angle=np.cos(target_angle)
+                # sin_target_angle=np.sin(target_angle)
+                # # traj[state_utilities.ANGLE_IDX, :] = target_angle
+                # traj[state_utilities.ANGLE_COS_IDX, :] = cos_target_angle
+                # traj[state_utilities.ANGLE_SIN_IDX, :] = sin_target_angle
+                # traj[state_utilities.ANGLED_IDX, :] = target_angled
 
         else:
             log.error(f'cost policy "{policy}" is unknown')
@@ -322,7 +361,7 @@ class cartpole_trajectory_generator:
         elif policy == 'cartonly':
             s = f'Policy: cartonly pos={gui_target_position:.1f}m freq={float(cost_function.cartonly_freq_hz):.1f}Hz amp={float(cost_function.cartonly_amp):.1f}Hz'
         elif policy == 'cartwheel':
-            s = f'Policy: cartwheel pos={gui_target_position:.1f}m state={self.cartwheel_state} cycles_to_do={self.cartwheel_cycles_to_do}'
+            s = f'Policy: cartwheel pos={gui_target_position:.1f}m state={self.cartwheel_state} cycles_to_do={self.cartwheel_cycles_to_do} angle={state[state_utilities.ANGLE_IDX]*180/np.pi:.1f}deg angle_d={state[state_utilities.ANGLED_IDX]*180/np.pi:.1f}deg/s'
         else:
             s = f'unknown/not implemented string'
         return s
