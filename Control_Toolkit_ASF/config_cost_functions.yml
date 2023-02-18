@@ -81,10 +81,10 @@ CartPole:
     dance_song_playback_rate: 1. # rate to match song speed compared to real time simulation rate, we should set to 1 for song to sound native but code must run fast enough then
 
     # cartwheel
-    cartwheel_cycles: +1 # positive cw, negative ccw
-    cartwheel_balance_angle_limit_deg: 5.0
-    cartwheel_balance_angled_limit_deg_per_sec: 5.0
-    cartwheel_freefall_angle_limit_deg: 45.
-    cartwheel_freefall_angled_limit_deg_per_sec: 100.
-    cartwheel_freefall_to_after_angle_limit_deg: 150.
-    cartwheel_target_duration_s: 1.1
+    cartwheel_cycles: +3 # positive cw, negative ccw
+    cartwheel_balance_angle_limit_deg: 10.0
+    cartwheel_balance_angled_limit_deg_per_sec: 30.0
+    cartwheel_freefall_angle_limit_deg: 20.
+    cartwheel_freefall_angled_limit_deg_per_sec: 30.
+    cartwheel_freefall_to_after_angle_limit_deg: 60.
+#    cartwheel_target_duration_s: 1.1

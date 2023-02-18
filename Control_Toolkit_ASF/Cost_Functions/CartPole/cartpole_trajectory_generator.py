@@ -244,7 +244,7 @@ class cartpole_trajectory_generator:
             # print(f'\rCARTPOS: time:{time:.1f}s gui_target_position: {gui_target_position*100:.1f}cm target: {cartpos_vector[0]*100:.1f}cm \033[K',end='') # magic string to go to start of line
         elif policy=='cartwheel':
             # cartwheel starts with balance, once balanced the cartwheels start, after the cartwheels we again balance
-            cartwheel_duration=cost_function.cartwheel_target_duration_s.numpy()
+            # cartwheel_duration=cost_function.cartwheel_target_duration_s.numpy()
             self.cartwheel_direction=np.sign(cost_function.cartwheel_cycles)
             # determine state transitions
             angle = state[state_utilities.ANGLE_IDX]
@@ -266,31 +266,25 @@ class cartpole_trajectory_generator:
                 if np.abs(angle_d)>self.cost_function.cartwheel_freefall_angle_limit_deg*np.pi/180\
                         and np.sign(angle_d)==self.cartwheel_direction \
                         and np.abs(angle)>self.cost_function.cartwheel_freefall_angled_limit_deg_per_sec*np.pi/180:
+                    self.cartwheel_cycles_to_do-=1
                     self.set_cartwheel_state('during',time)
             elif self.cartwheel_state=='during':
-                # during the cartwheel, we don't go to 'after' until the angle has exceeded pi/2
+                # during the cartwheel, we don't go to 'after' until the angle has exceeded some angle and spin speed
                 if np.abs(angle)>self.cost_function.cartwheel_freefall_to_after_angle_limit_deg*np.pi/180:
-                    self.set_cartwheel_state('after',time)
-
-                # if time-self.cartwheel_starttime>cartwheel_duration:
-                #     if self.is_pole_balanced(state):
-                #         self.cartwheel_cycles_to_do-=1
-                #         self.cartwheel_starttime = time
-                #         if self.cartwheel_cycles_to_do<=0:
-                #             self.set_cartwheel_state('after',time)
-                #     elif time-self.cartwheel_starttime>2*cartwheel_duration:
-                #         log.debug('gave up trying to do this cartwheel, starting over')
-                #         self.set_cartwheel_state('before',time)
+                    if self.cartwheel_cycles_to_do>0:
+                        self.set_cartwheel_state('before',time)
+                    else:
+                        self.set_cartwheel_state('after',time)
             elif self.cartwheel_state=='after':
                 pass # end state, don't get out of it except by starting a new cartwheel
 
             # now set the target trajectory objectives according to state
-            if self.cartwheel_state=='before' or self.cartwheel_state=='after':
+            if self.cartwheel_state=='before' or self.cartwheel_state=='after':  # just get balanced again
                 traj[state_utilities.POSITION_IDX] = gui_target_position
                 traj[state_utilities.ANGLE_IDX, :] = 0
                 traj[state_utilities.ANGLED_IDX, :] = 0
                 traj[state_utilities.POSITIOND_IDX, :] = 0
-            elif self.cartwheel_state=='starting':
+            elif self.cartwheel_state=='starting': # we just try to get the pole spinning the correct direction
                 traj[state_utilities.POSITION_IDX] = gui_target_position
                 traj[state_utilities.POSITIOND_IDX, :] = 0
                 # traj[state_utilities.ANGLE_IDX, :] = self.cartwheel_direction*self.cost_function.cartwheel_freefall_angle_limit_deg*np.pi/180
@@ -298,7 +292,7 @@ class cartpole_trajectory_generator:
                 # traj[state_utilities.ANGLE_SIN_IDX, :] = sin_target_angle
                 traj[state_utilities.ANGLED_IDX, :] = 1e6*self.cartwheel_direction
 
-            elif self.cartwheel_state=='during':
+            elif self.cartwheel_state=='during': # free fall, just get the cart back to target position
                 traj[state_utilities.POSITION_IDX] = gui_target_position
                 traj[state_utilities.POSITIOND_IDX, :] = 0
 
@@ -367,7 +361,7 @@ class cartpole_trajectory_generator:
         elif policy == 'cartonly':
             s = f'Policy: cartonly pos={gui_target_position:.1f}m freq={float(cost_function.cartonly_freq_hz):.1f}Hz amp={float(cost_function.cartonly_amp):.1f}Hz'
         elif policy == 'cartwheel':
-            s = f'Policy: cartwheel pos={gui_target_position:.1f}m state={self.cartwheel_state} cycles_to_do={self.cartwheel_cycles_to_do}'
+            s = f'Policy: cartwheel pos={gui_target_position:.1f}m state={self.cartwheel_state} cycles_to_do={self.cartwheel_cycles_to_do} angle={state[state_utilities.ANGLE_IDX]*180/np.pi:.1f}deg angle_d={state[state_utilities.ANGLED_IDX]*180/np.pi:.1f}deg/s'
         else:
             s = f'unknown/not implemented string'
         return s
