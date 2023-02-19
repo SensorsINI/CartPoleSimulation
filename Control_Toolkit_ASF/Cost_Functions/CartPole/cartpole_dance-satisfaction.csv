@@ -4,14 +4,28 @@
 # policies can be balance1, spin2, shimmy3, cartonly4
 # self.cartwheel_cycles=self.cartpole_dancer.amp
 endtime, cartpos, policy, option, freq, amp, freq2, amp2
-3, 0, balance1,up,,,,
-12, 0, shimmy3,up, 1.125, .06, 2.25, .08
-15, 0, cartwheel5, ,1,,
-18, 0, cartwheel5, ,-1,,
-21, 0, cartwheel5, ,+1,,
-35, -.05, spin2, cw, 5,,,
-64, 0, shimmy3,up, 1.125, .06, 2.25, .08
-73, .05, spin2, ccw, 5,,,
-76, 0, balance1,up,,,,
-90, 0, shimmy3,up,  1.125, .06, 2.25, .08
-
+3,0, balance1,up,,,,
+00:14.6,0, shimmy3,,1.125,0.1,2.25,0.08
+00:18.3,0, cartwheel5, ,,1,,
+00:21.3,0, cartwheel5, ,,-1,,
+00:24.5,0, cartwheel5, ,,1,,
+00:27.9,0, cartwheel5, ,,-1,,
+00:35.5,-0.05, spin2, cw,,,,
+00:42.2,0.05, spin2, ccw,,,,
+00:50.0,0, shimmy3,,1.125,0.1,2.25,0.08
+00:53.5,0, balance1,up,,,,
+00:57.0,0, shimmy3,,1.125,0.1,2.25,0.08
+01:00.4,0, cartwheel5, ,,1,,
+01:04.5,0, cartwheel5, ,,-1,,
+01:07.3,0, cartwheel5, ,,1,,
+01:09.8,0, cartwheel5, ,,-1,,
+01:15.1,-0.05, spin2, cw,,,,
+01:19.0,0.05, spin2, ccw,,,,
+01:22.2,0, shimmy3,,1.125,0.1,2.25,0.08
+01:26.1,0, balance1,up,,,,
+01:28.5,0, shimmy3,,1.125,0.1,2.25,0.08
+01:35.8,0, cartwheel5, ,,1,,
+01:39.8,0, cartwheel5, ,,-1,,
+01:42.7,0, cartwheel5, ,,1,,
+01:53.2,0, cartwheel5, ,,-1,,
+02:01.1,-0.05, spin2, cw,5,,,
