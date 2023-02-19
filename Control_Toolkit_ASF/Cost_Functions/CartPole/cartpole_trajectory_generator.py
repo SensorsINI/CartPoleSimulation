@@ -38,6 +38,14 @@ class cartpole_trajectory_generator:
         self.cartpole_dancer=cartpole_dancer()
         self.traj:np.ndarray=None # stores the latest trajectory, for later reference, e.g. for measuring model mismatch
         self.start_time=0
+
+        self.cartwheel_cycles_to_do:int = None
+        self.cartwheel_state:str = None
+        self.cartwheel_time_state_changed:float = None
+        self.cartwheel_starttime:float = None
+        self.cartwheel_direction:int = None
+        self.last_cartwheel_cycles:int=None
+
         # we cannot determine if we are running physical cartpole with following method since control is not running at start time.time()
         # if is_physical_cartpole_running_and_control_enabled() else 0 # subtracted from all times for running physical cartpole to avoid numerical overflow
         # log.debug(f'self.start_time={self.start_time:.1f}s')
@@ -53,6 +61,7 @@ class cartpole_trajectory_generator:
             self.cartwheel_cycles_to_do=np.abs(self.cost_function.cartwheel_cycles)
         self.cartwheel_starttime = 0  # time that this particular cartwheel started
         self.cartwheel_direction = 1  # 1 for ccw (increasing angle), -1 for cw
+        self.last_cartwheel_cycles=0 # to test if config file value changes so we can restart
 
     def reset(self):
         """ stops dance if it is going
@@ -102,6 +111,7 @@ class cartpole_trajectory_generator:
         if self._policy_changed and self._prev_policy=='dance' and policy!='dance':
             self.cartpole_dancer.stop() # stop music
 
+        # if we are following a complete dance from CSV file, then set the appropriate fields here from the CSV columns
         if policy=='dance':
             if self._policy_changed:
                 self.cartpole_dancer.start(time,  self)
@@ -145,25 +155,6 @@ class cartpole_trajectory_generator:
         if policy== 'spin':  # spin pole CW or CCW depending on target_equilibrium up or down
             # spin is handled entirely by a special cost function in cartpole_dancer_cost.py
             pass
-            # spin_dir_factor=1
-            # if cost_function.spin_dir=='cw':
-            #     spin_dir_factor=-1
-            # elif cost_function.spin_dir=='ccw':
-            #     spin_dir_factor=+1
-            # else:
-            #     log.warning(f'spin_dir value of "{cost_function.spin_dir} must be "cw" or "ccw"')
-            # horizon_endtime = float(mpc_horizon) * dt
-            # times = np.linspace(0, horizon_endtime, num=mpc_horizon)
-            # rad_per_s_target = spin_dir_factor*gui_target_equilibrium * 2 * np.pi * cost_function.spin_freq_hz # note direction of spin from target_equilibrium
-            # rad_per_dt = rad_per_s_target * dt
-            # # current_angle = state[state_utilities.ANGLE_IDX]
-            # # angle_trajectory=current_angle +  times * rad_per_dt
-            # traj[state_utilities.POSITION_IDX] = gui_target_position
-            # # traj[state_utilities.ANGLE_COS_IDX, :] = np.cos(angle_trajectory)
-            # # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(angle_trajectory)
-            # # traj[state_utilities.ANGLE_IDX, :] = angle_trajectory
-            # traj[state_utilities.ANGLED_IDX, :] = rad_per_s_target # 1000 rad/s is arbitrary, not sure if this is best target
-            # # traj[state_utilities.POSITIOND_IDX, :] = 0
         elif policy=='balance':  # balance upright or down at desired cart position
             up_down=1
             if cost_function.balance_dir=='up':
@@ -245,14 +236,16 @@ class cartpole_trajectory_generator:
         elif policy=='cartwheel':
             # cartwheel starts with balance, once balanced the cartwheels start, after the cartwheels we again balance
             # cartwheel_duration=cost_function.cartwheel_target_duration_s.numpy()
-            self.cartwheel_direction=np.sign(cost_function.cartwheel_cycles)
+            cartwheel_cycles=int(cost_function.cartwheel_cycles.numpy())
+            self.cartwheel_direction=np.sign(cartwheel_cycles)
             # determine state transitions
             angle = state[state_utilities.ANGLE_IDX]
             angle_d = state[state_utilities.ANGLED_IDX]
 
-            if self._policy_changed:
+            if self._policy_changed or cartwheel_cycles!=self.last_cartwheel_cycles:
                 self.set_cartwheel_state('before',time)
-                self.cartwheel_cycles_to_do=np.abs(cost_function.cartwheel_cycles)
+                self.cartwheel_cycles_to_do=np.abs(cartwheel_cycles)
+                self.last_cartwheel_cycles=cartwheel_cycles
 
             # first update state depending on cartwheel state, cartpole state, and time
             if self.cartwheel_state=='before':

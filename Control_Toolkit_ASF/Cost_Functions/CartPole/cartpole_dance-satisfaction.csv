@@ -2,6 +2,7 @@
 # it has 135bpm with offset of 40ms according to BeatEdit
 # which means the beat frequency is 2.25Hz and so all frequencies should be multiple or integer fraction of 2.25Hz, e.g. 1.125, .5625
 # policies can be balance1, spin2, shimmy3, cartonly4
+# self.cartwheel_cycles=self.cartpole_dancer.amp
 endtime, cartpos, policy, option, freq, amp, freq2, amp2
 3, 0, balance1,up,,,,
 12, 0, shimmy3,up, 1.125, .06, 2.25, .08
