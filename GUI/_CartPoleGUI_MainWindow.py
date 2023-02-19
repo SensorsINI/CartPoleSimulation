@@ -92,7 +92,7 @@ class CartPoleMainWindow(QMainWindow):
 
         :param str: the string to show
         """
-        if not CartPoleMainWindow.CartPoleGuiStatusText is None:
+        if not CartPoleMainWindow.CartPoleGuiStatusText is None and not text is None:
             CartPoleMainWindow.CartPoleGuiStatusText.setText(text)
 
     def __init__(self, parent=None, *args, **kwargs):

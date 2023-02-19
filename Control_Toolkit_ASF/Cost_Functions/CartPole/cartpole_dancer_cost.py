@@ -190,7 +190,7 @@ class cartpole_dancer_cost(cost_function_base):
 
         :returns: the pole potential energy in Joules, it is zero when pole is hanging down
         """
-        return ((1+cosangle)/2) * m_pole * L * 9.8 * 0.5  # hopefully this is height of COM potential gravitational energy
+        return ((1+cosangle)/2) * m_pole * (L/2) * 9.8  # hopefully this is height of COM potential gravitational energy
 
     def pole_energy_kinetic(self, angleD):
         """Compute kinetic energy of pole
@@ -199,4 +199,4 @@ class cartpole_dancer_cost(cost_function_base):
 
          :returns: the kinetic energy in Joules
          """
-        return (1. / 3.) * m_pole * L * L * (angleD ** 2)
+        return (1. / 6.) * m_pole * L * L * (angleD ** 2)

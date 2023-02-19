@@ -1,3 +1,15 @@
+# This config specifies the parameters for all the different MPC optimizers, e.g. mppi.
+#  To select a particular optimizer, see config_controllers.yml.
+mppi: # used as basic MPC optimizer for cartpole (tobi)
+  seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
+  mpc_horizon: 40                       # steps, 40 steps of 0.02 is .8s
+  num_rollouts: 700                    # Number of Monte Carlo samples
+  cc_weight: 1.0
+  R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in cost functions config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
+  LBD: 100.0                            # Cost parameter lambda
+  NU: 1000.0                            # Exploration variance
+  SQRTRHOINV: 0.03                      # Sampling variance
+  period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
 cem-tf:
   seed: null                          # If null, random seed based on datetime is used
   mpc_horizon: 40                       # steps
@@ -201,16 +213,6 @@ mppi-var-tf:
   STDEV_min: 0.01                       # Maximal variance for sampling
   STDEV_max: 10                         # Minimal sampling variance for sampling
   max_grad_norm: 100000                 # max norm of gradient such that ||gradient||_2
-mppi:
-  seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
-  mpc_horizon: 40                       # steps, 40 steps of 0.02 is .8s
-  num_rollouts: 700                    # Number of Monte Carlo samples
-  cc_weight: 1.0
-  R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in cost functions config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
-  LBD: 100.0                            # Cost parameter lambda
-  NU: 1000.0                            # Exploration variance
-  SQRTRHOINV: 0.03                      # Sampling variance
-  period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
 random-action-tf:
   seed: null                          # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                      # steps
