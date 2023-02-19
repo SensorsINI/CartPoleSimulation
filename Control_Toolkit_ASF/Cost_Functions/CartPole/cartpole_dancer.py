@@ -134,8 +134,8 @@ class cartpole_dancer:
                 or is_physical_cartpole_running_and_control_enabled():
                 if self.song_player:
                     self.song_player.play() # only play if simulator running or running physical cartpole
-                self.started = True
-                self.paused=False
+        self.started = True
+        self.paused=False
 
     def stop(self)->None:
         if self.song_player:
@@ -202,9 +202,12 @@ class cartpole_dancer:
 
             self.time_step_started=time
             self.current_row = self.reader.__next__()
-            log.debug(f'At time={time:.1f} new dance step is {self.current_row}')
+            log.debug(f"At t={time:.1f}s new dance step is '{self.current_row['policy']}' ending at t={self.current_row['endtime']}")
             if 'winsound' in sys.modules:
-                winsound.Beep(1000,300) # beep
+                try:
+                    winsound.Beep(1000,300) # beep
+                except ValueError as e:
+                    log.warning(f'could not play beep, caught {e}')
 
         except StopIteration:
             log.info(f'restarting dance at time={time}s')
@@ -212,7 +215,7 @@ class cartpole_dancer:
             self.step(time)
             return
         try:
-            self.endtime = float(self.current_row[self.ENDTIME])
+            self.endtime = hms_to_seconds(self.current_row[self.ENDTIME])
             self.policy = self.current_row[self.POLICY][:-1] # the dqnce step 'policy" column has entries like balance1, spin2, etc
             self.policy_number=int(self.current_row[self.POLICY][-1]) # todo not sufficient for XLA / TF compiled code to see this variable change
             self.option = self.current_row[self.OPTION]
@@ -247,3 +250,15 @@ class cartpole_dancer:
             return f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m freq={self.freq:.1f}Hz'
         else:
             return f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m'
+
+
+def hms_to_seconds(timestr:str)->float:
+    """Get seconds from time.
+
+    :param timestr: hh:mm:ss.xxx string or mm:s.xxx or simply s.xxx where xxx is the fraction of seconds
+    :returns: time in float seconds
+    """
+    seconds= 0.
+    for part in timestr.split(':'):
+        seconds= seconds*60. + float(part)
+    return seconds

@@ -132,14 +132,14 @@ class cartpole_trajectory_generator:
                 cost_function.shimmy_amp2=self.cartpole_dancer.amp2
                 cost_function.shimmy_duration=self.cartpole_dancer.endtime
                 cost_function.shimmy_dir=self.cartpole_dancer.option
-
             elif policy=='cartonly':
                 cost_function.cartonly_freq_hz=self.cartpole_dancer.freq
                 cost_function.cartonly_amp=self.cartpole_dancer.amp
                 cost_function.cartonly_duty_cycle=float(self.cartpole_dancer.option)
-
             elif policy=='cartwheel':
                 self.cartwheel_cycles=self.cartpole_dancer.amp
+            else:
+                log.error(f"policy '{policy}' is unknown")
 
 
         if policy== 'spin':  # spin pole CW or CCW depending on target_equilibrium up or down
@@ -171,7 +171,7 @@ class cartpole_trajectory_generator:
             elif cost_function.balance_dir=='down':
                 up_down=-1
             else:
-                log.warning(f'balance_dir value of "{cost_function.balance_dir} must be "up" or "down"')
+                log.warning(f"balance_dir value of '{cost_function.balance_dir}' must be 'up' or 'down'")
             target_angle = np.pi * (1 - gui_target_equilibrium*up_down) / 2  # either 0 for up and pi for down
             traj[state_utilities.POSITION_IDX] = gui_target_position
             # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(target_angle)
@@ -329,7 +329,7 @@ class cartpole_trajectory_generator:
         """
         if self.cartwheel_state is None or self.cartwheel_state!=new_state:
             self.cartwheel_time_state_changed=time
-            log.info(f'changed state from {self.cartwheel_state}->{new_state} at t={time:.3f}')
+            log.debug(f'changed state from {self.cartwheel_state}->{new_state} at t={time:.3f}')
         self.cartwheel_state=new_state
 
     def is_pole_balanced(self, state):

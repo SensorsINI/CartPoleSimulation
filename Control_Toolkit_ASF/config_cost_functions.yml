@@ -38,7 +38,7 @@ CartPole:
     # e.g. dance0 will create (in update_attributes call) policy='dance' and policy_number=0
     # this hack is to allow branching in XLA code that lacks string compare operator
     # see others\globals_and_utilities.py\update_attributes method
-    policy:  spin2  # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4 cartwheel5
+    policy:  dance0  # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4 cartwheel5
 
     # tobi cannot get conditional branch to work for following option in cartpole_dancer_cost.py
 #    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
