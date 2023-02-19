@@ -1,3 +1,5 @@
+# this config is to specify specific cost function parameters. The actual cost function used is specified in config_optimers.yml
+
 cost_function_name_default: default
 # Default value is used if controller does not specify a cost_function_specification (leave empty)
 # Cost functions are grouped by environment name in a folder within Control_Toolkit_ASF.Cost_Functions
@@ -36,7 +38,7 @@ CartPole:
     # e.g. dance0 will create (in update_attributes call) policy='dance' and policy_number=0
     # this hack is to allow branching in XLA code that lacks string compare operator
     # see others\globals_and_utilities.py\update_attributes method
-    policy:  cartwheel5  # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4 cartwheel5
+    policy:  spin2  # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4 cartwheel5
 
     # tobi cannot get conditional branch to work for following option in cartpole_dancer_cost.py
 #    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
@@ -55,9 +57,9 @@ CartPole:
     control_cost_change_weight: 1e0 # cost of changing control
 
     # spin
-    spin_dir: cw+1  # cw+1 ccw-1 1 or cw, -1 or ccw
+    spin_dir: ccw-1  # cw+1 ccw-1 1 or cw, -1 or ccw
     upright_pole_energy_multiple_to_count_spin_direction_cost: 1.5 # pole must have this excess total energy before we start counting spin direction energy
-    spin_energy_weight: 1e6 # cost factor only for spin behavior to weight the spin energy
+    spin_energy_weight: 1e7 # cost factor only for spin behavior to weight the spin energy
 
 
     # balance
@@ -78,7 +80,7 @@ CartPole:
 
     dance_song_file: 'others/Media/Rolling_Stones_Satisfaction.mp3' # no spaces or special chars, no / . - etc....
     dance_csv_file: 'Control_Toolkit_ASF/Cost_Functions/CartPole/cartpole_dance-satisfaction.csv'
-    dance_song_playback_rate: 1. # rate to match song speed compared to real time simulation rate, we should set to 1 for song to sound native but code must run fast enough then
+    dance_song_playback_rate: 0.55 # rate to match song speed compared to real time simulation rate, we should set to 1 for song to sound native but code must run fast enough then
 
     # cartwheel
     cartwheel_cycles: +3 # positive cw, negative ccw

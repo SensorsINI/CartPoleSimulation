@@ -1,3 +1,5 @@
+# the root config that specifies basic physical parameters of the cartpole.
+#  However, for physical-cartpole, we still use the legacy p_globals.py which overrides these parameters.
 cartpole:
   actuator_noise: 0.1  # Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
   mode: stabilization
