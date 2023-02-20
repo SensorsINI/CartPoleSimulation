@@ -1329,5 +1329,5 @@ def is_physical_cartpole_running_and_control_enabled():
                 log.debug(f'physical cartpole present and control enabled')
                 return True
         except Exception as e:
-            log.debug(f'Could not determine if control is enabled: {e}')
+            log.warning(f'Could not determine if control is enabled: {e}')
             return False

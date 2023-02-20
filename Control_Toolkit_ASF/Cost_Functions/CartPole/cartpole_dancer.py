@@ -133,6 +133,7 @@ class cartpole_dancer:
         if ((CartPoleMainWindow.CartPoleMainWindowInstance) and CartPoleMainWindow.CartPoleGuiSimulationState=='running')\
                 or is_physical_cartpole_running_and_control_enabled():
                 if self.song_player:
+                    log.debug(f'starting playing song {self.song_file_name}')
                     self.song_player.play() # only play if simulator running or running physical cartpole
         self.started = True
         self.paused=False
@@ -218,7 +219,11 @@ class cartpole_dancer:
             self.endtime = hms_to_seconds(self.current_row[self.ENDTIME])
             self.policy = self.current_row[self.POLICY][:-1] # the dqnce step 'policy" column has entries like balance1, spin2, etc
             self.policy_number=int(self.current_row[self.POLICY][-1]) # todo not sufficient for XLA / TF compiled code to see this variable change
-            self.option = self.current_row[self.OPTION]
+            opt_str=self.current_row[self.OPTION]
+            try:
+                self.option=int(opt_str)
+            except ValueError:
+                self.option = self.current_row[self.OPTION]
             self.cartpos = float(self.current_row[self.CARTPOS])
             self.freq = self.convert_float(self.FREQ)
             self.amp = self.convert_float(self.AMP)

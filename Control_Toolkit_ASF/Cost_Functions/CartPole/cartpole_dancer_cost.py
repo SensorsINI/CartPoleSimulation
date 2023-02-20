@@ -82,7 +82,7 @@ class cartpole_dancer_cost(cost_function_base):
 
         # dance step policies are: dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4
 
-        if self.lib.equal(self.policy_number, 2):
+        if self.lib.equal(self.policy_number, 2): # spin
             # The cost tensor we will return.  we allocate one less than num_timesteps to be all zeros because
             # we concatenate the terminal cost in this branch
             stage_costs = self.lib.zeros((num_rollouts, num_timesteps - 1))
@@ -116,7 +116,7 @@ class cartpole_dancer_cost(cost_function_base):
             if current_pole_total_energy>self.upright_pole_energy_multiple_to_count_spin_direction_cost * upright_pole_energy:
                 # pole is already spinning, multiply the spin energy by the actual direction of spinning and desired spin direction
                 actual_spin_dirs=self.lib.sign(angleD_states)
-                desired_spin_dir= -float(self.spin_dir_number) * gui_target_equilibrium # minus sign to get correct cost sign for cw/ccw rotation
+                desired_spin_dir= -float(self.spin_dir) * gui_target_equilibrium # minus sign to get correct cost sign for cw/ccw rotation
                 spin_cost_energy=spin_cost_energy*desired_spin_dir*actual_spin_dirs
 
             # compute the cart position cost as distance from desired cart position

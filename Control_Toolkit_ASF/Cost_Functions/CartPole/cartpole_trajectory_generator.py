@@ -40,6 +40,7 @@ class cartpole_trajectory_generator:
         self.traj:np.ndarray=None # stores the latest trajectory, for later reference, e.g. for measuring model mismatch
         self.start_time=0
 
+        self.cartwheel_cycles = None
         self.cartwheel_cycles_to_do:int = None
         self.cartwheel_state:str = None
         self.cartwheel_time_state_changed:float = None
@@ -127,11 +128,10 @@ class cartpole_trajectory_generator:
                                   cost_function.lib.to_variable(self.cartpole_dancer.policy_number, cost_function.lib.int32))
             gui_target_position=self.cartpole_dancer.cartpos
             if policy=='spin':
-                cost_function.spin_dir=self.cartpole_dancer.option
-                spin_dir_number=1 if cost_function.spin_dir=='cw' else -1
-                # hack to get int value for TF cost function use
-                cost_function.lib.assign(getattr(cost_function, 'spin_dir_number'),
-                                         cost_function.lib.to_variable(spin_dir_number,
+                spin_dir=self.cartpole_dancer.option
+                # hack to get int value for TF cost function use, is referred to in cartpole_dancer_cost as self.spin_dir
+                cost_function.lib.assign(getattr(cost_function, 'spin_dir'),
+                                         cost_function.lib.to_variable(spin_dir,
                                                                        cost_function.lib.int32))
                 # cost_function.spin_freq_hz=self.cartpole_dancer.freq
             elif policy=='balance':
@@ -148,7 +148,7 @@ class cartpole_trajectory_generator:
                 cost_function.cartonly_amp=self.cartpole_dancer.amp
                 cost_function.cartonly_duty_cycle=float(self.cartpole_dancer.option)
             elif policy=='cartwheel':
-                self.cartwheel_cycles=self.cartpole_dancer.amp
+                cost_function.cartwheel_cycles=self.cartpole_dancer.amp
             else:
                 log.error(f"policy '{policy}' is unknown")
 
@@ -168,7 +168,7 @@ class cartpole_trajectory_generator:
             traj[state_utilities.POSITION_IDX] = gui_target_position
             # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(target_angle)
             if gui_target_equilibrium*up_down>0:
-                traj[state_utilities.ANGLE_IDX, :] = target_angle # for up, target angle zero, which is increases linearly with angle, unlike cos which only goes away from 1 like 1-angle^2
+                traj[state_utilities.ANGLE_IDX, :] = 0 # for up, target angle zero, which is increases linearly with angle, unlike cos which only goes away from 1 like 1-angle^2
             else:
                 traj[state_utilities.ANGLE_COS_IDX, :] = -1 # for down, avoid the 2pi cut ot +pi/-pi by targetting cos to as negative as possible
 
@@ -186,9 +186,9 @@ class cartpole_trajectory_generator:
             # if time>self._time_policy_changed+cost_function.shimmy_duration:
             #     self._time_policy_changed=time # reset shimmy and start over if doing it from fixed shimmy policy in yml
             #     log.debug(f'shimmy restarted at time={time}')
-            f0 = cost_function.shimmy_freq_hz.numpy()  # seconds
-            a0 = cost_function.shimmy_amp.numpy()  # meters
-            if self._policy_changed:
+            f0 = cost_function.shimmy_freq_hz  # seconds
+            a0 = cost_function.shimmy_amp  # meters
+            if self._policy_changed or self.shimmy_starttime is None:
                 log.debug(f'shimmy with freq={f0:.3f}Hz and amp={a0:.3f}m restarted at time={time}')
                 self.shimmy_starttime=time
             # shimmy_endtime=self._time_policy_changed+cost_function.shimmy_duration
@@ -240,16 +240,16 @@ class cartpole_trajectory_generator:
         elif policy=='cartwheel':
             # cartwheel starts with balance, once balanced the cartwheels start, after the cartwheels we again balance
             # cartwheel_duration=cost_function.cartwheel_target_duration_s.numpy()
-            cartwheel_cycles=int(cost_function.cartwheel_cycles.numpy())
-            self.cartwheel_direction=np.sign(cartwheel_cycles)
+            self.cartwheel_cycles=cost_function.cartwheel_cycles
+            self.cartwheel_direction=np.sign(self.cartwheel_cycles)
             # determine state transitions
             angle = state[state_utilities.ANGLE_IDX]
             angle_d = state[state_utilities.ANGLED_IDX]
 
-            if self._policy_changed or cartwheel_cycles!=self.last_cartwheel_cycles:
+            if self._policy_changed or self.cartwheel_cycles!=self.last_cartwheel_cycles:
                 self.set_cartwheel_state('before',time)
-                self.cartwheel_cycles_to_do=np.abs(cartwheel_cycles)
-                self.last_cartwheel_cycles=cartwheel_cycles
+                self.cartwheel_cycles_to_do=np.abs(self.cartwheel_cycles)
+                self.last_cartwheel_cycles=self.cartwheel_cycles
 
             # first update state depending on cartwheel state, cartpole state, and time
             if self.cartwheel_state=='before':
@@ -351,7 +351,8 @@ class cartpole_trajectory_generator:
             dir = self.decode_string(cost_function.balance_dir)
             s = f'Policy: balance/{dir} pos={gui_target_position:.1f}m'
         elif policy == 'spin':
-            dir = self.decode_string(cost_function.spin_dir)
+            dir_int = cost_function.spin_dir.numpy()
+            dir='cw' if dir_int<0 else 'ccw'
             s = f'Policy: spin/{dir}*up/down pos={gui_target_position:.1f}m'
         elif policy == 'shimmy':
             s = f'Policy: shimmy pos={gui_target_position:.1f}m freq={float(cost_function.shimmy_freq_hz):.1f}Hz amp={float(cost_function.shimmy_amp):.1f}Hz'
