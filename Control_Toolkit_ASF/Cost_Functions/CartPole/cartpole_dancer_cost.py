@@ -81,10 +81,17 @@ class cartpole_dancer_cost(cost_function_base):
         target_trajectory = self.target_trajectory
 
         # dance step policies are: dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4
-        if self.lib.equal(self.policy_number, 2): # spin is special cost aimed to first get energy into pole, then make it spin in correct direction
-            # spin cost is based on total pole energy plus cart position plus rotation speed in cw or ccw direction
-            # if the pole has sufficient energy for full rotations then we follow objective to just maximize the angular velocity in the cw or ccw direction.
-            # when the pole has insufficient energy, we follow objective to maximize the total pole energy
+
+        if self.lib.equal(self.policy_number, 2):
+            # The cost tensor we will return.  we allocate one less than num_timesteps to be all zeros because
+            # we concatenate the terminal cost in this branch
+            stage_costs = self.lib.zeros((num_rollouts, num_timesteps - 1))
+
+            # spin is special cost aimed to first get energy into pole, then make it spin in correct direction.
+            # It is totally based on terminal state at end of rollout.
+            # Spin cost is based on total pole energy plus cart position plus rotation speed in cw or ccw direction.
+            # When the pole has insufficient energy for a spin, we follow objective to maximize the total pole energy.
+            # If the pole has sufficient energy for full rotations, then we follow objective to just maximize the signed kinetic energy in the cw or ccw direction.
             upright_pole_energy=self.pole_energy_potential(0) # energy of pole upright compared with hanging down (factor of 2), means pole can swing around all the way if total energy is larger than this
             current_pole_angle=states[0,0,state_utilities.ANGLE_IDX] # rad
             current_pole_angleD=states[0,0,state_utilities.ANGLED_IDX] # rad/s
@@ -93,9 +100,6 @@ class cartpole_dancer_cost(cost_function_base):
             current_pole_potential_energy=self.pole_energy_potential(current_pole_angle)
             current_pole_kinetic_energy=self.pole_energy_kinetic(current_pole_angleD)
             current_pole_total_energy=current_pole_potential_energy+current_pole_kinetic_energy
-
-            # the cost tensor we will return
-            stage_costs=self.lib.zeros((num_rollouts,num_timesteps-1))
 
             # now find the final state at end of horizon and try to get it to either have more energy or spinning faster in particular direction
             # each of following is [num_rollouts] vector of angleD, cos_angle, and cart position
@@ -119,15 +123,15 @@ class cartpole_dancer_cost(cost_function_base):
             # total stage cost is sum of energy of pole spin, direction of spin, and cart position
             # the returned stage_costs is a tensor [num_rollouts, horizon] that has concatenated the terminal costs at end of horizon to the zero stage costs along the horizon
             term_costs=self.spin_energy_weight *spin_cost_energy + self.cart_pos_weight * pos_cost
-            term_costs=tf.expand_dims(term_costs,-1) # make it to e.g. [700,1] tensor
+            term_costs=tf.expand_dims(term_costs,-1) # make it, e.g. with num_rollouts=700, from [700] to [700,1] tensor
             stage_costs =  self.lib.concat([stage_costs,term_costs],1)
 
         else:  # if not spin from 'spin2' as policy, i.e. all other policies, base cost on minimizing distance over rollout from some state vectors over horizon
             # states are "angle", "angleD", "angle_cos", "angle_sin", "position", "positionD"
             stage_costs = self.lib.zeros((num_rollouts, num_timesteps))
             cost_weights = (
-            self.pole_angle_weight, self.pole_swing_weight, self.pole_angle_weight, self.pole_angle_weight,
-            self.cart_pos_weight, self.cart_vel_weight)
+                self.pole_angle_weight, self.pole_swing_weight, self.pole_angle_weight, self.pole_angle_weight,
+                self.cart_pos_weight, self.cart_vel_weight)
             for i in range(NUM_STATES):
                 if not self.lib.any(
                         self.lib.isnan(target_trajectory[i, 0])):  # to skip a state, the first timestep is NaN

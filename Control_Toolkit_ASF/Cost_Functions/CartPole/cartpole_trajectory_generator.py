@@ -186,8 +186,10 @@ class cartpole_trajectory_generator:
             # if time>self._time_policy_changed+cost_function.shimmy_duration:
             #     self._time_policy_changed=time # reset shimmy and start over if doing it from fixed shimmy policy in yml
             #     log.debug(f'shimmy restarted at time={time}')
+            f0 = cost_function.shimmy_freq_hz.numpy()  # seconds
+            a0 = cost_function.shimmy_amp.numpy()  # meters
             if self._policy_changed:
-                log.debug(f'shimmy restarted at time={time}')
+                log.debug(f'shimmy with freq={f0:.3f}Hz and amp={a0:.3f}m restarted at time={time}')
                 self.shimmy_starttime=time
             # shimmy_endtime=self._time_policy_changed+cost_function.shimmy_duration
             # compute times from current time to end of horizon
@@ -196,8 +198,6 @@ class cartpole_trajectory_generator:
             # time for shimmy must be relative to start of shimmy step for freq ramp to make sense
             times = np.linspace(time_since_shimmy_started, horizon_endtime, num=mpc_horizon)
             # time_frac=times/cost_function.shimmy_duration
-            f0 = cost_function.shimmy_freq_hz  # seconds
-            a0 = cost_function.shimmy_amp  # meters
             # f1 = cost_function.shimmy_freq2_hz  # seconds
             # a1 = cost_function.shimmy_amp2  # meters
 
@@ -209,7 +209,7 @@ class cartpole_trajectory_generator:
 
             cartpos=a0*np.sin(2*np.pi*f0*times)
             cartpos_d=np.gradient(cartpos,dt)
-            angle=-np.arcsin(cartpos/(2*CARTPOLE_PHYSICAL_CONSTANTS.L)) # compute the angle towards the center of shimmy to keep head of pole fixed as well as possible. L is half of pole length.
+            angle=np.arcsin(cartpos/(2*CARTPOLE_PHYSICAL_CONSTANTS.L)) # compute the angle towards the center of shimmy to keep head of pole fixed as well as possible. L is half of pole length.
             angle_d=np.gradient(angle,dt)
 
             traj[state_utilities.POSITION_IDX] = gui_target_position + cartpos
