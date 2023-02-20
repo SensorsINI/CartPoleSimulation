@@ -1,5 +1,5 @@
 # This config specifies the parameters for all the different MPC optimizers, e.g. mppi.
-#  To select a particular optimizer, see config_controllers.yml.
+#  To select a particular optimizer from here, see optimizer: key in the config_controllers.yml selection of controller.
 mppi: # used as basic MPC optimizer for cartpole (tobi)
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 40                       # steps, 40 steps of 0.02 is .8s

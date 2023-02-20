@@ -1,4 +1,5 @@
-# this config specifies the controller used for a particular controller. For example,
+# this config specifies the controller options.
+# to select a particular controller, see TODO where is the controller specified?
 # controller_mpc.py uses the mpc: section below
 # see config_optimizers to specify the parameters for the optimizer, e.g. mppi
 
@@ -8,7 +9,7 @@ mpc: # selects Control_Tookit/Controllers/controller_mpc.py as the controller
   cost_function_specification: cartpole_dancer_cost  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary" "cartpole_dancer_cost"
   computation_library: tensorflow  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.
   controller_logging: false
-mppi-cartpole:
+mppi-cartpole: # TODO what is this section for?
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 30                       # steps
   batch_size: 3500                  # Number of Monte Carlo samples

@@ -17,14 +17,14 @@ CARTPOLE_PHYSICAL_CONSTANTS.TrackHalfLength = (CARTPOLE_PHYSICAL_CONSTANTS.usabl
 # L/2 is distance from pivot axle to center of mass of rod (i.e. half of rod length),
 # m is rod mass
 # g is gravitational acceleration
-pole_length=CARTPOLE_PHYSICAL_CONSTANTS.L*2
+pole_length=CARTPOLE_PHYSICAL_CONSTANTS.L*2 # note factor of 2 to get complete pole length
 pole_mass=CARTPOLE_PHYSICAL_CONSTANTS.m_pole
-Iend=(1./3.)*pole_mass*pole_length**2
-g=9.8
-natural_period=2*np.pi*np.sqrt(Iend/(pole_mass*g*(pole_length/2)))
+Iend=(1./3.)*pole_mass*pole_length**2 # the moment of inertia of pole from end of pole
+g=9.8 # gravity
+natural_period=2*np.pi*np.sqrt(Iend/(pole_mass*g*(pole_length/2))) # note the pole_length/2, it is the distance to COM of pole from pivot
 CARTPOLE_PHYSICAL_CONSTANTS.NaturalPeriod=natural_period
 log.info(f'computed natural period of cartpole T={CARTPOLE_PHYSICAL_CONSTANTS.NaturalPeriod:.3f}s, natural frequency={1/CARTPOLE_PHYSICAL_CONSTANTS.NaturalPeriod:.3f}Hz')
-# tobi measured natural frequency of 1.08Hz, computed is 1.37Hz
+# tobi measured natural frequency of 1.02Hz, computed is 0.97 Hz
 
 # Export variables as global
 def export_globals():
