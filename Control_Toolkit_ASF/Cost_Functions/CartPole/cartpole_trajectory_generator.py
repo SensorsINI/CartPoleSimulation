@@ -28,6 +28,7 @@ class cartpole_trajectory_generator:
     CARTWHEEL_STATES={'before','starting','during','after'}
 
     def __init__(self):
+        self.shimmy_starttime = None
         self._prev_policy=None
         self._prev_dance_policy=None
         self._time_policy_changed=None # when the new dance step started
@@ -182,15 +183,18 @@ class cartpole_trajectory_generator:
             #     up_down=-1
             # else:
             #     log.warning(f'balance_dir value of "{cost_function.balance_dir} must be "up" or "down"')
-            if time>self._time_policy_changed+cost_function.shimmy_duration:
-                self._time_policy_changed=time # reset shimmy and start over if doing it from fixed shimmy policy in yml
+            # if time>self._time_policy_changed+cost_function.shimmy_duration:
+            #     self._time_policy_changed=time # reset shimmy and start over if doing it from fixed shimmy policy in yml
+            #     log.debug(f'shimmy restarted at time={time}')
+            if self._policy_changed:
                 log.debug(f'shimmy restarted at time={time}')
-            shimmy_starttime=self._time_policy_changed
+                self.shimmy_starttime=time
             # shimmy_endtime=self._time_policy_changed+cost_function.shimmy_duration
             # compute times from current time to end of horizon
-            horizon_endtime = time-shimmy_starttime + mpc_horizon * dt
+            time_since_shimmy_started=time-self.shimmy_starttime
+            horizon_endtime =  time_since_shimmy_started + mpc_horizon * dt
             # time for shimmy must be relative to start of shimmy step for freq ramp to make sense
-            times = np.linspace(time-shimmy_starttime, horizon_endtime, num=mpc_horizon)
+            times = np.linspace(time_since_shimmy_started, horizon_endtime, num=mpc_horizon)
             # time_frac=times/cost_function.shimmy_duration
             f0 = cost_function.shimmy_freq_hz  # seconds
             a0 = cost_function.shimmy_amp  # meters
