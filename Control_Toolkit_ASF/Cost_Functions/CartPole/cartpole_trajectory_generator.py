@@ -3,6 +3,7 @@ from pydoc import text
 
 import numpy as np
 from matplotlib.pyplot import pause
+from scipy.signal import sawtooth
 
 from CartPole import state_utilities
 from Control_Toolkit.Controllers import template_controller
@@ -28,7 +29,9 @@ class cartpole_trajectory_generator:
     CARTWHEEL_STATES={'before','starting','during','after'}
 
     def __init__(self):
-        self.shimmy_starttime = None
+
+        self.last_status_text:str=None
+        self.step_start_time = None
         self._prev_policy=None
         self._prev_dance_policy=None
         self._time_policy_changed=None # when the new dance step started
@@ -188,15 +191,15 @@ class cartpole_trajectory_generator:
             #     log.debug(f'shimmy restarted at time={time}')
             f0 = cost_function.shimmy_freq_hz  # seconds
             a0 = cost_function.shimmy_amp  # meters
-            if self._policy_changed or self.shimmy_starttime is None:
-                log.debug(f'shimmy with freq={f0:.3f}Hz and amp={a0:.3f}m restarted at time={time}')
-                self.shimmy_starttime=time
+            if self._policy_changed or self.step_start_time is None:
+                log.debug(f'shimmy with freq={f0}Hz and amp={a0}m restarted at time={time}')
+                self.step_start_time=time
             # shimmy_endtime=self._time_policy_changed+cost_function.shimmy_duration
             # compute times from current time to end of horizon
-            time_since_shimmy_started=time-self.shimmy_starttime
-            horizon_endtime =  time_since_shimmy_started + mpc_horizon * dt
+            time_since_step_started=time-self.step_start_time
+            horizon_endtime =  time_since_step_started + mpc_horizon * dt
             # time for shimmy must be relative to start of shimmy step for freq ramp to make sense
-            times = np.linspace(time_since_shimmy_started, horizon_endtime, num=mpc_horizon)
+            times = np.linspace(time_since_step_started, horizon_endtime, num=mpc_horizon)
             # time_frac=times/cost_function.shimmy_duration
             # f1 = cost_function.shimmy_freq2_hz  # seconds
             # a1 = cost_function.shimmy_amp2  # meters
@@ -209,7 +212,8 @@ class cartpole_trajectory_generator:
 
             cartpos=a0*np.sin(2*np.pi*f0*times)
             cartpos_d=np.gradient(cartpos,dt)
-            angle=np.arcsin(cartpos/(2*CARTPOLE_PHYSICAL_CONSTANTS.L)) # compute the angle towards the center of shimmy to keep head of pole fixed as well as possible. L is half of pole length.
+            angle=np.arcsin(cartpos/(2*CARTPOLE_PHYSICAL_CONSTANTS.L))/2 # compute the angle towards the center of shimmy to keep head of pole fixed as well as possible. L is half of pole length.
+            # we divide by 2 to reduce the required angle a bit more
             angle_d=np.gradient(angle,dt)
 
             traj[state_utilities.POSITION_IDX] = gui_target_position + cartpos
@@ -219,23 +223,29 @@ class cartpole_trajectory_generator:
             traj[state_utilities.ANGLED_IDX, :] = angle_d
             traj[state_utilities.POSITIOND_IDX, :] = cartpos_d
         elif policy=='cartonly':  # cart follows the trajectory, pole ignored
-            per = 1./cost_function.cartonly_freq_hz  # seconds
-            amp = cost_function.cartonly_amp  # meters
-            horizon_endtime = time + mpc_horizon * dt
-            times = np.linspace(time, horizon_endtime, num=mpc_horizon)
-            from scipy.signal import sawtooth
+            f0 = cost_function.cartonly_freq_hz  # seconds
+            a0 = cost_function.cartonly_amp  # meters
+            if self._policy_changed or self.step_start_time is None:
+                log.debug(f'cartonly with freq={f0}Hz and amp={a0}m restarted at time={time}')
+                self.step_start_time=time
+            # shimmy_endtime=self._time_policy_changed+cost_function.shimmy_duration
+            # compute times from current time to end of horizon
+            time_since_step_started=time-self.step_start_time
+            horizon_endtime =  time_since_step_started + mpc_horizon * dt
+            # time for shimmy must be relative to start of shimmy step for freq ramp to make sense
+            times = np.linspace(time_since_step_started, horizon_endtime, num=mpc_horizon)
             # sawtooth is out for now to avoid sharp turns at ends
-            # cartpos = amp * sawtooth((2 * np.pi / per) * times, width=cost_function.cartonly_duty_cycle)  # width=.5 makes triangle https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.sawtooth.html
-            cartpos = amp * np.sin((2 * np.pi / per) * times)  # width=.5 makes triangle https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.sawtooth.html
+            cartpos = a0 * sawtooth((2 * np.pi * f0) * times, width=cost_function.cartonly_duty_cycle)  # width=.5 makes triangle https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.sawtooth.html
+            # cartpos = a0 * np.sin((2 * np.pi * f0) * times)  # width=.5 makes triangle https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.sawtooth.html
             cartvel = np.gradient(cartpos, dt)
             cartpos_vector = gui_target_position + cartpos
             traj[state_utilities.POSITION_IDX] = cartpos_vector
-            # target_angle=np.pi * (1-gui_target_equilibrium)/2 # either 0 for up and pi for down
-            # traj[state_utilities.ANGLE_COS_IDX, :] = -1 # we must include some pole cost or else the pole can start to spin
-            # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(target_angle)
-            # traj[state_utilities.ANGLE_IDX, :] = target_angle
-            traj[state_utilities.ANGLED_IDX, :] = 0 # we must include some pole cost or else the pole can start to spin
             traj[state_utilities.POSITIOND_IDX, :] = cartvel
+            traj[state_utilities.ANGLE_COS_IDX, :] = -1 # we must include some pole cost or else the pole can start to spin
+            # traj[state_utilities.ANGLE_IDX, :] = target_angle
+            # target_angle=np.pi * (1-gui_target_equilibrium)/2 # either 0 for up and pi for down
+            # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(target_angle)
+            # traj[state_utilities.ANGLED_IDX, :] = 0 # we must include some pole cost or else the pole can start to spin
             # print(f'\rCARTPOS: time:{time:.1f}s gui_target_position: {gui_target_position*100:.1f}cm target: {cartpos_vector[0]*100:.1f}cm \033[K',end='') # magic string to go to start of line
         elif policy=='cartwheel':
             # cartwheel starts with balance, once balanced the cartwheels start, after the cartwheels we again balance
@@ -317,7 +327,7 @@ class cartpole_trajectory_generator:
         else:
             log.error(f'cost policy "{policy}" is unknown')
 
-        self.set_gui_status_text(time, state, cost_function) # update CartPoleSimulation GUI status line (if it exists)
+        self.set_status_text(time, state, cost_function) # update CartPoleSimulation GUI status line (if it exists)
         self.traj=traj
         return traj
 
@@ -334,7 +344,7 @@ class cartpole_trajectory_generator:
         return np.abs(state[state_utilities.ANGLE_IDX])<self.cost_function.cartwheel_balance_angle_limit_deg*(np.pi/180)\
                 and np.abs(state[state_utilities.ANGLED_IDX])<self.cost_function.cartwheel_balance_angled_limit_deg_per_sec*(np.pi/180)
 
-    def set_gui_status_text(self, time: float, state: np.ndarray, cost_function: cost_function_base) -> None:
+    def set_status_text(self, time: float, state: np.ndarray, cost_function: cost_function_base) -> None:
         s = self.get_status_string(time, state, cost_function)
         CartPoleMainWindow.set_status_text(s)
 
@@ -355,13 +365,14 @@ class cartpole_trajectory_generator:
             dir='cw' if dir_int<0 else 'ccw'
             s = f'Policy: spin/{dir}*up/down pos={gui_target_position:.1f}m'
         elif policy == 'shimmy':
-            s = f'Policy: shimmy pos={gui_target_position:.1f}m freq={float(cost_function.shimmy_freq_hz):.1f}Hz amp={float(cost_function.shimmy_amp):.1f}Hz'
+            s = f'Policy: shimmy pos={gui_target_position:.1f}m freq={float(cost_function.shimmy_freq_hz):.1f}Hz amp={float(cost_function.shimmy_amp):.3f}m'
         elif policy == 'cartonly':
-            s = f'Policy: cartonly pos={gui_target_position:.1f}m freq={float(cost_function.cartonly_freq_hz):.1f}Hz amp={float(cost_function.cartonly_amp):.1f}Hz'
+            s = f'Policy: cartonly pos={gui_target_position:.1f}m freq={float(cost_function.cartonly_freq_hz):.1f}Hz amp={float(cost_function.cartonly_amp):.3f}m'
         elif policy == 'cartwheel':
             s = f'Policy: cartwheel pos={gui_target_position:.1f}m state={self.cartwheel_state} cycles_to_do={self.cartwheel_cycles_to_do} angle={state[state_utilities.ANGLE_IDX]*180/np.pi:.1f}deg angle_d={state[state_utilities.ANGLED_IDX]*180/np.pi:.1f}deg/s'
         else:
             s = f'unknown/not implemented string'
+        self.last_status_text=s
         return s
 
 

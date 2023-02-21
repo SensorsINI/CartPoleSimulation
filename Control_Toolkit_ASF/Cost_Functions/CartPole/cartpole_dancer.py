@@ -38,6 +38,8 @@ class cartpole_dancer:
         """ Constructs the dance reader, opening the CSV file
 
         """
+        self.last_status_string=None
+        """ The last status line shown in GUI for simulation and printed out during runtime in physical-cartpole"""
         self.started = False
         self.song_file_name:str = None
         self.song_player:vlc.MediaPlayer = None
@@ -239,7 +241,7 @@ class cartpole_dancer:
             return None
 
     def format_step(self, time:float) -> str:
-        """ Formats the current step for display in GUI main window status line
+        """ Formats the current step for display in GUI main window status line. Sets self.last_status_string for use by other classes.
 
         :param time: the current time in seconds
 
@@ -247,14 +249,17 @@ class cartpole_dancer:
         """
         duration=self.endtime-self.time_step_started
         timestr=f't={(time):.1f}/{self.endtime:.1f}s (dur={duration:.1f}s)'
+        s=None
         if not self.freq is  None and not self.freq2 is None and not self.amp is None and not self.amp2 is None:
-            return f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m f0/f1={self.freq:.1f}/{self.freq2:.1f}Hz a0/a1={self.amp:.2f}/{self.amp2:.2f}m'
+            s= f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m f0/f1={self.freq:.1f}/{self.freq2:.1f}Hz a0/a1={self.amp:.2f}/{self.amp2:.2f}m'
         elif not self.freq  is None and not self.amp is None:
-            return f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m freq={self.freq:.1f}Hz amp={self.amp:.2f}m'
+            s= f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m freq={self.freq:.1f}Hz amp={self.amp:.2f}m'
         elif not self.freq is None:
-            return f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m freq={self.freq:.1f}Hz'
+            s= f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m freq={self.freq:.1f}Hz'
         else:
-            return f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m'
+            s= f'Dance: {self.policy}/{self.option} {timestr} pos={self.cartpos:.1f}m'
+        self.last_status_string=s
+        return s
 
 
 def hms_to_seconds(timestr:str)->float:

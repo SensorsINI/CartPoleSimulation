@@ -349,12 +349,15 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
             elif isinstance(new_value,np.ndarray):
                 objtype=target_obj.lib.float32  # todo assuming all np arrays should go to float 32 here
             else:
-                log.warning(f'attribute "{property}" has unknown object type {type(new_value)}; cannot assign it')
+                log.warning(f'attribute \'{property}\' has unknown object type {type(new_value)}; cannot assign it')
             if not objtype is None and objtype!=target_obj.lib.string:
                 try:
                     target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value,objtype))
                 except ValueError:
-                    log.error(f'target attribute "{property}" is probably float type but in config file it is int. Add a trailing "." to the number "{new_value}"')
+                    log.error(f'target attribute \'{property}\' is probably float type but in config file it is int. Add a trailing "." to the number \'{new_value}\'')
+                except AttributeError as e:
+                    log.error(f'target attribute \'{property}\' on target_obj \'{target_obj}\' could not be set to \'{new_value}\'')
+
                     # target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value, target_obj.lib.to_variable(float(new_value), target_obj.lib.float32)))
             else: # string type; if it ends with int, then also assign a name_number variable
                 val_str,val_int = extract_int(new_value)
