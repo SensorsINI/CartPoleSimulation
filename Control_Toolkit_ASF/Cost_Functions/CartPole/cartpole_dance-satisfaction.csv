@@ -1,11 +1,12 @@
 # cartpole dancer dance sequence for song satisfaction rolling stones
 # it has 135bpm with offset of 40ms according to BeatEdit
 # which means the beat frequency is 2.25Hz and so all frequencies should be multiple or integer fraction of 2.25Hz, e.g. 1.125, .5625
-# policies can be balance1, spin2, shimmy3, cartonly4
+# policies can be balance1, spin2, shimmy3, cartonly4, cartwheel5
 # self.cartwheel_cycles=self.cartpole_dancer.amp
 endtime, cartpos, policy, option, freq, amp, freq2, amp2
 3,0, balance1,up,,,,
-00:14.6,0, shimmy3,,1.125,0.04,2.25,0.08
+00:7.3,0, cartonly4,.5,1.125,0.1,,
+00:14.6,0, cartonly4,.5,2.25,0.1,,
 00:18.3,0, cartwheel5, ,,1,,
 00:21.3,0, cartwheel5, ,,-1,,
 00:24.5,0, cartwheel5, ,,2,,

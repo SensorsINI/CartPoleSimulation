@@ -2,8 +2,9 @@ import time
 from pydoc import text
 
 import numpy as np
+import scipy
 from matplotlib.pyplot import pause
-from scipy.signal import sawtooth
+from scipy.signal import sawtooth, square
 
 from CartPole import state_utilities
 from Control_Toolkit.Controllers import template_controller
@@ -235,6 +236,7 @@ class cartpole_trajectory_generator:
             # time for shimmy must be relative to start of shimmy step for freq ramp to make sense
             times = np.linspace(time_since_step_started, horizon_endtime, num=mpc_horizon)
             # sawtooth is out for now to avoid sharp turns at ends
+            # cartpos = a0 * square((2 * np.pi * f0) * times, duty=cost_function.cartonly_duty_cycle)  # duty=.5 makes square with equal halfs https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.sawtooth.html
             cartpos = a0 * sawtooth((2 * np.pi * f0) * times, width=cost_function.cartonly_duty_cycle)  # width=.5 makes triangle https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.sawtooth.html
             # cartpos = a0 * np.sin((2 * np.pi * f0) * times)  # width=.5 makes triangle https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.sawtooth.html
             cartvel = np.gradient(cartpos, dt)
@@ -242,11 +244,6 @@ class cartpole_trajectory_generator:
             traj[state_utilities.POSITION_IDX] = cartpos_vector
             traj[state_utilities.POSITIOND_IDX, :] = cartvel
             traj[state_utilities.ANGLE_COS_IDX, :] = -1 # we must include some pole cost or else the pole can start to spin
-            # traj[state_utilities.ANGLE_IDX, :] = target_angle
-            # target_angle=np.pi * (1-gui_target_equilibrium)/2 # either 0 for up and pi for down
-            # traj[state_utilities.ANGLE_SIN_IDX, :] = np.sin(target_angle)
-            # traj[state_utilities.ANGLED_IDX, :] = 0 # we must include some pole cost or else the pole can start to spin
-            # print(f'\rCARTPOS: time:{time:.1f}s gui_target_position: {gui_target_position*100:.1f}cm target: {cartpos_vector[0]*100:.1f}cm \033[K',end='') # magic string to go to start of line
         elif policy=='cartwheel':
             # cartwheel starts with balance, once balanced the cartwheels start, after the cartwheels we again balance
             # cartwheel_duration=cost_function.cartwheel_target_duration_s.numpy()
@@ -294,35 +291,11 @@ class cartpole_trajectory_generator:
             elif self.cartwheel_state=='starting': # we just try to get the pole spinning the correct direction
                 traj[state_utilities.POSITION_IDX] = gui_target_position
                 traj[state_utilities.POSITIOND_IDX, :] = 0
-                # traj[state_utilities.ANGLE_IDX, :] = self.cartwheel_direction*self.cost_function.cartwheel_freefall_angle_limit_deg*np.pi/180
-                # traj[state_utilities.ANGLE_COS_IDX, :] = cos_target_angle
-                # traj[state_utilities.ANGLE_SIN_IDX, :] = sin_target_angle
                 traj[state_utilities.ANGLED_IDX, :] = 1e6*self.cartwheel_direction
 
             elif self.cartwheel_state=='during': # free fall, just get the cart back to target position
                 traj[state_utilities.POSITION_IDX] = gui_target_position
                 traj[state_utilities.POSITIOND_IDX, :] = 0
-
-                # # compute times from current time to end of horizon
-                # horizon_endtime = time - self.cartwheel_starttime + mpc_horizon * dt
-                # # time for step must be relative to start of step
-                # times = np.linspace(time - self.cartwheel_starttime, horizon_endtime, num=mpc_horizon)
-                # target_angle=self.cartwheel_direction*2*np.pi*times/cartwheel_duration
-                # cartwheel_end_time=self.cartwheel_starttime+self.cartwheel_cycles_to_do*cartwheel_duration
-                # target_angle[times>cartwheel_end_time]=0
-                # target_angled=np.gradient(target_angle,dt)
-                # # import matplotlib.pyplot as plt
-                # # plt.plot(times,target_angle*180/np.pi)
-                # # plt.xlabel('time(s)')
-                # # plt.ylabel('target angle (deg)')
-                # # plt.show()
-                # # pause(.2)
-                # cos_target_angle=np.cos(target_angle)
-                # sin_target_angle=np.sin(target_angle)
-                # # traj[state_utilities.ANGLE_IDX, :] = target_angle
-                # traj[state_utilities.ANGLE_COS_IDX, :] = cos_target_angle
-                # traj[state_utilities.ANGLE_SIN_IDX, :] = sin_target_angle
-                # traj[state_utilities.ANGLED_IDX, :] = target_angled
 
         else:
             log.error(f'cost policy "{policy}" is unknown')
