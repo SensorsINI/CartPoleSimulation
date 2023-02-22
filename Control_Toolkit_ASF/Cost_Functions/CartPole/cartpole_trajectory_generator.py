@@ -246,17 +246,19 @@ class cartpole_trajectory_generator:
             traj[state_utilities.POSITION_IDX] = cartpos_vector
             traj[state_utilities.POSITIOND_IDX, :] = cartvel
             traj[state_utilities.ANGLE_COS_IDX, :] = -1 # we must include some pole cost or else the pole can start to spin
-        elif policy=='cartwheel':
+        elif policy=='cartwheel' or policy=='toandfro':
             # cartwheel starts with balance, once balanced the cartwheels start, after the cartwheels we again balance
-            # need to convert cartwheel cycles to real float since equals test on tf.Variable does not work if object does not change like it does not with assignment in update_attributes.
-            # also cartwheel cycles can be set to float during dance above
-            self.cartwheel_cycles=cost_function.cartwheel_cycles if cost_function.cartwheel_cycles is float else cost_function.cartwheel_cycles.numpy()
-            self.cartwheel_direction=np.sign(self.cartwheel_cycles)
-            # determine state transitions
+            # toandfro swings one way and then the other immediately, must have cycles>2
+
+            # determine state transitions based on current state
             angle = state[state_utilities.ANGLE_IDX]
             angle_d = state[state_utilities.ANGLED_IDX]
 
+            # need to convert cartwheel cycles to real float since equals test on tf.Variable does not work if object does not change like it does not with assignment in update_attributes.
+            # also cartwheel cycles can be set to float during dance above
+            self.cartwheel_cycles=cost_function.cartwheel_cycles if cost_function.cartwheel_cycles is float else cost_function.cartwheel_cycles.numpy()
             if self._policy_changed or self.cartwheel_cycles!=self.last_cartwheel_cycles:
+                self.cartwheel_direction=np.sign(self.cartwheel_cycles)
                 self.set_cartwheel_state('before',time)
                 self.cartwheel_cycles_to_do=np.abs(self.cartwheel_cycles)
                 self.last_cartwheel_cycles=self.cartwheel_cycles
@@ -280,6 +282,8 @@ class cartpole_trajectory_generator:
                 if np.abs(angle)>self.cost_function.cartwheel_freefall_to_after_angle_limit_deg*np.pi/180:
                     if self.cartwheel_cycles_to_do>0:
                         self.set_cartwheel_state('before',time)
+                        if policy=='toandfro':
+                            self.cartwheel_direction= -self.cartwheel_direction # go other direction this time
                     else:
                         self.set_cartwheel_state('after',time)
             elif self.cartwheel_state=='after':
@@ -346,6 +350,8 @@ class cartpole_trajectory_generator:
             s = f'Policy: cartonly pos={gui_target_position:.1f}m freq={float(cost_function.cartonly_freq_hz):.1f}Hz amp={float(cost_function.cartonly_amp):.3f}m'
         elif policy == 'cartwheel':
             s = f'Policy: cartwheel pos={gui_target_position:.1f}m state={self.cartwheel_state} cycles_to_do={self.cartwheel_cycles_to_do} angle={state[state_utilities.ANGLE_IDX]*180/np.pi:.1f}deg angle_d={state[state_utilities.ANGLED_IDX]*180/np.pi:.1f}deg/s'
+        elif policy == 'toandfro':
+            s = f'Policy: toandfro pos={gui_target_position:.1f}m state={self.cartwheel_state} cycles_to_do={self.cartwheel_cycles_to_do} angle={state[state_utilities.ANGLE_IDX]*180/np.pi:.1f}deg angle_d={state[state_utilities.ANGLED_IDX]*180/np.pi:.1f}deg/s'
         else:
             s = f'unknown/not implemented string'
         self.last_status_text=s
