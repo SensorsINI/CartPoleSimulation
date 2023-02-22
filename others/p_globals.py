@@ -24,7 +24,9 @@ g=9.8 # gravity
 natural_period=2*np.pi*np.sqrt(Iend/(pole_mass*g*(pole_length/2))) # note the pole_length/2, it is the distance to COM of pole from pivot
 CARTPOLE_PHYSICAL_CONSTANTS.NaturalPeriod=natural_period
 log.info(f'computed natural period of cartpole T={CARTPOLE_PHYSICAL_CONSTANTS.NaturalPeriod:.3f}s, natural frequency={1/CARTPOLE_PHYSICAL_CONSTANTS.NaturalPeriod:.3f}Hz')
-# tobi measured natural frequency of 1.02Hz, computed is 0.97 Hz
+# result is  T=1.034s, natural frequency=0.967Hz
+# tobi measured natural frequency of 1.02Hz +-.02
+# discrepancy might be explained by mass of mounting hardware near pivot point
 
 # Export variables as global
 def export_globals():
