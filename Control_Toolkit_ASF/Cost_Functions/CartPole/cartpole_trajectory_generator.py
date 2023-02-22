@@ -256,7 +256,7 @@ class cartpole_trajectory_generator:
 
             # need to convert cartwheel cycles to real float since equals test on tf.Variable does not work if object does not change like it does not with assignment in update_attributes.
             # also cartwheel cycles can be set to float during dance above
-            self.cartwheel_cycles=cost_function.cartwheel_cycles if cost_function.cartwheel_cycles is float else cost_function.cartwheel_cycles.numpy()
+            self.cartwheel_cycles=cost_function.cartwheel_cycles if type(cost_function.cartwheel_cycles) in (int,float) else cost_function.cartwheel_cycles.numpy()
             if self._policy_changed or self.cartwheel_cycles!=self.last_cartwheel_cycles:
                 self.cartwheel_direction=np.sign(self.cartwheel_cycles)
                 self.set_cartwheel_state('before',time)
