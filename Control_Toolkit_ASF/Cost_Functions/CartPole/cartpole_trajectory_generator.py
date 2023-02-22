@@ -26,7 +26,7 @@ log = get_logger(__name__)
 class cartpole_trajectory_generator:
 
     POLICIES=('balance','spin','shimmy','cartonly','cartwheel')
-    POLICIES_NUMBERED=('balance0','spin1','shimmy2','cartonly3','cartwheel4') # for tensorflow scalar BS
+    POLICIES_NUMBERED=('balance0','spin1','shimmy2','cartonly3','cartwheel4','toandfro5') # for tensorflow scalar BS
     CARTWHEEL_STATES={'before','starting','during','after'}
 
     def __init__(self):
@@ -153,6 +153,8 @@ class cartpole_trajectory_generator:
                 cost_function.cartonly_duty_cycle=float(self.cartpole_dancer.option)
             elif policy=='cartwheel':
                 cost_function.cartwheel_cycles=self.cartpole_dancer.amp
+            elif policy=='toandfro':
+                cost_function.cartwheel_cycles=self.cartpole_dancer.amp
             else:
                 log.error(f"policy '{policy}' is unknown")
 
@@ -246,8 +248,9 @@ class cartpole_trajectory_generator:
             traj[state_utilities.ANGLE_COS_IDX, :] = -1 # we must include some pole cost or else the pole can start to spin
         elif policy=='cartwheel':
             # cartwheel starts with balance, once balanced the cartwheels start, after the cartwheels we again balance
-            # cartwheel_duration=cost_function.cartwheel_target_duration_s.numpy()
-            self.cartwheel_cycles=cost_function.cartwheel_cycles
+            # need to convert cartwheel cycles to real float since equals test on tf.Variable does not work if object does not change like it does not with assignment in update_attributes.
+            # also cartwheel cycles can be set to float during dance above
+            self.cartwheel_cycles=cost_function.cartwheel_cycles if cost_function.cartwheel_cycles is float else cost_function.cartwheel_cycles.numpy()
             self.cartwheel_direction=np.sign(self.cartwheel_cycles)
             # determine state transitions
             angle = state[state_utilities.ANGLE_IDX]
