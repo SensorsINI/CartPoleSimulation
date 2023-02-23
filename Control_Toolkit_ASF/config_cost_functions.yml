@@ -38,54 +38,56 @@ CartPole:
     # e.g. dance0 will create (in update_attributes call) policy='dance' and policy_number=0
     # this hack is to allow branching in XLA code that lacks string compare operator
     # see others\globals_and_utilities.py\update_attributes method
-    policy:  shimmy3  # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4 cartwheel5
+    policy:  toandfro6  # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4 cartwheel5 toandfro6
 
     # tobi cannot get conditional branch to work for following option in cartpole_dancer_cost.py
 #    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
     stage_cost_factor: 1e0 # how much to weight up the state costs
-    track_edge_barrier_cost: 1e9 # how much to penalize cart at edge of track
-    track_length_fraction: 0.8 # fraction of half track length to allow free movement of cart before hitting barrier function
+    track_edge_barrier_cost: 1e11 # how much to penalize cart at edge of track
+    track_length_fraction: 0.95 # fraction of half track length to allow free movement of cart before hitting barrier function
 
     # cost weightings for the different state components for following desired cart state trajectory
-    cart_pos_weight: 2e7 # weight on cart pos error
-    pole_angle_weight: 6e6 # weight on difference of angle
-    cart_vel_weight: 1e4 # weight on difference of cart velocity
-    pole_swing_weight: 3.5e+4 # cart angle derivative weight
+    cart_pos_weight: 2e6 # weight on cart pos error
+    pole_angle_weight: 1e6 # weight on difference of angle
+    cart_vel_weight: 3e2 # weight on difference of cart velocity
+    pole_swing_weight: 4e+4 # cart angle derivative weight
 
     # following weight the control and its change
-    control_cost_weight: 1e3 # cost of control
+    control_cost_weight: 1e1 # cost of control
     control_cost_change_weight: 1e0 # cost of changing control
 
     # spin
-    spin_dir: ccw-1  # cw+1 ccw-1 1 or cw, -1 or ccw
-    upright_pole_energy_multiple_to_count_spin_direction_cost: 1.5 # pole must have this excess total energy before we start counting spin direction energy
-    spin_energy_weight: 1e7 # cost factor only for spin behavior to weight the spin energy
+    spin_dir:  1  # cw+1 ccw-1 1 or cw, -1 or ccw
+    upright_pole_energy_multiple_to_count_spin_direction_cost: .25 # pole must have this excess total energy before we start counting spin direction energy
+    spin_energy_weight: 5e+6 # cost factor only for spin behavior to weight the spin energy
 
 
     # balance
     balance_dir: up # 1 or up, -1 or down, multiplied by target_equilibrium
 
     # shimmy does a sinusoidal dance of cart around target position with period in seconds and amplitude in meters
-    shimmy_freq_hz: 1.125
-    shimmy_amp: .07
+    shimmy_freq_hz: 1.125   # for 160bpm song, 2.25 Hz is beat, 1.125 is half beat, 0.5625 is quarter beat
+    shimmy_amp: .04 # in practice, 0.03 results in about .07m amplitude, not clear why
     shimmy_freq2_hz: 2.
     shimmy_amp2: .025
     shimmy_duration: 8. # for shimmy that lasts a finite time and ramps from freq to freq2 and amp to amp2
     shimmy_dir: up # up, down
+#    shimmy_plot: 0 # to plot the shimmy function
 
     # cartonly only controls cart position, pole is ignored. Trajectory is triangular with amp and per
-    cartonly_amp: .15
-    cartonly_freq_hz: .2
-    cartonly_duty_cycle: .5 # set to .5 for triangle, 0 or 1 for sawtooth
+    cartonly_amp: 0.1 # amplitude in meters (half of peak to peak of triangle wave)
+    cartonly_freq_hz: 1.125
+    cartonly_duty_cycle: 0.5 # set to .5 for triangle, 0 or 1 for sawtooth
+
+    # cartwheel and toandfro steps.
+    cartwheel_cycles: +6 # positive cw, negative ccw. For toandfro, must be >2 to do complete back and forth steps
+    cartwheel_balance_angle_limit_deg: 10.0
+    cartwheel_balance_angled_limit_deg_per_sec: 30.0
+    cartwheel_freefall_angle_limit_deg: 20.
+    cartwheel_freefall_angled_limit_deg_per_sec: 30.
+    cartwheel_freefall_to_after_angle_limit_deg: 60.
+#    cartwheel_target_duration_s: 1.1
 
     dance_song_file: 'others/Media/Rolling_Stones_Satisfaction.mp3' # no spaces or special chars, no / . - etc....
     dance_csv_file: 'Control_Toolkit_ASF/Cost_Functions/CartPole/cartpole_dance-satisfaction.csv'
-    dance_song_playback_rate: 0.55 # rate to match song speed compared to real time simulation rate, we should set to 1 for song to sound native but code must run fast enough then
-
-    # cartwheel
-    cartwheel_cycles: +3 # positive cw, negative ccw
-    cartwheel_balance_angle_limit_deg: 10.0 # pole considered balanced to start cartwheel when angle less than this, AND
-    cartwheel_balance_angled_limit_deg_per_sec: 30.0 # limit on pole swing for balance condition
-    cartwheel_freefall_angle_limit_deg: 20. # angle when pole enters freefall phase
-    cartwheel_freefall_angled_limit_deg_per_sec: 30. # swing rate to enter free fall
-    cartwheel_freefall_to_after_angle_limit_deg: 60. # angle to enter controlled rebalancing after freefall
+    dance_song_playback_rate: 1. # rate to match song speed compared to real time simulation rate, we should set to 1 for song to sound native but code must run fast enough then
