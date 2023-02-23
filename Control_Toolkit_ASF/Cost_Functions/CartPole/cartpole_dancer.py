@@ -205,7 +205,7 @@ class cartpole_dancer:
 
             self.time_step_started=time
             self.current_row = self.reader.__next__()
-            log.debug(f"At t={time:.1f}s new dance step is '{self.current_row['policy']}' ending at t={self.current_row['endtime']}")
+            log.info(f"At t={time:.1f}s new dance step is '{self.current_row['policy']}' ending at t={self.current_row['endtime']}")
             if 'winsound' in sys.modules:
                 try:
                     winsound.Beep(1000,300) # beep
