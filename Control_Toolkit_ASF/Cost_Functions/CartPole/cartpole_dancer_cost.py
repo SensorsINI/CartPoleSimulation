@@ -77,15 +77,39 @@ class cartpole_dancer_cost(cost_function_base):
 
         input_shape = self.lib.shape(states)
         num_rollouts = input_shape[0]
-        num_timesteps = input_shape[1]
-        target_trajectory = self.target_trajectory
+        mpc_horizon = input_shape[1]
+        num_states=input_shape[2]
+
+        # allocate a zero stage costs tensor of dimension [num_rollouts, horizon], using the input states tensor that has the correct dimension
+        # squeeze is to remove the single state dimension to go from 3d to 2d tensor
+        # this 2d stage_costs tensor is immutable and is replaced every time modify it
+        stage_costs = tf.squeeze(tf.zeros_like(states[:,:,0]))
+
+
 
         # dance step policies are: dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4
+
+        # states are "angle", "angleD", "angle_cos", "angle_sin", "position", "positionD"
+        # stage_costs = self.lib.zeros((num_rollouts, num_timesteps))
+        target_trajectory = tf.transpose(
+            self.target_trajectory)  # [horizon,num_states] array tensor computed by cartpole_trajectory_generator.py
+        broadcasted_target_trajectory = tf.broadcast_to(target_trajectory,
+                                                        [num_rollouts, mpc_horizon, NUM_STATES])
+        cost_weights = self.effective_traj_cost_weights
+
+        traj_dist = self.dist(
+            states - broadcasted_target_trajectory)  # difference for each rollout of predicted to target trajectory, has dim [num_rollouts, horizon, num_states]
+        stage_costs = tf.multiply(traj_dist, cost_weights)  # multiply states dim by cost_weights
+        stage_costs = self.stage_cost_factor * tf.reduce_sum(stage_costs,
+                                                             axis=2)  # sum costs across state dimension to leave costs as [num_rollouts, mpc_horizon]
+        stage_costs = tf.reshape(stage_costs, [num_rollouts, mpc_horizon])
 
         if self.lib.equal(self.policy_number, 2): # spin
             # The cost tensor we will return.  we allocate one less than num_timesteps to be all zeros because
             # we concatenate the terminal cost in this branch
-            stage_costs = self.lib.zeros((num_rollouts, num_timesteps - 1))
+            # stage_costs = self.lib.zeros((num_rollouts, num_timesteps - 1))
+            # stage_costs = tf.zeros_like(states)
+            # stage_costs=stage_costs[:,-1]
 
             # spin is special cost aimed to first get energy into pole, then make it spin in correct direction.
             # It is totally based on terminal state at end of rollout.
@@ -124,38 +148,18 @@ class cartpole_dancer_cost(cost_function_base):
             # the returned stage_costs is a tensor [num_rollouts, horizon] that has concatenated the terminal costs at end of horizon to the zero stage costs along the horizon
             term_costs=self.spin_energy_weight *spin_cost_energy + self.cart_pos_weight * pos_cost
             term_costs=tf.expand_dims(term_costs,-1) # make it, e.g. with num_rollouts=700, from [700] to [700,1] tensor
-            stage_costs =  self.lib.concat([stage_costs,term_costs],1)
-
-        else:  # if not spin from 'spin2' as policy, i.e. all other policies, base cost on minimizing distance over rollout from some state vectors over horizon
-            # states are "angle", "angleD", "angle_cos", "angle_sin", "position", "positionD"
-            stage_costs = self.lib.zeros((num_rollouts, num_timesteps))
-            cost_weights = (
-                self.pole_angle_weight, self.pole_swing_weight, self.pole_angle_weight, self.pole_angle_weight,
-                self.cart_pos_weight, self.cart_vel_weight)
-            for i in range(NUM_STATES):
-                if not self.lib.any(
-                        self.lib.isnan(target_trajectory[i, 0])):  # to skip a state, the first timestep is NaN
-                    state_i = states[:, :, i]  # matrix [rollout,timestep] for this state element
-                    trajectory_i = target_trajectory[i, :]  # timestep vector for this state element
-                    diff = state_i - trajectory_i
-
-                    diffabs = self.dist(diff)
-
-                    # don't do sum here, it is done in get_trajectory_cost() caller
-                    # sums=self.lib.sum(diff2,1) # sums over the time dimension, leaving column vector of rollouts
-                    cost_i = cost_weights[i] * diffabs
-                    stage_costs += cost_i
+            stage_costs =  self.lib.concat([stage_costs[:,:-1],term_costs],1) # now concatenate the terminal costs (all we count for spin) to the zero stage costs replacing the last horizon step
+            stage_costs = tf.reshape(stage_costs, [num_rollouts, mpc_horizon])
 
         if previous_input is not None:
             control_change_cost = self.control_cost_change_weight * self._control_change_rate_cost(inputs, previous_input)
         control_cost = self.control_cost_weight * self._CC_cost(inputs)  # compute the cart acceleration control cost
 
-        terminal_traj_edge_barrier_cost = self.track_edge_barrier_cost * self.track_edge_barrier(
-            states[:, :, state_utilities.POSITION_IDX])
+        terminal_traj_edge_barrier_cost = self.track_edge_barrier_cost * self.track_edge_barrier(states[:, :, state_utilities.POSITION_IDX])
 
         stage_costs = stage_costs + terminal_traj_edge_barrier_cost + control_cost + control_change_cost   # result has dimension [num_rollouts, horizon]
 
-        return stage_costs * self.stage_cost_factor
+        return stage_costs
 
     # final stage cost
     def get_terminal_cost(self, terminal_states: TensorType):

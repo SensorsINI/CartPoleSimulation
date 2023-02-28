@@ -6,7 +6,7 @@
 # when running physical-cartpole, its globals.py overwrites the config regarding controller & optimizer. For simulator, options are specified completely in .yml files.
 
 mpc: # selects Control_Tookit/Controllers/controller_mpc.py as the controller
-  optimizer: mppi # selects the optimizer, see CartPoleSimulation/ControlToolkit_ASF/config_optimizers.yml. Popular options are 'mppi' and 'rpgd-tf'
+  optimizer: rpgd-tf # selects the optimizer, see CartPoleSimulation/ControlToolkit_ASF/config_optimizers.yml. Popular options are 'mppi' and 'rpgd-tf'
   predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
   cost_function_specification: cartpole_dancer_cost  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary" "cartpole_dancer_cost"
   computation_library: tensorflow  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.

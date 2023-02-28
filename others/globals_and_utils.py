@@ -338,7 +338,7 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
 
     """
     for property, new_value in updated_attributes.items():
-        if hasattr(target_obj, property) :  # make sure it is mutable if we want to set it
+        if hasattr(target_obj, property) : # target already has this attribute  # make sure it is mutable if we want to set it
             objtype=None
             if isinstance(new_value,numbers.Integral):
                 objtype=target_obj.lib.int32
@@ -348,9 +348,19 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
                 objtype=target_obj.lib.string
             elif isinstance(new_value,np.ndarray):
                 objtype=target_obj.lib.float32  # todo assuming all np arrays should go to float 32 here
+            elif isinstance(new_value,tf.Tensor):
+                objtype=tf.Tensor
+            elif isinstance(new_value,tf.Variable):
+                objtype=tf.Variable
             else:
-                log.warning(f'attribute \'{property}\' has unknown object type {type(new_value)}; cannot assign it')
-            if not objtype is None and objtype!=target_obj.lib.string:
+                raise AttributeError(f'attribute \'{property}\' has unknown object type {type(new_value)}; cannot assign it')
+            if objtype==tf.Tensor:
+                # we cannot assign a value to an existing Tensor; they are immutable.
+                # setattr(target_obj, property, new_value)
+                raise AttributeError(f"target '{objtype}  for property '{property}'  is an immutable tf.Tensor. The compiled target_obj will not see this new value. Instead, create a tf.Variable that can be reassigned in compiled Tensorflow code..")
+            elif objtype==tf.Variable:
+                target_obj.lib.assign(getattr(target_obj, property), new_value)
+            elif not objtype is None and objtype!=target_obj.lib.string:
                 try:
                     target_obj.lib.assign(getattr(target_obj, property), target_obj.lib.to_variable(new_value,objtype))
                 except ValueError:
@@ -370,7 +380,7 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
                     target_obj.lib.assign(getattr(target_obj, property),
                                           target_obj.lib.to_variable(new_value, objtype))
 
-        else:
+        else: # target_object doesn't have this attribute (field) yet
             # log.debug(
             #     f"tensorflow attribute '{property}' does not exist in {target_obj.__class__.__name__}, setting it for first time")
             if target_obj.lib is None:
@@ -391,8 +401,10 @@ def update_attributes(updated_attributes: "dict[str, TensorType]", target_obj):
                         setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.string))
                 elif isinstance(new_value,numbers.Real) or isinstance(new_value,np.ndarray):
                     setattr(target_obj, property, target_obj.lib.to_variable(new_value, target_obj.lib.float32))
+                elif isinstance(new_value,(tf.Tensor,tf.Variable)):
+                    setattr(target_obj, property, new_value)
                 else:
-                    log.warning(f'type "{type(new_value)}" of attribute "{property}" is not settable type, must be int, float (or np.ndarray), or string')
+                    raise AttributeError(f'type \'{type(new_value)}\' of attribute \'{property}\' is not settable type, must be int, float (or np.ndarray), or string')
 
 
 class MockSpace:

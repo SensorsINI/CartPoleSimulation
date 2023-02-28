@@ -38,7 +38,8 @@ CartPole:
     # e.g. dance0 will create (in update_attributes call) policy='dance' and policy_number=0
     # this hack is to allow branching in XLA code that lacks string compare operator
     # see others\globals_and_utilities.py\update_attributes method
-    policy:  toandfro6  # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4 cartwheel5 toandfro6
+
+    policy:  shimmy3  # dance0 (follow csv file)   balance1 spin2 shimmy3 cartonly4 cartwheel5 toandfro6
 
     # tobi cannot get conditional branch to work for following option in cartpole_dancer_cost.py
 #    distance_norm: 0 # 0=abs, 1=rmse, 2=mse are possible distance metrics
@@ -63,7 +64,7 @@ CartPole:
 
 
     # balance
-    balance_dir: up # 1 or up, -1 or down, multiplied by target_equilibrium
+    balance_dir: 1 # 1 for up, -1 for down, multiplied by target_equilibrium
 
     # shimmy does a sinusoidal dance of cart around target position with period in seconds and amplitude in meters
     shimmy_freq_hz: 1.125   # for 160bpm song, 2.25 Hz is beat, 1.125 is half beat, 0.5625 is quarter beat
@@ -75,7 +76,7 @@ CartPole:
 #    shimmy_plot: 0 # to plot the shimmy function
 
     # cartonly only controls cart position, pole is ignored. Trajectory is triangular with amp and per
-    cartonly_amp: 0.1 # amplitude in meters (half of peak to peak of triangle wave)
+    cartonly_amp: 0.05 # amplitude in meters (half of peak to peak of triangle wave)
     cartonly_freq_hz: 1.125
     cartonly_duty_cycle: 0.5 # set to .5 for triangle, 0 or 1 for sawtooth
 

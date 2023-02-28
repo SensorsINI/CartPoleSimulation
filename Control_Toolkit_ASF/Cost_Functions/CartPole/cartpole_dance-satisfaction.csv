@@ -4,7 +4,7 @@
 # policies can be balance1, spin2, shimmy3, cartonly4, cartwheel5
 # self.cartwheel_cycles=self.cartpole_dancer.amp
 endtime, cartpos, policy, option, freq, amp, freq2, amp2
-3,0, balance1,up,,,,
+3,0, balance1,1,,,,
 00:7.3,0, cartonly4,.5,1.125,0.1,,
 00:14.6,0, cartonly4,.5,2.25,0.1,,
 00:18.3,0, toandfro6, ,,2,,
@@ -23,4 +23,4 @@ endtime, cartpos, policy, option, freq, amp, freq2, amp2
 01:15.1,-0.05, spin2, -1,,,,
 01:19.0,0.05, spin2, +1,,,,
 01:22.2,0, shimmy3,,2.25,0.03,2.25,0.08
-01:26.1,0, balance1,down,,,,
+01:26.1,0, balance1,-1,,,,

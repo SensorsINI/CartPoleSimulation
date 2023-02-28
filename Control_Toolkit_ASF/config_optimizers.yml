@@ -23,7 +23,7 @@ rpgd-tf: # this is the tensorflow (tf) version of the Resampling Parallel Gradie
   gradmax_clip: 5
   rtol: 1.0e-3
   num_rollouts: 32
-  opt_keep_k_ratio: 0.25
+  opt_keep_k_ratio: .75
   outer_its: 2
   resamp_per: 10
   sample_stdev: 0.5
