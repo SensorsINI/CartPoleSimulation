@@ -104,6 +104,7 @@ rpgd-tf:
   outer_its: 5
   resamp_per: 10
   sample_stdev: 0.5
+  sample_mean: 0.0
   warmup: false
   warmup_iterations: 250
 rpgd-me-tf:
