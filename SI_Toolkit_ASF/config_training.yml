@@ -1,9 +1,9 @@
 library: 'TF'  # TF or Pytorch
 modeling:
-  NET_NAME: 'GRU-32H1-32H2'
+  NET_NAME: 'Dense-32H1-32H2'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Pretrained-RNN-1/'
+  path_to_experiment: 'CPS-17-02-2023-UpDown-Model/'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
 
 training_default:
@@ -11,22 +11,22 @@ training_default:
   control_inputs: ['Q']
   state_inputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
   setpoint_inputs: []  # Can be only 'target_position' or empty for CartPole
-  outputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
-  #  outputs: ['D_angle_sin', 'D_angle_cos', 'D_angleD', 'D_position', 'D_positionD'] # Don't forget to change SHIFT_LABELS to 0
+#  outputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
+  outputs: ['D_angle_sin', 'D_angle_cos', 'D_angleD', 'D_position', 'D_positionD'] # Don't forget to change SHIFT_LABELS to 0
   translation_invariant_variables: []
   # For training open loop dynamics model:
   # inputs = ['position', 'positionD', 'angle_sin', 'angle_cos', 'angleD']
   # outputs = inputs_list
   # For training of a network imitating MPC:
-  #  control_inputs: []
-  #  state_inputs: ['position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_position']
-  #  outputs:  ['Q']
-  EPOCHS: 10
-  BATCH_SIZE: 16
+#  control_inputs: []
+#  state_inputs: ['position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_equilibrium', 'target_position']
+#  outputs:  ['Q']
+  EPOCHS: 20
+  BATCH_SIZE: 32
   SEED: 1873
-  LR: 1.0e-2
-  WASH_OUT_LEN: 10
-  POST_WASH_OUT_LEN: 20
+  LR: 1.0e-3
+  WASH_OUT_LEN: 0
+  POST_WASH_OUT_LEN: 1
   ON_FLY_DATA_GENERATION: False
   NORMALIZE: True
   SHIFT_LABELS: 1  # for k, as a label to row i is taken row i+k
