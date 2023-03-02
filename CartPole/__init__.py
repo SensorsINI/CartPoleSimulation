@@ -486,7 +486,7 @@ class CartPole(EnvironmentBatched):
                 self.Q_applied = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
                 update_start = timeit.default_timer()
-                self.Q_calculated = self.controller.step(self.s_with_noise_and_latency, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
+                self.Q_calculated = float(self.controller.step(self.s_with_noise_and_latency, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium}))
                 self.Q_update_time = timeit.default_timer()-update_start
                 self.Q_applied = self.Q_calculated + controlDisturbance * rng.standard_normal(size=np.shape(self.Q_calculated), dtype=np.float32) + controlBias
 
@@ -995,7 +995,7 @@ class CartPole(EnvironmentBatched):
                 # in this case slider corresponds already to the power of the motor
                 self.Q_applied = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q_applied = self.controller.step(self.s, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
+                self.Q_applied = float(self.controller.step(self.s, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium}))
                 self.Q_applied = self.Q_calculated + controlDisturbance * rng.standard_normal(
                     size=np.shape(self.Q_calculated), dtype=np.float32) + controlBias
 

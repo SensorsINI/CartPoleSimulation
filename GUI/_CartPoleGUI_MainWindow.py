@@ -922,6 +922,7 @@ class MainWindow(QMainWindow):
             self.labSpeed.setText("Speed (m/s): " + str(np.around(self.CartPoleInstance.s[POSITIOND_IDX], 2)))
             self.labAngle.setText(
                 "Angle (deg): " + str(np.around(self.CartPoleInstance.s[ANGLE_IDX] * 360 / (2 * np.pi), 2)))
+            print(self.CartPoleInstance.Q)
             self.labMotor.setText("Motor power (Q): {:.3f}".format(np.around(self.CartPoleInstance.Q, 2)))
             if self.CartPoleInstance.controller_name == 'manual-stabilization':
                 self.labTargetPosition.setText("")
