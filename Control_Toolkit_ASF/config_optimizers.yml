@@ -105,6 +105,9 @@ rpgd-tf:
   resamp_per: 10
   sample_stdev: 0.5
   sample_mean: 0.0
+  sample_whole_control_space: false # If true bounds of uniform distribution are set to max limits of action space, otherwise see below
+  uniform_dist_max: 0.8 # only applies if SAMPLING_DISTRIBUTION: uniform AND sample_whole_control_space: false
+  uniform_dist_min: -0.8 # only applies if SAMPLING_DISTRIBUTION: uniform AND sample_whole_control_space: false
   warmup: false
   warmup_iterations: 250
 rpgd-me-tf:
