@@ -480,7 +480,7 @@ class CartPole(EnvironmentBatched):
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
                 update_start = timeit.default_timer()
-                self.Q = self.controller.step(self.s_with_noise_and_latency, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
+                self.Q = float(self.controller.step(self.s_with_noise_and_latency, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium}))
                 self.Q_update_time = timeit.default_timer()-update_start
 
             self.dt_controller_steps_counter = 0
@@ -987,7 +987,7 @@ class CartPole(EnvironmentBatched):
                 # in this case slider corresponds already to the power of the motor
                 self.Q = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = self.controller.step(self.s, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium})
+                self.Q = float(self.controller.step(self.s, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium}))
 
             self.u = Q2u(self.Q)  # Calculate CURRENT control input
             self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)  # Calculate CURRENT second derivatives
