@@ -75,9 +75,7 @@ class quadratic_boundary_grad(cost_function_base):
 
         ep_terminal = ep_terminal_weight * self._E_pot_cost(terminal_states[:, ANGLE_IDX])
 
-        terminal_cost = dd_terminal + \
-                        ep_terminal + \
-                        10000 * self.lib.cast(
+        end_of_horizon_stabilization_failure = 10000 * self.lib.cast(
             (self.lib.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
             | (
                 self.lib.abs(terminal_states[:, POSITION_IDX] - self.controller.target_position)
@@ -85,6 +83,11 @@ class quadratic_boundary_grad(cost_function_base):
             ),
             self.lib.float32,
         )
+
+        terminal_cost = dd_terminal + \
+                        ep_terminal + \
+                        end_of_horizon_stabilization_failure
+
         return self.lib.reshape(terminal_cost, (-1, 1))
 
     # cost of changing control to fast
