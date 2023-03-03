@@ -25,6 +25,8 @@ R = config["CartPole"]["quadratic_boundary_grad"]["R"]
 
 
 class quadratic_boundary_grad(cost_function_base):
+    MAX_COST = dd_weight * 1.0e7 + ep_weight + ekp_weight * 25.0 + cc_weight * R * (u_max ** 2) + ccrc_weight * 4 * (u_max ** 2)
+
     # cost for distance from track edge
     def _distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
@@ -72,7 +74,7 @@ class quadratic_boundary_grad(cost_function_base):
             ),
             self.lib.float32,
         )
-        return terminal_cost
+        return self.lib.reshape(terminal_cost, (-1, 1))
 
     # cost of changing control to fast
     def _control_change_rate_cost(self, u, u_prev):
