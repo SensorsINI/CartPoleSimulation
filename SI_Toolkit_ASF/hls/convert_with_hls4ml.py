@@ -27,7 +27,7 @@ config = hls4ml.utils.config_from_keras_model(model, granularity='model')
 print("-----------------------------------")
 hls_model = hls4ml.converters.convert_from_keras_model(model,
                                                        hls_config=config,
-                                                       output_dir='../../m1/prj0',
+                                                       output_dir='../../m1/prj0', ## !!!! If the path is longer it crashes. Depending on how long is the path it crashes at different places.
                                                        board='zybo-z7-20')  # TODO: What would be counterpart for Zybo
 
 hls4ml.utils.plot_model(hls_model, show_shapes=True, show_precision=True, to_file=None)
