@@ -1,7 +1,7 @@
 controller: mpc
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
 seed: 1998   # If not assign random seed based on datetime is used
-length_of_experiment: 3600  # Length of each experiment in s:
+length_of_experiment: 2  # Length of each experiment in s:
 split: [0.8, 0.1]  # Train/Val/(Test) split - only matters if you run it in ML Pipeline mode
 random_initial_state:
   # Unassigned variables will be randomly initialized (see below)
@@ -18,8 +18,8 @@ random_initial_state:
 start_at_target: True  # initial target position should be equal to initial state
 track_fraction_usable_for_target_position: 0.9  # Set the max for smoothly interpolated random target position to avoid bumping into track ends.
 target_position_end: ~  # value OR not assigned - random value is taken
-initial_target_equilibrium: 'random'  # possible 'up', 'down', 'random' = 50/50
-change_target_equilibrium_every_x_second: 16
+initial_target_equilibrium: 'up'  # possible 'up', 'down', 'random' = 50/50
+change_target_equilibrium_every_x_second: 13
 dt:
   simulation: 0.002  # simulation timestep, s
   control: 0.02  # control rate, s
