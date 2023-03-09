@@ -1,0 +1,11 @@
+board: 'zybo-z7-20'
+path_to_hls_installation: '/tools/Xilinx/Vivado/2020.1/bin'
+
+
+path_to_models: './SI_Toolkit_ASF/Experiments/NeuralImitatorCPS_v2/Models/'
+net_name: 'Dense-6IN-128H1-128H2-1OUT-1'
+batch_size: 1
+
+with_brunton_testing: true
+
+output_dir: '../../m1/prj0' # Must be a very short path neer to the root filesystem. Otherwise it crashes silently

@@ -1,9 +1,10 @@
 mpc:
   optimizer: mppi
-  predictor_specification: "Dense-6IN-32H1-32H2-5OUT-0"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
+  predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
   cost_function_specification: quadratic_boundary_grad  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary"
   computation_library: tensorflow  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.
   controller_logging: false
+  calculate_optimal_trajectory: false
 mppi-cartpole:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                       # steps
@@ -93,10 +94,8 @@ mpc-opti:
   controller_logging: True
 neural-imitator-tf:
   seed: null                            # If null, random seed based on datetime is used
-#  PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
-#  net_name: 'GRU-6IN-32H1-32H2-1OUT-4'
-  PATH_TO_MODELS: './SI_Toolkit_ASF/Experiments/CPS-17-02-2023-UpDown-Imitation/Models/'
-  net_name: 'Dense-7IN-32H1-32H2-1OUT-0'
+  PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
+  net_name: 'GRU-6IN-32H1-32H2-1OUT-4'
   controller_logging: True
 neural-imitator-pytorch:
   seed: null                            # If null, random seed based on datetime is used
