@@ -5,8 +5,7 @@ import hls4ml
 from types import SimpleNamespace
 
 from SI_Toolkit.Functions.General.Initialization import get_net
-
-
+from SI_Toolkit_ASF.hls.hls4ml_functions import convert_model_with_hls4ml
 
 config_hls = yaml.load(open(os.path.join('SI_Toolkit_ASF', 'config_hls.yml'), 'r'), Loader=yaml.FullLoader)
 
@@ -24,12 +23,8 @@ model, net_info = \
     get_net(a, time_series_length=1,
             batch_size=batch_size, stateful=True)
 
-config = hls4ml.utils.config_from_keras_model(model, granularity='model')
-print("-----------------------------------")
-hls_model = hls4ml.converters.convert_from_keras_model(model,
-                                                       hls_config=config,
-                                                       output_dir=config_hls['output_dir'], ## !!!! If the path is long it crashes. Depending on how long is the path it crashes at different places.
-                                                       board=config_hls['board'])  # TODO: What would be counterpart for Zybo
+
+hls_model, hls_model_config = convert_model_with_hls4ml(model)
 
 hls4ml.utils.plot_model(hls_model, show_shapes=True, show_precision=True, to_file=None)
 
