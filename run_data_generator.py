@@ -9,7 +9,7 @@ from CartPole.cartpole_model import TrackHalfLength, create_cartpole_state
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 from others.globals_and_utils import create_rng, load_config
-from others.p_globals import TrackHalfLength
+from others.p_globals import TrackHalfLength, L
 
 # Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
 # On other OS you have to chose a different interactive backend.
@@ -186,6 +186,8 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     ############ END OF PARAMETERS SECTION ############
 
     for i in range(number_of_experiments):
+        # global L
+        # L[...] = np.uniform()
 
         if run_for_ML_Pipeline:
             if i < int(frac_train*number_of_experiments):
