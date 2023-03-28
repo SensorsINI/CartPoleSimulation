@@ -19,26 +19,33 @@ STATE_INDICES_TF = tf.lookup.StaticHashTable(
 
 class next_state_predictor_ODE_tf():
 
-    def __init__(self, dt, intermediate_steps, batch_size=1, disable_individual_compilation=False):
+    def __init__(self,
+                 dt,
+                 intermediate_steps,
+                 batch_size=1,
+                 variable_parameters=None,
+                 disable_individual_compilation=False):
         self.intermediate_steps = tf.convert_to_tensor(intermediate_steps, dtype=tf.int32)
         self.t_step = tf.convert_to_tensor(dt / float(self.intermediate_steps), dtype=tf.float32)
+
+        self.variable_parameters = variable_parameters
 
         if disable_individual_compilation:
             self.step = self._step
         else:
             self.step = CompileTF(self._step)
 
-    def _step(self, s, Q, params):
+    def _step(self, s, Q):
 
         # assert does not work with CompileTF, but left here for information
         # assert Q.shape[0] == s.shape[0]
         # assert Q.ndim == 2
         # assert s.ndim == 2
 
-        if params is None:
-            pole_half_length = tf.convert_to_tensor(L, dtype=tf.float32)
+        if self.variable_parameters is not None and hasattr(self.variable_parameters, 'L'):
+            pole_half_length = tf.convert_to_tensor(self.variable_parameters.L, dtype=tf.float32)
         else:
-            pole_half_length = tf.convert_to_tensor(params, dtype=tf.float32)
+            pole_half_length = tf.convert_to_tensor(L, dtype=tf.float32)
 
         Q = Q[..., 0]  # Removes features dimension, specific for cartpole as it has only one control input
         u = Q2u_tf(Q)
