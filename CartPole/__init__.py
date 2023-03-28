@@ -549,7 +549,11 @@ class CartPole(EnvironmentBatched):
 
             # Set path where to save the data
             if csv_name is None or csv_name == '':
-                self.csv_filepath = self.path_to_experiment_recordings + 'CP_' + self.controller_name + self.optimizer_name + str(
+                if self.controller.has_optimizer:
+                    name_controller = self.controller_name + '_' + self.optimizer_name
+                else:
+                    name_controller = self.controller_name
+                self.csv_filepath = self.path_to_experiment_recordings + 'CP_' + name_controller + str(
                     datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')) + '.csv'
             else:
                 self.csv_filepath = csv_name
