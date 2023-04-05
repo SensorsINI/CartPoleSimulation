@@ -4,6 +4,7 @@ mpc:
   cost_function_specification: default  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary"
   computation_library: tensorflow  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.
   controller_logging: false
+  calculate_optimal_trajectory: false
 mppi-cartpole:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                       # steps
@@ -91,15 +92,11 @@ pid:
 mpc-opti:
   mpc_horizon: 10                       # steps
   controller_logging: True
-neural-imitator-tf:
-  seed: null                            # If null, random seed based on datetime is used
-  PATH_TO_MODELS: './SI_Toolkit_ASF/Experiments/Experiment-10/Models/'
-  net_name: 'Dense-7IN-64H1-64H2-1OUT-1'
-  controller_logging: True
-neural-imitator-pytorch:
+neural-imitator:
   seed: null                            # If null, random seed based on datetime is used
   PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
-  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'
+  net_name: 'GRU-6IN-32H1-32H2-1OUT-4'  # TF
+#  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'  # Pytorch
   controller_logging: True
 secloc:
   log_base: 1.05

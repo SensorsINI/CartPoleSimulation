@@ -10,26 +10,28 @@ from CartPole.cartpole_model import TrackHalfLength
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX
 from CartPole.cartpole_model import u_max
 
+import numpy as np
+
 #load constants from config file
 config = safe_load(open(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"), "r"))
 
 dd_weight = config["CartPole"]["quadratic_boundary_grad"]["dd_weight"]
 cc_weight = config["CartPole"]["quadratic_boundary_grad"]["cc_weight"]
 ep_weight = config["CartPole"]["quadratic_boundary_grad"]["ep_weight"]
+admissible_angle = np.deg2rad(config["CartPole"]["quadratic_boundary_grad"]["admissible_angle"], dtype=np.float32)
 ekp_weight = config["CartPole"]["quadratic_boundary_grad"]["ekp_weight"]
 ccrc_weight = config["CartPole"]["quadratic_boundary_grad"]["ccrc_weight"]
 R = config["CartPole"]["quadratic_boundary_grad"]["R"]
-discount_factor = config["CartPole"]["quadratic_boundary_grad"]["discount_factor"]
 
 
 class quadratic_boundary_grad(cost_function_base):
     MAX_COST = dd_weight * 1.0e7 + ep_weight + ekp_weight * 25.0 + cc_weight * R * (u_max ** 2) + ccrc_weight * 4 * (u_max ** 2)
-    
+
     # cost for distance from track edge
     def _distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
         return (
-            (position - self.controller.target_position) / (2.0 * TrackHalfLength)
+            (position - self.variable_parameters.target_position) / (2.0 * TrackHalfLength)
         ) ** 2 + self.lib.cast(
             self.lib.abs(position) > 0.95 * TrackHalfLength, self.lib.float32
         ) * 1e9 * (
@@ -39,8 +41,8 @@ class quadratic_boundary_grad(cost_function_base):
     # cost for difference from upright position
     def _E_pot_cost(self, angle):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
-        return self.controller.target_equilibrium * 0.25 * (1.0 - self.lib.cos(angle)) ** 2
-    
+        return 0.25 * (1.0 + self.lib.cos(admissible_angle) - self.lib.cos(angle + (1.0-self.variable_parameters.target_equilibrium)*self.lib.pi/2.0)) ** 2
+
     def _E_kin_cost(self, angleD):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
         return angleD ** 2
@@ -67,7 +69,7 @@ class quadratic_boundary_grad(cost_function_base):
         terminal_cost = 10000 * self.lib.cast(
             (self.lib.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
             | (
-                self.lib.abs(terminal_states[:, POSITION_IDX] - self.controller.target_position)
+                self.lib.abs(terminal_states[:, POSITION_IDX] - self.variable_parameters.target_position)
                 > 0.1 * TrackHalfLength
             ),
             self.lib.float32,
@@ -83,7 +85,7 @@ class quadratic_boundary_grad(cost_function_base):
         return self.lib.sum((u - u_prev_vec) ** 2, 2)
 
     # all stage costs together
-    def _get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
+    def get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
         dd = dd_weight * self._distance_difference_cost(
             states[:, :, POSITION_IDX]
         )
@@ -105,12 +107,3 @@ class quadratic_boundary_grad(cost_function_base):
             ccrc = ccrc_weight * self._control_change_rate_cost(u, u_prev)
         stage_cost = dd + ep + cc + ccrc
         return stage_cost, dd, ep, cc, ccrc
-    
-    def get_trajectory_cost(self, state_horizon: TensorType, inputs: TensorType, previous_input: TensorType = None) -> TensorType:
-        stage_costs = self.get_stage_cost(state_horizon[:, :-1, :], inputs, previous_input)  # Select all but last state of the horizon
-        gamma = discount_factor * self.lib.ones_like(stage_costs)
-        gamma = self.lib.cumprod(gamma, 1)
-
-        terminal_costs = self.get_terminal_cost(state_horizon[:, -1, :])
-        total_cost = self.lib.mean(self.lib.concat([gamma * stage_costs, terminal_costs], 1), 1)  # Mean across the MPC horizon dimension
-        return total_cost
