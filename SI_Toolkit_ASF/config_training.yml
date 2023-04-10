@@ -1,9 +1,9 @@
 library: 'TF'  # TF or Pytorch
 modeling:
-  NET_NAME: 'GRU-32H1-32H2'
+  NET_NAME: 'EHBaselineModel-Dense-32H1-32H2'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Pretrained-RNN-1/'
+  path_to_experiment: 'CPS-Tutorial/'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
 
 training_default:
@@ -22,14 +22,19 @@ training_default:
   #  state_inputs: ['position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_position']
   #  outputs:  ['Q']
   EPOCHS: 10
-  BATCH_SIZE: 16
+  BATCH_SIZE: 32
   SEED: 1873
-  LR: 1.0e-2
-  WASH_OUT_LEN: 10
-  POST_WASH_OUT_LEN: 20
+  LR: 1e-3
+  WASH_OUT_LEN: 0
+  POST_WASH_OUT_LEN: 1
   ON_FLY_DATA_GENERATION: False
   NORMALIZE: True
   SHIFT_LABELS: 1  # for k, as a label to row i is taken row i+k
   USE_NNI: False  # Decide if you want to use NNI package
   CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch; 'with cells' or 'with modules'
+  FIRST_LOSS: False
+  STACK_LOSS: False
+  SUM_LOSS: False
+  EXTEND_HORIZON: False
+  INCREASE_SHIFT_LABELS: False
 
