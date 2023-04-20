@@ -73,6 +73,8 @@ rc('font', **font)
 config = load_config("config.yml")
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
+rng = create_rng(__name__, config["cartpole"]["seed"])
+
 
 class CartPole(EnvironmentBatched):
     num_states = 6
@@ -101,12 +103,28 @@ class CartPole(EnvironmentBatched):
         
         # Variables for control input and target position.
         self.u = 0.0  # Physical force acting on the cart
+        self.Q_applied = 0.0
+        self.Q_calculated = 0.0
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
 
         self.action_space = MockSpace(-1.0, 1.0, (1,), np.float32)
         state_low = [-np.pi, -np.inf, -1.0, -1.0, -TrackHalfLength, -np.inf]
         state_high = [-v for v in state_low]
         self.observation_space = MockSpace(state_low, state_high, (6,), np.float32)
+
+        self.L_initial = float(L)
+
+        self.change_L_every_x_second = np.inf
+        self.time_last_L_change = None
+        self.L_discount_factor = 1.0
+        self.L_range = [0.03, 0.2]
+        self.L_informed_controller = True
+        if self.L_informed_controller:
+            self.L_for_controller = L
+        else:
+            self.L_for_controller = float(self.L_initial)
+        self.L_change_mode = 'step'
+        self.L_step = 0.02
 
         self.latency = self.config["latency"]
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
@@ -212,7 +230,9 @@ class CartPole(EnvironmentBatched):
         self.WheelToMiddle = None
         self.y_plane = None
         self.y_wheel = None
-        self.MastHight = None  # For drawing only. For calculation see L
+        self.mast_height_maximal_drawing_units = None  # For drawing only. For calculation see L
+        self.max_height_maximal_physical_units = None
+        self.mast_height_current_drawing_units = None
         self.MastThickness = None
         self.TrackHalfLengthGraphics = None  # Length of the track
 
@@ -314,7 +334,7 @@ class CartPole(EnvironmentBatched):
         self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
 
     def cartpole_ode(self):
-        self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)
+        self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=float(L))
 
     def Q2u(self):
         self.u = Q2u(self.Q)
@@ -338,7 +358,7 @@ class CartPole(EnvironmentBatched):
     def update_target_equilibrium(self):
         if self.time_last_target_equilibrium_change is None:
             self.time_last_target_equilibrium_change = self.time
-        elif self.target_equilibrium == -1 and (self.time-self.time_last_target_equilibrium_change) > self.change_target_equilibrium_every_x_second/4:
+        elif self.target_equilibrium == -1 and (self.time-self.time_last_target_equilibrium_change) > self.change_target_equilibrium_every_x_second:
             self.time_last_target_equilibrium_change = self.time
             self.target_equilibrium = -1*self.target_equilibrium
         elif self.target_equilibrium == 1 and (self.time-self.time_last_target_equilibrium_change) > self.change_target_equilibrium_every_x_second:
@@ -383,7 +403,8 @@ class CartPole(EnvironmentBatched):
                 self.dict_history['positionD'].append(self.s[POSITIOND_IDX])
                 self.dict_history['positionDD'].append(self.positionDD)
 
-                self.dict_history['Q'].append(self.Q)
+                self.dict_history['Q_calculated'].append(self.Q_calculated)
+                self.dict_history['Q_applied'].append(self.Q_applied)
                 self.dict_history['u'].append(self.u)
 
                 # The target_position is not always meaningful
@@ -391,7 +412,7 @@ class CartPole(EnvironmentBatched):
                 self.dict_history['target_position'].append(self.target_position)
                 self.dict_history['target_equilibrium'].append(self.target_equilibrium)
 
-                self.dict_history['L'].append(L)
+                self.dict_history['L'].append(float(L))
 
                 self.dict_history['Q_update_time'].append(self.Q_update_time)
 
@@ -418,13 +439,14 @@ class CartPole(EnvironmentBatched):
                                      'positionDD': [self.positionDD],
 
 
-                                     'Q': [self.Q],
+                                     'Q_calculated': [self.Q_calculated],
+                                     'Q_applied': [self.Q_applied],
                                      'u': [self.u],
 
                                      'target_position': [self.target_position],
                                      'target_equilibrium': [self.target_equilibrium],
 
-                                     'L': [L],
+                                     'L': [float(L)],
 
                                      'Q_update_time': [self.Q_update_time],
 
@@ -461,7 +483,7 @@ class CartPole(EnvironmentBatched):
             self.s[POSITION_IDX],
             self.s[POSITIOND_IDX],
             self.dt_simulation,
-            L=L,
+            L=float(L),
         )
 
     # Determine the dimensionless [-1,1] value of the motor power Q
@@ -477,19 +499,37 @@ class CartPole(EnvironmentBatched):
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                self.Q = self.slider_value
+                self.Q_applied = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
                 update_start = timeit.default_timer()
-                self.Q = float(self.controller.step(self.s_with_noise_and_latency, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium}))
+                self.Q_calculated = float(self.controller.step(
+                    self.s_with_noise_and_latency,
+                    self.time,
+                    {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium, 'L': float(self.L_for_controller)}
+                ))
                 self.Q_update_time = timeit.default_timer()-update_start
+                self.Q_applied = self.Q_calculated + controlDisturbance * rng.standard_normal(size=np.shape(self.Q_calculated), dtype=np.float32) + controlBias
 
+            self.Q = self.Q_applied
             self.dt_controller_steps_counter = 0
 
     def update_parameters(self):
-        ...
-        # Example code incrementing Cart mass at each iteration
-        # global L
-        # L[...] = L*0.9999
+        global L
+        if self.time_last_L_change is None:
+            self.time_last_L_change = self.time
+        else:
+            if (self.time-self.time_last_L_change) > self.change_L_every_x_second:
+                self.time_last_L_change = self.time
+                if self.L_change_mode == 'uniform':
+                    L[...] = np.random.uniform(*self.L_range)
+                elif self.L_change_mode == 'step':
+                    if L + self.L_step > self.L_range[1] or L + self.L_step < self.L_range[0]:
+                        self.L_step *= -1.0
+                    L[...] = L + self.L_step
+
+            else:
+                L[...] = L * self.L_discount_factor
+
 
 
     # endregion
@@ -509,7 +549,11 @@ class CartPole(EnvironmentBatched):
 
             # Set path where to save the data
             if csv_name is None or csv_name == '':
-                self.csv_filepath = self.path_to_experiment_recordings + 'CP_' + self.controller_name + self.optimizer_name + str(
+                if self.controller.has_optimizer:
+                    name_controller = self.controller_name + '_' + self.optimizer_name
+                else:
+                    name_controller = self.controller_name
+                self.csv_filepath = self.path_to_experiment_recordings + 'CP_' + name_controller + str(
                     datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')) + '.csv'
             else:
                 self.csv_filepath = csv_name
@@ -765,7 +809,16 @@ class CartPole(EnvironmentBatched):
                                          turning_points=None,
                                          used_track_fraction=0.8,
                                          target_equilibrium=None,
-                                         change_target_equilibrium_every_x_second=np.inf
+                                         change_target_equilibrium_every_x_second=np.inf,
+
+                                         L_initial=None,
+                                         change_L_every_x_seconds=None,
+                                         L_discount_factor=None,
+                                         L_range=None,
+                                         L_informed_controller=None,
+                                         L_change_mode=None,
+                                         L_step=None,
+
                                          ):
 
         # Set time scales:
@@ -790,6 +843,22 @@ class CartPole(EnvironmentBatched):
         if used_track_fraction is not None: self.used_track_fraction = used_track_fraction
         if target_equilibrium is not None: self.target_equilibrium = target_equilibrium
         if change_target_equilibrium_every_x_second is not None: self.change_target_equilibrium_every_x_second = change_target_equilibrium_every_x_second
+        if L_initial is not None: self.L_initial = L_initial
+        if change_L_every_x_seconds is not None: self.change_L_every_x_second = change_L_every_x_seconds
+        if L_discount_factor is not None: self.L_discount_factor = L_discount_factor
+        if L_range is not None: self.L_range = L_range
+        if L_informed_controller is not None: self.L_informed_controller = L_informed_controller
+        if L_change_mode is not None: self.L_change_mode = L_change_mode
+        if L_step is not None: self.L_step = self.L_step
+
+        global L
+
+        if self.L_informed_controller:
+            self.L_for_controller = L
+        else:
+            self.L_for_controller = float(self.L_initial)
+
+        L[...] = float(self.L_initial)
 
         self.Generate_Random_Trace_Function()
         self.use_pregenerated_target_position = 1
@@ -900,6 +969,7 @@ class CartPole(EnvironmentBatched):
                 initial_environment_attributes={
                     "target_position": self.target_position,
                     "target_equilibrium": self.target_equilibrium,
+                    "L": float(self.L_for_controller)
                 },
                 num_states=self.observation_space.shape[0],
                 num_control_inputs=self.action_space.shape[0],
@@ -949,6 +1019,8 @@ class CartPole(EnvironmentBatched):
         k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
 
         self.time = 0.0
+        self.time_last_target_equilibrium_change = None
+        self.time_last_L_change = None
         if reset_mode == 0:  # Don't change it
             self.s[POSITION_IDX] = self.s[POSITIOND_IDX] = 0.0
             self.s[ANGLE_IDX] = self.s[ANGLED_IDX] = 0.0
@@ -985,12 +1057,20 @@ class CartPole(EnvironmentBatched):
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                self.Q = self.slider_value
+                self.Q_applied = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q = float(self.controller.step(self.s, self.time, {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium}))
+                self.Q_applied = float(self.controller.step(
+                    self.s,
+                    self.time,
+                    {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium, "L": float(self.L_for_controller)}
+                ))
+                self.Q_applied = self.Q_calculated + controlDisturbance * rng.standard_normal(
+                    size=np.shape(self.Q_calculated), dtype=np.float32) + controlBias
 
+
+            self.Q = self.Q_applied
             self.u = Q2u(self.Q)  # Calculate CURRENT control input
-            self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=L)  # Calculate CURRENT second derivatives
+            self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=float(L))  # Calculate CURRENT second derivatives
 
         # Reset the dict keeping the experiment history and save the state for t = 0
         self.dt_save_steps_counter = 0
@@ -1010,13 +1090,14 @@ class CartPole(EnvironmentBatched):
                                  'positionD': [self.s[POSITIOND_IDX]],
                                  'positionDD': [self.positionDD],
 
-                                 'Q': [self.Q],
+                                 'Q_calculated': [self.Q_calculated],
+                                 'Q_applied': [self.Q_applied],
                                  'u': [self.u],
 
                                  'target_position': [self.target_position],
                                  'target_equilibrium': [self.target_equilibrium],
 
-                                 'L': [L],
+                                 'L': [float(L)],
 
                                  'Q_update_time': [self.Q_update_time],
 
@@ -1107,8 +1188,11 @@ class CartPole(EnvironmentBatched):
         self.WheelToMiddle = 4.0
         self.y_plane = 0.0
         self.y_wheel = self.y_plane + self.WheelRadius
-        self.MastHight = 10.0  # For drawing only. For calculation see L
-        self.PoleInitialPhysicalHight = float(L)
+
+        self.mast_height_maximal_drawing_units = 10.0
+        self.max_height_maximal_physical_units = np.max([self.L_initial, *self.L_range])
+        self.mast_height_current_drawing_units = self.mast_height_maximal_drawing_units * (float(L) / self.max_height_maximal_physical_units)
+
         self.MastThickness = 0.05
         self.TrackHalfLengthGraphics = 50.0  # Full Length of the track
 
@@ -1126,7 +1210,7 @@ class CartPole(EnvironmentBatched):
         # Initialize elements of the drawing
         self.Mast = FancyBboxPatch(xy=(self.s[POSITION_IDX]*self.physical_to_graphics - (self.MastThickness / 2.0), 1.25 * self.WheelRadius),
                                    width=self.MastThickness,
-                                   height=self.MastHight,
+                                   height=self.mast_height_current_drawing_units,
                                    fc='g')
 
         self.Chassis = FancyBboxPatch((self.s[POSITION_IDX]*self.physical_to_graphics - (self.CartLength / 2.0), self.WheelRadius),
@@ -1196,7 +1280,7 @@ class CartPole(EnvironmentBatched):
 
         # Draw an invisible point at constant position
         # Thanks to it the axes is drawn high enough for the mast
-        InvisiblePointUp = Rectangle((0, self.MastHight + 2.0),
+        InvisiblePointUp = Rectangle((0, self.mast_height_maximal_drawing_units + 2.0),
                                      self.MastThickness,
                                      0.0001,
                                      fc='w',
@@ -1205,7 +1289,7 @@ class CartPole(EnvironmentBatched):
         AxCart.add_patch(InvisiblePointUp)
 
         if self.show_hanging_pole:
-            InvisiblePointDown = Rectangle((0, -self.MastHight - 2.0),
+            InvisiblePointDown = Rectangle((0, -self.mast_height_maximal_drawing_units - 2.0),
                                          self.MastThickness,
                                          0.0001,
                                          fc='w',
@@ -1253,7 +1337,7 @@ class CartPole(EnvironmentBatched):
         # Draw mast
         mast_position = (self.s[POSITION_IDX]*self.physical_to_graphics - (self.MastThickness / 2.0))
         self.Mast.set_x(mast_position)
-        self.Mast.set_height(self.MastHight*(float(L)/self.PoleInitialPhysicalHight))
+        self.Mast.set_height(self.mast_height_maximal_drawing_units * (float(L) / self.max_height_maximal_physical_units))
         # Draw rotated mast
         t21 = transforms.Affine2D().translate(-mast_position, -1.25 * self.WheelRadius)
         if ANGLE_CONVENTION == 'CLOCK-NEG':

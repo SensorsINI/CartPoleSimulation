@@ -670,7 +670,7 @@ class MainWindow(QMainWindow):
                 self.CartPoleInstance.u = row['u']
             except KeyError:
                 pass
-            self.CartPoleInstance.Q = row['Q']
+            self.CartPoleInstance.Q = row['Q_applied']
             self.CartPoleInstance.target_position = row['target_position']
             if self.CartPoleInstance.controller_name == 'manual-stabilization':
                 self.CartPoleInstance.slider_value = self.CartPoleInstance.Q

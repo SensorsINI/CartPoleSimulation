@@ -147,7 +147,7 @@ class controller_do_mpc(template_controller):
         self.x0['s.angle'] = s.angle
         self.x0['s.angleD'] = s.angleD
 
-        self.tvp_template['_tvp', :, 'target_position'] = self.target_position
+        self.tvp_template['_tvp', :, 'target_position'] = self.variable_parameters.target_position
 
         Q = self.mpc.make_step(self.x0)
 
