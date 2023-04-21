@@ -1,7 +1,7 @@
 mpc:
   optimizer: mppi
   predictor_specification: "ODE_TF"    # Can be "ODE", "ODE_TF", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
-  cost_function_specification: quadratic_boundary_grad  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary"
+  cost_function_specification: default  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary"
   computation_library: tensorflow  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.
   controller_logging: false
   calculate_optimal_trajectory: false
@@ -82,6 +82,7 @@ lqr:
   control_noise:  # Defined in cartpole config
   controller_logging: True
 pid:
+  computation_library: numpy
   P_angle: 9.0
   I_angle: 0.0
   D_angle: 0.0
@@ -92,15 +93,11 @@ pid:
 mpc-opti:
   mpc_horizon: 10                       # steps
   controller_logging: True
-neural-imitator-tf:
+neural-imitator:
   seed: null                            # If null, random seed based on datetime is used
   PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
-  net_name: 'GRU-6IN-32H1-32H2-1OUT-4'
-  controller_logging: True
-neural-imitator-pytorch:
-  seed: null                            # If null, random seed based on datetime is used
-  PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
-  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'
+  net_name: 'GRU-6IN-32H1-32H2-1OUT-4'  # TF
+#  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'  # Pytorch
   controller_logging: True
 secloc:
   log_base: 1.05

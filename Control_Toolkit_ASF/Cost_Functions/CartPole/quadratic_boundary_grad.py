@@ -31,7 +31,7 @@ class quadratic_boundary_grad(cost_function_base):
     def _distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
         return (
-            (position - self.controller.target_position) / (2.0 * TrackHalfLength)
+            (position - self.variable_parameters.target_position) / (2.0 * TrackHalfLength)
         ) ** 2 + self.lib.cast(
             self.lib.abs(position) > 0.95 * TrackHalfLength, self.lib.float32
         ) * 1e9 * (
@@ -41,7 +41,7 @@ class quadratic_boundary_grad(cost_function_base):
     # cost for difference from upright position
     def _E_pot_cost(self, angle):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
-        return 0.25 * (1.0 + self.lib.cos(admissible_angle) - self.lib.cos(angle + (1.0-self.controller.target_equilibrium)*self.lib.pi/2.0)) ** 2
+        return 0.25 * (1.0 + self.lib.cos(admissible_angle) - self.lib.cos(angle + (1.0-self.variable_parameters.target_equilibrium)*self.lib.pi/2.0)) ** 2
 
     def _E_kin_cost(self, angleD):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
@@ -69,7 +69,7 @@ class quadratic_boundary_grad(cost_function_base):
         terminal_cost = 10000 * self.lib.cast(
             (self.lib.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
             | (
-                self.lib.abs(terminal_states[:, POSITION_IDX] - self.controller.target_position)
+                self.lib.abs(terminal_states[:, POSITION_IDX] - self.variable_parameters.target_position)
                 > 0.1 * TrackHalfLength
             ),
             self.lib.float32,

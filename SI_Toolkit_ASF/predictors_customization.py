@@ -7,22 +7,29 @@ from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
 
 class next_state_predictor_ODE():
 
-    def __init__(self, dt: float, intermediate_steps: int, batch_size: int, **kwargs):
+    def __init__(self,
+                 dt: float,
+                 intermediate_steps: int,
+                 batch_size: int,
+                 variable_parameters=None,
+                 **kwargs):
         self.s = create_cartpole_state()
+
+        self.variable_parameters = variable_parameters
 
         self.intermediate_steps = intermediate_steps
         self.t_step = np.float32(dt / float(self.intermediate_steps))
         
-    def step(self, s, Q, params):
+    def step(self, s, Q):
 
         assert Q.shape[0] == s.shape[0]
         assert Q.ndim == 2
         assert s.ndim == 2
 
-        if params is None:
-            pole_half_length = L
+        if self.variable_parameters is not None and hasattr(self.variable_parameters, 'L'):
+            pole_half_length = self.variable_parameters.L
         else:
-            pole_half_length = params
+            pole_half_length = L
 
         Q = np.squeeze(Q, axis=1)  # Removes features dimension, specific for cartpole as it has only one control input
         u = Q2u(Q)

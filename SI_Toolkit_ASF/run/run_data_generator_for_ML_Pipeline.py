@@ -4,6 +4,8 @@ from run_data_generator import run_data_generator
 # Automatically create new path to save everything in
 
 import yaml, os
+import shutil
+
 config_SI = load_config(os.path.join("SI_Toolkit_ASF", "config_training.yml"))
 config_cartpole = load_config(os.path.join("config.yml"))
 
@@ -26,8 +28,43 @@ if __name__ == '__main__':
     # Save copy of configs in experiment folder
     if not os.path.exists(record_path):
         os.makedirs(record_path)
-    yaml.dump(config_SI, open(record_path + "/SI_Toolkit_config_savefile.yml", "w"), default_flow_style=False)
-    yaml.dump(config_cartpole, open(record_path + "/CartPole_config_savefile.yml", "w"), default_flow_style=False)
+
+    # Copy configs at the moment of creation of dataset
+
+    shutil.copy2(
+        "config.yml",
+        os.path.join(record_path, "config.yml"))
+
+    shutil.copy2(
+        "config_data_gen.yml",
+        os.path.join(record_path, "config_data_gen.yml"))
+
+    shutil.copy2(
+        os.path.join("SI_Toolkit_ASF", "config_training.yml"),
+        os.path.join(record_path, "config_training.yml"))
+
+    shutil.copy2(
+        os.path.join("SI_Toolkit_ASF", "config_predictors.yml"),
+        os.path.join(record_path, "config_predictors.yml"))
+
+    shutil.copy2(
+        os.path.join("Control_Toolkit_ASF", "config_controllers.yml"),
+        os.path.join(record_path, "config_controllers.yml"))
+
+    shutil.copy2(
+        os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"),
+        os.path.join(record_path, "config_cost_function.yml"))
+
+    shutil.copy2(
+        os.path.join("Control_Toolkit_ASF", "config_optimizers.yml"),
+        os.path.join(record_path, "config_optimizers.yml"))
+
+
+
+
+
+
+
 
     # Run data generator
     run_data_generator(run_for_ML_Pipeline=True, record_path=record_path)

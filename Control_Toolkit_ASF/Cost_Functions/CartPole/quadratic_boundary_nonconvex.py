@@ -28,14 +28,14 @@ class quadratic_boundary_nonconvex(cost_function_base):
     def _distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
         return (
-            ((position - self.controller.target_position) / (2.0 * TrackHalfLength)) ** 2
+            ((position - self.variable_parameters.target_position) / (2.0 * TrackHalfLength)) ** 2
             - 0.15
             * (
                 self.lib.cos(
                     4
                     * 2
                     * self.lib.pi
-                    * (position - self.controller.target_position)
+                    * (position - self.variable_parameters.target_position)
                     / (2.0 * TrackHalfLength)
                 )
                 - 1.0
@@ -49,7 +49,7 @@ class quadratic_boundary_nonconvex(cost_function_base):
     # cost for difference from upright position
     def _E_pot_cost(self, angle):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
-        return self.controller.target_equilibrium * 0.25 * (1.0 - self.lib.cos(angle)) ** 2
+        return self.variable_parameters.target_equilibrium * 0.25 * (1.0 - self.lib.cos(angle)) ** 2
 
     # actuation cost
     def _CC_cost(self, u):
@@ -73,7 +73,7 @@ class quadratic_boundary_nonconvex(cost_function_base):
         terminal_cost = 10000 * self.lib.cast(
             (self.lib.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
             | (
-                self.lib.abs(terminal_states[:, POSITION_IDX] - self.controller.target_position)
+                self.lib.abs(terminal_states[:, POSITION_IDX] - self.variable_parameters.target_position)
                 > 0.1 * TrackHalfLength
             ),
             self.lib.float32,
