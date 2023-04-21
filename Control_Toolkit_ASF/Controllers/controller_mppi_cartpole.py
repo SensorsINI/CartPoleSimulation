@@ -490,7 +490,7 @@ class controller_mppi_cartpole(template_controller):
                 self.u,
                 self.delta_u,
                 self.u_prev,
-                self.target_position,
+                self.variable_parameters.target_position,
             )
 
             # Update inputs with weighted perturbations
@@ -516,7 +516,7 @@ class controller_mppi_cartpole(template_controller):
 
         if LOGGING:
             LOGS.get("trajectory").append(np.copy(self.s))
-            LOGS.get("target_trajectory").append(np.copy(self.target_position))
+            LOGS.get("target_trajectory").append(np.copy(self.variable_parameters.target_position))
 
         if (
             self.warm_up_countdown > 0
@@ -527,7 +527,7 @@ class controller_mppi_cartpole(template_controller):
         ):
             self.warm_up_countdown -= 1
             if abs(s[ANGLE_IDX]) < np.pi/10.0:  # Stabilize during warm_up with auxiliary controller if initial angle small
-                Q = self.auxiliary_controller.step(s, self.target_position)
+                Q = self.auxiliary_controller.step(s, self.variable_parameters.target_position)
             else:
                 Q = self.rng_mppi_rnn.uniform(-1, 1)  # Apply random input to let RNN "feel" the system behaviour
         else:
@@ -537,7 +537,7 @@ class controller_mppi_cartpole(template_controller):
         # It stops controller when Pole is well stabilized (starting inputing random input)
         # And re-enables it when angle exceedes 90 deg.
         # if (abs(self.s[[ANGLE_IDX]]) < 0.01
-        #     and abs(self.s[[POSITION_IDX]]-self.target_position < 0.02)
+        #     and abs(self.s[[POSITION_IDX]]-self.variable_parameters.target_position < 0.02)
         #         and abs(self.s[[ANGLED_IDX]]) < 0.1
         #             and abs(self.s[[POSITIOND_IDX]]) < 0.05):
         #     self.control_enabled = False

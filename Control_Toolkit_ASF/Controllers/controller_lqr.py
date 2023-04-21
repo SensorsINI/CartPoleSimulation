@@ -85,7 +85,7 @@ class controller_lqr(template_controller):
         self.update_attributes(updated_attributes)
         
         state = np.array(
-            [[s[POSITION_IDX] - self.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
+            [[s[POSITION_IDX] - self.variable_parameters.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
 
         Q = np.dot(-self.K, state).item()
 
