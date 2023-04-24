@@ -26,18 +26,24 @@ A PID controller for the Cartpole using CartpoleSimulator conventions
 
 import json
 
-from CartPoleSimulation.Control_Toolkit.Controllers import template_controller
-from CartPoleSimulation.CartPole.state_utilities import cartpole_state_varname_to_index
-from DriverFunctions.json_helpers import get_new_json_filename
+from Control_Toolkit.Controllers import template_controller
+from CartPole.state_utilities import cartpole_state_varname_to_index
 
-from globals import dec, inc, JSON_PATH
+try:
+    from DriverFunctions.json_helpers import get_new_json_filename
+    from globals import dec, inc, JSON_PATH
+
+    # PID params from json
+    PARAMS_JSON_FILE = JSON_PATH + 'control_PID.json'
+
+except ModuleNotFoundError:
+    print('No JSON file for PID, using config parameters instead')
+    PARAMS_JSON_FILE = None
+    pass
 
 import numpy as np
 
 from SI_Toolkit.computation_library import TensorType
-
-# PID params from json
-PARAMS_JSON_FILE = JSON_PATH + 'control_PID.json'
 
 # Sensitivity for PID gains - these are hardcoded multiplicative factors for PID gains
 # They help to keep gains in json files in user-friendly magnitude.
@@ -74,9 +80,9 @@ class controller_pid(template_controller):
         self.position_error_previous = None
 
         # Gains
-        self.POSITION_KP = 0.0
-        self.POSITION_KD = 0.0
-        self.POSITION_KI = 0.0
+        self.POSITION_KP = self.config_controller['P_position']
+        self.POSITION_KD = self.config_controller['D_position']
+        self.POSITION_KI = self.config_controller['I_position']
 
         # "Cost" components:
         # gain * error(or error integral or error difference) * sensitivity factor (see at the top of the file)
@@ -101,9 +107,9 @@ class controller_pid(template_controller):
         self.angle_error_previous = None
 
         # Gains
-        self.ANGLE_KP = 0.0
-        self.ANGLE_KD = 0.0
-        self.ANGLE_KI = 0.0
+        self.ANGLE_KP = self.config_controller['P_angle']
+        self.ANGLE_KD = self.config_controller['D_angle']
+        self.ANGLE_KI = self.config_controller['I_angle']
 
         # "Cost" components:
         # gain * error(or error integral or error difference) * sensitivity factor (see at the top of the file)
