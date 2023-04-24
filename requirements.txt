@@ -23,6 +23,7 @@ typing-extensions
 PyQt6
 tensorflow-probability
 Pillow
+gymnasium
 
 torch
 tensorflow

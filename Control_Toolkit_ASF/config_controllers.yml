@@ -82,6 +82,7 @@ lqr:
   control_noise:  # Defined in cartpole config
   controller_logging: True
 pid:
+  computation_library: numpy
   P_angle: 9.0
   I_angle: 0.0
   D_angle: 0.0
