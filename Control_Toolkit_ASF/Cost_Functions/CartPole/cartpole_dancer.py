@@ -90,13 +90,17 @@ class cartpole_dancer:
                 raise FileNotFoundError(f'mp3/wave file for dance {self.song_file_name} not found, cannot play music')
         if self.song_player:
             self.song_player.release()
-        self.song_player:vlc.MediaPlayer = vlc.MediaPlayer(self.song_file_name)
-        log.debug(f'loaded CSV {self.csv_file_name} and song {self.song_file_name}')
+        try:
+            self.song_player:vlc.MediaPlayer = vlc.MediaPlayer(self.song_file_name)
+            log.debug(f'loaded CSV {self.csv_file_name} and song {self.song_file_name}')
+        except AttributeError as e:
+            log.error(f'cannot open VLC song_player: {e}')
 
-        if self.song_player.set_rate(self.cartpole_trajectory_generator.cost_function.dance_song_playback_rate)==-1:
-            log.warning('could not set playback rate for song')
-        em = self.song_player.event_manager()
-        em.event_attach(vlc.EventType.MediaPlayerEndReached, self.start) # restart dance when song restarts
+        if self.song_player:
+            if self.song_player.set_rate(self.cartpole_trajectory_generator.cost_function.dance_song_playback_rate)==-1:
+                log.warning('could not set playback rate for song')
+            em = self.song_player.event_manager()
+            em.event_attach(vlc.EventType.MediaPlayerEndReached, self.start) # restart dance when song restarts
         self.mtime = self.csv_file_path.stat().st_mtime
         if self.csvfile:
             self.csvfile.close()
