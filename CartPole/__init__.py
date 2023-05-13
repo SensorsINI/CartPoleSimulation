@@ -1255,9 +1255,6 @@ class CartPole(EnvironmentBatched):
     # This method draws elements and set properties of the CartPole figure
     # which do not change at every frame of the animation
     def draw_constant_elements(self, fig, AxCart, AxSlider):
-        # Delete all elements of the Figure
-        AxCart.clear()
-        AxSlider.clear()
 
         ## Upper chart with Cart Picture
         # Set x and y limits
