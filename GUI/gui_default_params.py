@@ -19,9 +19,9 @@ save_interval = 0.02  # s, How often to save the results of simulation
 # controller_init = 'custom-mpc-scipy'  # Defines which controller is loaded at the start of the program
 import os
 if os.getcwd().split(os.sep)[-1] == 'Driver':
-    controller_init = 'mpc'  # Load as default if loaded as part of physical-cartpole
+    controller_init = 'energy'  # TODO shreyan controller CCNW2023 Load as default if loaded as part of physical-cartpole
 else:
-    controller_init = 'mpc'  # Load as default if loaded as cartpole simulator stand alone
+    controller_init = 'energy'  # TODO shreyan controller CCNW2023 # Load as default if loaded as cartpole simulator stand alone
 """
 Possible choices for CartPole controller:
 
