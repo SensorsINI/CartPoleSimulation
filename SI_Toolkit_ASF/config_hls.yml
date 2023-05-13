@@ -1,13 +1,19 @@
 board: 'zybo-z7-20'
+part: 'XC7Z020'
 path_to_hls_installation: '/tools/Xilinx/Vivado/2020.1/bin'
 
 
-path_to_models: './SI_Toolkit_ASF/Experiments/NeuralImitatorCPS_v2/Models/'
-net_name: 'Dense-6IN-128H1-128H2-1OUT-1'
+path_to_models: './SI_Toolkit_ASF/Experiments/'
+net_name: 'Dense-7IN-16H1-16H2-1OUT-0'
 batch_size: 1
 
-precision: 'ap_fixed<16,6>'
+precision: 'ap_fixed<20,6>'  #FIXME: Probably not working as intended
+Strategy: 'Resources'  # Resources or Latency
+ReuseFactor: 64
+
+#backend: 'Vivado'  # VivadoAccelerator or Vivado
+backend: 'VivadoAccelerator'  # VivadoAccelerator or Vivado
 
 with_brunton_testing: true
 
-output_dir: '../../m1/prj0' # Must be a very short path neer to the root filesystem. Otherwise it crashes silently
+output_dir: '../../m1/prjAccel' # Must be a very short path neer to the root filesystem. Otherwise it crashes silently

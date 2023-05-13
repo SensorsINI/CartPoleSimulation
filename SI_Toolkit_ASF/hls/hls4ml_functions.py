@@ -7,12 +7,20 @@ config_hls = yaml.load(open(os.path.join('SI_Toolkit_ASF', 'config_hls.yml'), 'r
 def convert_model_with_hls4ml(model, granularity='model'):
     config = hls4ml.utils.config_from_keras_model(model, granularity=granularity)
 
+
     config['Model']['Precision'] = config_hls['precision']
+    config['Model']['Strategy'] = config_hls['Strategy']
+    config['Model']['ReuseFactor'] = config_hls['ReuseFactor']
+
     hls_model = hls4ml.converters.convert_from_keras_model(model,
                                                            hls_config=config,
                                                            output_dir=config_hls['output_dir'],
+                                                           backend=config_hls['backend'],
                                                            ## !!!! If the path is long it crashes. Depending on how long is the path it crashes at different places.
-                                                           board=config_hls['board'])
+                                                           part=config_hls['part'],                                                     # board=config_hls['board'],
+    )
+
+    hls_model.compile()
 
     return hls_model, config
 
