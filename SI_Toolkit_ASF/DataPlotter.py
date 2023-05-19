@@ -2,9 +2,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 #Path to Recording
-path = "Experiments/Experiment-11/Recordings/Validate/Experiment.csv"
+path = "Experiments/CP_neural-imitator-tfmppi_2023-03-09_12-13-48.csv"
 start_time = 0
-end_time = 40
+end_time = 20
 
 def plot_data(path, value, target_value, start_time, end_time):
     recording = pd.read_csv(path, skiprows=28)
@@ -16,6 +16,7 @@ def plot_data(path, value, target_value, start_time, end_time):
     plt.ylabel(value)
     plt.legend()
     plt.show()
+plot_data(path,'position','target_position',start_time,end_time)
 
 
 
