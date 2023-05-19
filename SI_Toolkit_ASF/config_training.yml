@@ -1,9 +1,9 @@
 library: 'TF'  # TF or Pytorch
 modeling:
-  NET_NAME: 'Dense-64H1-64H2'
+  NET_NAME: 'GRU-64H1-64H2'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Experiment-11/'
+  path_to_experiment: 'DG-27s-and-1s500ms-noisy-u/'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
 
 training_default:
@@ -19,17 +19,25 @@ training_default:
   # outputs = inputs_list
   # For training of a network imitating MPC:
   control_inputs: []
-  state_inputs: ['position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_position', 'target_equilibrium']
-  outputs:  ['Q']
+  state_inputs: ['position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_position','target_equilibrium']
+  outputs:  ['L']
   EPOCHS: 15
-  BATCH_SIZE: 16
+  BATCH_SIZE: 50
   SEED: 1873
-  LR: 1.0e-2
-  WASH_OUT_LEN: 0
-  POST_WASH_OUT_LEN: 1
+  LR: 1.0e-3
+  WASH_OUT_LEN: 3
+  POST_WASH_OUT_LEN: 20
   ON_FLY_DATA_GENERATION: False
   NORMALIZE: True
   SHIFT_LABELS: 0  # for k, as a label to row i is taken row i+k
   USE_NNI: False  # Decide if you want to use NNI package
   CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch; 'with cells' or 'with modules'
+
+
+
+
+
+
+
+
 

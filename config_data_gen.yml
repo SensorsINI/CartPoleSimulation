@@ -1,7 +1,7 @@
 controller: mpc
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
 seed: 1998   # If not assign random seed based on datetime is used
-length_of_experiment: 3600  # Length of each experiment in s:
+length_of_experiment: 5  # Length of each experiment in s:
 split: [0.8, 0.1]  # Train/Val/(Test) split - only matters if you run it in ML Pipeline mode
 random_initial_state:
   # Unassigned variables will be randomly initialized (see below)
@@ -22,7 +22,7 @@ initial_target_equilibrium: 'random'  # possible 'up', 'down', 'random' = 50/50
 change_target_equilibrium_every_x_second: 16
 L:  # Pole half-length
   L_initial: default
-  change_L_every_x_second: inf
+  change_L_every_x_second: 1
   L_discount_factor: 1.0 #0.9999; Change of L at EACH SIMULATOR TIMESTEP
   L_range: [0.01, 0.6]  # Range from which to uniformly sample L
   informed_controller: true  # If false controller assumes always L_initial
@@ -41,4 +41,4 @@ save_mode: 'online'  # It was intended to save memory usage, but it doesn't seem
 # Show popup window in the end with summary of experiment?
 show_summary_plots: False
 show_controller_report: False
-number_of_experiments: 10  # How many experiments will be generated
+number_of_experiments: 1  # How many experiments will be generated

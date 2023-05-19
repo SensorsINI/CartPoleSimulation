@@ -114,17 +114,17 @@ class CartPole(EnvironmentBatched):
 
         self.L_initial = float(L)
 
-        self.change_L_every_x_second = np.inf
+        self.change_L_every_x_second = 5
         self.time_last_L_change = None
         self.L_discount_factor = 1.0
-        self.L_range = [0.03, 0.2]
+        self.L_range = [0.1, 0.25]
         self.L_informed_controller = True
         if self.L_informed_controller:
             self.L_for_controller = L
         else:
             self.L_for_controller = float(self.L_initial)
         self.L_change_mode = 'step'
-        self.L_step = 0.02
+        self.L_step = 0
 
         self.latency = self.config["latency"]
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
