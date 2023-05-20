@@ -849,7 +849,7 @@ class CartPole(EnvironmentBatched):
         if L_range is not None: self.L_range = L_range
         if L_informed_controller is not None: self.L_informed_controller = L_informed_controller
         if L_change_mode is not None: self.L_change_mode = L_change_mode
-        if L_step is not None: self.L_step = self.L_step
+        if L_step is not None: self.L_step = L_step
 
         global L
 
