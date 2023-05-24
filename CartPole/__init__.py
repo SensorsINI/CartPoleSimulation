@@ -858,8 +858,6 @@ class CartPole(EnvironmentBatched):
         else:
             self.L_for_controller = float(self.L_initial)
 
-        L[...] = float(self.L_initial)
-
         self.Generate_Random_Trace_Function()
         self.use_pregenerated_target_position = 1
 
@@ -870,6 +868,8 @@ class CartPole(EnvironmentBatched):
 
         # Reset variables
         self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, target_position=self.target_position)
+
+        L[...] = float(self.L_initial)
 
     # Runs a random experiment with parameters set with setup_cartpole_random_experiment
     # And saves the experiment recording to csv file
