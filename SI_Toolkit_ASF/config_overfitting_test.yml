@@ -1,9 +1,9 @@
 
-predictors_specifications_testing_Exp_1: ['SGP_10_1_10', 'SGP_10_51_10', 'SGP_10_101_10', 'SGP_10_151_10', 'SGP_10_201_10', 'SGP_10_251_10', 'SGP_10_301_10', 'SGP_10_351_10']
+predictors_specifications_testing_Exp_1: ['SGP_10_1_10_1', 'SGP_10_51_10_1', 'SGP_10_101_10_1', 'SGP_10_151_10_1', 'SGP_10_201_10_1', 'SGP_10_251_10_1', 'SGP_10_301_10_1', 'SGP_10_351_10_1']
 
-predictors_specifications_testing_Exp_2: ['SGP_2_400_10', 'SGP_7_400_10', 'SGP_12_400_10', 'SGP_17_400_10', 'SGP_22_400_10', 'SGP_27_400_10', 'SGP_32_400_10', 'SGP_37_400_10', 'SGP_42_400_10', 'SGP_47_400_10', 'SGP_52_400_10', 'SGP_57_400_10', 'SGP_62_400_10', 'SGP_67_400_10', 'SGP_72_400_10', 'SGP_77_400_10', 'SGP_82_400_10', 'SGP_87_400_10', 'SGP_92_400_10', 'SGP_97_400_10']
+predictors_specifications_testing_Exp_2: []
 
-predictors_specifications_testing_Exp_3: []
+predictors_specifications_testing_Exp_3: ['SGP_10_400_1_1', 'SGP_10_400_1_2', 'SGP_10_400_1_3', 'SGP_10_400_21_1', 'SGP_10_400_21_2', 'SGP_10_400_21_3', 'SGP_10_400_41_1', 'SGP_10_400_41_2', 'SGP_10_400_41_3', 'SGP_10_400_61_1', 'SGP_10_400_61_2', 'SGP_10_400_61_3', 'SGP_10_400_81_1', 'SGP_10_400_81_2', 'SGP_10_400_81_3']
 
 # predictors_specifications may be a names from the list of predictors in config_predictors.yml (assuming specification make sense)
 # It can be a names of networks or GPs e.g. 'GRU-6IN-32H1-32H2-5OUT-0' to be used for test
