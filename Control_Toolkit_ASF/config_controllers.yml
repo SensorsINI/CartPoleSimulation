@@ -95,18 +95,16 @@ mpc-opti:
   controller_logging: True
 neural-imitator:
   seed: null                            # If null, random seed based on datetime is used
-  PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
-  net_name: 'GRU-6IN-32H1-32H2-1OUT-4'  # TF
-#  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'  # Pytorch
+  PATH_TO_MODELS: './Control_Toolkit_ASF/networks_noah_koller/'
+  net_name: 'Dense-7IN-64H1-64H2-1OUT-3'  # TF
   controller_logging: True
   computation_library: tensorflow
 neural-cascaded:
   seed: null                            # If null, random seed based on datetime is used
-  PATH_TO_MODEL_1: './SI_Toolkit_ASF/Experiments/DG-27s-and-1s500ms-noisy-u/Models/'
+  PATH_TO_MODEL_1: './Control_Toolkit_ASF/networks_noah_koller/'
   net_name_1: 'GRU-7IN-64H1-64H2-1OUT-2'  # TF
-  PATH_TO_MODEL_2: './SI_Toolkit_ASF/Experiments/DG-27s-and-1s500ms-noisy-u/Models/'
+  PATH_TO_MODEL_2: './Control_Toolkit_ASF/networks_noah_koller/'
   net_name_2: 'Dense-8IN-64H1-64H2-1OUT-4'  # TF
-  #  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'  # Pytorch
   controller_logging: True
   computation_library: tensorflow
 secloc:

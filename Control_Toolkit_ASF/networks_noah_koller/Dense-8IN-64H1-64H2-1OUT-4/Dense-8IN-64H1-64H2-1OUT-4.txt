@@ -1,0 +1,50 @@
+CREATED:
+2023-04-06 at time 10:09:29
+
+WITH GIT REVISION:
+90bf766262945fbc84af89c4bef0364fa1b8f368
+
+LIBRARY:
+TF
+
+NET NAME:
+Dense-64H1-64H2
+
+NET FULL NAME:
+Dense-8IN-64H1-64H2-1OUT-4
+
+INPUTS:
+angleD, angle_cos, angle_sin, position, positionD, L, target_equilibrium, target_position
+
+OUTPUTS:
+Q
+
+TYPE:
+Dense
+
+NORMALIZATION:
+./SI_Toolkit_ASF/Experiments/DG-27s-and-1s500ms-noisy-u/Models/Dense-8IN-64H1-64H2-1OUT-4/NI_2023-01-11_02-00-48.csv
+
+PARENT NET:
+Network trained from scratch
+
+WASH OUT LENGTH:
+0
+
+CONSTRUCT NETWORK:
+with cells
+
+TRAINING_FILES:
+./SI_Toolkit_ASF/Experiments/DG-27s-and-1s500ms-noisy-u//Recordings/Train/
+
+VALIDATION_FILES:
+./SI_Toolkit_ASF/Experiments/DG-27s-and-1s500ms-noisy-u//Recordings/Validate/
+
+TEST_FILES:
+./SI_Toolkit_ASF/Experiments/DG-27s-and-1s500ms-noisy-u//Recordings/Test/
+
+TIMESTEP MEAN:
+0
+
+TIMESTEP STD:
+0

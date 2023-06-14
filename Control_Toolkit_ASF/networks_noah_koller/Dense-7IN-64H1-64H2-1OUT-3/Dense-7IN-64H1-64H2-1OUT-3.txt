@@ -1,0 +1,50 @@
+CREATED:
+2023-05-26 at time 18:47:10
+
+WITH GIT REVISION:
+9768a11a86bd541adaf947211cf8bb2f18252ca7
+
+LIBRARY:
+TF
+
+NET NAME:
+Dense-64H1-64H2
+
+NET FULL NAME:
+Dense-7IN-64H1-64H2-1OUT-3
+
+INPUTS:
+angleD, angle_cos, angle_sin, position, positionD, target_equilibrium, target_position
+
+OUTPUTS:
+Q_calculated
+
+TYPE:
+Dense
+
+NORMALIZATION:
+./SI_Toolkit_ASF/Experiments/static_imitator/Models/Dense-7IN-64H1-64H2-1OUT-3/NI_2023-05-26_18-46-18.csv
+
+PARENT NET:
+Network trained from scratch
+
+WASH OUT LENGTH:
+0
+
+CONSTRUCT NETWORK:
+with cells
+
+TRAINING_FILES:
+./SI_Toolkit_ASF/Experiments/static_imitator//Recordings/Train/
+
+VALIDATION_FILES:
+./SI_Toolkit_ASF/Experiments/static_imitator//Recordings/Validate/
+
+TEST_FILES:
+./SI_Toolkit_ASF/Experiments/static_imitator//Recordings/Test/
+
+TIMESTEP MEAN:
+0.0
+
+TIMESTEP STD:
+0.0
