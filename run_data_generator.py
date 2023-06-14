@@ -112,7 +112,7 @@ class random_experiment_setter:
 
         global L
         if self.L_initial_mode == 'uniform':
-            self.L_initial = np.random.uniform(self.L_range)
+            self.L_initial = np.random.uniform(*self.L_range)
         elif self.L_initial_mode == 'default':
             self.L_initial = L[...]
         else:
@@ -219,8 +219,6 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     ############ END OF PARAMETERS SECTION ############
 
     for i in range(number_of_experiments):
-        # global L
-        # L[...] = np.uniform()
 
         if run_for_ML_Pipeline:
             if i < int(frac_train*number_of_experiments):
