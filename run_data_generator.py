@@ -112,7 +112,7 @@ class random_experiment_setter:
 
         global L
         if self.L_initial_mode == 'uniform':
-            self.L_initial = np.random.uniform(self.L_range)
+            self.L_initial = np.random.uniform(*self.L_range)
         elif self.L_initial_mode == 'default':
             self.L_initial = L[...]
         else:

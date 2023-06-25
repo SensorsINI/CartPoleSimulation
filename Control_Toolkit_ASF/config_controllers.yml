@@ -99,6 +99,7 @@ neural-imitator:
   net_name: 'GRU-6IN-32H1-32H2-1OUT-4'  # TF
 #  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'  # Pytorch
   controller_logging: True
+  computation_library: tensorflow
 secloc:
   log_base: 1.05
   ref_period: 1
