@@ -1,4 +1,4 @@
-board: 'zybo-z7-20'
+board: 'digilentinc.com:zybo-z7-20:part0:1.0'
 part: 'XC7Z020'
 path_to_hls_installation: '/tools/Xilinx/Vivado/2020.1/bin'
 
@@ -11,9 +11,9 @@ precision: 'ap_fixed<20,6>'  #FIXME: Probably not working as intended
 Strategy: 'Resources'  # Resources or Latency
 ReuseFactor: 64
 
-#backend: 'Vivado'  # VivadoAccelerator or Vivado
-backend: 'VivadoAccelerator'  # VivadoAccelerator or Vivado
+backend: 'Vivado'  # VivadoAccelerator or Vivado
+#backend: 'VivadoAccelerator'  # VivadoAccelerator or Vivado
 
 with_brunton_testing: true
 
-output_dir: '../../m1/prjAccel' # Must be a very short path neer to the root filesystem. Otherwise it crashes silently
+output_dir: '../../m1/xxx' # Must be a very short path neer to the root filesystem. Otherwise it crashes silently
