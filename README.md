@@ -18,7 +18,7 @@ Create conda environment with
 	conda create -n CartPoleSimulation python=3.8
     conda activate CartPoleSimulation
 
-To set up the SI_Toolkit (System Identification Toolbox) and Control Toolkit, pull all sub modules:
+If  SI_Toolkit (System Identification Toolbox) or Control Toolkit folders are empty, use these lines to pull all submodules:
 ```bash
 git submodule update --init --recursive
 git submodule update --recursive --remote
