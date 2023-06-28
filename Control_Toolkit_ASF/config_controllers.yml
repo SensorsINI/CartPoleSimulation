@@ -98,6 +98,7 @@ neural-imitator:
   PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
   net_name: 'GRU-6IN-32H1-32H2-1OUT-4'  # TF
 #  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'  # Pytorch
+  input_at_input: False
   controller_logging: True
   computation_library: tensorflow
 secloc:
