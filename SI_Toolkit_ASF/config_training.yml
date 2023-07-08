@@ -24,7 +24,11 @@ training_default:
   EPOCHS: 10
   BATCH_SIZE: 16
   SEED: 1873
-  LR: 1.0e-2
+  LR:
+    INITIAL: 1.0e-2
+    MINIMAL: 1.0e-5
+    PATIENCE: 1
+    DECREASE_FACTOR: 0.316 # sqrt(0.1)
   WASH_OUT_LEN: 10
   POST_WASH_OUT_LEN: 20
   ON_FLY_DATA_GENERATION: False
