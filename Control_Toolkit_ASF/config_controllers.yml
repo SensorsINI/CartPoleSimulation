@@ -110,3 +110,10 @@ secloc:
   pid_Ki: 1.0
   #secloc_motor_map: 128
   controller_logging: True
+fpga:
+  seed: null                            # If null, random seed based on datetime is used
+  PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
+  net_name: 'Dense-7IN-16H1-16H2-1OUT-0'  # TF
+#  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'  # Pytorch
+  input_at_input: False
+  controller_logging: True

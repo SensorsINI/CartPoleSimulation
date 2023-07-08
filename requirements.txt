@@ -16,7 +16,7 @@ PyYAML
 scikit-learn
 scipy
 setuptools
-sklearn
+# sklearn
 sympy
 tqdm
 typing-extensions
@@ -24,6 +24,7 @@ PyQt6
 tensorflow-probability
 Pillow
 gymnasium
+pyserial
 
 torch
 tensorflow
