@@ -13,10 +13,10 @@ pandas
 pip
 pygame
 PyYAML
-scikit-learn
+#scikit-learn
 scipy
 setuptools
-sklearn
+#sklearn
 sympy
 tqdm
 typing-extensions

@@ -25,7 +25,7 @@ class random_experiment_setter:
         self.length_of_experiment = config["length_of_experiment"]
 
         self.controller = config["controller"]
-        
+
         self.position_init = config["random_initial_state"]["position"]
         self.positionD_init = config["random_initial_state"]["positionD"]
         self.angle_init = config["random_initial_state"]["angle"]
@@ -184,6 +184,16 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
     RES = random_experiment_setter()
 
     ############ END OF PARAMETERS SECTION ############
+    swing_up_times = []
+
+    if not os.path.exists('SI_Toolkit_ASF/Experiments/experiment_init_states.npy'):
+        experiment_init_states = {}
+    else:
+        experiment_init_states = \
+            np.load('SI_Toolkit_ASF/Experiments/experiment_init_states.npy',
+                    allow_pickle=True).item()
+
+    print(record_path)
 
     for i in range(number_of_experiments):
 
@@ -233,22 +243,39 @@ def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
         #     stats.print_stats()
         ###################################
 
-        CartPoleInstance.run_cartpole_random_experiment(
+        _, swing_up_time, initial_state = CartPoleInstance.run_cartpole_random_experiment(
             csv=csv,
             save_mode=save_mode,
             show_summary_plots=show_summary_plots
         )
+        swing_up_times.append(swing_up_time)
+
+        if i in experiment_init_states.keys():
+            assert all([initial_state[x] == experiment_init_states[i][x] for x in
+                        range(len(initial_state))])
+        else:
+            experiment_init_states[i] = initial_state
 
         gen_end = timeit.default_timer()
         gen_dt = (gen_end - gen_start)
-        print('time to generate data: {} ms'.format(gen_dt * 1000.0))
-        print('Speed-up: {}'.format(float(config['length_of_experiment'])/gen_dt))
+        # print('time to generate data: {} ms'.format(gen_dt * 1000.0))
+        # print('Speed-up: {}'.format(float(config['length_of_experiment'])/gen_dt))
+        print('Swing up time:', swing_up_time)
 
         if show_controller_report:
             try:
                 CartPoleInstance.controller.controller_report()
             except:
                 pass
+
+    print(swing_up_times, np.mean(swing_up_times))
+    if not os.path.exists('SI_Toolkit_ASF/Experiments/experiment_init_states.npy'):
+        np.save('SI_Toolkit_ASF/Experiments/experiment_init_states.npy',
+                experiment_init_states)
+    with open(os.path.join(record_path, 'swing_up_times.txt'), 'w') as f:
+        f.write(str(swing_up_times))
+        f.write(str(np.mean(swing_up_times)))
+    np.save(os.path.join(record_path, 'swing_up_times.npy'), swing_up_times)
 
 
 if __name__ == '__main__':

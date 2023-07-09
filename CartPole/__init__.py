@@ -10,6 +10,7 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 import csv
 # Import module to interact with OS
 import os
+import math
 import traceback
 # Import module to get a current time and date used to name the files containing the history of simulations
 from datetime import datetime
@@ -528,7 +529,7 @@ class CartPole(EnvironmentBatched):
                     logpath_new = logpath_new + '-' + str(net_index) + '.csv'
                     net_index += 1
 
-            print('Saving to the file: {}'.format(self.csv_filepath))
+            # print('Saving to the file: {}'.format(self.csv_filepath))
             # Write the .csv file
             with open(self.csv_filepath, "a", newline='') as outfile:
                 writer = csv.writer(outfile)
@@ -825,18 +826,32 @@ class CartPole(EnvironmentBatched):
         # Create csv file for saving
         self.save_history_csv(csv_name=csv, mode='init', length_of_experiment=self.length_of_experiment)
 
+
         # Save 0th timestep
         if save_mode == 'online':
             self.save_history_csv(csv_name=csv, mode='save online')
 
+        angle_history, velocity_history = [], []
+        swing_up_time = self.t_max_pre
+        assert self.target_position == 0.0
+        assert self.target_equilibrium == 1.
         # Run the CartPole experiment for number of time
-        for _ in trange(self.number_of_timesteps_in_random_experiment):
+
+        initial_state = self.s
+
+        for ts in trange(self.number_of_timesteps_in_random_experiment):
 
             # Print an error message if it runs already to long (should stop before)
             if self.time > self.t_max_pre:
                 raise Exception('ERROR: It seems the experiment is running too long...')
 
             self.update_state()
+            angle_history.append(abs(self.s[ANGLE_IDX] * (180. / math.pi)))
+            # velocity_history.append(abs(self.s[POSITIOND_IDX]))
+            if sum(angle_history[-1000:])/len(angle_history[-1000:]) < 2:
+                swing_up_time = round(self.time, 4)
+                break
+
 
             # Additional option to stop the experiment
             if abs(self.s[POSITION_IDX]) > 45.0:  # FIXME: THIS LIMIT CURRENTLY MAKES NO SENSE... (MP)
@@ -862,18 +877,18 @@ class CartPole(EnvironmentBatched):
 
         if save_mode == 'offline':
             self.save_history_csv(csv_name=csv, mode='save offline')
-        
+
         if show_summary_plots: self.summary_plots()
 
         mean_abs_dist = np.mean([np.abs(self.dict_history["position"][i] - self.dict_history["target_position"][i]) for i in range(len(self.dict_history["target_position"]))])
         mean_abs_angle = np.mean(np.abs(self.dict_history["angle"])) * 180.0 / np.pi
-        print(f"Mean absolute distance to target: {mean_abs_dist}m\nMean absolute angle: {mean_abs_angle}deg")
+        # print(f"Mean absolute distance to target: {mean_abs_dist}m\nMean absolute angle: {mean_abs_angle}deg")
 
         # Set CartPole state - the only use is to make sure that experiment history is discared
         # Maybe you can delete this line
         self.set_cartpole_state_at_t0(reset_mode=0)
 
-        return data
+        return data, swing_up_time, initial_state
 
     # endregion
 

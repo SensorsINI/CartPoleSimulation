@@ -1,6 +1,6 @@
 library: 'TF'  # TF or Pytorch
 modeling:
-  NET_NAME: 'EHBaselineModel-Dense-32H1-32H2'
+  NET_NAME: 'Incremental2steps-Dense-32H1-32H2'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
   path_to_experiment: 'CPS-Tutorial/'
@@ -21,7 +21,7 @@ training_default:
   #  control_inputs: []
   #  state_inputs: ['position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_position']
   #  outputs:  ['Q']
-  EPOCHS: 10
+  EPOCHS: 30
   BATCH_SIZE: 32
   SEED: 1873
   LR: 1e-3
@@ -32,9 +32,7 @@ training_default:
   SHIFT_LABELS: 1  # for k, as a label to row i is taken row i+k
   USE_NNI: False  # Decide if you want to use NNI package
   CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch; 'with cells' or 'with modules'
-  FIRST_LOSS: False
-  STACK_LOSS: False
-  SUM_LOSS: False
-  EXTEND_HORIZON: False
-  INCREASE_SHIFT_LABELS: False
-
+  INCREASE_SHIFT_LABELS: True
+  BASELINE_TRAIN: False
+  KERAS_BASELINE: False
+  LAST_LOSS: False
