@@ -117,3 +117,5 @@ fpga:
 #  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'  # Pytorch
   input_at_input: False
   controller_logging: True
+  SERIAL_PORT: 3
+  SERIAL_BAUD: 115200
