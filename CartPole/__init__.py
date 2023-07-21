@@ -60,6 +60,8 @@ from matplotlib import animation, rc, transforms
 from matplotlib.patches import (Circle, FancyArrowPatch, FancyBboxPatch,
                                 Rectangle)
 
+from random import random
+
 # Angle convention to rotate the mast in right direction - depends on used Equation
 from CartPole.cartpole_model import ANGLE_CONVENTION
 
@@ -130,6 +132,10 @@ class CartPole(EnvironmentBatched):
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
         self.NoiseAdderInstance = NoiseAdder()
         self.s_with_noise_and_latency = np.copy(self.s)
+        self.zero_angle_shift_init = np.deg2rad(self.config['zero_angle_shift']['init'])
+        self.zero_angle_shift = self.zero_angle_shift_init
+        self.zero_angle_shift_mode = self.config['zero_angle_shift']['mode']
+        self.zero_angle_shift_increment = np.deg2rad(self.config['zero_angle_shift']['increment'])
 
         # region Time scales for simulation step, controller update and saving data
         # See last paragraph of "Time scales" section for explanations
@@ -233,7 +239,9 @@ class CartPole(EnvironmentBatched):
         self.mast_height_maximal_drawing_units = None  # For drawing only. For calculation see L
         self.max_height_maximal_physical_units = None
         self.mast_height_current_drawing_units = None
+        self.zero_angle_tick_height_current_drawing_units = None
         self.MastThickness = None
+        self.ZeroAngleTickThickness = None
         self.TrackHalfLengthGraphics = None  # Length of the track
 
         # Elements of the drawing
@@ -241,6 +249,8 @@ class CartPole(EnvironmentBatched):
         self.Chassis = None
         self.WheelLeft = None
         self.WheelRight = None
+
+        self.ZeroAngleTick = None
 
         # Arrow indicating acceleration (=motor power)
         self.Acceleration_Arrow = None
@@ -253,6 +263,7 @@ class CartPole(EnvironmentBatched):
         self.Slider_Bar = None
         self.Slider_Arrow = None
         self.t2 = None  # An abstract container for the transform rotating the mast
+        self.t_zero_angle = None  # An abstract container for the transform rotating the zero angle tick
 
         self.init_graphical_elements()  # Assign proper object to the above variables
         # endregion
@@ -332,12 +343,27 @@ class CartPole(EnvironmentBatched):
         self.LatencyAdderInstance.add_current_state_to_latency_buffer(self.s)
         s_delayed = self.LatencyAdderInstance.get_interpolated_delayed_state()
         self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
+        self.s_with_noise_and_latency = self.update_zero_angle_shift(self.s_with_noise_and_latency)
 
     def cartpole_ode(self):
         self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=float(L))
 
     def Q2u(self):
         self.u = Q2u(self.Q)
+
+    def update_zero_angle_shift(self, s):
+        if self.zero_angle_shift_mode == 'constant':
+            da = 0.0
+        elif self.zero_angle_shift_mode == 'random walk':
+            da  = (1.0 if random() < 0.5 else -1.0)*self.zero_angle_shift_increment
+        elif self.zero_angle_shift_mode == 'increase':
+            da = self.zero_angle_shift_increment
+        else:
+            raise ValueError('zero_angle_shift_mode with value {} not valid'.format(self.zero_angle_shift_mode))
+        self.zero_angle_shift += da
+        s[ANGLE_IDX] = wrap_angle_rad(s[ANGLE_IDX]+self.zero_angle_shift)
+
+        return s
 
     def update_target_position(self):
         if self.use_pregenerated_target_position:
@@ -1191,7 +1217,10 @@ class CartPole(EnvironmentBatched):
         self.max_height_maximal_physical_units = np.max([self.L_initial, *self.L_range])
         self.mast_height_current_drawing_units = self.mast_height_maximal_drawing_units * (float(L) / self.max_height_maximal_physical_units)
 
+        self.zero_angle_tick_height_current_drawing_units = 1.0
+
         self.MastThickness = 0.05
+        self.ZeroAngleTickThickness = 0.01
         self.TrackHalfLengthGraphics = 50.0  # Full Length of the track
 
         self.physical_to_graphics = (self.TrackHalfLengthGraphics-self.WheelToMiddle)/TrackHalfLength  # TrackHalfLength is the effective length of track
@@ -1210,6 +1239,11 @@ class CartPole(EnvironmentBatched):
                                    width=self.MastThickness,
                                    height=self.mast_height_current_drawing_units,
                                    fc='g')
+
+        self.ZeroAngleTick = FancyBboxPatch(xy=(self.s[POSITION_IDX]*self.physical_to_graphics - (self.ZeroAngleTickThickness / 2.0), 1.2 * self.mast_height_current_drawing_units),
+                                   width=self.ZeroAngleTickThickness,
+                                   height=self.zero_angle_tick_height_current_drawing_units,
+                                   fc='yellow')
 
         self.Chassis = FancyBboxPatch((self.s[POSITION_IDX]*self.physical_to_graphics - (self.CartLength / 2.0), self.WheelRadius),
                                       self.CartLength,
@@ -1237,6 +1271,7 @@ class CartPole(EnvironmentBatched):
                                             arrowstyle='fancy', mutation_scale=50)
         self.Slider_Bar = Rectangle((0.0, 0.0), self.slider_value, 1.0)
         self.t2 = transforms.Affine2D().rotate(0.0)  # An abstract container for the transform rotating the mast
+        self.t_zero_angle = transforms.Affine2D().rotate(0.0)  # An abstract container for the transform rotating the mast
 
     # This method accepts the mouse position and updated the slider value accordingly
     # The mouse position has to be captured by a function not included in this class
@@ -1333,6 +1368,10 @@ class CartPole(EnvironmentBatched):
         mast_position = (self.s[POSITION_IDX]*self.physical_to_graphics - (self.MastThickness / 2.0))
         self.Mast.set_x(mast_position)
         self.Mast.set_height(self.mast_height_maximal_drawing_units * (float(L) / self.max_height_maximal_physical_units))
+
+        zero_tick_position = (self.s[POSITION_IDX]*self.physical_to_graphics - (self.ZeroAngleTickThickness / 2.0))
+        self.ZeroAngleTick.set_x(zero_tick_position)
+
         # Draw rotated mast
         t21 = transforms.Affine2D().translate(-mast_position, -1.25 * self.WheelRadius)
         if ANGLE_CONVENTION == 'CLOCK-NEG':
@@ -1343,6 +1382,17 @@ class CartPole(EnvironmentBatched):
             raise ValueError('Unknown angle convention')
         t23 = transforms.Affine2D().translate(mast_position, 1.25 * self.WheelRadius)
         self.t2 = t21 + t22 + t23
+
+        t21 = transforms.Affine2D().translate(-zero_tick_position, 0.0)
+        if ANGLE_CONVENTION == 'CLOCK-NEG':
+            t22 = transforms.Affine2D().rotate(-self.zero_angle_shift)
+        elif ANGLE_CONVENTION == 'CLOCK-POS':
+            t22 = transforms.Affine2D().rotate(self.zero_angle_shift)
+        else:
+            raise ValueError('Unknown angle convention')
+        t23 = transforms.Affine2D().translate(zero_tick_position, 0.0)
+        self.t_zero_angle = t21 + t22 + t23
+
         # Draw Chassis
         self.Chassis.set_x(self.s[POSITION_IDX]*self.physical_to_graphics - (self.CartLength / 2.0))
         # Draw Wheels
@@ -1355,7 +1405,7 @@ class CartPole(EnvironmentBatched):
             self.Slider_Arrow.set_positions((self.slider_value, 0), (self.slider_value, 1.0))
 
         return self.Mast, self.t2, self.Chassis, self.WheelRight, self.WheelLeft,\
-               self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow
+               self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow, self.ZeroAngleTick, self.t_zero_angle
 
     # A function redrawing the changing elements of the Figure
     def run_animation(self, fig):
@@ -1366,19 +1416,22 @@ class CartPole(EnvironmentBatched):
             fig.AxCart.add_patch(self.WheelLeft)
             fig.AxCart.add_patch(self.WheelRight)
             fig.AxCart.add_patch(self.Acceleration_Arrow)
+            fig.AxCart.add_patch(self.ZeroAngleTick)
             fig.AxSlider.add_patch(self.Slider_Bar)
             fig.AxSlider.add_patch(self.Slider_Arrow)
             return self.Mast, self.Chassis, self.WheelLeft, self.WheelRight,\
-                   self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow
+                   self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow, self.ZeroAngleTick
 
         def animationManage(i):
             # Updating variable elements
             self.update_drawing()
             # Special care has to be taken of the mast rotation
             self.t2 = self.t2 + fig.AxCart.transData
+            self.t_zero_angle = self.t_zero_angle + fig.AxCart.transData
             self.Mast.set_transform(self.t2)
+            self.ZeroAngleTick.set_transform(self.t_zero_angle)
             return self.Mast, self.Chassis, self.WheelLeft, self.WheelRight,\
-                   self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow
+                   self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow, self.ZeroAngleTick
 
         # Initialize animation object
         anim = animation.FuncAnimation(fig, animationManage,

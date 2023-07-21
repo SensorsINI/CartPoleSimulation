@@ -23,4 +23,8 @@ cartpole:
     sigma_position: 0.0005
     sigma_angleD: 0.075 # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
     sigma_positionD: 0.005
+  zero_angle_shift:
+    init: 0.0  # deg
+    mode: 'constant'  # 'constant', 'random_walk', 'increase'
+    increment: 1.0
   num_control_inputs: 1
