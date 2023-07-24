@@ -308,7 +308,7 @@ class controller_pid(template_controller):
             self.loadparams()
 
     def print_help(self):
-        print("\n***********************************")
+        print("\n****************************")
         print("keystroke commands")
         print("ESC quit")
         print("k toggle control on/off (initially off)")
