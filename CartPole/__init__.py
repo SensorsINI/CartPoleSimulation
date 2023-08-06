@@ -362,6 +362,8 @@ class CartPole(EnvironmentBatched):
             raise ValueError('zero_angle_shift_mode with value {} not valid'.format(self.zero_angle_shift_mode))
         self.zero_angle_shift += da
         s[ANGLE_IDX] = wrap_angle_rad(s[ANGLE_IDX]+self.zero_angle_shift)
+        s[ANGLE_COS_IDX] = np.cos(s[ANGLE_IDX])
+        s[ANGLE_SIN_IDX] = np.sin(s[ANGLE_IDX])
 
         return s
 
