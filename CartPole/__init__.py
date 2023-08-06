@@ -357,6 +357,7 @@ class CartPole(EnvironmentBatched):
         elif self.zero_angle_shift_mode == 'random walk':
             da  = (1.0 if random() < 0.5 else -1.0)*self.zero_angle_shift_increment
         elif self.zero_angle_shift_mode == 'increase':
+            self.zero_angle_shift_increment *= 1.000
             da = self.zero_angle_shift_increment
         else:
             raise ValueError('zero_angle_shift_mode with value {} not valid'.format(self.zero_angle_shift_mode))
