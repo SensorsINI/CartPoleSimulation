@@ -1,7 +1,7 @@
 #library: 'TF'  # TF or Pytorch
 library: 'Pytorch'  # TF or Pytorch
 modeling:
-  NET_NAME: 'Dense-16H1-16H2'
+  NET_NAME: 'DeltaGRU-7IN-32H1-32H2-1OUT-6'
 #  NET_NAME: 'GRU-7IN-32H1-32H2-1OUT-1'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
@@ -23,19 +23,19 @@ training_default:
   control_inputs: []
   state_inputs: ['position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_equilibrium', 'target_position']
   outputs:  ['Q']
-  EPOCHS: 10
-  BATCH_SIZE: 16
+  EPOCHS: 30
+  BATCH_SIZE: 128
   SEED: 1873
   LR:
-    INITIAL: 1.0e-2
+    INITIAL: 1.0e-3
     MINIMAL: 1.0e-5
     PATIENCE: 1
     DECREASE_FACTOR: 0.316 # sqrt(0.1)
-  WASH_OUT_LEN: 10
-  POST_WASH_OUT_LEN: 20
+  WASH_OUT_LEN: 25
+  POST_WASH_OUT_LEN: 10
   ON_FLY_DATA_GENERATION: False
   NORMALIZE: True
   SHIFT_LABELS: 0  # for k, as a label to row i is taken row i+k
   USE_NNI: False  # Decide if you want to use NNI package
-  CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch; 'with cells' or 'with modules'
-  VALIDATE_ALSO_ON_TRAINING_SET: true
+  CONSTRUCT_NETWORK: 'with modules'   # Matters only for Pytorch; 'with cells' or 'with modules'
+  VALIDATE_ALSO_ON_TRAINING_SET: false
