@@ -1,3 +1,9 @@
+LIBRARY:
+TF
+
+CONSTRUCT NETWORK:
+with cells
+
 CREATED:
 2022-08-14 at time 01:06:57
 
@@ -36,3 +42,12 @@ VALIDATION_FILES:
 
 TEST_FILES:
 ./SI_Toolkit_ASF/Experiments/Experiment-NIPS-CPS//Recordings/Test/
+
+TIMESTEP MEAN:
+0.0
+
+TIMESTEP STD:
+0.0
+
+NORMALIZE:
+True

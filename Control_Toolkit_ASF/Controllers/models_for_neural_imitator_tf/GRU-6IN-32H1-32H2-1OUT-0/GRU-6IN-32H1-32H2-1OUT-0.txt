@@ -42,3 +42,12 @@ VALIDATION_FILES:
 
 TEST_FILES:
 ./SI_Toolkit_ASF/Experiments/Experiment-NIPS-CPS//Recordings/Test/
+
+TIMESTEP MEAN:
+0.0
+
+TIMESTEP STD:
+0.0
+
+NORMALIZE:
+True
