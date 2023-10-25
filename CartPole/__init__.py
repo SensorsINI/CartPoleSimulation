@@ -117,7 +117,7 @@ class CartPole(EnvironmentBatched):
         self.change_L_every_x_second = np.inf
         self.time_last_L_change = None
         self.L_discount_factor = 1.0
-        self.L_range = [0.03, 0.2]
+        self.L_range = [0.03, 0.3] # orginal: [0.03,0.2]; changed for better visualization of larger length
         self.L_informed_controller = True
         if self.L_informed_controller:
             self.L_for_controller = L
@@ -260,7 +260,8 @@ class CartPole(EnvironmentBatched):
         self.target_position = 0.0
         self.target_equilibrium = 1.0
 
-        self.change_target_equilibrium_every_x_second = np.inf
+        self.down_target_equilibrium_every_x_second = np.inf
+        self.up_target_equilibrium_every_x_second = np.inf
         self.time_last_target_equilibrium_change = None
 
         self.Q_update_time = None
@@ -358,10 +359,10 @@ class CartPole(EnvironmentBatched):
     def update_target_equilibrium(self):
         if self.time_last_target_equilibrium_change is None:
             self.time_last_target_equilibrium_change = self.time
-        elif self.target_equilibrium == -1 and (self.time-self.time_last_target_equilibrium_change) > self.change_target_equilibrium_every_x_second:
+        elif self.target_equilibrium == -1 and (self.time-self.time_last_target_equilibrium_change) > self.up_target_equilibrium_every_x_second:
             self.time_last_target_equilibrium_change = self.time
             self.target_equilibrium = -1*self.target_equilibrium
-        elif self.target_equilibrium == 1 and (self.time-self.time_last_target_equilibrium_change) > self.change_target_equilibrium_every_x_second:
+        elif self.target_equilibrium == 1 and (self.time-self.time_last_target_equilibrium_change) > self.down_target_equilibrium_every_x_second:
             self.time_last_target_equilibrium_change = self.time
             self.target_equilibrium = -1*self.target_equilibrium
 
@@ -809,7 +810,8 @@ class CartPole(EnvironmentBatched):
                                          turning_points=None,
                                          used_track_fraction=0.8,
                                          target_equilibrium=None,
-                                         change_target_equilibrium_every_x_second=np.inf,
+                                         down_target_equilibrium_every_x_second=np.inf,
+                                         up_target_equilibrium_every_x_second=np.inf,
 
                                          L_initial=None,
                                          change_L_every_x_seconds=None,
@@ -842,7 +844,8 @@ class CartPole(EnvironmentBatched):
         if turning_points is not None: self.turning_points = turning_points
         if used_track_fraction is not None: self.used_track_fraction = used_track_fraction
         if target_equilibrium is not None: self.target_equilibrium = target_equilibrium
-        if change_target_equilibrium_every_x_second is not None: self.change_target_equilibrium_every_x_second = change_target_equilibrium_every_x_second
+        if down_target_equilibrium_every_x_second is not None: self.down_target_equilibrium_every_x_second = down_target_equilibrium_every_x_second
+        if up_target_equilibrium_every_x_second is not None: self.up_target_equilibrium_every_x_second = up_target_equilibrium_every_x_second
         if L_initial is not None: self.L_initial = L_initial
         if change_L_every_x_seconds is not None: self.change_L_every_x_second = change_L_every_x_seconds
         if L_discount_factor is not None: self.L_discount_factor = L_discount_factor

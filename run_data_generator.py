@@ -54,9 +54,12 @@ class random_experiment_setter:
         if isinstance(self.turning_points_period, str) and self.turning_points_period == 'inf':
             self.turning_points_period = np.inf
 
-        self.change_target_equilibrium_every_x_second = config['change_target_equilibrium_every_x_second']
-        if isinstance(self.change_target_equilibrium_every_x_second, str) and self.change_target_equilibrium_every_x_second == 'inf':
-            self.change_target_equilibrium_every_x_second = np.inf
+        self.down_target_equilibrium_every_x_second = config['down_target_equilibrium_every_x_second']
+        if isinstance(self.down_target_equilibrium_every_x_second, str) and self.down_target_equilibrium_every_x_second == 'inf':
+            self.down_target_equilibrium_every_x_second = np.inf
+        self.up_target_equilibrium_every_x_second = config['up_target_equilibrium_every_x_second']
+        if isinstance(self.up_target_equilibrium_every_x_second, str) and self.up_target_equilibrium_every_x_second == 'inf':
+            self.up_target_equilibrium_every_x_second = np.inf
 
         self.initial_target_equilibrium = config['initial_target_equilibrium']
 
@@ -141,7 +144,8 @@ class random_experiment_setter:
             used_track_fraction=self.track_fraction_usable_for_target_position,
 
             target_equilibrium=target_equilibrium,
-            change_target_equilibrium_every_x_second=self.change_target_equilibrium_every_x_second,
+            down_target_equilibrium_every_x_second=self.down_target_equilibrium_every_x_second,
+            up_target_equilibrium_every_x_second=self.up_target_equilibrium_every_x_second,
 
             L_initial=self.L_initial,
             change_L_every_x_seconds=self.change_L_every_x_second,
