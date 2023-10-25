@@ -28,8 +28,8 @@ class default(cost_function_base):
         return (
             (position - self.variable_parameters.target_position) / (2.0 * TrackHalfLength)
         ) ** 2 + self.lib.cast(
-            self.lib.abs(position) > 0.90 * TrackHalfLength, self.lib.float32
-        ) * 1.0e7  # Soft constraint: Do not crash into border
+            self.lib.abs(position) > 0.8 * TrackHalfLength, self.lib.float32
+        ) * 1.0e7  # Soft constraint: Do not crash into border (default: 0.9 * halflength; 1.0e7)
 
     # cost for difference from upright position
     def _E_pot_cost(self, angle):
