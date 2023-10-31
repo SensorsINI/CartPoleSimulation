@@ -67,7 +67,7 @@ else:
         home = os.path.expanduser("~")
         return os.path.join(home, "Downloads")
 
-LOGGING_LEVEL = logging.INFO
+LOGGING_LEVEL = logging.ERROR
 PORT = 12000  # UDP port used to send frames from producer to consumer
 IMSIZE = 224  # input image size, must match model
 UDP_BUFFER_SIZE = int(math.pow(2, math.ceil(math.log(IMSIZE * IMSIZE + 1000) / math.log(2))))
