@@ -16,7 +16,7 @@ PyYAML
 scikit-learn
 scipy
 setuptools
-sklearn
+scikit-learn
 sympy
 tqdm
 typing-extensions
@@ -26,7 +26,7 @@ Pillow
 gymnasium
 
 torch
-tensorflow
+tensorflow==2.9.1
 
 do-mpc==4.1.1
 casadi

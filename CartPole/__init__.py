@@ -10,6 +10,7 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 import csv
 # Import module to interact with OS
 import os
+import math
 import traceback
 # Import module to get a current time and date used to name the files containing the history of simulations
 from datetime import datetime
@@ -899,13 +900,24 @@ class CartPole(EnvironmentBatched):
             self.save_history_csv(csv_name=csv, mode='save online')
 
         # Run the CartPole experiment for number of time
-        for _ in trange(self.number_of_timesteps_in_random_experiment):
+
+        angle_history, velocity_history = [], []
+        swing_up_time = self.t_max_pre
+        initial_state = self.s
+
+
+        for ts in trange(self.number_of_timesteps_in_random_experiment):
 
             # Print an error message if it runs already to long (should stop before)
             if self.time > self.t_max_pre:
                 raise Exception('ERROR: It seems the experiment is running too long...')
 
             self.update_state()
+            angle_history.append(abs(self.s[ANGLE_IDX] * (180. / math.pi)))
+            velocity_history.append(abs(self.s[POSITIOND_IDX]))
+            if sum(angle_history[-1000:])/len(angle_history[-1000:]) < 2:
+                swing_up_time = round(self.time, 4)
+                break
 
             # Additional option to stop the experiment
             if abs(self.s[POSITION_IDX]) > 45.0:  # FIXME: THIS LIMIT CURRENTLY MAKES NO SENSE... (MP)
@@ -942,7 +954,7 @@ class CartPole(EnvironmentBatched):
         # Maybe you can delete this line
         self.set_cartpole_state_at_t0(reset_mode=0)
 
-        return data
+        return data, swing_up_time, initial_state
 
     # endregion
 
