@@ -28,11 +28,13 @@ training_default:
   SEED: 1873
   LR:
     INITIAL: 1.0e-2
+    REDUCE_LR_ON_PLATEAU: True
     MINIMAL: 1.0e-5
     PATIENCE: 1
     DECREASE_FACTOR: 0.316 # sqrt(0.1)
   WASH_OUT_LEN: 10
   POST_WASH_OUT_LEN: 20
+    MIN_DELTA: 1.0e-4
   ON_FLY_DATA_GENERATION: False
   NORMALIZE: True
   SHIFT_LABELS: 0  # for k, as a label to row i is taken row i+k
