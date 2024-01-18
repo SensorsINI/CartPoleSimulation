@@ -4,9 +4,9 @@ modeling:
   NET_NAME: 'Dense-16H1-16H2'
 #  NET_NAME: 'GRU-7IN-32H1-32H2-1OUT-1'
 paths:
-  # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'CPS-17-02-2023-UpDown-Imitation/'
-  PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
+  PATH_TO_EXPERIMENT_FOLDERS:     './SI_Toolkit_ASF/Experiments/'     # Path where the experiments are stored
+  path_to_experiment:             'CPS-17-02-2023-UpDown-Imitation'   # Path relative to PATH_TO_EXPERIMENT_FOLDERS to the particular experiment folder
+  DATA_FOLDER:                    'Recordings'                        # Folder within path_to_experiment where the experimental data is stored
 
 training_default:
   # For training closed loop dynamics model:
