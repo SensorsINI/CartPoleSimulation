@@ -24,6 +24,7 @@ PyQt6
 tensorflow-probability
 Pillow
 gymnasium
+pyserial
 
 torch
 tensorflow
