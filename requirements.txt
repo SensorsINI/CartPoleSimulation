@@ -25,6 +25,7 @@ tensorflow-probability
 Pillow
 gymnasium
 pyserial
+tensorflow_model_optimization
 
 torch
 tensorflow
