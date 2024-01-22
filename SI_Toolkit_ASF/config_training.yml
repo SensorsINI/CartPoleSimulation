@@ -41,3 +41,39 @@ training_default:
   USE_NNI: False  # Decide if you want to use NNI package
   CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch; 'with cells' or 'with modules'
   VALIDATE_ALSO_ON_TRAINING_SET: true
+
+REGULARIZATION:   # Implemented only for TF, no regularization for Pytorch
+  ACTIVATED: False
+  KERNEL:  # For all layers
+    l1: 0.01
+    l2: 0.01
+  BIAS:  # For all layers
+    l1: 0.01
+    l2: 0.01
+  ACTIVITY:  # Not for last layer, this has activity regularization set to 0
+    l1: 0.00
+    l2: 0.00
+
+
+QUANTIZATION: # Not implemented yet
+  ACTIVATED: False
+  GRANULARITY: 'Model'
+  PRECISION: 'ap_fixed<20,6>'
+
+PRUNING: # TF only for the moment
+  ACTIVATED: False
+  PRUNING_PARAMS:
+    PRUNING_SCHEDULE: 'CONSTANT_SPARSITY'
+  PRUNING_SCHEDULES:
+    CONSTANT_SPARSITY:
+      target_sparsity: 0.75
+      begin_step_in_epochs: 1.0  # fraction of epoch allowed
+      end_step_in_training_fraction: 1.0
+      frequency_per_epoch: 100.0 # fraction of epoch allowed
+    POLYNOMIAL_DECAY:
+      initial_sparsity: 0.0
+      final_sparsity: 0.75
+      begin_step_in_epochs: 1.0  # fraction of epoch allowed
+      end_step_in_training_fraction: 0.8
+      power: 3.0
+      frequency_per_epoch: 1000 # fraction of epoch allowed
