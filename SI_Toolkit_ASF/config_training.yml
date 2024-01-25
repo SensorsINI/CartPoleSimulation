@@ -56,9 +56,18 @@ REGULARIZATION:   # Implemented only for TF, no regularization for Pytorch
 
 
 QUANTIZATION: # Not implemented yet
-  ACTIVATED: False
-  GRANULARITY: 'Model'
-  PRECISION: 'ap_fixed<20,6>'
+  ACTIVATED: True
+  ACTIVATION:
+    bits: 12
+  KERNEL:
+    bits: 12
+    integer: 5
+  BIAS:
+    bits: 12
+    integer: 5
+  RECURRENT:
+    bits: 12
+    integer: 5
 
 PRUNING: # TF only for the moment
   ACTIVATED: False
