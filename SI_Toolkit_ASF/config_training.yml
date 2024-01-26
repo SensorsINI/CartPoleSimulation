@@ -40,7 +40,7 @@ training_default:
   SHIFT_LABELS: 0  # for k, as a label to row i is taken row i+k
   USE_NNI: False  # Decide if you want to use NNI package
   CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch; 'with cells' or 'with modules'
-  VALIDATE_ALSO_ON_TRAINING_SET: true
+  VALIDATE_ALSO_ON_TRAINING_SET: false
 
 REGULARIZATION:   # Implemented only for TF, no regularization for Pytorch
   ACTIVATED: False
@@ -58,16 +58,19 @@ REGULARIZATION:   # Implemented only for TF, no regularization for Pytorch
 QUANTIZATION: # Not implemented yet
   ACTIVATED: True
   ACTIVATION:
-    bits: 12
+    bits: 6
   KERNEL:
-    bits: 12
-    integer: 5
+    bits: 11
+    integer: 6
+    symmetric: True
   BIAS:
-    bits: 12
-    integer: 5
+    bits: 11
+    integer: 6
+    symmetric: True
   RECURRENT:
-    bits: 12
-    integer: 5
+    bits: 11
+    integer: 6
+    symmetric: True
 
 PRUNING: # TF only for the moment
   ACTIVATED: False
