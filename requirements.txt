@@ -32,6 +32,9 @@ tensorflow
 
 do-mpc==4.1.1
 casadi
-nni
+
+qkeras
+hls4ml
+# nni
 
 -e ./SI_Toolkit
