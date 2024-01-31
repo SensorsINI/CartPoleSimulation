@@ -1,57 +1,55 @@
 from typing import Callable, Optional
-import tensorflow as tf
-from CartPole.cartpole_model_tf import Q2u
+from CartPole.cartpole_equations import CartPoleEquations
 
 from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, CONTROL_INDICES, create_cartpole_state
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
-from CartPole.cartpole_tf import cartpole_fine_integration_tf, Q2u_tf
 from CartPole.cartpole_model import L
 
-from SI_Toolkit.Functions.TF.Compile import CompileTF, CompileAdaptive
-
-STATE_INDICES_TF = tf.lookup.StaticHashTable(
-    initializer=tf.lookup.KeyValueTensorInitializer(
-        keys=tf.constant(list(STATE_INDICES.keys())), values=tf.constant(list(STATE_INDICES.values()))),
-    default_value=-100, name=None
-)
+from SI_Toolkit.Functions.TF.Compile import CompileAdaptive
 
 
-class next_state_predictor_ODE_tf():
+class next_state_predictor_ODE:
 
     def __init__(self,
                  dt,
                  intermediate_steps,
+                 lib,
                  batch_size=1,
                  variable_parameters=None,
                  disable_individual_compilation=False):
-        self.intermediate_steps = tf.convert_to_tensor(intermediate_steps, dtype=tf.int32)
-        self.t_step = tf.convert_to_tensor(dt / float(self.intermediate_steps), dtype=tf.float32)
-
+        self.lib = lib
+        self.intermediate_steps = self.lib.to_tensor(intermediate_steps, dtype=self.lib.int32)
+        self.t_step = self.lib.to_tensor(dt / float(self.intermediate_steps), dtype=self.lib.float32)
         self.variable_parameters = variable_parameters
+
+        self.cpe = CartPoleEquations(lib=self.lib)
 
         if disable_individual_compilation:
             self.step = self._step
         else:
-            self.step = CompileTF(self._step)
+            self.step = CompileAdaptive(self._step)
 
     def _step(self, s, Q):
 
-        # assert does not work with CompileTF, but left here for information
+        # assert does not work with CompileAdaptive, but left here for information
         # assert Q.shape[0] == s.shape[0]
         # assert Q.ndim == 2
         # assert s.ndim == 2
 
         if self.variable_parameters is not None and hasattr(self.variable_parameters, 'L'):
-            pole_half_length = tf.convert_to_tensor(self.variable_parameters.L, dtype=tf.float32)
+            pole_half_length = self.lib.to_tensor(self.variable_parameters.L, dtype=self.lib.float32)
         else:
-            pole_half_length = tf.convert_to_tensor(L, dtype=tf.float32)
+            pole_half_length = self.lib.to_tensor(L, dtype=self.lib.float32)
 
         Q = Q[..., 0]  # Removes features dimension, specific for cartpole as it has only one control input
-        u = Q2u_tf(Q)
-        s_next = cartpole_fine_integration_tf(s, u=u, t_step=self.t_step, intermediate_steps=self.intermediate_steps, L=pole_half_length)
+        u = self.cpe.Q2u(Q)
+        s_next = self.cpe.cartpole_fine_integration(s, u=u, t_step=self.t_step, intermediate_steps=self.intermediate_steps, L=pole_half_length)
 
         return s_next
+
+    def __call__(self, s, Q):
+        return self.step(s, Q)
 
 
 class predictor_output_augmentation_tf:

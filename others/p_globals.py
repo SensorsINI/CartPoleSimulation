@@ -1,3 +1,5 @@
+from SI_Toolkit.computation_library import NumpyLibrary
+
 from types import SimpleNamespace
 import numpy as np
 
@@ -27,20 +29,20 @@ P_GLOBALS.k = float(config["cartpole"]["k"].split("/")[0])/float(config["cartpol
 
 
 # Export variables as global
-def export_globals():
+def export_parameters(lib=NumpyLibrary):
     return (
-    np.array(P_GLOBALS.k, dtype=np.float32),
-    np.array(P_GLOBALS.m_cart, dtype=np.float32),
-    np.array(P_GLOBALS.m_pole, dtype=np.float32),
-    np.array(P_GLOBALS.g, dtype=np.float32),
-    np.array(P_GLOBALS.J_fric, dtype=np.float32),
-    np.array(P_GLOBALS.M_fric, dtype=np.float32),
-    np.array(P_GLOBALS.L, dtype=np.float32),
-    np.array(P_GLOBALS.v_max, dtype=np.float32),
-    np.array(P_GLOBALS.u_max, dtype=np.float32),
-    np.array(P_GLOBALS.controlDisturbance, dtype=np.float32),
-    np.array(P_GLOBALS.controlBias, dtype=np.float32),
-    np.array(P_GLOBALS.TrackHalfLength, dtype=np.float32)
+    lib.to_tensor(P_GLOBALS.k, dtype=lib.float32),
+    lib.to_tensor(P_GLOBALS.m_cart, dtype=lib.float32),
+    lib.to_tensor(P_GLOBALS.m_pole, dtype=lib.float32),
+    lib.to_tensor(P_GLOBALS.g, dtype=lib.float32),
+    lib.to_tensor(P_GLOBALS.J_fric, dtype=lib.float32),
+    lib.to_tensor(P_GLOBALS.M_fric, dtype=lib.float32),
+    lib.to_tensor(P_GLOBALS.L, dtype=lib.float32),
+    lib.to_tensor(P_GLOBALS.v_max, dtype=lib.float32),
+    lib.to_tensor(P_GLOBALS.u_max, dtype=lib.float32),
+    lib.to_tensor(P_GLOBALS.controlDisturbance, dtype=lib.float32),
+    lib.to_tensor(P_GLOBALS.controlBias, dtype=lib.float32),
+    lib.to_tensor(P_GLOBALS.TrackHalfLength, dtype=lib.float32)
 )
 
-k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength = export_globals()
+k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength = export_parameters()
