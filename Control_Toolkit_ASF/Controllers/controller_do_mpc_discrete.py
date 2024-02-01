@@ -5,7 +5,8 @@ from types import SimpleNamespace
 import do_mpc
 import numpy as np
 
-from CartPole.cartpole_model import Q2u, cartpole_ode_namespace
+from CartPole.cartpole_model import cartpole_ode_namespace
+from CartPole.cartpole_equations import CartPoleEquations
 from others.p_globals import TrackHalfLength, v_max
 from CartPole.state_utilities import cartpole_state_vector_to_namespace
 from Control_Toolkit.Controllers import template_controller
@@ -74,7 +75,8 @@ class controller_do_mpc_discrete(template_controller):
 
         target_position = self.model.set_variable('_tvp', 'target_position')
 
-        s_next = mpc_next_state(s, Q2u(Q), dt=self.config_controller["dt"])
+        self.cpe = CartPoleEquations()
+        s_next = mpc_next_state(s, self.cpe.Q2u(Q), dt=self.config_controller["dt"])
 
         self.model.set_rhs('s.position', s_next.position)
         self.model.set_rhs('s.angle', s_next.angle)

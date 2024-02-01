@@ -32,7 +32,7 @@ from scipy.interpolate import BPoly, interp1d
 from tqdm import trange
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
-from CartPole.cartpole_model import Q2u, s0
+
 from CartPole.cartpole_numba import (cartpole_integration_numba,
                                      cartpole_ode_numba, edge_bounce_numba)
 from CartPole.latency_adder import LatencyAdder
@@ -40,6 +40,9 @@ from CartPole.load import get_full_paths_to_csvs, load_csv_recording
 from CartPole.noise_adder import NoiseAdder
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
+from CartPole.state_utilities import create_cartpole_state
+
+s0 = create_cartpole_state()
 
 # region Imported modules
 
@@ -63,7 +66,7 @@ from matplotlib.patches import (Circle, FancyArrowPatch, FancyBboxPatch,
 from random import random
 
 # Angle convention to rotate the mast in right direction - depends on used Equation
-from CartPole.cartpole_model import ANGLE_CONVENTION
+from CartPole.cartpole_equations import ANGLE_CONVENTION, CartPoleEquations
 
 # Set the font parameters for matplotlib figures
 font = {'size': 22}
@@ -108,6 +111,8 @@ class CartPole(EnvironmentBatched):
         self.Q_applied = 0.0
         self.Q_calculated = 0.0
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
+
+        self.cpe = CartPoleEquations()
 
         self.action_space = MockSpace(-1.0, 1.0, (1,), np.float32)
         state_low = [-np.pi, -np.inf, -1.0, -1.0, -TrackHalfLength, -np.inf]
@@ -349,7 +354,7 @@ class CartPole(EnvironmentBatched):
         self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=float(L))
 
     def Q2u(self):
-        self.u = Q2u(self.Q)
+        self.u = self.cpe.Q2u(self.Q)
 
     def update_zero_angle_shift(self, s):
         if self.zero_angle_shift_mode == 'constant':
@@ -1096,7 +1101,7 @@ class CartPole(EnvironmentBatched):
 
 
             self.Q = self.Q_applied
-            self.u = Q2u(self.Q)  # Calculate CURRENT control input
+            self.u = self.cpe.Q2u(self.Q)  # Calculate CURRENT control input
             self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=float(L))  # Calculate CURRENT second derivatives
 
         # Reset the dict keeping the experiment history and save the state for t = 0

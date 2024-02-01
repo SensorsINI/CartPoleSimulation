@@ -10,7 +10,6 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
                                       create_cartpole_state)
 
-config = load_config("config.yml")
 
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
@@ -41,9 +40,6 @@ ANGLE_CONVENTION = 'CLOCK-NEG'
 
 The 0-angle state is always defined as pole in upright position. This currently cannot be changed
 """
-
-# Create initial state vector
-s0 = create_cartpole_state()
 
 
 def _cartpole_ode(ca, sa, angleD, positionD, u,
@@ -126,21 +122,6 @@ def cartpole_ode(s: np.ndarray, u: float,
     )
     return angleDD, positionDD
 
-def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L=L):
-    if position >= TrackHalfLength or -position >= TrackHalfLength:  # Without abs to compile with tensorflow
-        angleD -= 2 * (positionD * angle_cos) / L
-        angle += angleD * t_step
-        positionD = -positionD
-        position += positionD * t_step
-    return angle, angleD, position, positionD
-
-
-def edge_bounce_wrapper(angle, angle_cos, angleD, position, positionD, t_step, L=L):
-    for i in range(position.size):
-        angle[i], angleD[i], position[i], positionD[i] = edge_bounce(angle[i], angle_cos[i], angleD[i], position[i], positionD[i],
-                                                                     t_step, L)
-    return angle, angleD, position, positionD
-
 
 def Q2u(Q):
     """
@@ -173,6 +154,9 @@ if __name__ == '__main__':
     On 9.02.2021 we saw a perfect coincidence (5 digits after coma) of Jacobian from Mathematica cartpole_model.nb
     with Jacobian calculated with this script for all non zero inputs, dtype=float32
     """
+
+    # Create initial state vector
+    s0 = create_cartpole_state()
 
     # Set non-zero input
     s = s0

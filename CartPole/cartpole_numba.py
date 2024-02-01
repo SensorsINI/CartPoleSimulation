@@ -1,6 +1,7 @@
 from numba import float32, jit
 import numpy as np
-from CartPole.cartpole_model import _cartpole_ode, euler_step, edge_bounce
+from CartPole.cartpole_equations import euler_step, edge_bounce
+from CartPole.cartpole_model import _cartpole_ode
 from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad_inplace
 
