@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from SI_Toolkit.computation_library import NumpyLibrary, PyTorchLibrary, TensorFlowLibrary
 
 from SI_Toolkit.Functions.TF.Compile import CompileAdaptive
@@ -38,15 +40,77 @@ ANGLE_CONVENTION = 'CLOCK-NEG'
 The 0-angle state is always defined as pole in upright position. This currently cannot be changed
 """
 
+
+
+def _cartpole_ode(ca, sa, angleD, positionD, u,
+                  k, m_cart, m_pole, g, J_fric, M_fric, L):
+
+    """
+    Calculates current values of second derivative of angle and position
+    from current value of angle and position, and their first derivatives
+
+    :param angle, angleD, position, positionD: Essential state information of cart.
+        Angle is in radians, 0 vertical and increasing CCW.
+        position is in meters, 0 in middle of track and increasing to right.
+    :param m_cart and m_pole: masses in kg of cart and pole.
+    :param ca and sa: sin and cos of angle of pole.
+    :param g: gravity in m/s^2
+    :param J_fric and M_fric: friction coefficients in Nm per rad/s of pole  TODO check correct
+    :param  M_fric: friction coefficient of cart in N per m/s TODO check correct
+    :param L: length of pole in meters.
+
+    :param u: Force applied on cart in unnormalized range TODO what does this mean?
+
+    :returns: angular acceleration, horizontal acceleration
+    """
+
+    # Clockwise rotation is defined as negative
+    # force and cart movement to the right are defined as positive
+    # g (gravitational acceleration) is positive (absolute value)
+    # Checked independently by Marcin and Krishna
+
+    A = (k + 1) * (m_cart + m_pole) - m_pole * (ca ** 2)
+    F_fric = - M_fric * positionD  # Force resulting from cart friction, notice that the mass of the cart is not explicitly there
+    T_fric = - J_fric * angleD  # Torque resulting from pole friction
+
+    positionDD = (
+            (
+                    m_pole * g * sa * ca  # Movement of the cart due to gravity
+                    + ((T_fric * ca) / L)  # Movement of the cart due to pend' s friction in the joint
+                    + (k + 1) * (
+                            - (m_pole * L * (
+                                        angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
+                            + F_fric  # Braking of the cart due its friction
+                            + u  # Effect of force applied to cart
+                    )
+            ) / A
+    )
+
+    # Making m go to 0 and setting J_fric=0 (fine for pole without mass)
+    # positionDD = (u_max/M)*Q-(M_fric/M)*positionD
+    # Compare this with positionDD = a*Q-b*positionD
+    # u_max = M*a = 0.230*19.6 = 4.5, 0.317*19.6 = 6.21, (Second option is if I account for pole mass)
+    # M_fric = M*b = 0.230*20 = 4.6, 0.317*20 = 6.34
+    # From experiment b = 20, a = 28
+    angleDD = (
+            (
+                    g * sa + positionDD * ca + T_fric / (m_pole * L)
+            ) / ((k + 1) * L)
+    )
+
+    # making M go to infinity makes angleDD = (g/k*L)sin(angle) - angleD*J_fric/(k*m*L^2)
+    # This is the same as equation derived directly for a pendulum.
+    # k is 4/3! It is the factor for pendulum with length 2L: I = k*m*L^2
+
+    return angleDD, positionDD
+
+
+
+
+
 ###
 # FIXME: Currently these equations are not modeling edge bounce!
 ###
-
-from CartPole.cartpole_model_tf import _cartpole_ode, cartpole_ode
-
-_cartpole_ode_tf = _cartpole_ode
-
-cartpole_ode_tf = cartpole_ode
 
 
 def euler_step(state, stateD, t_step):
@@ -64,6 +128,11 @@ class CartPoleEquations:
 
         # Compiling
         self.euler_step = CompileAdaptive(self.lib)(euler_step)
+
+    def export_parameters(self):
+        return (self.k, self.m_cart, self.m_pole, self.g, self.J_fric,
+         self.M_fric, self.L, self.v_max, self.u_max, self.controlDisturbance,
+         self.controlBias, self.TrackHalfLength)
 
     @CompileAdaptive
     def Q2u(self, Q):
@@ -130,7 +199,7 @@ class CartPoleEquations:
         for _ in self.lib.arange(0, intermediate_steps):
             # Find second derivative for CURRENT "k" step (same as in input).
             # State and u in input are from the same timestep, output is belongs also to THE same timestep ("k")
-            angleDD, positionDD = _cartpole_ode_tf(angle_cos, angle_sin, angleD, positionD, u,
+            angleDD, positionDD = _cartpole_ode(angle_cos, angle_sin, angleD, positionD, u,
                                                    k, m_cart, m_pole, g, J_fric, M_fric, L)
 
             # Find NEXT "k+1" state [angle, angleD, position, positionD]
@@ -162,6 +231,22 @@ class CartPoleEquations:
     @CompileAdaptive
     def wrap_angle_rad(self, sin, cos):
         return self.lib.atan2(sin, cos)
+
+    def cartpole_ode_namespace(self, s: SimpleNamespace, u: float, **kwargs):
+
+        k = kwargs.get('k', self.k)
+        m_cart = kwargs.get('m_cart', self.m_cart)
+        m_pole = kwargs.get('m_pole', self.m_pole)
+        g = kwargs.get('g', self.g)
+        J_fric = kwargs.get('J_fric', self.J_fric)
+        M_fric = kwargs.get('M_fric', self.M_fric)
+        L = kwargs.get('L', self.L)
+
+        angleDD, positionDD = _cartpole_ode(
+            self.lib.cos(s.angle), self.lib.sin(s.angle), s.angleD, s.positionD, u,
+            k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L
+        )
+        return angleDD, positionDD
 
     # The edge bounce functions were not used at the time I was refactoring the code
     # But if I remember correctly from before,

@@ -5,14 +5,14 @@ from types import SimpleNamespace
 
 import do_mpc
 import numpy as np
-import yaml
-from CartPole.cartpole_model import cartpole_ode_namespace
+
 from CartPole.cartpole_equations import CartPoleEquations
 from CartPole.state_utilities import cartpole_state_vector_to_namespace
 from Control_Toolkit.Controllers import template_controller
 from others.globals_and_utils import create_rng
 from SI_Toolkit.computation_library import NumpyLibrary, TensorType
 
+cpe = CartPoleEquations()
 
 class controller_do_mpc(template_controller):
     _computation_library = NumpyLibrary
@@ -48,8 +48,7 @@ class controller_do_mpc(template_controller):
         self.model.set_rhs('s.position', s.positionD)
         self.model.set_rhs('s.angle', s.angleD)
 
-        self.cpe = CartPoleEquations()
-        angleD_next, positionD_next = cartpole_ode_namespace(s, self.cpe.Q2u(Q))
+        angleD_next, positionD_next = cpe.cartpole_ode_namespace(s, cpe.Q2u(Q))
 
         self.model.set_rhs('s.positionD', positionD_next)
         self.model.set_rhs('s.angleD', angleD_next)

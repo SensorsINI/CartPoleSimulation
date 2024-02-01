@@ -1,13 +1,14 @@
 from numba import float32, jit
 import numpy as np
-from CartPole.cartpole_equations import euler_step, edge_bounce
-from CartPole.cartpole_model import _cartpole_ode
+from CartPole.cartpole_equations import euler_step, edge_bounce, _cartpole_ode
+
 from CartPole.state_utilities import ANGLE_IDX, ANGLE_SIN_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad_inplace
 
 from others.p_globals import (
     k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
 )
+
 
 _cartpole_ode_numba = jit(_cartpole_ode, nopython=True, cache=True, fastmath=True)
 
