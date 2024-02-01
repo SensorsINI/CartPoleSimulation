@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad_inplace
-from CartPole.cartpole_model import TrackHalfLength
+
 from CartPole.state_utilities import (ANGLE_IDX, ANGLED_IDX, POSITION_IDX,
                                       POSITIOND_IDX, STATE_INDICES,
                                       create_cartpole_state)

@@ -20,7 +20,10 @@ cartpole_ode_tf = cartpole_ode
 class CartPoleEquations:
     def __init__(self, lib=NumpyLibrary):
         self.lib = lib
-        k_global, m_cart_global, m_pole_global, g_global, J_fric_global, M_fric_global, L_global, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength = export_parameters(lib)
+        (self.k, self.m_cart, self.m_pole, self.g, self.J_fric,
+         self.M_fric, self.L, self.v_max, self.u_max, self.controlDisturbance,
+         self.controlBias, self.TrackHalfLength) = export_parameters(lib)
+
 
         def _wrap_angle_rad(sin, cos):
             return self.lib.atan2(sin, cos)
@@ -34,7 +37,7 @@ class CartPoleEquations:
             In future there might be implemented here a more sophisticated model of a motor driving CartPole
             """
             u = self.lib.to_tensor(
-                u_max * Q,  # Q is drive -1:1 range, add noise on control
+                self.u_max * Q,  # Q is drive -1:1 range, add noise on control
                 self.lib.float32
             )
 
@@ -43,7 +46,7 @@ class CartPoleEquations:
         self.Q2u = CompileAdaptive(self.lib)(Q2u)
 
         def cartpole_fine_integration(s, u, t_step, intermediate_steps,
-                                         k=k_global, m_cart=m_cart_global, m_pole=m_pole_global, g=g_global, J_fric=J_fric_global, M_fric=M_fric_global, L=L_global):
+                                         k=self.k, m_cart=self.m_cart, m_pole=self.m_pole, g=self.g, J_fric=self.J_fric, M_fric=self.M_fric, L=self.L):
             """
             Just an upper wrapper changing the way data is provided to the function _cartpole_fine_integration_tf
             """
@@ -73,10 +76,10 @@ class CartPoleEquations:
                                           angle_cos, angle_sin,
                                           position, positionD,
                                           u, t_step,
-                                          intermediate_steps, k=k_global,
-                                          m_cart=m_cart_global, m_pole=m_pole_global,
-                                          g=g_global, J_fric=J_fric_global,
-                                          M_fric=M_fric_global, L=L_global):
+                                          intermediate_steps, k=self.k,
+                                          m_cart=self.m_cart, m_pole=self.m_pole,
+                                          g=self.g, J_fric=self.J_fric,
+                                          M_fric=self.M_fric, L=self.L):
             # print('test 6')
             for _ in self.lib.arange(0, intermediate_steps):
                 # Find second derivative for CURRENT "k" step (same as in input).

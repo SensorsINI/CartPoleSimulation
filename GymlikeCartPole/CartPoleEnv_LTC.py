@@ -2,7 +2,7 @@ import gymnasium as gym
 import os
 from gymnasium.core import ObsType
 from CartPole import CartPole
-from CartPole.cartpole_model import ANGLE_IDX, POSITION_IDX
+from CartPole.state_utilities import ANGLE_IDX, POSITION_IDX
 from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
 from others.p_globals import TrackHalfLength
 from run_data_generator import random_experiment_setter

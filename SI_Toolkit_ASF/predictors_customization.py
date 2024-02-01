@@ -1,8 +1,11 @@
+from SI_Toolkit.computation_library import NumpyLibrary
+
 import numpy as np
 
 from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, create_cartpole_state
 
-from CartPole.cartpole_model import Q2u, L
+from CartPole.cartpole_equations import CartPoleEquations
+
 from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
 
 class next_state_predictor_ODE():
@@ -13,6 +16,10 @@ class next_state_predictor_ODE():
                  batch_size: int,
                  variable_parameters=None,
                  **kwargs):
+
+        self.lib  = NumpyLibrary
+        self.cpe = CartPoleEquations(self.lib)
+
         self.s = create_cartpole_state()
 
         self.variable_parameters = variable_parameters
@@ -29,10 +36,10 @@ class next_state_predictor_ODE():
         if self.variable_parameters is not None and hasattr(self.variable_parameters, 'L'):
             pole_half_length = self.variable_parameters.L
         else:
-            pole_half_length = L
+            pole_half_length = self.cpe.L
 
         Q = np.squeeze(Q, axis=1)  # Removes features dimension, specific for cartpole as it has only one control input
-        u = Q2u(Q)
+        u = self.cpe.Q2u(Q)
         s_next = cartpole_fine_integration_s_numba(s, u, self.t_step, self.intermediate_steps, L=pole_half_length)
         return s_next
 
