@@ -66,7 +66,7 @@ class predictor_autoregressive_tf:
         self.Q_prev = tf.zeros(shape=(self.batch_size, 1, len(CONTROL_INPUTS)), dtype=tf.float32)
 
 
-    # TODO: replace everywhere with predict_tf
+    # TODO: replace everywhere with predict_core
     # DEPRECATED: This version is in-efficient since it copies all batches to GPU
     def predict(self, initial_state, Q):
         # print('************\n************\n************\n************\n************\n************\n')
@@ -74,7 +74,7 @@ class predictor_autoregressive_tf:
 
         self.initial_state = initial_state
 
-        net_output = self.predict_tf(tf.convert_to_tensor(self.initial_state[0,...], dtype=tf.float32), tf.convert_to_tensor(Q, dtype=tf.float32))
+        net_output = self.predict_core(tf.convert_to_tensor(self.initial_state[0,...], dtype=tf.float32), tf.convert_to_tensor(Q, dtype=tf.float32))
 
         # Prepare Deprecated Output
         output_array = np.zeros([self.batch_size, self.horizon + 1, len(STATE_VARIABLES)], dtype=np.float32)
@@ -85,7 +85,7 @@ class predictor_autoregressive_tf:
 
     # Predict (Euler: 6.8ms, RNN:10.5ms)
     @CompileTF
-    def predict_tf(self, initial_state, Q):
+    def predict_core(self, initial_state, Q):
         # assert tf.rank(Q) == 3
         # Select States
 
