@@ -45,8 +45,8 @@ The 0-angle state is always defined as pole in upright position. This currently 
 s0 = create_cartpole_state()
 
 
-def _cartpole_ode (ca, sa, angleD, positionD, u,
-                   k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
+def _cartpole_ode(ca, sa, angleD, positionD, u,
+                  k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L):
 
     """
     Calculates current values of second derivative of angle and position
@@ -72,7 +72,7 @@ def _cartpole_ode (ca, sa, angleD, positionD, u,
     # g (gravitational acceleration) is positive (absolute value)
     # Checked independently by Marcin and Krishna
 
-    A = (k + 1) * (m_cart + m_pole) - m_pole * (ca ** 2)
+    A = (k + 1.0) * (m_cart + m_pole) - m_pole * (ca ** 2)
     F_fric = - M_fric * positionD  # Force resulting from cart friction, notice that the mass of the cart is not explicitly there
     T_fric = - J_fric * angleD  # Torque resulting from pole friction
 
@@ -123,25 +123,6 @@ def cartpole_ode(s: np.ndarray, u: float,
         s[..., ANGLE_COS_IDX], s[..., ANGLE_SIN_IDX], s[..., ANGLED_IDX], s[..., POSITIOND_IDX], u,
         k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L
     )
-    """
-    Calculates current values of second derivative of angle and position
-    from current value of angle and position, and their first derivatives
-
-    :param angle, angleD, position, positionD: Essential state information of cart.
-        Angle is in radians, 0 vertical and increasing CCW.
-        position is in meters, 0 in middle of track and increasing to right.
-    :param m_m_cart and m_pole: masses in kg of cart and pole.
-    :param ca and sa: sin and cos of angle of pole.
-    :param g: gravity in m/s^2
-    :param J_fric and M_fric: friction coefficients in Nm per rad/s of pole  TODO check correct
-    :param  M_fric: friction coefficient of cart in N per m/s TODO check correct
-    :param L: length of pole in meters.
-
-    :param u: Force applied on cart in unnormalized range TODO what does this mean?
-
-    :returns: angular acceleration in rad/s^2 positive CCW, horizontal acceleration in m/s^2 positive to right
-    """
-
     return angleDD, positionDD
 
 def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L=L):
@@ -175,13 +156,13 @@ def euler_step(state, stateD, t_step):
     return state + stateD * t_step
 
 
-def cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD, t_step, ):
+def cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD, t_step):
     angle_next = euler_step(angle, angleD, t_step)
     angleD_next = euler_step(angleD, angleDD, t_step)
     position_next = euler_step(position, positionD, t_step)
     positionD_next = euler_step(positionD, positionDD, t_step)
-
     return angle_next, angleD_next, position_next, positionD_next
+
 
 
 if __name__ == '__main__':
