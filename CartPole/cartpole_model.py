@@ -72,7 +72,7 @@ def _cartpole_ode(ca, sa, angleD, positionD, u,
     # g (gravitational acceleration) is positive (absolute value)
     # Checked independently by Marcin and Krishna
 
-    A = (k + 1.0) * (m_cart + m_pole) - m_pole * (ca ** 2)
+    A = (k + 1) * (m_cart + m_pole) - m_pole * (ca ** 2)
     F_fric = - M_fric * positionD  # Force resulting from cart friction, notice that the mass of the cart is not explicitly there
     T_fric = - J_fric * angleD  # Torque resulting from pole friction
 
