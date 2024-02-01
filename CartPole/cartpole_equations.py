@@ -27,7 +27,7 @@ class CartPoleEquations:
         def _wrap_angle_rad(sin, cos):
             return self.lib.atan2(sin, cos)
 
-        wrap_angle_rad = CompileAdaptive(_wrap_angle_rad, computation_library=self.lib)
+        wrap_angle_rad = CompileAdaptive(self.lib)(_wrap_angle_rad)
 
         def Q2u(Q):
             """
@@ -42,7 +42,7 @@ class CartPoleEquations:
 
             return u
 
-        self.Q2u = CompileAdaptive(Q2u, computation_library=self.lib)
+        self.Q2u = CompileAdaptive(self.lib)(Q2u)
 
         def cartpole_fine_integration(s, u, t_step, intermediate_steps,
                                          k=k_global, m_cart=m_cart_global, m_pole=m_pole_global, g=g_global, J_fric=J_fric_global, M_fric=M_fric_global, L=L_global):
@@ -131,7 +131,7 @@ class CartPoleEquations:
         #
         #     return angle_bounced_tensor, angleD_bounced_tensor, position_bounced_tensor, positionD_bounced_tensor
         #
-        # self.edge_bounce_wrapper = CompileAdaptive(edge_bounce_wrapper, computation_library=self.lib)
+        # self.edge_bounce_wrapper = CompileAdaptive(self.lib)(edge_bounce_wrapper)
 
 
 
