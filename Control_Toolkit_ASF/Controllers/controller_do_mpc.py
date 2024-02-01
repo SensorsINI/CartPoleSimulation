@@ -6,13 +6,19 @@ from types import SimpleNamespace
 import do_mpc
 import numpy as np
 
-from CartPole.cartpole_equations import CartPoleEquations
+from CartPole.cartpole_equations import _cartpole_ode, Q2u
 from CartPole.state_utilities import cartpole_state_vector_to_namespace
 from Control_Toolkit.Controllers import template_controller
 from others.globals_and_utils import create_rng
 from SI_Toolkit.computation_library import NumpyLibrary, TensorType
+from others.p_globals import k, m_cart, m_pole, g, J_fric, M_fric, L, u_max
 
-cpe = CartPoleEquations()
+def cartpole_ode_namespace(s: SimpleNamespace, u: float):
+    angleDD, positionDD = _cartpole_ode(
+        np.cos(s.angle), np.sin(s.angle), s.angleD, s.positionD, u,
+        k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L
+    )
+    return angleDD, positionDD
 
 class controller_do_mpc(template_controller):
     _computation_library = NumpyLibrary
@@ -48,7 +54,7 @@ class controller_do_mpc(template_controller):
         self.model.set_rhs('s.position', s.positionD)
         self.model.set_rhs('s.angle', s.angleD)
 
-        angleD_next, positionD_next = cpe.cartpole_ode_namespace(s, cpe.Q2u(Q))
+        angleD_next, positionD_next = cartpole_ode_namespace(s, Q2u(Q, u_max))
 
         self.model.set_rhs('s.positionD', positionD_next)
         self.model.set_rhs('s.angleD', angleD_next)

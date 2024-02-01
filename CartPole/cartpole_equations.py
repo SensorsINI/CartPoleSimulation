@@ -105,18 +105,24 @@ def _cartpole_ode(ca, sa, angleD, positionD, u,
     return angleDD, positionDD
 
 
+def Q2u(Q, u_max):
+    """
+    Converts dimensionless motor power [-1,1] to a physical force acting on a cart.
 
+    In future there might be implemented here a more sophisticated model of a motor driving CartPole
+    """
+    u = u_max * Q  # Q is drive -1:1 range, add noise on control
 
-
-###
-# FIXME: Currently these equations are not modeling edge bounce!
-###
+    return u
 
 
 def euler_step(state, stateD, t_step):
     return state + stateD * t_step
 
-
+###
+# FIXME: Currently these equations are not modeling edge bounce!
+#  The function for edge bounce is separate, it is used by simulator but not by predictors
+###
 class CartPoleEquations:
     supported_computation_libraries: set = {NumpyLibrary, TensorFlowLibrary, PyTorchLibrary}
 
@@ -136,16 +142,8 @@ class CartPoleEquations:
 
     @CompileAdaptive
     def Q2u(self, Q):
-        """
-        Converts dimensionless motor power [-1,1] to a physical force acting on a cart.
-
-        In future there might be implemented here a more sophisticated model of a motor driving CartPole
-        """
-        u = self.lib.to_tensor(
-            self.u_max * Q,  # Q is drive -1:1 range, add noise on control
-            self.lib.float32
-        )
-
+        Q = self.lib.to_tensor(Q, self.lib.float32)
+        u = Q2u(Q, u_max=self.u_max)
         return u
 
     def cartpole_fine_integration(self, s, u, t_step, intermediate_steps, **kwargs):
@@ -231,22 +229,6 @@ class CartPoleEquations:
     @CompileAdaptive
     def wrap_angle_rad(self, sin, cos):
         return self.lib.atan2(sin, cos)
-
-    def cartpole_ode_namespace(self, s: SimpleNamespace, u: float, **kwargs):
-
-        k = kwargs.get('k', self.k)
-        m_cart = kwargs.get('m_cart', self.m_cart)
-        m_pole = kwargs.get('m_pole', self.m_pole)
-        g = kwargs.get('g', self.g)
-        J_fric = kwargs.get('J_fric', self.J_fric)
-        M_fric = kwargs.get('M_fric', self.M_fric)
-        L = kwargs.get('L', self.L)
-
-        angleDD, positionDD = _cartpole_ode(
-            self.lib.cos(s.angle), self.lib.sin(s.angle), s.angleD, s.positionD, u,
-            k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L
-        )
-        return angleDD, positionDD
 
     # The edge bounce functions were not used at the time I was refactoring the code
     # But if I remember correctly from before,
