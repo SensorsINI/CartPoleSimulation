@@ -124,30 +124,6 @@ def cartpole_ode(s: np.ndarray, u: float,
     return angleDD, positionDD
 
 
-def Q2u(Q):
-    """
-    Converts dimensionless motor power [-1,1] to a physical force acting on a cart.
-
-    In future there might be implemented here a more sophisticated model of a motor driving CartPole
-    """
-    u = u_max * Q  # Q is drive -1:1 range
-
-    return u
-
-
-def euler_step(state, stateD, t_step):
-    return state + stateD * t_step
-
-
-def cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD, t_step):
-    angle_next = euler_step(angle, angleD, t_step)
-    angleD_next = euler_step(angleD, angleDD, t_step)
-    position_next = euler_step(position, positionD, t_step)
-    positionD_next = euler_step(positionD, positionDD, t_step)
-    return angle_next, angleD_next, position_next, positionD_next
-
-
-
 if __name__ == '__main__':
     import timeit
 
