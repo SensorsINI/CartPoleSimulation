@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import numpy as np
 from others.globals_and_utils import create_rng, load_config
+
 from others.p_globals import (J_fric, L, m_cart, M_fric, TrackHalfLength,
                               controlBias, controlDisturbance, g, k, m_pole, u_max, v_max)
 

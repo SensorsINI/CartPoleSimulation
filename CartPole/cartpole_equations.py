@@ -10,9 +10,7 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
 # FIXME: Currently these equations are not modeling edge bounce!
 ###
 
-from CartPole.cartpole_model_tf import (_cartpole_ode, cartpole_integration_tf,
-                                        cartpole_ode, edge_bounce,
-                                        edge_bounce_wrapper)
+from CartPole.cartpole_model_tf import _cartpole_ode, cartpole_ode
 
 _cartpole_ode_tf = _cartpole_ode
 
@@ -87,7 +85,7 @@ class CartPoleEquations:
                                                        k, m_cart, m_pole, g, J_fric, M_fric, L)
 
                 # Find NEXT "k+1" state [angle, angleD, position, positionD]
-                angle, angleD, position, positionD = cartpole_integration_tf(angle, angleD, angleDD, position,
+                angle, angleD, position, positionD = cartpole_integration(angle, angleD, angleDD, position,
                                                                              positionD,
                                                                              positionDD, t_step, )
 
@@ -102,7 +100,20 @@ class CartPoleEquations:
             # print('test 7')
             return angle, angleD, position, positionD, angle_cos, angle_sin
 
+        def _euler_step(state, stateD, t_step):
+            return state + stateD * t_step
 
+        euler_step = CompileAdaptive(self.lib)(_euler_step)
+
+        def _cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD, t_step):
+            angle_next = euler_step(angle, angleD, t_step)
+            angleD_next = euler_step(angleD, angleDD, t_step)
+            position_next = euler_step(position, positionD, t_step)
+            positionD_next = euler_step(positionD, positionDD, t_step)
+
+            return angle_next, angleD_next, position_next, positionD_next
+
+        cartpole_integration = CompileAdaptive(self.lib)(_cartpole_integration)
 
         # The edge bounce functions were not used at the time I was refactoring the code
         # But if I remember correctly from before,

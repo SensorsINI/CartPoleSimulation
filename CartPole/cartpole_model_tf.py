@@ -1,13 +1,11 @@
 from types import SimpleNamespace
 
 import numpy as np
-
-import tensorflow as tf
-from SI_Toolkit.Functions.TF.Compile import CompileAdaptive
-from SI_Toolkit.computation_library import TensorFlowLibrary
-
 from others.globals_and_utils import create_rng, load_config
+
+from SI_Toolkit.computation_library import TensorFlowLibrary
 from others.p_globals import export_parameters
+k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength = export_parameters(TensorFlowLibrary)
 
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX,
@@ -15,7 +13,6 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
 
 config = load_config("config.yml")
 
-k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength = export_parameters(TensorFlowLibrary)
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
@@ -168,20 +165,6 @@ def cartpole_integration(angle, angleD, angleDD, position, positionD, positionDD
     positionD_next = euler_step(positionD, positionDD, t_step)
     return angle_next, angleD_next, position_next, positionD_next
 
-
-@CompileAdaptive(TensorFlowLibrary)
-def euler_step_tf(state, stateD, t_step):
-    return state + stateD * t_step
-
-
-@CompileAdaptive(TensorFlowLibrary)
-def cartpole_integration_tf(angle, angleD, angleDD, position, positionD, positionDD, t_step):
-    angle_next = euler_step_tf(angle, angleD, t_step)
-    angleD_next = euler_step_tf(angleD, angleDD, t_step)
-    position_next = euler_step_tf(position, positionD, t_step)
-    positionD_next = euler_step_tf(positionD, positionDD, t_step)
-
-    return angle_next, angleD_next, position_next, positionD_next
 
 
 if __name__ == '__main__':
