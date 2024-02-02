@@ -29,20 +29,28 @@ P_GLOBALS.k = float(config["cartpole"]["k"].split("/")[0])/float(config["cartpol
 
 
 # Export variables as global
-def export_parameters(lib=NumpyLibrary):
+def export_parameters(lib=NumpyLibrary, trainable=False):
+    dtype = lib.float32
+
+    if trainable:
+        convert = lambda x: lib.to_variable(x, dtype=dtype)
+    else:
+        convert = lambda x: lib.to_tensor(x, dtype=dtype)
+
     return (
-    lib.to_tensor(P_GLOBALS.k, dtype=lib.float32),
-    lib.to_tensor(P_GLOBALS.m_cart, dtype=lib.float32),
-    lib.to_tensor(P_GLOBALS.m_pole, dtype=lib.float32),
-    lib.to_tensor(P_GLOBALS.g, dtype=lib.float32),
-    lib.to_tensor(P_GLOBALS.J_fric, dtype=lib.float32),
-    lib.to_tensor(P_GLOBALS.M_fric, dtype=lib.float32),
-    lib.to_tensor(P_GLOBALS.L, dtype=lib.float32),
-    lib.to_tensor(P_GLOBALS.v_max, dtype=lib.float32),
-    lib.to_tensor(P_GLOBALS.u_max, dtype=lib.float32),
-    lib.to_tensor(P_GLOBALS.controlDisturbance, dtype=lib.float32),
-    lib.to_tensor(P_GLOBALS.controlBias, dtype=lib.float32),
-    lib.to_tensor(P_GLOBALS.TrackHalfLength, dtype=lib.float32)
-)
+        convert(P_GLOBALS.k),
+        convert(P_GLOBALS.m_cart),
+        convert(P_GLOBALS.m_pole),
+        convert(P_GLOBALS.g),
+        convert(P_GLOBALS.J_fric),
+        convert(P_GLOBALS.M_fric),
+        convert(P_GLOBALS.L),
+        convert(P_GLOBALS.v_max),
+        convert(P_GLOBALS.u_max),
+        convert(P_GLOBALS.controlDisturbance),
+        convert(P_GLOBALS.controlBias),
+        convert(P_GLOBALS.TrackHalfLength)
+    )
+
 
 k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength = export_parameters()
