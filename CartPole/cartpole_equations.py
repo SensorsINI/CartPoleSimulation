@@ -9,7 +9,7 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 
 
-
+from ruamel.yaml import YAML
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
@@ -126,24 +126,50 @@ def euler_step(state, stateD, t_step):
 class CartPoleEquations:
     supported_computation_libraries: set = {NumpyLibrary, TensorFlowLibrary, PyTorchLibrary}
 
-    def __init__(self, lib=NumpyLibrary):
+    def __init__(self, lib=NumpyLibrary, get_parameters_from=None):
         self.lib = lib
-        (self.k, self.m_cart, self.m_pole, self.g, self.J_fric,
-         self.M_fric, self.L, self.v_max, self.u_max, self.controlDisturbance,
-         self.controlBias, self.TrackHalfLength) = export_parameters(lib)
+        self.params = SimpleNamespace()
+        if get_parameters_from is None:
+            (self.params.k, self.params.m_cart, self.params.m_pole, self.params.g,
+             self.params.J_fric, self.params.M_fric, self.params.L,
+             self.params.v_max, self.params.u_max, self.params.controlDisturbance,
+             self.params.controlBias, self.params.TrackHalfLength) = export_parameters(lib)
+        else:
+            # Initialize ruamel.yaml object
+            yaml = YAML()
+
+            # Load the parameters from a YAML file
+            with open(get_parameters_from, 'r') as file:
+                parameters = yaml.load(file)
+                for key, value in parameters.items():
+                    setattr(self.params, key, value)
 
         # Compiling
         self.euler_step = CompileAdaptive(self.lib)(euler_step)
 
+    def save_parameters(self, filepath='cartpole_parameters.yml'):
+        # Convert SimpleNamespace to a dictionary
+        params_dict = {k: getattr(self.params, k) for k in self.params.__dict__}
+
+        # Initialize ruamel.yaml object
+        yaml = YAML()
+        yaml.indent(mapping=2, sequence=4, offset=2)
+
+        # Save the dictionary to a YAML file
+        with open(filepath, 'w') as file:
+            yaml.dump(params_dict, file)
+
+
     def export_parameters(self):
-        return (self.k, self.m_cart, self.m_pole, self.g, self.J_fric,
-         self.M_fric, self.L, self.v_max, self.u_max, self.controlDisturbance,
-         self.controlBias, self.TrackHalfLength)
+        return (self.params.k, self.params.m_cart, self.params.m_pole, self.params.g,
+                self.params.J_fric, self.params.M_fric, self.params.L,
+                self.params.v_max, self.params.u_max, self.params.controlDisturbance,
+                self.params.controlBias, self.params.TrackHalfLength)
 
     @CompileAdaptive
     def Q2u(self, Q):
         Q = self.lib.to_tensor(Q, self.lib.float32)
-        u = Q2u(Q, u_max=self.u_max)
+        u = Q2u(Q, u_max=self.params.u_max)
         return u
 
     def cartpole_fine_integration(self, s, u, t_step, intermediate_steps, **kwargs):
@@ -151,13 +177,13 @@ class CartPoleEquations:
         Just an upper wrapper changing the way data is provided to the function _cartpole_fine_integration_tf
         """
 
-        k = kwargs.get('k', self.k)
-        m_cart = kwargs.get('m_cart', self.m_cart)
-        m_pole = kwargs.get('m_pole', self.m_pole)
-        g = kwargs.get('g', self.g)
-        J_fric = kwargs.get('J_fric', self.J_fric)
-        M_fric = kwargs.get('M_fric', self.M_fric)
-        L = kwargs.get('L', self.L)
+        k = kwargs.get('k', self.params.k)
+        m_cart = kwargs.get('m_cart', self.params.m_cart)
+        m_pole = kwargs.get('m_pole', self.params.m_pole)
+        g = kwargs.get('g', self.params.g)
+        J_fric = kwargs.get('J_fric', self.params.J_fric)
+        M_fric = kwargs.get('M_fric', self.params.M_fric)
+        L = kwargs.get('L', self.params.L)
 
         (
             angle, angleD, position, positionD, angle_cos, angle_sin
@@ -186,13 +212,13 @@ class CartPoleEquations:
                                       u, t_step,
                                       intermediate_steps,
                                       **kwargs):
-        k = kwargs.get('k', self.k)
-        m_cart = kwargs.get('m_cart', self.m_cart)
-        m_pole = kwargs.get('m_pole', self.m_pole)
-        g = kwargs.get('g', self.g)
-        J_fric = kwargs.get('J_fric', self.J_fric)
-        M_fric = kwargs.get('M_fric', self.M_fric)
-        L = kwargs.get('L', self.L)
+        k = kwargs.get('k', self.params.k)
+        m_cart = kwargs.get('m_cart', self.params.m_cart)
+        m_pole = kwargs.get('m_pole', self.params.m_pole)
+        g = kwargs.get('g', self.params.g)
+        J_fric = kwargs.get('J_fric', self.params.J_fric)
+        M_fric = kwargs.get('M_fric', self.params.M_fric)
+        L = kwargs.get('L', self.params.L)
 
         for _ in self.lib.arange(0, intermediate_steps):
             # Find second derivative for CURRENT "k" step (same as in input).
@@ -259,6 +285,8 @@ class CartPoleEquations:
     #     return angle_bounced_tensor, angleD_bounced_tensor, position_bounced_tensor, positionD_bounced_tensor
 
 
+# FIXME: Notice that TrackHalfLength is provided in a very different way than other parameters to their respective functions
+#   This may lead to unwanted behaviours.
 def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L):
     if position >= TrackHalfLength or -position >= TrackHalfLength:  # Without abs to compile with tensorflow
         angleD -= 2 * (positionD * angle_cos) / L
