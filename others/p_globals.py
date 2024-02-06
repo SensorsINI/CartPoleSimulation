@@ -29,10 +29,10 @@ P_GLOBALS.k = float(config["cartpole"]["k"].split("/")[0])/float(config["cartpol
 
 
 # Export variables as global
-def export_parameters(lib=NumpyLibrary, trainable=False):
+def export_parameters(lib=NumpyLibrary):
     dtype = lib.float32
 
-    if trainable:
+    if 'trainable' in config['cartpole'] and config['cartpole'] is True:
         convert = lambda x: lib.to_variable(x, dtype=dtype)
     else:
         convert = lambda x: lib.to_tensor(x, dtype=dtype)
