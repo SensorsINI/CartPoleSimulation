@@ -22,6 +22,7 @@ class next_state_predictor_ODE:
         self.variable_parameters = variable_parameters
 
         self.cpe = CartPoleEquations(lib=self.lib)
+        self.params = self.cpe.params
 
         if disable_individual_compilation:
             self.step = self._step
@@ -38,7 +39,7 @@ class next_state_predictor_ODE:
         if self.variable_parameters is not None and hasattr(self.variable_parameters, 'L'):
             pole_half_length = self.lib.to_tensor(self.variable_parameters.L, dtype=self.lib.float32)
         else:
-            pole_half_length = self.lib.to_tensor(self.cpe.L, dtype=self.lib.float32)
+            pole_half_length = self.lib.to_tensor(self.cpe.params.L, dtype=self.lib.float32)
 
         Q = Q[..., 0]  # Removes features dimension, specific for cartpole as it has only one control input
         u = self.cpe.Q2u(Q)
