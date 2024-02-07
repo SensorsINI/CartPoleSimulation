@@ -57,7 +57,7 @@ REGULARIZATION:   # Implemented only for TF, no regularization for Pytorch
 
 
 QUANTIZATION: # Not implemented yet
-  ACTIVATED: True
+  ACTIVATED: False
   ACTIVATION:
     bits: 6
   KERNEL:
