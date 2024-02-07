@@ -41,6 +41,7 @@ training_default:
   USE_NNI: False  # Decide if you want to use NNI package
   CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch; 'with cells' or 'with modules'
   VALIDATE_ALSO_ON_TRAINING_SET: false
+  PLOT_WEIGHTS_DISTRIBUTION: false # Calculate histograms of weights and biases and activations, take long time
 
 REGULARIZATION:   # Implemented only for TF, no regularization for Pytorch
   ACTIVATED: False
