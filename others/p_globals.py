@@ -18,8 +18,8 @@ P_GLOBALS.J_fric = config["cartpole"]["J_fric"]
 P_GLOBALS.v_max = config["cartpole"]["v_max"]
 
 cart_length = config["cartpole"]["cart_length"]
-usable_track_length = config["cartpole"]["usable_track_length"]
-P_GLOBALS.TrackHalfLength = (usable_track_length-cart_length)/2.0  # m, effective length, by which cart center can move
+usable_track_length = config["cartpole"]["track_length"]-cart_length
+P_GLOBALS.TrackHalfLength = usable_track_length/2.0  # m, effective length, by which cart center can move
 
 P_GLOBALS.controlDisturbance = config["cartpole"]["controlDisturbance"]
 P_GLOBALS.controlBias = config["cartpole"]["controlBias"]
