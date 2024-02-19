@@ -1,4 +1,8 @@
 import os
+# print('GPU Disabled')
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # TF: If uncommented, only uses CPU
+# os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
+
 import timeit
 from time import sleep
 

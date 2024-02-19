@@ -3,7 +3,7 @@ from run_data_generator import run_data_generator
 
 # Automatically create new path to save everything in
 
-import yaml, os
+import os
 import shutil
 
 config_SI = load_config(os.path.join("SI_Toolkit_ASF", "config_training.yml"))
@@ -30,14 +30,25 @@ if __name__ == '__main__':
         os.makedirs(record_path)
 
     # Copy configs at the moment of creation of dataset
+    try:
+        shutil.copy2(
+            os.path.join("CartPoleSimulation", "config.yml"),
+            os.path.join(record_path, "config.yml"))
+    except FileNotFoundError:
+        shutil.copy2(
+            "config.yml",
+            os.path.join(record_path, "config.yml"))
 
-    shutil.copy2(
-        "config.yml",
-        os.path.join(record_path, "config.yml"))
 
-    shutil.copy2(
-        "config_data_gen.yml",
-        os.path.join(record_path, "config_data_gen.yml"))
+    try:
+        shutil.copy2(
+            os.path.join("CartPoleSimulation", "config_data_gen.yml"),
+            os.path.join(record_path, "config_data_gen.yml"))
+    except FileNotFoundError:
+        shutil.copy2(
+            "config_data_gen.yml",
+            os.path.join(record_path, "config_data_gen.yml"))
+
 
     shutil.copy2(
         os.path.join("SI_Toolkit_ASF", "config_training.yml"),
