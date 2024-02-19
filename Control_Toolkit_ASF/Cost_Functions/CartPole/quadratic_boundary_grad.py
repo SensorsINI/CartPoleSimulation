@@ -15,6 +15,8 @@ import numpy as np
 config = safe_load(open(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"), "r"))
 
 dd_weight = config["CartPole"]["quadratic_boundary_grad"]["dd_weight"]
+db_weight = config["CartPole"]["quadratic_boundary_grad"]["db_weight"]
+permissible_track_fraction = config["CartPole"]["quadratic_boundary_grad"]["permissible_track_fraction"]
 cc_weight = config["CartPole"]["quadratic_boundary_grad"]["cc_weight"]
 ep_weight = config["CartPole"]["quadratic_boundary_grad"]["ep_weight"]
 admissible_angle = np.deg2rad(config["CartPole"]["quadratic_boundary_grad"]["admissible_angle"], dtype=np.float32)
@@ -29,13 +31,19 @@ class quadratic_boundary_grad(cost_function_base):
     # cost for distance from track edge
     def _distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
-        return (
-            (position - self.variable_parameters.target_position) / (2.0 * TrackHalfLength)
-        ) ** 2 + self.lib.cast(
-            self.lib.abs(position) > 0.95 * TrackHalfLength, self.lib.float32
-        ) * 1e9 * (
-            (self.lib.abs(position) - 0.95 * TrackHalfLength) / (0.05 * TrackHalfLength)
-        ) ** 2  # Soft constraint: Do not crash into border
+        target_distance_cost = (
+            (position - self.variable_parameters.target_position) / (2.0 * TrackHalfLength)) ** 2
+
+        return target_distance_cost
+
+    def _boundary_approach_cost(self, position):
+        """Compute penalty for approaching the boundary"""
+        # Soft constraint: Do not crash into border
+        too_near_to_the_boundary = self.lib.cast(self.lib.abs(position) > permissible_track_fraction * TrackHalfLength, self.lib.float32)
+        return too_near_to_the_boundary * (
+                (self.lib.abs(position) - permissible_track_fraction * TrackHalfLength) / (
+                    (1 - permissible_track_fraction) * TrackHalfLength)
+        ) ** 2
 
     # cost for difference from upright position
     def _E_pot_cost(self, angle):
@@ -88,11 +96,12 @@ class quadratic_boundary_grad(cost_function_base):
         dd = dd_weight * self._distance_difference_cost(
             states[:, :, POSITION_IDX]
         )
+        db = db_weight * self._boundary_approach_cost(states[:, :, POSITION_IDX])
         ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX])
         ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLED_IDX])
         cc = cc_weight * self._CC_cost(inputs)
         ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
-        stage_cost = dd + ep + ekp + cc + ccrc
+        stage_cost = dd + db + ep + ekp + cc + ccrc
         return stage_cost
 
     def q_debug(self, s, u, u_prev):
