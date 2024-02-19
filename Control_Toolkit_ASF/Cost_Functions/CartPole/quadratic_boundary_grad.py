@@ -53,7 +53,7 @@ class quadratic_boundary_grad(cost_function_base):
     # cost for difference from upright position
     def _E_pot_cost(self, angle):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
-        return 0.25 * (1.0 + self.lib.cos(admissible_angle) - self.lib.cos(angle + (1.0-self.variable_parameters.target_equilibrium)*self.lib.pi/2.0)) ** 2
+        return 0.25 * (2.0 - self.lib.cos(angle + (1.0-self.variable_parameters.target_equilibrium)*self.lib.pi/2.0)) ** 2
 
     def _E_kin_cost(self, angleD):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
@@ -78,14 +78,15 @@ class quadratic_boundary_grad(cost_function_base):
         :return: One terminal cost per rollout
         :rtype: np.ndarray
         """
-        terminal_cost = 10000 * self.lib.cast(
-            (self.lib.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
-            | (
-                self.lib.abs(terminal_states[:, POSITION_IDX] - self.variable_parameters.target_position)
-                > 0.1 * TrackHalfLength
-            ),
-            self.lib.float32,
-        )
+        # terminal_cost = 10000 * self.lib.cast(
+        #     (self.lib.abs(terminal_states[:, ANGLE_IDX]) > 0.2)
+        #     | (
+        #         self.lib.abs(terminal_states[:, POSITION_IDX] - self.variable_parameters.target_position)
+        #         > 0.1 * TrackHalfLength
+        #     ),
+        #     self.lib.float32,
+        # )
+        terminal_cost = self.lib.zeros_like(terminal_states[:, ANGLE_IDX])
         return self.lib.reshape(terminal_cost, (-1, 1))
 
     # cost of changing control to fast
