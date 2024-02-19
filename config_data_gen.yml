@@ -19,7 +19,8 @@ start_at_target: True  # initial target position should be equal to initial stat
 track_fraction_usable_for_target_position: 0.9  # Set the max for smoothly interpolated random target position to avoid bumping into track ends.
 target_position_end: ~  # value OR not assigned - random value is taken
 initial_target_equilibrium: 'random'  # possible 'up', 'down', 'random' = 50/50
-change_target_equilibrium_every_x_second: 16
+keep_target_equilibrium_x_seconds_up: 16
+keep_target_equilibrium_x_seconds_down: 5.333333333333333
 L:  # Pole half-length
   L_initial: default
   change_L_every_x_second: inf
