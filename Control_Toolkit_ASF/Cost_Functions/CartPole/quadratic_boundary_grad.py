@@ -14,6 +14,11 @@ import numpy as np
 #load constants from config file
 config = safe_load(open(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"), "r"))
 
+print('\nConfig cost function:')
+for key, value in config["CartPole"]["quadratic_boundary_grad"].items():
+    print('{}: {}'.format(key, value))
+print()
+
 dd_weight = config["CartPole"]["quadratic_boundary_grad"]["dd_weight"]
 db_weight = config["CartPole"]["quadratic_boundary_grad"]["db_weight"]
 permissible_track_fraction = config["CartPole"]["quadratic_boundary_grad"]["permissible_track_fraction"]
