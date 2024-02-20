@@ -2,7 +2,7 @@
 from SI_Toolkit.Functions.General.Initialization import get_net, get_norm_info_for_net
 from SI_Toolkit.Functions.TF.Compile import CompileTF
 from SI_Toolkit.load_and_normalize import *
-from SI_Toolkit_ASF.predictors_customization import STATE_VARIABLES, STATE_INDICES, CONTROL_INPUTS
+from SI_Toolkit_ASF.predictors_customization_tf import STATE_VARIABLES, STATE_INDICES, CONTROL_INPUTS
 from types import SimpleNamespace
 import os
 import tensorflow as tf

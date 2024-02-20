@@ -3,7 +3,7 @@ import os
 from gymnasium.core import ObsType
 from CartPole import CartPole
 from CartPole.state_utilities import ANGLE_IDX, POSITION_IDX
-from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
+from CartPole.cartpole_numba import cartpole_fine_integration_numba_interface
 from others.p_globals import TrackHalfLength
 from run_data_generator import random_experiment_setter
 
@@ -95,8 +95,8 @@ class CartPoleEnv_LTC(gym.Env):
         # Convert dimensionless motor power to a physical force acting on the Cart
         self.CartPoleInstance.Q2u()
 
-        self.CartPoleInstance.s = cartpole_fine_integration_s_numba(self.CartPoleInstance.s, self.CartPoleInstance.u,
-                                                                    np.float32(self.CartPoleInstance.dt_simulation), self.intermediate_steps)
+        self.CartPoleInstance.s = cartpole_fine_integration_numba_interface(self.CartPoleInstance.s, self.CartPoleInstance.u,
+                                                                    np.float32(self.CartPoleInstance.dt_simulation), self.intermediate_steps, params=self.CartPoleInstance.cpe.params)
 
         self.CartPoleInstance.add_noise_and_latency()
 

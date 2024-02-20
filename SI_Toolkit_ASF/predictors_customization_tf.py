@@ -1,4 +1,5 @@
 from typing import Callable, Optional
+from SI_Toolkit.computation_library import NumpyLibrary
 from CartPole.cartpole_equations import CartPoleEquations
 
 from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, CONTROL_INDICES, create_cartpole_state
@@ -52,7 +53,7 @@ class next_state_predictor_ODE:
 
 
 class predictor_output_augmentation_tf:
-    def __init__(self, net_info, lib, disable_individual_compilation=False, differential_network=False):
+    def __init__(self, net_info, lib=NumpyLibrary, disable_individual_compilation=False, differential_network=False):
 
         self.lib = lib
 

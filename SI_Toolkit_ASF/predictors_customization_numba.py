@@ -5,10 +5,10 @@ import numpy as np
 from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, create_cartpole_state
 
 from CartPole.cartpole_equations import CartPoleEquations
+from CartPole.cartpole_numba import cartpole_fine_integration_numba_interface
 
-from CartPole.cartpole_numba import cartpole_fine_integration_s_numba
 
-class next_state_predictor_ODE():
+class next_state_predictor_ODE:
 
     def __init__(self,
                  dt: float,
@@ -36,26 +36,9 @@ class next_state_predictor_ODE():
         if self.variable_parameters is not None and hasattr(self.variable_parameters, 'L'):
             pole_half_length = self.variable_parameters.L
         else:
-            pole_half_length = self.cpe.L
+            pole_half_length = self.cpe.params.L
 
         Q = np.squeeze(Q, axis=1)  # Removes features dimension, specific for cartpole as it has only one control input
         u = self.cpe.Q2u(Q)
-        s_next = cartpole_fine_integration_s_numba(s, u, self.t_step, self.intermediate_steps, L=pole_half_length)
+        s_next = cartpole_fine_integration_numba_interface(s, u, self.t_step, self.intermediate_steps, self.cpe.params, L=pole_half_length)
         return s_next
-
-
-def augment_predictor_output(output_array, net_info):
-
-    if 'angle' not in net_info.outputs:
-        output_array[..., STATE_INDICES['angle']] = \
-            np.arctan2(
-                output_array[..., STATE_INDICES['angle_sin']],
-                output_array[..., STATE_INDICES['angle_cos']])
-    if 'angle_sin' not in net_info.outputs:
-        output_array[..., STATE_INDICES['angle_sin']] = \
-            np.sin(output_array[..., STATE_INDICES['angle']])
-    if 'angle_cos' not in net_info.outputs:
-        output_array[..., STATE_INDICES['angle_cos']] = \
-            np.sin(output_array[..., STATE_INDICES['angle']])
-
-    return output_array

@@ -33,7 +33,7 @@ def copy_internal_states_from_ref(net, memory_states_ref):
 
 if __name__ == '__main__':
     import numpy as np
-    from SI_Toolkit_ASF.predictors_customization import CONTROL_INPUTS
+    from SI_Toolkit_ASF.predictors_customization_tf import CONTROL_INPUTS
 
     batch_size = 8
     horizon = 10

@@ -33,8 +33,6 @@ from tqdm import trange
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
 
-from CartPole.cartpole_numba import (cartpole_integration_numba,
-                                     cartpole_ode_numba, edge_bounce_numba)
 from CartPole.latency_adder import LatencyAdder
 from CartPole.load import get_full_paths_to_csvs, load_csv_recording
 from CartPole.noise_adder import NoiseAdder
@@ -112,7 +110,7 @@ class CartPole(EnvironmentBatched):
         self.Q_calculated = 0.0
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
 
-        self.cpe = CartPoleEquations()
+        self.cpe = CartPoleEquations(numba_compiled=True)
 
         self.action_space = MockSpace(-1.0, 1.0, (1,), np.float32)
         state_low = [-np.pi, -np.inf, -1.0, -1.0, -TrackHalfLength, -np.inf]
@@ -352,7 +350,7 @@ class CartPole(EnvironmentBatched):
         self.s_with_noise_and_latency = self.update_zero_angle_shift(self.s_with_noise_and_latency)
 
     def cartpole_ode(self):
-        self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=float(L))
+        self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L))
 
     def Q2u(self):
         self.u = self.cpe.Q2u(self.Q)
@@ -506,12 +504,12 @@ class CartPole(EnvironmentBatched):
         """
 
         self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = \
-            cartpole_integration_numba(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD, self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation,)
+            self.cpe.cartpole_integration(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD, self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation,)
 
 
     def edge_bounce(self):
         # Elastic collision at edges
-        self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = edge_bounce_numba(
+        self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = self.cpe.edge_bounce(
             self.s[ANGLE_IDX],
             np.cos(self.s[ANGLE_IDX]),
             self.s[ANGLED_IDX],
@@ -1105,7 +1103,7 @@ class CartPole(EnvironmentBatched):
 
             self.Q = self.Q_applied
             self.u = self.cpe.Q2u(self.Q)  # Calculate CURRENT control input
-            self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=float(L))  # Calculate CURRENT second derivatives
+            self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L))  # Calculate CURRENT second derivatives
 
         # Reset the dict keeping the experiment history and save the state for t = 0
         self.dt_save_steps_counter = 0
