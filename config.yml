@@ -28,4 +28,3 @@ cartpole:
     mode: 'constant'  # 'constant', 'random_walk', 'increase'
     increment: 1.0
   num_control_inputs: 1
-  trainable: false
