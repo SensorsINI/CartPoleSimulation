@@ -8,7 +8,7 @@ from CartPole.state_utilities import (
     create_cartpole_state,
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
 )
-from others.p_globals import (
+from CartPole.cartpole_parameters import (
     k as param_k,
     m_cart as param_M,
     m_pole as param_m,

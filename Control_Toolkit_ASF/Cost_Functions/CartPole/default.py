@@ -4,9 +4,7 @@ from yaml import safe_load
 from SI_Toolkit.computation_library import TensorType
 from Control_Toolkit.Cost_Functions import cost_function_base
 
-from others.globals_and_utils import load_config
-
-from others.p_globals import TrackHalfLength, u_max
+from CartPole.cartpole_parameters import TrackHalfLength, u_max
 from CartPole.state_utilities import ANGLE_IDX, POSITION_IDX
 
 # load constants from config file

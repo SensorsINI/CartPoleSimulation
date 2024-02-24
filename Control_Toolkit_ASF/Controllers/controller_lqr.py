@@ -11,7 +11,7 @@ import os
 
 from CartPole.cartpole_jacobian import cartpole_jacobian
 
-from others.p_globals import u_max
+from CartPole.cartpole_parameters import u_max
 from CartPole.state_utilities import create_cartpole_state
 from CartPole.state_utilities import (ANGLE_IDX, ANGLED_IDX, POSITION_IDX,
                                       POSITIOND_IDX)

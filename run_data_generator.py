@@ -14,7 +14,7 @@ from CartPole.state_utilities import create_cartpole_state
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 from others.globals_and_utils import create_rng, load_config
-from others.p_globals import TrackHalfLength, L
+from CartPole.cartpole_parameters import TrackHalfLength, L
 
 # Uncomment if you want to get interactive plots for MPPI in Pycharm on MacOS
 # On other OS you have to chose a different interactive backend.

@@ -26,7 +26,7 @@ from Control_Toolkit.Controllers import template_controller
 from matplotlib.widgets import Slider
 from numba import jit
 from numpy.random import SFC64, Generator
-from others.p_globals import TrackHalfLength
+from CartPole.cartpole_parameters import TrackHalfLength
 from scipy.interpolate import interp1d
 from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
 from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper

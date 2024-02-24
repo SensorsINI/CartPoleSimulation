@@ -13,8 +13,8 @@ import time
 
 import sys
 
-from others.p_globals import (
-    k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength,
+from CartPole.cartpole_parameters import (
+    TrackHalfLength,
 )
 
 # region Imports needed to create layout of the window in __init__ method

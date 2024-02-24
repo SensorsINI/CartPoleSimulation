@@ -2,7 +2,7 @@ from SI_Toolkit.computation_library import NumpyLibrary, PyTorchLibrary, TensorF
 
 from SI_Toolkit.Functions.TF.Compile import CompileAdaptive
 
-from others.p_globals import CartPoleParameters, TrackHalfLength
+from CartPole.cartpole_parameters import CartPoleParameters, TrackHalfLength
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 

@@ -4,7 +4,7 @@ from gymnasium.core import ObsType
 from CartPole import CartPole
 from CartPole.state_utilities import ANGLE_IDX, POSITION_IDX
 from CartPole.cartpole_numba import cartpole_fine_integration_numba_interface
-from others.p_globals import TrackHalfLength
+from CartPole.cartpole_parameters import TrackHalfLength
 from run_data_generator import random_experiment_setter
 
 import numpy as np

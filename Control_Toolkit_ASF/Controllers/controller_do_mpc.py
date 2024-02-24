@@ -11,7 +11,7 @@ from CartPole.state_utilities import cartpole_state_vector_to_namespace
 from Control_Toolkit.Controllers import template_controller
 from others.globals_and_utils import create_rng
 from SI_Toolkit.computation_library import NumpyLibrary, TensorType
-from others.p_globals import k, m_cart, m_pole, g, J_fric, M_fric, L, u_max
+from CartPole.cartpole_parameters import k, m_cart, m_pole, g, J_fric, M_fric, L, u_max
 
 def cartpole_ode_namespace(s: SimpleNamespace, u: float):
     angleDD, positionDD = _cartpole_ode(

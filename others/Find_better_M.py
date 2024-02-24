@@ -11,8 +11,8 @@ but, the results for positionDD is better with k=4/3"
 """
 
 
-from others.p_globals import (
-    k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
+from CartPole.cartpole_parameters import (
+    k, m_cart, m_pole, g, J_fric, M_fric, L
 )
 
 import numpy as np
