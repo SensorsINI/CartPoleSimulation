@@ -1,15 +1,11 @@
-from types import SimpleNamespace
-
 from SI_Toolkit.computation_library import NumpyLibrary, PyTorchLibrary, TensorFlowLibrary
 
 from SI_Toolkit.Functions.TF.Compile import CompileAdaptive
 
-from others.p_globals import export_parameters, TrackHalfLength
+from others.p_globals import CartPoleParameters, TrackHalfLength
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 
-
-from ruamel.yaml import YAML
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
@@ -119,6 +115,7 @@ def Q2u(Q, u_max):
 def euler_step(state, stateD, t_step):
     return state + stateD * t_step
 
+
 ###
 # FIXME: Currently these equations are not modeling edge bounce!
 #  The function for edge bounce is separate, it is used by simulator but not by predictors
@@ -128,22 +125,7 @@ class CartPoleEquations:
 
     def __init__(self, lib=NumpyLibrary, get_parameters_from=None, numba_compiled=False):
         self.lib = lib
-        self.params = SimpleNamespace()
-        if get_parameters_from is None:
-            (self.params.k, self.params.m_cart, self.params.m_pole, self.params.g,
-             self.params.J_fric, self.params.M_fric, self.params.L,
-             self.params.v_max, self.params.u_max, self.params.controlDisturbance,
-             self.params.controlBias, self.params.TrackHalfLength) = export_parameters(lib)
-        else:
-            # Initialize ruamel.yaml object
-            yaml = YAML()
-
-            # Load the parameters from a YAML file
-            with open(get_parameters_from, 'r') as file:
-                parameters = yaml.load(file)
-                for key, value in parameters.items():
-                    setattr(self.params, key, value)
-
+        self.params = CartPoleParameters(lib, get_parameters_from)
         self.euler_step = CompileAdaptive(self.lib)(euler_step)  # This is a nested function, still it was compiled separately before for TF. TODO: Check if it is needed to compile it separately
 
         if numba_compiled:
@@ -155,24 +137,6 @@ class CartPoleEquations:
             self.edge_bounce = edge_bounce
             self.cartpole_integration = self._cartpole_integration
 
-    def save_parameters(self, filepath='cartpole_parameters.yml'):
-        # Convert SimpleNamespace to a dictionary
-        params_dict = {k: getattr(self.params, k) for k in self.params.__dict__}
-
-        # Initialize ruamel.yaml object
-        yaml = YAML()
-        yaml.indent(mapping=2, sequence=4, offset=2)
-
-        # Save the dictionary to a YAML file
-        with open(filepath, 'w') as file:
-            yaml.dump(params_dict, file)
-
-
-    def export_parameters(self):
-        return (self.params.k, self.params.m_cart, self.params.m_pole, self.params.g,
-                self.params.J_fric, self.params.M_fric, self.params.L,
-                self.params.v_max, self.params.u_max, self.params.controlDisturbance,
-                self.params.controlBias, self.params.TrackHalfLength)
 
     @CompileAdaptive
     def Q2u(self, Q):

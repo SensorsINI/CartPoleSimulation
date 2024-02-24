@@ -1,4 +1,5 @@
 from SI_Toolkit.computation_library import NumpyLibrary
+from ruamel.yaml import YAML
 
 from types import SimpleNamespace
 
@@ -47,6 +48,43 @@ def export_parameters(lib=NumpyLibrary):
         convert(P_GLOBALS.controlBias),
         convert(P_GLOBALS.TrackHalfLength)
     )
+
+
+class CartPoleParameters:
+    def __init__(self, lib=NumpyLibrary, get_parameters_from=None):
+        self.lib = lib
+        if get_parameters_from is None:
+            (self.k, self.m_cart, self.m_pole, self.g,
+             self.J_fric, self.M_fric, self.L,
+             self.v_max, self.u_max, self.controlDisturbance,
+             self.controlBias, self.TrackHalfLength) = export_parameters(lib)
+        else:
+            # Initialize ruamel.yaml object
+            yaml = YAML()
+
+            # Load the parameters from a YAML file
+            with open(get_parameters_from, 'r') as file:
+                parameters = yaml.load(file)
+                for key, value in parameters.items():
+                    setattr(self, key, value)
+
+    def save_parameters(self, filepath='cartpole_parameters.yml'):
+        # Convert SimpleNamespace to a dictionary
+        params_dict = {param_name: getattr(self, param_name) for param_name in self.__dict__ if param_name != 'lib'}
+
+        # Initialize ruamel.yaml object
+        yaml = YAML()
+        yaml.indent(mapping=2, sequence=4, offset=2)
+
+        # Save the dictionary to a YAML file
+        with open(filepath, 'w') as file:
+            yaml.dump(params_dict, file)
+
+    def export_parameters(self):
+        return (self.k, self.m_cart, self.m_pole, self.g,
+                self.J_fric, self.M_fric, self.L,
+                self.v_max, self.u_max, self.controlDisturbance,
+                self.controlBias, self.TrackHalfLength)
 
 
 k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength = export_parameters()
