@@ -9,7 +9,7 @@ controller_name = "mppi"
 controller_full_name = f"controller-{controller_name}".replace("-", "_")
 Controller = import_controller_by_name(controller_full_name)
 
-config = load_config("config.yml")
+config = load_config("cartpole_physical_parameters.yml")
 
 logger = my_logger(__name__)
 

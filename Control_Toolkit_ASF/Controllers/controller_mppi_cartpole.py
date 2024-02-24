@@ -35,7 +35,7 @@ from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper
 # from SI_Toolkit.Predictors.predictor_autoregressive_tf_Jerome import predictor_autoregressive_tf
 
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = yaml.load(open("cartpole_physical_parameters.yml", "r"), Loader=yaml.FullLoader)
 config_data_gen = yaml.load(open("config_data_gen.yml", "r"), Loader=yaml.FullLoader)
 config_controller = yaml.load(open(os.path.join("Control_Toolkit_ASF", "config_controllers.yml"), "r"), Loader=yaml.FullLoader)
 config_mppi_cartpole = config_controller["mppi-cartpole"]

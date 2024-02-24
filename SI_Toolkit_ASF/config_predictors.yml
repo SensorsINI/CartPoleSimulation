@@ -1,7 +1,7 @@
 predictor_name_default: 'I_love_control'
 # If controller does not specify predictor_specification (leave empty)
 # a predictor from "predictors:predictor_name_default" from below is loaded
-# Check config.yml and config_testing.yml to learn more on how predictors are selected
+# Check config_testing.yml to learn more on how predictors are selected
 
 predictors:
   ### THESE ARE DEFAULT PREDICTORS! DON'T CHANGE THEM, RATHER ADD YOUR PREDICTOR BELOW

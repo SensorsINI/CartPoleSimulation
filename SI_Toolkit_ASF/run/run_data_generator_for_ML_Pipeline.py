@@ -7,7 +7,7 @@ import os
 import shutil
 
 config_SI = load_config(os.path.join("SI_Toolkit_ASF", "config_training.yml"))
-config_cartpole = load_config(os.path.join("config.yml"))
+config_cartpole = load_config(os.path.join("cartpole_physical_parameters.yml"))
 
 def get_record_path():
     experiment_index = 1
@@ -32,12 +32,12 @@ if __name__ == '__main__':
     # Copy configs at the moment of creation of dataset
     try:
         shutil.copy2(
-            os.path.join("CartPoleSimulation", "config.yml"),
-            os.path.join(record_path, "config.yml"))
+            os.path.join("CartPoleSimulation", "cartpole_physical_parameters.yml"),
+            os.path.join(record_path, "cartpole_physical_parameters.yml"))
     except FileNotFoundError:
         shutil.copy2(
-            "config.yml",
-            os.path.join(record_path, "config.yml"))
+            "cartpole_physical_parameters.yml",
+            os.path.join(record_path, "cartpole_physical_parameters.yml"))
 
 
     try:

@@ -8,7 +8,7 @@ class CartPoleParameters:
     def __init__(self, lib=NumpyLibrary, get_parameters_from=None):
         self.lib = lib
         if get_parameters_from is None:
-            get_parameters_from = "config.yml"
+            get_parameters_from = "cartpole_physical_parameters.yml"
 
         parameters = load_config(get_parameters_from)['cartpole']
         # Load the parameters from a YAML file

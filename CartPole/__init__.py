@@ -73,7 +73,7 @@ rc('font', **font)
 
 # endregion
 
-config = load_config("config.yml")
+config = load_config("cartpole_physical_parameters.yml")
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
 rng = create_rng(__name__, config["cartpole"]["seed"])

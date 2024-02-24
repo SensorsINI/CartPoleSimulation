@@ -1,7 +1,6 @@
 cost_function_name_default: default
 # Default value is used if controller does not specify a cost_function_specification (leave empty)
 # Cost functions are grouped by environment name in a folder within Control_Toolkit_ASF.Cost_Functions
-# Check config.yml to learn more on how cost_functions are selected
 
 CartPole:
   default:

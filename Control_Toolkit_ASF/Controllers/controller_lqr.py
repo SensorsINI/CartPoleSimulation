@@ -19,7 +19,7 @@ from Control_Toolkit.Controllers import template_controller
 from others.globals_and_utils import create_rng
 
 s0 = create_cartpole_state()
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
+config = yaml.load(open("cartpole_physical_parameters.yml", "r"), Loader=yaml.FullLoader)
 actuator_noise = config["cartpole"]["actuator_noise"]
 
 
