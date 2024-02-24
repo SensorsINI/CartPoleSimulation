@@ -23,8 +23,8 @@ from Control_Toolkit.others.environment import EnvironmentBatched
 from Control_Toolkit.others.globals_and_utils import (
     get_available_controller_names, get_available_optimizer_names, get_controller_name, get_optimizer_name, import_controller_by_name)
 from others.globals_and_utils import MockSpace, create_rng, load_config
-from CartPole.cartpole_parameters import (P_GLOBALS, J_fric, L, m_cart, M_fric, TrackHalfLength,
-                                          controlBias, controlDisturbance, export_parameters,
+from CartPole.cartpole_parameters import (J_fric, L, m_cart, M_fric, TrackHalfLength,
+                                          controlBias, controlDisturbance, CP_PARAMETERS_DEFAULT,
                                           g, k, m_pole, u_max, v_max)
 # Interpolate function to create smooth random track
 from scipy.interpolate import BPoly, interp1d
@@ -637,8 +637,9 @@ class CartPole(EnvironmentBatched):
 
                 writer.writerow(['#'])
                 writer.writerow(['# Parameters:'])
-                for k in P_GLOBALS.__dict__:
-                    writer.writerow(['# ' + k + ': ' + str(getattr(P_GLOBALS, k))])
+                for param_name in self.cpe.params.__dict__:
+                    if param_name != 'lib':
+                        writer.writerow(['# ' + param_name + ': ' + str(getattr(self.cpe.params, param_name))])
                 writer.writerow(['#'])
 
                 writer.writerow(['# Data:'])
@@ -1049,7 +1050,8 @@ class CartPole(EnvironmentBatched):
 
         # reset global variables
         global k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
-        k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_parameters()
+        (k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...],
+         controlDisturbance[...], controlBias[...], TrackHalfLength[...]) = CP_PARAMETERS_DEFAULT.export_parameters()
 
         self.time = 0.0
         self.time_last_target_equilibrium_change = None

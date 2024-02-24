@@ -1,72 +1,28 @@
 from SI_Toolkit.computation_library import NumpyLibrary
 from ruamel.yaml import YAML
 
-from types import SimpleNamespace
-
 from others.globals_and_utils import load_config
-
-config = load_config("config.yml")
-
-# Parameters of the CartPole
-P_GLOBALS = SimpleNamespace()  # "p" like parameters
-P_GLOBALS.m_pole = config["cartpole"]["m_pole"]
-P_GLOBALS.m_cart = config["cartpole"]["m_cart"]
-P_GLOBALS.L = float(config["cartpole"]["L"].split("/")[0])/float(config["cartpole"]["L"].split("/")[1])
-P_GLOBALS.u_max = config["cartpole"]["u_max"]
-P_GLOBALS.M_fric = config["cartpole"]["M_fric"]
-P_GLOBALS.J_fric = config["cartpole"]["J_fric"]
-P_GLOBALS.v_max = config["cartpole"]["v_max"]
-
-cart_length = config["cartpole"]["cart_length"]
-usable_track_length = config["cartpole"]["track_length"]-cart_length
-P_GLOBALS.TrackHalfLength = usable_track_length/2.0  # m, effective length, by which cart center can move
-
-P_GLOBALS.controlDisturbance = config["cartpole"]["controlDisturbance"]
-P_GLOBALS.controlBias = config["cartpole"]["controlBias"]
-
-P_GLOBALS.g = config["cartpole"]["g"]
-P_GLOBALS.k = float(config["cartpole"]["k"].split("/")[0])/float(config["cartpole"]["k"].split("/")[1])
-
-
-# Export variables as global
-def export_parameters(lib=NumpyLibrary):
-
-    dtype = lib.float32
-    convert = lambda x: lib.to_tensor(x, dtype=dtype)
-
-    return (
-        convert(P_GLOBALS.k),
-        convert(P_GLOBALS.m_cart),
-        convert(P_GLOBALS.m_pole),
-        convert(P_GLOBALS.g),
-        convert(P_GLOBALS.J_fric),
-        convert(P_GLOBALS.M_fric),
-        convert(P_GLOBALS.L),
-        convert(P_GLOBALS.v_max),
-        convert(P_GLOBALS.u_max),
-        convert(P_GLOBALS.controlDisturbance),
-        convert(P_GLOBALS.controlBias),
-        convert(P_GLOBALS.TrackHalfLength)
-    )
 
 
 class CartPoleParameters:
     def __init__(self, lib=NumpyLibrary, get_parameters_from=None):
         self.lib = lib
         if get_parameters_from is None:
-            (self.k, self.m_cart, self.m_pole, self.g,
-             self.J_fric, self.M_fric, self.L,
-             self.v_max, self.u_max, self.controlDisturbance,
-             self.controlBias, self.TrackHalfLength) = export_parameters(lib)
-        else:
-            # Initialize ruamel.yaml object
-            yaml = YAML()
+            get_parameters_from = "config.yml"
 
-            # Load the parameters from a YAML file
-            with open(get_parameters_from, 'r') as file:
-                parameters = yaml.load(file)
-                for key, value in parameters.items():
-                    setattr(self, key, value)
+        parameters = load_config(get_parameters_from)['cartpole']
+        # Load the parameters from a YAML file
+        with open(get_parameters_from, 'r') as file:
+            for key, value in parameters.items():
+                if key == 'L':
+                    value = float(value.split("/")[0])/float(value.split("/")[1])
+                elif key == 'k':
+                    value = float(value.split("/")[0])/float(value.split("/")[1])
+                if key in ['k', 'm_cart', 'm_pole', 'g', 'J_fric', 'M_fric', 'L', 'v_max', 'u_max',
+                           'controlDisturbance', 'controlBias', 'TrackHalfLength']:
+                    value = lib.to_tensor(value, dtype=lib.float32)
+                setattr(self, key, value)
+            setattr(self, 'TrackHalfLength', lib.to_tensor((parameters['track_length']-parameters['cart_length'])/2.0, dtype=lib.float32))
 
     def save_parameters(self, filepath='cartpole_parameters.yml'):
         # Convert SimpleNamespace to a dictionary
@@ -80,11 +36,31 @@ class CartPoleParameters:
         with open(filepath, 'w') as file:
             yaml.dump(params_dict, file)
 
-    def export_parameters(self):
-        return (self.k, self.m_cart, self.m_pole, self.g,
-                self.J_fric, self.M_fric, self.L,
-                self.v_max, self.u_max, self.controlDisturbance,
-                self.controlBias, self.TrackHalfLength)
+    def export_parameters(self, lib=None):
+
+        if lib is None:
+            convert = lambda x: x
+        else:
+            dtype = lib.float32
+            convert = lambda x: lib.to_tensor(x, dtype=dtype)
 
 
-k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength = export_parameters()
+        return (
+            convert(self.k),
+            convert(self.m_cart),
+            convert(self.m_pole),
+            convert(self.g),
+            convert(self.J_fric),
+            convert(self.M_fric),
+            convert(self.L),
+            convert(self.v_max),
+            convert(self.u_max),
+            convert(self.controlDisturbance),
+            convert(self.controlBias),
+            convert(self.TrackHalfLength)
+        )
+
+
+CP_PARAMETERS_DEFAULT = CartPoleParameters()
+(k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max,
+ controlDisturbance, controlBias, TrackHalfLength) = CP_PARAMETERS_DEFAULT.export_parameters()
