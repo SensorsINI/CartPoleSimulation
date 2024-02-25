@@ -638,8 +638,13 @@ class CartPole(EnvironmentBatched):
                 writer.writerow(['#'])
                 writer.writerow(['# Parameters:'])
                 for param_name in self.cpe.params.__dict__:
-                    if param_name != 'lib':
-                        writer.writerow(['# ' + param_name + ': ' + str(getattr(self.cpe.params, param_name))])
+                    parameter = getattr(self.cpe.params, param_name)
+                    if isinstance(parameter, dict):
+                        dict_string = ' '.join(f"{key}: {value};" for key, value in parameter.items())
+                        writer.writerow(['# ' + param_name + ':' + str(dict_string)])
+                    else:
+                        if param_name != 'lib':
+                            writer.writerow(['# ' + param_name + ': ' + str(parameter)])
                 writer.writerow(['#'])
 
                 writer.writerow(['# Data:'])
