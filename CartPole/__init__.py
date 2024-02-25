@@ -1099,7 +1099,7 @@ class CartPole(EnvironmentBatched):
                 # in this case slider corresponds already to the power of the motor
                 self.Q_applied = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q_applied = float(self.controller.step(
+                self.Q_calculated = float(self.controller.step(
                     self.s,
                     self.time,
                     {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium, "L": float(self.L_for_controller)}
