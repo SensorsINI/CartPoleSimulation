@@ -11,17 +11,16 @@ class CartPoleParameters:
             get_parameters_from = "cartpole_physical_parameters.yml"
 
         parameters = load_config(get_parameters_from)['cartpole']
-        # Load the parameters from a YAML file
-        with open(get_parameters_from, 'r') as file:
-            for key, value in parameters.items():
-                if key == 'L':
-                    value = float(value.split("/")[0])/float(value.split("/")[1])
-                elif key == 'k':
-                    value = float(value.split("/")[0])/float(value.split("/")[1])
-                if key in ['k', 'm_cart', 'm_pole', 'g', 'J_fric', 'M_fric', 'L', 'v_max', 'u_max',
-                           'controlDisturbance', 'controlBias', 'TrackHalfLength']:
-                    value = lib.to_tensor(value, dtype=lib.float32)
-                setattr(self, key, value)
+
+        for key, value in parameters.items():
+            if key == 'L':
+                value = float(value.split("/")[0])/float(value.split("/")[1])
+            elif key == 'k':
+                value = float(value.split("/")[0])/float(value.split("/")[1])
+            if key in ['k', 'm_cart', 'm_pole', 'g', 'J_fric', 'M_fric', 'L', 'v_max', 'u_max',
+                       'controlDisturbance', 'controlBias', 'TrackHalfLength']:
+                value = lib.to_tensor(value, dtype=lib.float32)
+            setattr(self, key, value)
             setattr(self, 'TrackHalfLength', lib.to_tensor((parameters['track_length']-parameters['cart_length'])/2.0, dtype=lib.float32))
 
     def save_parameters(self, filepath='cartpole_parameters.yml'):
