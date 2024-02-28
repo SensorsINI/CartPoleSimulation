@@ -6,7 +6,7 @@ from Control_Toolkit.Optimizers import template_optimizer
 from CartPole.cartpole_model import TrackHalfLength, Q2u
 from CartPole.cartpole_numba import cartpole_ode_numba
 from others.globals_and_utils import load_config
-from others.p_globals import v_max
+from CartPole.cartpole_parameters import v_max
 from CartPole.state_utilities import create_cartpole_state, \
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
 
