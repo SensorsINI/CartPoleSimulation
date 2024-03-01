@@ -58,6 +58,7 @@ REGULARIZATION:   # Implemented only for TF, no regularization for Pytorch
 
 QUANTIZATION: # Not implemented yet
   ACTIVATED: False
+  QUANTIZATION_DATASET: 'float'  # 'float' or ap_fixed<x,y>
   ACTIVATION:
     bits: 6
   KERNEL:
