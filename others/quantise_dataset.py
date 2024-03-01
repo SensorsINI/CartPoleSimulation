@@ -5,15 +5,18 @@ from SI_Toolkit.load_and_normalize import load_data, get_paths_to_datafiles
 from CartPole.cartpole_parameters import TrackHalfLength
 
 # Settings
+encoder_precision = 2*TrackHalfLength/4705.0
 ADC_precision = (1.0 / 4096.0)
 measurement_interval = 1.0e-3  # s
 add_noise = 1  # +/- quantised units
-path_to_data = '../SI_Toolkit_ASF/'
+path_to_data = './SI_Toolkit_ASF/'
 quantized_folder = path_to_data + '_quantized'
 
 features_precision_dict = {
     'angle': ADC_precision,
     'angleD': ADC_precision / measurement_interval,
+    'position': encoder_precision,
+    'positionD': encoder_precision / measurement_interval,
 }
 
 # Ensure the quantized directory exists
