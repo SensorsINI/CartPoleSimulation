@@ -10,6 +10,7 @@ predictors:
     model_name: 'GRU-6IN-32H1-32H2-5OUT-0'
     path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-2/Models/'
     update_before_predicting: True
+    input_quantization: 'float'
   GP_default:
     predictor_type: 'GP'
     model_name: 'SGP_10'
