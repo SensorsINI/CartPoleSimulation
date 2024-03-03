@@ -9,10 +9,10 @@ batch_size: 1
 
 
 PRECISION:
-  input_and_output: 'fixed<12,1>'
+  input_and_output: 'fixed<12,2>'
   activations: 'fixed<12,1>'
   weights_and_biases: 'fixed<12,4>'
-  intermediate_results: 'fixed<12,4>'  # Also set as "Model precision" and used for all quantizations not included above
+  intermediate_results: 'fixed<18,6>'  # Also set as "Model precision" and used for all quantizations not included above
 
 Strategy: 'Resources'  # Resources or Latency
 ReuseFactor: 64
