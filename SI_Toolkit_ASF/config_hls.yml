@@ -3,8 +3,8 @@ part: 'XC7Z020'
 path_to_hls_installation: '/tools/Xilinx/Vivado/2020.1/bin'
 
 
-path_to_models: './SI_Toolkit_ASF/Experiments/'
-net_name: 'Dense-7IN-16H1-16H2-1OUT-0'
+path_to_models: './IROS24_CPP_v2/'
+net_name: 'Dense-7IN-32H1-32H2-1OUT-8'
 batch_size: 1
 
 
@@ -15,11 +15,11 @@ PRECISION:
   intermediate_results: 'fixed<18,6>'  # Also set as "Model precision" and used for all quantizations not included above
 
 Strategy: 'Resources'  # Resources or Latency
-ReuseFactor: 64
+ReuseFactor: 32
 
 backend: 'Vivado'  # VivadoAccelerator or Vivado
 #backend: 'VivadoAccelerator'  # VivadoAccelerator or Vivado
 
-with_brunton_testing: true
+with_brunton_testing: false
 
-output_dir: '../../m1/xxx' # Must be a very short path neer to the root filesystem. Otherwise it crashes silently
+output_dir: '../../CPP_IROS/x3232_12_2_v1' # Must be a very short path neer to the root filesystem. Otherwise it crashes silently
