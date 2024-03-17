@@ -1,4 +1,4 @@
-from SI_Toolkit.load_and_normalize import add_shifted_columns
+from SI_Toolkit.load_and_normalize import transform_dataset
 
 # # A = 'Test/Test-'
 # # A = 'Validate/Validate-'
@@ -15,4 +15,5 @@ variables_to_shift = ['u']
 indices_by_which_to_shift = [-1]
 
 if __name__ == '__main__':
-    add_shifted_columns(get_files_from, save_files_to, variables_to_shift, indices_by_which_to_shift)
+    transform_dataset(get_files_from, save_files_to, transformation='add_shifted_columns',
+                        variables_to_shift=variables_to_shift, indices_by_which_to_shift=indices_by_which_to_shift)
