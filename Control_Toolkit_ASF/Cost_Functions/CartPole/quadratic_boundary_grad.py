@@ -34,10 +34,17 @@ class quadratic_boundary_grad(cost_function_base):
     MAX_COST = dd_weight * 1.0e7 + ep_weight + ekp_weight * 25.0 + cc_weight * R * (u_max ** 2) + ccrc_weight * 4 * (u_max ** 2)
 
     # cost for distance from track edge
+    # def _distance_difference_cost(self, position):
+    #     """Compute penalty for distance of cart to the target position"""
+    #     target_distance_cost = (
+    #         (position - self.variable_parameters.target_position) / (2.0 * TrackHalfLength)) ** 2
+    #
+    #     return target_distance_cost
+
     def _distance_difference_cost(self, position):
         """Compute penalty for distance of cart to the target position"""
-        target_distance_cost = (
-            (position - self.variable_parameters.target_position) / (2.0 * TrackHalfLength)) ** 2
+        target_distance_cost = self.lib.abs(
+            (position - self.variable_parameters.target_position) / (2.0 * TrackHalfLength))
 
         return target_distance_cost
 
