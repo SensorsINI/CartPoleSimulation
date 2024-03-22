@@ -1,0 +1,12 @@
+batch_first: False
+thx: 0.0
+thh: 0.25  # 64.0/256.0
+qa: 0
+aqi: 8
+aqf: 8
+qw: 1
+wqi: 1
+wqf: 7
+afqi: 2
+afqf: 4
+debug: 0

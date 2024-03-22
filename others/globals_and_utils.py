@@ -8,7 +8,6 @@ import os
 import time
 from datetime import datetime
 from typing import Tuple
-import yaml
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0' # all TF messages
 
@@ -21,6 +20,8 @@ import tensorflow as tf
 from engineering_notation import EngNumber as eng  # only from pip
 from matplotlib import pyplot as plt
 from numpy.random import SFC64, Generator
+
+from SI_Toolkit.load_and_normalize import load_yaml
 
 if os.name == 'nt':
     import ctypes
@@ -66,7 +67,7 @@ else:
         home = os.path.expanduser("~")
         return os.path.join(home, "Downloads")
 
-LOGGING_LEVEL = logging.INFO
+LOGGING_LEVEL = logging.ERROR
 PORT = 12000  # UDP port used to send frames from producer to consumer
 IMSIZE = 224  # input image size, must match model
 UDP_BUFFER_SIZE = int(math.pow(2, math.ceil(math.log(IMSIZE * IMSIZE + 1000) / math.log(2))))
@@ -212,9 +213,9 @@ def load_config(filename: str) -> dict:
     :type filename: str
     """
     try:
-        config = yaml.load(open(os.path.join("CartPoleSimulation", filename), "r"), Loader=yaml.FullLoader)
+        config = load_yaml(os.path.join("CartPoleSimulation", filename), "r")
     except FileNotFoundError:
-        config = yaml.load(open(filename), Loader=yaml.FullLoader)
+        config = load_yaml(filename)
     return config
 
 

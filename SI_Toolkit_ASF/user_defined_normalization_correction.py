@@ -1,5 +1,5 @@
 import numpy as np
-from others.p_globals import TrackHalfLength, u_max
+from CartPole.cartpole_parameters import TrackHalfLength, u_max
 
 
 def apply_user_defined_normalization_correction(df_norm_info):

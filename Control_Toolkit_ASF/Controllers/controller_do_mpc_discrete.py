@@ -4,12 +4,20 @@ from types import SimpleNamespace
 
 import do_mpc
 import numpy as np
-from CartPole.cartpole_model import (Q2u, TrackHalfLength,
-                                     cartpole_ode_namespace, v_max)
+
+from CartPole.cartpole_equations import _cartpole_ode, Q2u
 from CartPole.state_utilities import cartpole_state_vector_to_namespace
 from Control_Toolkit.Controllers import template_controller
 from SI_Toolkit.computation_library import NumpyLibrary, TensorType
+from CartPole.cartpole_parameters import TrackHalfLength, v_max
+from CartPole.cartpole_parameters import k, m_cart, m_pole, g, J_fric, M_fric, L, u_max
 
+def cartpole_ode_namespace(s: SimpleNamespace, u: float):
+    angleDD, positionDD = _cartpole_ode(
+        np.cos(s.angle), np.sin(s.angle), s.angleD, s.positionD, u,
+        k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L
+    )
+    return angleDD, positionDD
 
 def mpc_next_state(s, u, dt):
     """Wrapper for CartPole ODE. Given a current state (without second derivatives), returns a state after time dt
@@ -73,7 +81,7 @@ class controller_do_mpc_discrete(template_controller):
 
         target_position = self.model.set_variable('_tvp', 'target_position')
 
-        s_next = mpc_next_state(s, Q2u(Q), dt=self.config_controller["dt"])
+        s_next = mpc_next_state(s, Q2u(Q, u_max), dt=self.config_controller["dt"])
 
         self.model.set_rhs('s.position', s_next.position)
         self.model.set_rhs('s.angle', s_next.angle)

@@ -17,7 +17,6 @@ if __name__ == '__main__':
     
     import timeit
 
-    from CartPole.cartpole_model import TrackHalfLength, s0, u_max
     from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX,
                                           ANGLE_SIN_IDX, ANGLED_IDX,
                                           POSITION_IDX, POSITIOND_IDX,

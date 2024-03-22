@@ -5,6 +5,7 @@ mpc:
   computation_library: tensorflow  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.
   controller_logging: false
   calculate_optimal_trajectory: false
+  device: '/device:CPU:0'
 mppi-cartpole:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                       # steps
@@ -99,8 +100,9 @@ neural-imitator:
   net_name: 'GRU-6IN-32H1-32H2-1OUT-4'  # TF
 #  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'  # Pytorch
   input_at_input: False
+  input_precision: 'float'  #'ap_fixed<20,6>'   # Can be 'float' - currently do nothing, or 'ap_fixed<total number of bits, integer bits + 1 sign bit>' - adjusting the number precision of the input
   controller_logging: True
-  computation_library: tensorflow
+  hls4ml: false
 secloc:
   log_base: 1.05
   ref_period: 1
@@ -110,3 +112,12 @@ secloc:
   pid_Ki: 1.0
   #secloc_motor_map: 128
   controller_logging: True
+fpga:
+  seed: null                            # If null, random seed based on datetime is used
+  PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/models_for_neural_imitator_tf/'
+  net_name: 'Dense-7IN-16H1-16H2-1OUT-0'  # TF
+#  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'  # Pytorch
+  input_at_input: False
+  controller_logging: True
+  SERIAL_PORT: 3
+  SERIAL_BAUD: 230400

@@ -23,23 +23,24 @@ from Control_Toolkit.others.environment import EnvironmentBatched
 from Control_Toolkit.others.globals_and_utils import (
     get_available_controller_names, get_available_optimizer_names, get_controller_name, get_optimizer_name, import_controller_by_name)
 from others.globals_and_utils import MockSpace, create_rng, load_config
-from others.p_globals import (P_GLOBALS, J_fric, L, m_cart, M_fric, TrackHalfLength,
-                              controlBias, controlDisturbance, export_globals,
-                              g, k, m_pole, u_max, v_max)
+from CartPole.cartpole_parameters import (J_fric, L, m_cart, M_fric, TrackHalfLength,
+                                          controlBias, controlDisturbance, CP_PARAMETERS_DEFAULT,
+                                          g, k, m_pole, u_max, v_max)
 # Interpolate function to create smooth random track
 from scipy.interpolate import BPoly, interp1d
 # Run range() automatically adding progress bar in terminal
 from tqdm import trange
 
 from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
-from CartPole.cartpole_model import Q2u, s0
-from CartPole.cartpole_numba import (cartpole_integration_numba,
-                                     cartpole_ode_numba, edge_bounce_numba)
+
 from CartPole.latency_adder import LatencyAdder
 from CartPole.load import get_full_paths_to_csvs, load_csv_recording
 from CartPole.noise_adder import NoiseAdder
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
+from CartPole.state_utilities import create_cartpole_state
+
+s0 = create_cartpole_state()
 
 # region Imported modules
 
@@ -60,8 +61,10 @@ from matplotlib import animation, rc, transforms
 from matplotlib.patches import (Circle, FancyArrowPatch, FancyBboxPatch,
                                 Rectangle)
 
+from random import random
+
 # Angle convention to rotate the mast in right direction - depends on used Equation
-from CartPole.cartpole_model import ANGLE_CONVENTION
+from CartPole.cartpole_equations import ANGLE_CONVENTION, CartPoleEquations
 
 # Set the font parameters for matplotlib figures
 font = {'size': 22}
@@ -70,7 +73,7 @@ rc('font', **font)
 
 # endregion
 
-config = load_config("config.yml")
+config = load_config("cartpole_physical_parameters.yml")
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
 rng = create_rng(__name__, config["cartpole"]["seed"])
@@ -107,6 +110,8 @@ class CartPole(EnvironmentBatched):
         self.Q_calculated = 0.0
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
 
+        self.cpe = CartPoleEquations(numba_compiled=True)
+
         self.action_space = MockSpace(-1.0, 1.0, (1,), np.float32)
         state_low = [-np.pi, -np.inf, -1.0, -1.0, -TrackHalfLength, -np.inf]
         state_high = [-v for v in state_low]
@@ -130,6 +135,10 @@ class CartPole(EnvironmentBatched):
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
         self.NoiseAdderInstance = NoiseAdder()
         self.s_with_noise_and_latency = np.copy(self.s)
+        self.zero_angle_shift_init = np.deg2rad(self.config['zero_angle_shift']['init'])
+        self.zero_angle_shift = self.zero_angle_shift_init
+        self.zero_angle_shift_mode = self.config['zero_angle_shift']['mode']
+        self.zero_angle_shift_increment = np.deg2rad(self.config['zero_angle_shift']['increment'])
 
         # region Time scales for simulation step, controller update and saving data
         # See last paragraph of "Time scales" section for explanations
@@ -233,7 +242,9 @@ class CartPole(EnvironmentBatched):
         self.mast_height_maximal_drawing_units = None  # For drawing only. For calculation see L
         self.max_height_maximal_physical_units = None
         self.mast_height_current_drawing_units = None
+        self.zero_angle_tick_height_current_drawing_units = None
         self.MastThickness = None
+        self.ZeroAngleTickThickness = None
         self.TrackHalfLengthGraphics = None  # Length of the track
 
         # Elements of the drawing
@@ -241,6 +252,8 @@ class CartPole(EnvironmentBatched):
         self.Chassis = None
         self.WheelLeft = None
         self.WheelRight = None
+
+        self.ZeroAngleTick = None
 
         # Arrow indicating acceleration (=motor power)
         self.Acceleration_Arrow = None
@@ -253,6 +266,7 @@ class CartPole(EnvironmentBatched):
         self.Slider_Bar = None
         self.Slider_Arrow = None
         self.t2 = None  # An abstract container for the transform rotating the mast
+        self.t_zero_angle = None  # An abstract container for the transform rotating the zero angle tick
 
         self.init_graphical_elements()  # Assign proper object to the above variables
         # endregion
@@ -260,7 +274,8 @@ class CartPole(EnvironmentBatched):
         self.target_position = 0.0
         self.target_equilibrium = 1.0
 
-        self.change_target_equilibrium_every_x_second = np.inf
+        self.keep_target_equilibrium_x_seconds_up = np.inf
+        self.keep_target_equilibrium_x_seconds_down = np.inf
         self.time_last_target_equilibrium_change = None
 
         self.Q_update_time = None
@@ -332,12 +347,30 @@ class CartPole(EnvironmentBatched):
         self.LatencyAdderInstance.add_current_state_to_latency_buffer(self.s)
         s_delayed = self.LatencyAdderInstance.get_interpolated_delayed_state()
         self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
+        self.s_with_noise_and_latency = self.update_zero_angle_shift(self.s_with_noise_and_latency)
 
     def cartpole_ode(self):
-        self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=float(L))
+        self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L))
 
     def Q2u(self):
-        self.u = Q2u(self.Q)
+        self.u = self.cpe.Q2u(self.Q)
+
+    def update_zero_angle_shift(self, s):
+        if self.zero_angle_shift_mode == 'constant':
+            da = 0.0
+        elif self.zero_angle_shift_mode == 'random walk':
+            da  = (1.0 if random() < 0.5 else -1.0)*self.zero_angle_shift_increment
+        elif self.zero_angle_shift_mode == 'increase':
+            self.zero_angle_shift_increment *= 1.000
+            da = self.zero_angle_shift_increment
+        else:
+            raise ValueError('zero_angle_shift_mode with value {} not valid'.format(self.zero_angle_shift_mode))
+        self.zero_angle_shift += da
+        s[ANGLE_IDX] = wrap_angle_rad(s[ANGLE_IDX]+self.zero_angle_shift)
+        s[ANGLE_COS_IDX] = np.cos(s[ANGLE_IDX])
+        s[ANGLE_SIN_IDX] = np.sin(s[ANGLE_IDX])
+
+        return s
 
     def update_target_position(self):
         if self.use_pregenerated_target_position:
@@ -358,10 +391,10 @@ class CartPole(EnvironmentBatched):
     def update_target_equilibrium(self):
         if self.time_last_target_equilibrium_change is None:
             self.time_last_target_equilibrium_change = self.time
-        elif self.target_equilibrium == -1 and (self.time-self.time_last_target_equilibrium_change) > self.change_target_equilibrium_every_x_second:
+        elif self.target_equilibrium == -1 and (self.time-self.time_last_target_equilibrium_change) > self.keep_target_equilibrium_x_seconds_down:
             self.time_last_target_equilibrium_change = self.time
             self.target_equilibrium = -1*self.target_equilibrium
-        elif self.target_equilibrium == 1 and (self.time-self.time_last_target_equilibrium_change) > self.change_target_equilibrium_every_x_second:
+        elif self.target_equilibrium == 1 and (self.time-self.time_last_target_equilibrium_change) > self.keep_target_equilibrium_x_seconds_up:
             self.time_last_target_equilibrium_change = self.time
             self.target_equilibrium = -1*self.target_equilibrium
 
@@ -471,12 +504,12 @@ class CartPole(EnvironmentBatched):
         """
 
         self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = \
-            cartpole_integration_numba(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD, self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation,)
+            self.cpe.cartpole_integration(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD, self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation,)
 
 
     def edge_bounce(self):
         # Elastic collision at edges
-        self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = edge_bounce_numba(
+        self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = self.cpe.edge_bounce(
             self.s[ANGLE_IDX],
             np.cos(self.s[ANGLE_IDX]),
             self.s[ANGLED_IDX],
@@ -604,8 +637,14 @@ class CartPole(EnvironmentBatched):
 
                 writer.writerow(['#'])
                 writer.writerow(['# Parameters:'])
-                for k in P_GLOBALS.__dict__:
-                    writer.writerow(['# ' + k + ': ' + str(getattr(P_GLOBALS, k))])
+                for param_name in self.cpe.params.__dict__:
+                    parameter = getattr(self.cpe.params, param_name)
+                    if isinstance(parameter, dict):
+                        dict_string = ' '.join(f"{key}: {value};" for key, value in parameter.items())
+                        writer.writerow(['# ' + param_name + ':' + str(dict_string)])
+                    else:
+                        if param_name != 'lib':
+                            writer.writerow(['# ' + param_name + ': ' + str(parameter)])
                 writer.writerow(['#'])
 
                 writer.writerow(['# Data:'])
@@ -809,7 +848,8 @@ class CartPole(EnvironmentBatched):
                                          turning_points=None,
                                          used_track_fraction=0.8,
                                          target_equilibrium=None,
-                                         change_target_equilibrium_every_x_second=np.inf,
+                                         keep_target_equilibrium_x_seconds_up=np.inf,
+                                         keep_target_equilibrium_x_seconds_down=np.inf,
 
                                          L_initial=None,
                                          change_L_every_x_seconds=None,
@@ -842,7 +882,8 @@ class CartPole(EnvironmentBatched):
         if turning_points is not None: self.turning_points = turning_points
         if used_track_fraction is not None: self.used_track_fraction = used_track_fraction
         if target_equilibrium is not None: self.target_equilibrium = target_equilibrium
-        if change_target_equilibrium_every_x_second is not None: self.change_target_equilibrium_every_x_second = change_target_equilibrium_every_x_second
+        if keep_target_equilibrium_x_seconds_up is not None: self.keep_target_equilibrium_x_seconds_up = keep_target_equilibrium_x_seconds_up
+        if keep_target_equilibrium_x_seconds_down is not None: self.keep_target_equilibrium_x_seconds_down = keep_target_equilibrium_x_seconds_down
         if L_initial is not None: self.L_initial = L_initial
         if change_L_every_x_seconds is not None: self.change_L_every_x_second = change_L_every_x_seconds
         if L_discount_factor is not None: self.L_discount_factor = L_discount_factor
@@ -1014,7 +1055,8 @@ class CartPole(EnvironmentBatched):
 
         # reset global variables
         global k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
-        k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...], controlDisturbance[...], controlBias[...], TrackHalfLength[...] = export_globals()
+        (k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...],
+         controlDisturbance[...], controlBias[...], TrackHalfLength[...]) = CP_PARAMETERS_DEFAULT.export_parameters()
 
         self.time = 0.0
         self.time_last_target_equilibrium_change = None
@@ -1057,7 +1099,7 @@ class CartPole(EnvironmentBatched):
                 # in this case slider corresponds already to the power of the motor
                 self.Q_applied = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
-                self.Q_applied = float(self.controller.step(
+                self.Q_calculated = float(self.controller.step(
                     self.s,
                     self.time,
                     {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium, "L": float(self.L_for_controller)}
@@ -1067,8 +1109,8 @@ class CartPole(EnvironmentBatched):
 
 
             self.Q = self.Q_applied
-            self.u = Q2u(self.Q)  # Calculate CURRENT control input
-            self.angleDD, self.positionDD = cartpole_ode_numba(self.s, self.u, L=float(L))  # Calculate CURRENT second derivatives
+            self.u = self.cpe.Q2u(self.Q)  # Calculate CURRENT control input
+            self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L))  # Calculate CURRENT second derivatives
 
         # Reset the dict keeping the experiment history and save the state for t = 0
         self.dt_save_steps_counter = 0
@@ -1191,7 +1233,10 @@ class CartPole(EnvironmentBatched):
         self.max_height_maximal_physical_units = np.max([self.L_initial, *self.L_range])
         self.mast_height_current_drawing_units = self.mast_height_maximal_drawing_units * (float(L) / self.max_height_maximal_physical_units)
 
+        self.zero_angle_tick_height_current_drawing_units = 1.0
+
         self.MastThickness = 0.05
+        self.ZeroAngleTickThickness = 0.01
         self.TrackHalfLengthGraphics = 50.0  # Full Length of the track
 
         self.physical_to_graphics = (self.TrackHalfLengthGraphics-self.WheelToMiddle)/TrackHalfLength  # TrackHalfLength is the effective length of track
@@ -1210,6 +1255,11 @@ class CartPole(EnvironmentBatched):
                                    width=self.MastThickness,
                                    height=self.mast_height_current_drawing_units,
                                    fc='g')
+
+        self.ZeroAngleTick = FancyBboxPatch(xy=(self.s[POSITION_IDX]*self.physical_to_graphics - (self.ZeroAngleTickThickness / 2.0), 1.2 * self.mast_height_current_drawing_units),
+                                   width=self.ZeroAngleTickThickness,
+                                   height=self.zero_angle_tick_height_current_drawing_units,
+                                   fc='yellow')
 
         self.Chassis = FancyBboxPatch((self.s[POSITION_IDX]*self.physical_to_graphics - (self.CartLength / 2.0), self.WheelRadius),
                                       self.CartLength,
@@ -1237,6 +1287,7 @@ class CartPole(EnvironmentBatched):
                                             arrowstyle='fancy', mutation_scale=50)
         self.Slider_Bar = Rectangle((0.0, 0.0), self.slider_value, 1.0)
         self.t2 = transforms.Affine2D().rotate(0.0)  # An abstract container for the transform rotating the mast
+        self.t_zero_angle = transforms.Affine2D().rotate(0.0)  # An abstract container for the transform rotating the mast
 
     # This method accepts the mouse position and updated the slider value accordingly
     # The mouse position has to be captured by a function not included in this class
@@ -1333,6 +1384,10 @@ class CartPole(EnvironmentBatched):
         mast_position = (self.s[POSITION_IDX]*self.physical_to_graphics - (self.MastThickness / 2.0))
         self.Mast.set_x(mast_position)
         self.Mast.set_height(self.mast_height_maximal_drawing_units * (float(L) / self.max_height_maximal_physical_units))
+
+        zero_tick_position = (self.s[POSITION_IDX]*self.physical_to_graphics - (self.ZeroAngleTickThickness / 2.0))
+        self.ZeroAngleTick.set_x(zero_tick_position)
+
         # Draw rotated mast
         t21 = transforms.Affine2D().translate(-mast_position, -1.25 * self.WheelRadius)
         if ANGLE_CONVENTION == 'CLOCK-NEG':
@@ -1343,6 +1398,17 @@ class CartPole(EnvironmentBatched):
             raise ValueError('Unknown angle convention')
         t23 = transforms.Affine2D().translate(mast_position, 1.25 * self.WheelRadius)
         self.t2 = t21 + t22 + t23
+
+        t21 = transforms.Affine2D().translate(-zero_tick_position, 0.0)
+        if ANGLE_CONVENTION == 'CLOCK-NEG':
+            t22 = transforms.Affine2D().rotate(-self.zero_angle_shift)
+        elif ANGLE_CONVENTION == 'CLOCK-POS':
+            t22 = transforms.Affine2D().rotate(self.zero_angle_shift)
+        else:
+            raise ValueError('Unknown angle convention')
+        t23 = transforms.Affine2D().translate(zero_tick_position, 0.0)
+        self.t_zero_angle = t21 + t22 + t23
+
         # Draw Chassis
         self.Chassis.set_x(self.s[POSITION_IDX]*self.physical_to_graphics - (self.CartLength / 2.0))
         # Draw Wheels
@@ -1355,7 +1421,7 @@ class CartPole(EnvironmentBatched):
             self.Slider_Arrow.set_positions((self.slider_value, 0), (self.slider_value, 1.0))
 
         return self.Mast, self.t2, self.Chassis, self.WheelRight, self.WheelLeft,\
-               self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow
+               self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow, self.ZeroAngleTick, self.t_zero_angle
 
     # A function redrawing the changing elements of the Figure
     def run_animation(self, fig):
@@ -1366,19 +1432,22 @@ class CartPole(EnvironmentBatched):
             fig.AxCart.add_patch(self.WheelLeft)
             fig.AxCart.add_patch(self.WheelRight)
             fig.AxCart.add_patch(self.Acceleration_Arrow)
+            fig.AxCart.add_patch(self.ZeroAngleTick)
             fig.AxSlider.add_patch(self.Slider_Bar)
             fig.AxSlider.add_patch(self.Slider_Arrow)
             return self.Mast, self.Chassis, self.WheelLeft, self.WheelRight,\
-                   self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow
+                   self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow, self.ZeroAngleTick
 
         def animationManage(i):
             # Updating variable elements
             self.update_drawing()
             # Special care has to be taken of the mast rotation
             self.t2 = self.t2 + fig.AxCart.transData
+            self.t_zero_angle = self.t_zero_angle + fig.AxCart.transData
             self.Mast.set_transform(self.t2)
+            self.ZeroAngleTick.set_transform(self.t_zero_angle)
             return self.Mast, self.Chassis, self.WheelLeft, self.WheelRight,\
-                   self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow
+                   self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow, self.ZeroAngleTick
 
         # Initialize animation object
         anim = animation.FuncAnimation(fig, animationManage,

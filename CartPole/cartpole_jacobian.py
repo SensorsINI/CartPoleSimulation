@@ -3,12 +3,12 @@ from typing import Union
 
 import numpy as np
 
-from CartPole.cartpole_model import _cartpole_ode
+from CartPole.cartpole_equations import _cartpole_ode
 from CartPole.state_utilities import (
     create_cartpole_state,
     ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX
 )
-from others.p_globals import (
+from CartPole.cartpole_parameters import (
     k as param_k,
     m_cart as param_M,
     m_pole as param_m,
@@ -28,7 +28,7 @@ k, m_cart, m_pole, L, J_fric, M_fric, g = sym.symbols("k,M,m,L,J_fric,M_fric,g")
 
 xD = v
 tD = o
-oD, vD = _cartpole_ode(sym.cos(t), sym.sin(t), o, v, u)
+oD, vD = _cartpole_ode(sym.cos(t), sym.sin(t), o, v, u, k, m_cart, m_pole, g, J_fric, M_fric, L)
 
 
 xx = sym.diff(xD, x, 1)

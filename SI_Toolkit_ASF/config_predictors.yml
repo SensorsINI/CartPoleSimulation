@@ -1,7 +1,7 @@
 predictor_name_default: 'I_love_control'
 # If controller does not specify predictor_specification (leave empty)
 # a predictor from "predictors:predictor_name_default" from below is loaded
-# Check config.yml and config_testing.yml to learn more on how predictors are selected
+# Check config_testing.yml to learn more on how predictors are selected
 
 predictors:
   ### THESE ARE DEFAULT PREDICTORS! DON'T CHANGE THEM, RATHER ADD YOUR PREDICTOR BELOW
@@ -10,6 +10,7 @@ predictors:
     model_name: 'GRU-6IN-32H1-32H2-5OUT-0'
     path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-2/Models/'
     update_before_predicting: True
+    input_quantization: 'float'
   GP_default:
     predictor_type: 'GP'
     model_name: 'SGP_10'

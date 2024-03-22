@@ -1,7 +1,7 @@
 from CartPole import CartPole
 from CartPole.cartpole_model import create_cartpole_state, TrackHalfLength
 from others.globals_and_utils import create_rng, load_config
-from others.p_globals import TrackHalfLength
+from CartPole.cartpole_parameters import TrackHalfLength
 from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
 import os
