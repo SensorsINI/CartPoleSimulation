@@ -30,9 +30,9 @@ L:  # Pole half-length
   L_change_mode: step  # 'uniform' to sample uniformly from L_range, 'step' to change by constant step within the L_range
   L_step: 0.02  # Only for L_change_mode 'step'
 dt:
-  simulation: 0.0005  # simulation timestep, s
-  control: 0.005  # control rate, s
-  saving: 0.005  # save datapoints in csv in this interval, s
+  simulation: 0.002  # simulation timestep, s
+  control: 0.02  # control rate, s
+  saving: 0.02  # save datapoints in csv in this interval, s
 turning_points:
   track_relative_complexity: 1  # Randomly placed target points/s
   interpolation_type: '0-derivative-smooth'  # How to interpolate between turning points of random trace, Possible options: '0-derivative-smooth', 'linear', 'previous'
