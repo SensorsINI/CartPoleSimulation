@@ -1,5 +1,6 @@
 import os
 import timeit
+import shutil
 from time import sleep
 
 import numpy as np
@@ -11,6 +12,64 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 from others.globals_and_utils import create_rng, load_config
 from CartPole.cartpole_parameters import TrackHalfLength, L
+
+
+def get_record_path():
+    config_SI = load_config(os.path.join("SI_Toolkit_ASF", "config_training.yml"))
+    experiment_index = 1
+    while True:
+        record_path = "Experiment-" + str(experiment_index)
+        if os.path.exists(config_SI['paths']['PATH_TO_EXPERIMENT_FOLDERS'] + record_path):
+            experiment_index += 1
+        else:
+            record_path += "/Recordings"
+            break
+
+    record_path = config_SI['paths']['PATH_TO_EXPERIMENT_FOLDERS'] + record_path
+    return record_path
+
+
+def copy_configs(record_path):
+    # Copy configs at the moment of creation of dataset
+    try:
+        shutil.copy2(
+            os.path.join("CartPoleSimulation", "cartpole_physical_parameters.yml"),
+            os.path.join(record_path, "cartpole_physical_parameters.yml"))
+    except FileNotFoundError:
+        shutil.copy2(
+            "cartpole_physical_parameters.yml",
+            os.path.join(record_path, "cartpole_physical_parameters.yml"))
+
+
+    try:
+        shutil.copy2(
+            os.path.join("CartPoleSimulation", "config_data_gen.yml"),
+            os.path.join(record_path, "config_data_gen.yml"))
+    except FileNotFoundError:
+        shutil.copy2(
+            "config_data_gen.yml",
+            os.path.join(record_path, "config_data_gen.yml"))
+
+
+    shutil.copy2(
+        os.path.join("SI_Toolkit_ASF", "config_training.yml"),
+        os.path.join(record_path, "config_training.yml"))
+
+    shutil.copy2(
+        os.path.join("SI_Toolkit_ASF", "config_predictors.yml"),
+        os.path.join(record_path, "config_predictors.yml"))
+
+    shutil.copy2(
+        os.path.join("Control_Toolkit_ASF", "config_controllers.yml"),
+        os.path.join(record_path, "config_controllers.yml"))
+
+    shutil.copy2(
+        os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"),
+        os.path.join(record_path, "config_cost_function.yml"))
+
+    shutil.copy2(
+        os.path.join("Control_Toolkit_ASF", "config_optimizers.yml"),
+        os.path.join(record_path, "config_optimizers.yml"))
 
 
 class random_experiment_setter:
@@ -196,8 +255,20 @@ def generate_random_initial_state(init_state_stub, init_limits, rng):
     return initial_state_post
 
 
-def run_data_generator(run_for_ML_Pipeline=False, record_path=None):
+def run_data_generator(record_path=None):
     config = load_config("config_data_gen.yml")
+
+    if config["ML_Pipeline_mode"]:
+        run_for_ML_Pipeline = True
+        record_path = get_record_path()
+
+        # Save copy of configs in experiment folder
+        if not os.path.exists(record_path):
+            os.makedirs(record_path)
+
+        copy_configs(record_path)
+    else:
+        run_for_ML_Pipeline = False
 
     if record_path is None:
         record_path = config["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
