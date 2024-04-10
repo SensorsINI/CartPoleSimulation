@@ -28,7 +28,7 @@ from numba import jit
 from numpy.random import SFC64, Generator
 from CartPole.cartpole_parameters import TrackHalfLength
 from scipy.interpolate import interp1d
-from SI_Toolkit.Predictors.predictor_ODE_numba import predictor_ODE_numba
+from SI_Toolkit.Predictors.predictor_ODE_v0 import predictor_ODE_v0
 from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper
 
 # from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
@@ -60,7 +60,7 @@ if predictor.predictor_config['predictor_type'] == 'neural':
 else:
     NET_TYPE = None
 
-predictor_ground_truth = predictor_ODE_numba(
+predictor_ground_truth = predictor_ODE_v0(
     horizon=mpc_horizon, dt=dt, intermediate_steps=10
 )
 

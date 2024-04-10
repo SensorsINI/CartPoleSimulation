@@ -43,7 +43,7 @@ It should be also possible to create this file with `conda list -e > requirement
 
 ## Basic Operation
 1. **Run GUI:** Run `python run_cartpole_gui.py` from top-level path.
-2. **Run a single experiment:** Open `run_data_generator.py`. In the marked section, you can define your experiment. For a single run, set `number_of_experiments = 1`. Then open `./config.yml` to modify controller-related parameters. For example, you can choose there whether MPPI should run with the true model ('predictor_ODE_numba' == Euler Integrator) or with a neural network ('predictor_autoregressive_neural'). Once set, run `python -m run_data_generator`. It will create a new folder `./Experiment_Recordings/` and store a csv log file in it.
+2. **Run a single experiment:** Open `run_data_generator.py`. In the marked section, you can define your experiment. For a single run, set `number_of_experiments = 1`. Then open `./config.yml` to modify controller-related parameters. For example, you can choose there whether MPPI should run with the true model ('predictor_ODE_v0' == Euler Integrator) or with a neural network ('predictor_autoregressive_neural'). Once set, run `python -m run_data_generator`. It will create a new folder `./Experiment_Recordings/` and store a csv log file in it.
 
 ## Run a Machine Learning Pipeline
 

@@ -15,8 +15,8 @@ predictors:
     predictor_type: 'GP'
     model_name: 'SGP_10'
     path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-2/Models/'
-  ODE_numba_default:
-    predictor_type: 'ODE_numba'
+  ODE_v0_default:
+    predictor_type: 'ODE_v0'
     model_name:
     intermediate_steps: 10
   ODE_default:
@@ -27,7 +27,7 @@ predictors:
   # ADD YOUR PREDICTORS BELOW
 
   I_love_control:
-    predictor_type: 'neural'  # Possible options are: 'neural', 'GP', 'ODE, 'ODE_numba'
+    predictor_type: 'neural'  # Possible options are: 'neural', 'GP', 'ODE, 'ODE_v0'
     model_name: 'GRU-6IN-32H1-32H2-5OUT-2'
     path_to_model: './SI_Toolkit_ASF/Experiments/Experiment-2/Models/'
     update_before_predicting: True
