@@ -1,11 +1,22 @@
-from SI_Toolkit.computation_library import NumpyLibrary
+"""
+This is an application specific part of predictor_ODE_numba.py.
+The predictor will search in this file for the next_state_predictor_ODE_numba,
+a function which given a state returns next state.
+STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, providing information about system state and control components
+need to be either defined here or imported into here.
+"""
 
-import numpy as np
+# The STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS import is needed
+# as from here the variables are imported to other files
+from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS
 
-from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, create_cartpole_state
-
+# What is below serves defining next_state_predictor_ODE_numba, a function which given a state returns next state.
+from CartPole.state_utilities import create_cartpole_state
 from CartPole.cartpole_equations import CartPoleEquations
 from CartPole.cartpole_numba import cartpole_fine_integration_numba_interface
+
+from SI_Toolkit.computation_library import NumpyLibrary
+import numpy as np
 
 
 class next_state_predictor_ODE_numba:

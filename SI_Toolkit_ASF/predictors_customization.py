@@ -1,12 +1,25 @@
-from typing import Callable, Optional
+"""
+This is an application specific part of predictor_ODE.py.
+The predictor will search in this file for the next_state_predictor_ODE,
+a function which given a state returns next state.
+
+STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, providing information about system state and control components
+need to be either defined here or imported into here.
+
+A class predictor_output_augmentation which is used to augment the output of the neural predictor.
+E.g. the neural network predicts sin and cos this class can take care of adding angle to the predictor output.
+"""
+
+# The STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS import is needed
+# as from here the variables are imported to other files
+from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, CONTROL_INDICES
+
 from SI_Toolkit.computation_library import NumpyLibrary
 from CartPole.cartpole_equations import CartPoleEquations
 
-from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, CONTROL_INDICES, create_cartpole_state
-from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITIOND_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
-
 from SI_Toolkit.Functions.TF.Compile import CompileAdaptive
 
+from CartPole.state_utilities import ANGLE_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
 class next_state_predictor_ODE:
 
@@ -31,11 +44,6 @@ class next_state_predictor_ODE:
             self.step = CompileAdaptive(self._step)
 
     def _step(self, s, Q):
-
-        # assert does not work with CompileAdaptive, but left here for information
-        # assert Q.shape[0] == s.shape[0]
-        # assert Q.ndim == 2
-        # assert s.ndim == 2
 
         if self.variable_parameters is not None and hasattr(self.variable_parameters, 'L'):
             pole_half_length = self.lib.to_tensor(self.variable_parameters.L, dtype=self.lib.float32)
