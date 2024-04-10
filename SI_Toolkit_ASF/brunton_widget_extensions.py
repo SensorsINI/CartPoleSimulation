@@ -4,6 +4,7 @@ get_feature_label allows replacing feature names with more descriptive labels.
 convert_units_inplace converts units of the data to the desired units for display only.
 All changes are done for GUI only, no changes to underlying dataset.
 """
+
 import numpy as np
 
 def get_feature_label(feature):
