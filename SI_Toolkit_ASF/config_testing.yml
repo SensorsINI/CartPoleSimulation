@@ -6,7 +6,7 @@ predictors_specifications_testing: ['I_love_control', 'I_love_control_too', 'GRU
 # For multiple network they must be in the same folder specified in predictors:neural_default:path_to_model
 # One can also specify full path to each model as name,
 # in this case the path from predictors:neural_default:path_to_model get overwritten
-# Where multiple ODE models are available, one can specify the name after colon e.g. ["ODE_TF:simple", "ODE:st"]
+# Where multiple ODE models are available, one can specify the name after colon e.g. ["ODE:simple", "ODE:st"]
 # In this case name from predictor_config is getting overwritten
 
 test_file: 'Experiment-1.csv'

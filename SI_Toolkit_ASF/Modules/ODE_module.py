@@ -11,7 +11,7 @@ from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper
 # This is a custom keras model for the ODE model of the car dynamics
 # It is not a real network, but it can calculate the ODE with neuw paramteres without recompiling the TensorFlow Graph
 
-predictor_specification = "ODE_TF"
+predictor_specification = "ODE"
 dt = 0.02
 trainable_params = ['u_max']
 

@@ -505,7 +505,7 @@ class controller_mppi_cartpole(template_controller):
                 # Compute one rollout of shape (mpc_horizon + 1) x s.size
                 if predictor.predictor_type == "ODE":
                     rollout_trajectory = predictor.predict(np.copy(self.s), self.u[:, np.newaxis])
-                elif predictor.predictor_type in ["neural", "ODE_TF", "GP"]:
+                elif predictor.predictor_type in ["neural", "ODE", "GP"]:
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     # FIXME: Problaby you can reduce it!
 
