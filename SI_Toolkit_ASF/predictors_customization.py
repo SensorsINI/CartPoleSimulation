@@ -52,7 +52,7 @@ class next_state_predictor_ODE:
         return self.step(s, Q)
 
 
-class predictor_output_augmentation_tf:
+class predictor_output_augmentation:
     def __init__(self, net_info, lib=NumpyLibrary, disable_individual_compilation=False, differential_network=False):
 
         self.lib = lib
