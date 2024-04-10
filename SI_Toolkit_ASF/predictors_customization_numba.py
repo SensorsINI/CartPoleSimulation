@@ -8,7 +8,7 @@ from CartPole.cartpole_equations import CartPoleEquations
 from CartPole.cartpole_numba import cartpole_fine_integration_numba_interface
 
 
-class next_state_predictor_ODE:
+class next_state_predictor_ODE_numba:
 
     def __init__(self,
                  dt: float,
