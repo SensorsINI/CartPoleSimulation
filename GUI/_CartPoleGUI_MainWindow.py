@@ -12,6 +12,7 @@ import numpy as np
 import time
 
 import sys
+import os
 
 from CartPole.cartpole_parameters import (
     TrackHalfLength,
@@ -45,7 +46,6 @@ import csv
 from CartPole import CartPole
 from CartPole.state_utilities import ANGLED_IDX, ANGLE_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
 
-from GUI.gui_default_params import *
 from GUI.loop_timer import loop_timer
 from GUI._CartPoleGUI_worker_template import Worker
 from GUI._CartPoleGUI_summary_window import SummaryWindow
@@ -56,12 +56,46 @@ except:
     pass
 from GUI._ControllerGUI_NoiseOptionsWindow import NoiseOptionsWindow
 
+from others.globals_and_utils import load_config
+
 
 # Class implementing the main window of CartPole GUI
 class MainWindow(QMainWindow):
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
+
+        # Import variables from config
+        config = load_config('config_gui.yml')
+
+        dt_simulation = config['time_scales']['dt_simulation']
+        controller_update_interval = config['time_scales']['controller_update_interval']
+        save_interval = config['time_scales']['save_interval']
+
+        controller_init_cpp = config['gui_settings']['controller_init_cpp']
+        controller_init_cps = config['gui_settings']['controller_init_cps']
+
+        if os.getcwd().split(os.sep)[-1] == 'Driver':
+            controller_init = controller_init_cpp  # Load as default if loaded as part of physical-cartpole
+        else:
+            controller_init = controller_init_cps  # Load as default if loaded as cartpole simulator stand alone
+
+        save_history_init = config['gui_settings']['save_history_init']
+        show_experiment_summary_init = config['gui_settings']['show_experiment_summary_init']
+        stop_at_90_init = config['gui_settings']['stop_at_90_init']
+        slider_on_click_init = config['gui_settings']['slider_on_click_init']
+        simulator_mode_init = config['gui_settings']['simulator_mode_init']
+        speedup_init = config['gui_settings']['speedup_init']
+        show_hanging_pole_init = config['gui_settings']['show_hanging_pole_init']
+
+        self.track_relative_complexity_init = config['random_trace_generation']['track_relative_complexity_init']
+        self.length_of_experiment_init = config['random_trace_generation']['length_of_experiment_init']
+        self.interpolation_type_init = config['random_trace_generation']['interpolation_type_init']
+        self.turning_points_period_init = config['random_trace_generation']['turning_points_period_init']
+        self.start_random_target_position_at_init = config['random_trace_generation']['start_random_target_position_at_init']
+        self.end_random_target_position_at_init = config['random_trace_generation']['end_random_target_position_at_init']
+        self.turning_points_init = config['random_trace_generation'].get('turning_points_init',
+                                                                    None)  # Using .get for optional keys
 
         # region Create CartPole instance and load initial settings
 
@@ -814,7 +848,7 @@ class MainWindow(QMainWindow):
             self.CartPoleInstance.use_pregenerated_target_position = True
 
             if self.textbox_length.text() == '':
-                self.CartPoleInstance.length_of_experiment = length_of_experiment_init
+                self.CartPoleInstance.length_of_experiment = self.length_of_experiment_init
             else:
                 self.CartPoleInstance.length_of_experiment = float(self.textbox_length.text())
 
@@ -887,13 +921,13 @@ class MainWindow(QMainWindow):
 
     # Set parameters from gui_default_parameters related to generating a random experiment target position
     def set_random_experiment_generator_init_params(self):
-        self.CartPoleInstance.track_relative_complexity = track_relative_complexity_init
-        self.CartPoleInstance.length_of_experiment = length_of_experiment_init
-        self.CartPoleInstance.interpolation_type = interpolation_type_init
-        self.CartPoleInstance.turning_points_period = turning_points_period_init
-        self.CartPoleInstance.start_random_target_position_at = start_random_target_position_at_init
-        self.CartPoleInstance.end_random_target_position_at = end_random_target_position_at_init
-        self.CartPoleInstance.turning_points = turning_points_init
+        self.CartPoleInstance.track_relative_complexity = self.track_relative_complexity_init
+        self.CartPoleInstance.length_of_experiment = self.length_of_experiment_init
+        self.CartPoleInstance.interpolation_type = self.interpolation_type_init
+        self.CartPoleInstance.turning_points_period = self.turning_points_period_init
+        self.CartPoleInstance.start_random_target_position_at = self.start_random_target_position_at_init
+        self.CartPoleInstance.end_random_target_position_at = self.end_random_target_position_at_init
+        self.CartPoleInstance.turning_points = self.turning_points_init
 
     # Method resetting variables which change during experimental run
     def reset_variables(self, reset_mode=1, s=None, target_position=None):
