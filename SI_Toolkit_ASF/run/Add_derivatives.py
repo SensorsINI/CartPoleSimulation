@@ -1,4 +1,4 @@
-from SI_Toolkit.load_and_normalize import transform_dataset
+from SI_Toolkit.data_preprocessing import transform_dataset
 
 get_files_from = 'SI_Toolkit_ASF/Experiments/Pretrained-RNN-1-Derivative/Recordings/Train'
 save_files_to = get_files_from
