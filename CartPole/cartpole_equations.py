@@ -53,7 +53,7 @@ def _cartpole_ode(ca, sa, angleD, positionD, u,
     :param g: gravity in m/s^2
     :param J_fric and M_fric: friction coefficients in Nm per rad/s of pole  TODO check correct
     :param  M_fric: friction coefficient of cart in N per m/s TODO check correct
-    :param L: length of pole in meters.
+    :param L: half-length of pole in meters.
 
     :param u: Force applied on cart in unnormalized range TODO what does this mean?
 
