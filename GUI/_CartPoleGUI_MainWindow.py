@@ -994,18 +994,27 @@ class MainWindow(QMainWindow):
     # The method is evoked after QUIT button is pressed
     # TODO: Can we connect it somehow also the the default cross closing the application?
     def quit_application(self):
-        # Stops animation (updating changing elements of the Figure)
-        self.anim._stop()
+        # Stops animation (updating changing elements of the Figure) if the event source exists
+        if self.anim and self.anim.event_source:
+            self.anim.event_source.remove_callback(self.anim._step)
+            self.anim.event_source = None
         # Stops the two threads updating the GUI labels and updating the state of Cart instance
         self.run_set_labels_thread = False
         self.terminate_experiment_or_replay_thread = True
         self.pause_experiment_or_replay_thread = False
         # Closes the GUI window
         self.close()
+
+        self.threadpool.clear()
+        self.threadpool.waitForDone()
+
         # The standard command
         # It seems however not to be working by its own
         # I don't know how it works
         QApplication.quit()
+
+    def closeEvent(self, event):
+        self.quit_application()
 
     # endregion
 
