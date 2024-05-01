@@ -1,4 +1,4 @@
-# README
+# Cartpole Simulator
 
 ![Alt Text](https://raw.githubusercontent.com/SensorsINI/CartPoleSimulation/master/others/Media/CartPoleSimulator.gif "CartPole Simulator Demo")
 
