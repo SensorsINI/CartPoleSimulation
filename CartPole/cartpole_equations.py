@@ -6,6 +6,9 @@ from CartPole.cartpole_parameters import CartPoleParameters, TrackHalfLength
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 
+from scipy.integrate import solve_ivp
+import numpy as np
+
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
@@ -145,6 +148,9 @@ class CartPoleEquations:
         else:
             self._cartpole_ode = _cartpole_ode
             self.edge_bounce = edge_bounce
+            # if lib == NumpyLibrary:
+            #     self.cartpole_integration = self._cartpole_integration_scipy
+            # else:
             self.cartpole_integration = self._cartpole_integration
 
 
@@ -240,8 +246,27 @@ class CartPoleEquations:
 
         return angle, angleD, position, positionD, angle_cos, angle_sin
 
+    # def cartpole_dynamics(self, t, y, u):
+    #     angle, angleD, position, positionD  = y
+    #
+    #     angleDD, positionDD = _cartpole_ode(np.cos(angle), np.sin(angle), angleD, positionD, u,
+    #                       self.params.k, self.params.m_cart, self.params.m_pole, self.params.g, self.params.J_fric, self.params.M_fric, self.params.L)
+    #
+    #     return [angleD, angleDD, positionD, positionDD]
+    #
+    #
+    # def _cartpole_integration_scipy(self, angle, angleD, angleDD, position, positionD, positionDD, t_step, u):
+    #     y0 = [angle, angleD, position, positionD]
+    #     t_span = [0, t_step]
+    #
+    #     sol = solve_ivp(self.cartpole_dynamics, t_span, y0, args=(u,), method='RK45')
+    #
+    #     angle_next, angleD_next, position_next, positionD_next = sol.y[:, -1]
+    #
+    #     return angle_next, angleD_next, position_next, positionD_next
+
     @CompileAdaptive
-    def _cartpole_integration(self, angle, angleD, angleDD, position, positionD, positionDD, t_step):
+    def _cartpole_integration(self, angle, angleD, angleDD, position, positionD, positionDD, t_step, u=None):
         angle_next = self.euler_step(angle, angleD, t_step)
         angleD_next = self.euler_step(angleD, angleDD, t_step)
         position_next = self.euler_step(position, positionD, t_step)
