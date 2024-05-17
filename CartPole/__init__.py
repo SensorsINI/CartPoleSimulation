@@ -559,7 +559,7 @@ class CartPole(EnvironmentBatched):
                 csv_name = create_csv_file_name(self.controller, self.controller_name, self.optimizer_name)
             csv_title = create_csv_title()
             header = create_csv_header(self, length_of_experiment)
-            self.csv_filepath = create_csv_file(csv_name, self.dict_history,
+            self.csv_filepath = create_csv_file(csv_name, self.dict_history.keys(),
                                                 path_to_experiment_recordings=self.path_to_experiment_recordings,
                                                 title=csv_title, header=header)
         else:

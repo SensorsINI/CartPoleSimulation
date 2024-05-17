@@ -8,7 +8,7 @@ from datetime import datetime
 
 
 
-def create_csv_file(csv_name, dict_history, path_to_experiment_recordings=None,
+def create_csv_file(csv_name, keys, path_to_experiment_recordings=None,
                     title='', header=[]):
     csv_filepath = _create_csv_file_path(csv_name, path_to_experiment_recordings)
 
@@ -19,7 +19,7 @@ def create_csv_file(csv_name, dict_history, path_to_experiment_recordings=None,
 
         writer.writerow(['# ' + title])
 
-        repo = Repo()
+        repo = Repo(search_parent_directories=True)
         git_revision = repo.head.object.hexsha
         writer.writerow(['# ' + 'Done with git-revision: {}'
                         .format(git_revision)])
@@ -27,7 +27,7 @@ def create_csv_file(csv_name, dict_history, path_to_experiment_recordings=None,
         writer.writerow(['#'])
         for line in header:
             writer.writerow(['# ' + line])
-        writer.writerow(dict_history.keys())
+        writer.writerow(keys)
 
     return csv_filepath
 
@@ -92,13 +92,26 @@ def _create_csv_file_path(csv_name, path_to_experiment_recordings=None):
 
 # Specific for Simulated Cartpole
 
-def create_csv_file_name(controller, controller_name, optimizer_name):
-    if controller.has_optimizer:
-        name_controller = controller_name + '_' + optimizer_name
+
+def create_csv_file_name(controller='', controller_name='', optimizer_name='',
+                         prefix='CPS', with_date=True, title=''):
+
+    if with_date:
+        date = str(datetime.now().strftime('_%Y-%m-%d_%H-%M-%S'))
     else:
-        name_controller = controller_name
-    csv_filename = 'CPS_' + name_controller + str(
-        datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')) + '.csv'
+        date = ''
+
+    if controller_name == '':
+        name_controller = ''
+    elif controller.has_optimizer:
+        name_controller = '_' + controller_name + '_' + optimizer_name
+    else:
+        name_controller = '_' + controller_name
+
+    if title != '':
+        title = '_' + title
+
+    csv_filename = prefix + title + name_controller + date + '.csv'
 
     return csv_filename
 
