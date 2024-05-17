@@ -326,7 +326,7 @@ edge_bounce_numba = jit(edge_bounce, nopython=True, cache=True, fastmath=True)
 
 
 @jit(nopython=True, cache=True, fastmath=True)
-def cartpole_integration_numba(angle, angleD, angleDD, position, positionD, positionDD, t_step, ):
+def cartpole_integration_numba(angle, angleD, angleDD, position, positionD, positionDD, t_step, u=None):
     angle_next = euler_step_numba(angle, angleD, t_step)
     angleD_next = euler_step_numba(angleD, angleDD, t_step)
     position_next = euler_step_numba(position, positionD, t_step)
