@@ -99,14 +99,14 @@ def _cartpole_ode(ca, sa, angleD, positionD, u,
 
     # making M go to infinity makes angleDD = (g/k*L)sin(angle) - angleD*J_fric/(k*m*L^2)
     # This is the same as equation derived directly for a pendulum.
-    # k is 4/3! It is the factor for pendulum with length 2L: I = k*m*L^2
+    # k is 1/3! It is the factor for pendulum with length 2L: I = k*m*L^2
 
     return angleDD, positionDD
 
 def cartpole_energy(ca, angleD, positionD,
                   m_cart, m_pole, g, L):
     T_cart = m_cart * positionD ** 2 / 2
-    T_pole_trans = m_pole * (positionD ** 2 - 2 * L * angleD * positionD * ca + L ** 2 * angleD ** 2) / 2
+    T_pole_trans = m_pole * (positionD ** 2 - 2 * L * angleD * positionD * ca) / 2
     T_pole_rot = 2/3 * m_pole * L ** 2 * angleD ** 2
     V_pole = m_pole * g * L * ca
 
