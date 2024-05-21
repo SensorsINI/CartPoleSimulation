@@ -123,6 +123,6 @@ def calculete_additional_metrics(ground_truth, predictions_list):
         predictions_array = np.concatenate((predictions_array, new_data), axis=-1)
         features = np.array(list(features) + ['E_total', 'T_cart', 'T_pole', 'T_pole_rot', 'V_pole'])
 
-        predictions_list[i] = (predictions_array, features, time_axis)
+        predictions_list[i] = [predictions_array, features, time_axis]
 
     return ground_truth, predictions_list
