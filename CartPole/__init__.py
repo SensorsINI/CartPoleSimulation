@@ -820,6 +820,8 @@ class CartPole(EnvironmentBatched):
         else:
             raise ValueError('Unknown save mode value')
 
+        self.cartpole_ode()
+
         # Create csv file for saving
         self.save_history_csv(csv_name=csv, mode='init', length_of_experiment=self.length_of_experiment)
 
