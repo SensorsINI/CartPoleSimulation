@@ -553,14 +553,22 @@ class CartPole(EnvironmentBatched):
     # region 2. Methods related to experiment history as a whole: saving, loading, plotting, resetting
 
     # This method saves the dictionary keeping the history of simulation to a .csv file
-    def save_history_csv(self, csv_name=None, mode='init', length_of_experiment='unknown'):
+    def save_history_csv(
+            self,
+            csv_name=None,
+            mode='init',
+            length_of_experiment='unknown',
+            path_to_experiment_recordings=None):
+
         if mode == 'init':
             if csv_name is None or csv_name == '':
                 csv_name = create_csv_file_name(self.controller, self.controller_name, self.optimizer_name)
             csv_title = create_csv_title()
             header = create_csv_header(self, length_of_experiment)
+            if path_to_experiment_recordings is None:
+                path_to_experiment_recordings = self.path_to_experiment_recordings
             self.csv_filepath = create_csv_file(csv_name, self.dict_history.keys(),
-                                                path_to_experiment_recordings=self.path_to_experiment_recordings,
+                                                path_to_experiment_recordings=path_to_experiment_recordings,
                                                 title=csv_title, header=header)
         else:
             save_data_to_csv_file(self.csv_filepath, self.dict_history, self.rounding_decimals, mode=mode)
@@ -805,6 +813,7 @@ class CartPole(EnvironmentBatched):
     # @profile(precision=4)
     def run_cartpole_random_experiment(self,
                                        csv=None,
+                                       path_to_experiment_recordings=None,
                                        save_mode='offline',
                                        show_summary_plots=True
                                        ):
@@ -823,7 +832,12 @@ class CartPole(EnvironmentBatched):
         self.cartpole_ode()
 
         # Create csv file for saving
-        self.save_history_csv(csv_name=csv, mode='init', length_of_experiment=self.length_of_experiment)
+        self.save_history_csv(
+            csv_name=csv,
+            mode='init',
+            length_of_experiment=self.length_of_experiment,
+            path_to_experiment_recordings=path_to_experiment_recordings,
+        )
 
         # Save 0th timestep
         if save_mode == 'online':
