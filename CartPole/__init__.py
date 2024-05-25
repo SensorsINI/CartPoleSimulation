@@ -7,12 +7,11 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 @author: Marcin
 """
 # Import module to save history of the simulation as csv file
-import csv
+
 # Import module to interact with OS
 import os
 import traceback
 # Import module to get a current time and date used to name the files containing the history of simulations
-from datetime import datetime
 import timeit
 # To detect the latest csv file
 
@@ -44,12 +43,6 @@ s0 = create_cartpole_state()
 
 # region Imported modules
 
-try:
-    # Use gitpython to get a current revision number and use it in description of experimental data
-    from git import Repo
-except:
-    pass
-
 # check memory usage of chosen methods. Commented by default
 # from memory_profiler import profile
 
@@ -65,6 +58,10 @@ from random import random
 
 # Angle convention to rotate the mast in right direction - depends on used Equation
 from CartPole.cartpole_equations import ANGLE_CONVENTION, CartPoleEquations
+
+from CartPole.csv_logger import create_csv_file_name, create_csv_title, create_csv_header, create_csv_file, save_data_to_csv_file
+
+from SI_Toolkit.Functions.FunctionalDict import FunctionalDict, HistoryClass
 
 # Set the font parameters for matplotlib figures
 font = {'size': 22}
@@ -217,7 +214,37 @@ class CartPole(EnvironmentBatched):
         #                                                    not to take target position from environment
         # endregion and
 
-        self.dict_history = {}  # Dictionary holding the experiment history
+        self.variables_to_log = FunctionalDict(
+            {
+                'time': lambda: self.time,
+
+                'angle': lambda: self.s[ANGLE_IDX],
+                'angleD': lambda: self.s[ANGLED_IDX],
+                'angleDD': lambda: self.angleDD,
+                'angle_cos': lambda: self.s[ANGLE_COS_IDX],
+                'angle_sin': lambda: self.s[ANGLE_SIN_IDX],
+                'position': lambda: self.s[POSITION_IDX],
+                'positionD': lambda: self.s[POSITIOND_IDX],
+                'positionDD': lambda: self.positionDD,
+
+                'Q_calculated': lambda: self.Q_calculated,
+                'Q_applied': lambda: self.Q_applied,
+                'u': lambda: self.u,
+
+                # The target_position is not always meaningful
+                # If it is not meaningful all values in this column are set to 0
+                'target_position': lambda: self.target_position,
+                'target_equilibrium': lambda: self.target_equilibrium,
+
+                'L': lambda: float(L),
+
+                'Q_update_time': lambda: self.Q_update_time,
+
+            }
+        )
+
+        self.dict_history = HistoryClass()  # Class holding the history of the simulation
+        self.dict_history.add_keys(keys=self.variables_to_log.keys())
 
         # region Variables initialization for drawing/animating a CartPole
         # DIMENSIONS OF THE DRAWING ONLY!!!
@@ -424,73 +451,29 @@ class CartPole(EnvironmentBatched):
             # It is saved first internally to a dictionary in the Cart instance
             if self.save_data_in_cart:
 
-                # Saving simulation data
-                self.dict_history['time'].append(self.time)
-
-                self.dict_history['angle'].append(self.s[ANGLE_IDX])
-                self.dict_history['angleD'].append(self.s[ANGLED_IDX])
-                self.dict_history['angleDD'].append(self.angleDD)
-                self.dict_history['angle_cos'].append(self.s[ANGLE_COS_IDX])
-                self.dict_history['angle_sin'].append(self.s[ANGLE_SIN_IDX])
-                self.dict_history['position'].append(self.s[POSITION_IDX])
-                self.dict_history['positionD'].append(self.s[POSITIOND_IDX])
-                self.dict_history['positionDD'].append(self.positionDD)
-
-                self.dict_history['Q_calculated'].append(self.Q_calculated)
-                self.dict_history['Q_applied'].append(self.Q_applied)
-                self.dict_history['u'].append(self.u)
-
-                # The target_position is not always meaningful
-                # If it is not meaningful all values in this column are set to 0
-                self.dict_history['target_position'].append(self.target_position)
-                self.dict_history['target_equilibrium'].append(self.target_equilibrium)
-
-                self.dict_history['L'].append(float(L))
-
-                self.dict_history['Q_update_time'].append(self.Q_update_time)
+                self.dict_history.update_history(self.variables_to_log)
 
                 try:
-                    for key, value in self.controller.controller_data_for_csv.items():
-                        self.dict_history[key].append(value[0])
+                    self.dict_history.update_history(self.controller.controller_data_for_csv)
                 except AttributeError:
                     pass
                 except Exception:
                     print(traceback.format_exc())
 
             else:
-
-                self.dict_history = {
-                                     'time': [self.time],
-
-                                     'angle': [self.s[ANGLE_IDX]],
-                                     'angleD': [self.s[ANGLED_IDX]],
-                                     'angleDD': [self.angleDD],
-                                     'angle_cos': [self.s[ANGLE_COS_IDX]],
-                                     'angle_sin': [self.s[ANGLE_SIN_IDX]],
-                                     'position': [self.s[POSITION_IDX]],
-                                     'positionD': [self.s[POSITIOND_IDX]],
-                                     'positionDD': [self.positionDD],
-
-
-                                     'Q_calculated': [self.Q_calculated],
-                                     'Q_applied': [self.Q_applied],
-                                     'u': [self.u],
-
-                                     'target_position': [self.target_position],
-                                     'target_equilibrium': [self.target_equilibrium],
-
-                                     'L': [float(L)],
-
-                                     'Q_update_time': [self.Q_update_time],
-
-                                     }
+                # TODO: This is probably inefficient to recreate dict_history every time
+                self.dict_history = HistoryClass()
+                self.dict_history.add_keys(keys=self.variables_to_log.keys())
 
                 try:
-                    self.dict_history.update(self.controller.controller_data_for_csv)
+                    self.dict_history.add_keys(self.controller.controller_data_for_csv.keys())
+                    self.dict_history.update_history(self.controller.controller_data_for_csv)
                 except AttributeError:
                     pass
                 except Exception:
                     print(traceback.format_exc())
+
+                self.dict_history.update_history(self.variables_to_log)
 
                 self.save_flag = True
 
@@ -504,7 +487,7 @@ class CartPole(EnvironmentBatched):
         """
 
         self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = \
-            self.cpe.cartpole_integration(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD, self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation,)
+            self.cpe.cartpole_integration(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD, self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation, u=self.u)
 
 
     def edge_bounce(self):
@@ -571,112 +554,17 @@ class CartPole(EnvironmentBatched):
 
     # This method saves the dictionary keeping the history of simulation to a .csv file
     def save_history_csv(self, csv_name=None, mode='init', length_of_experiment='unknown'):
-
         if mode == 'init':
-
-            # Make folder to save data (if not yet existing)
-            try:
-                os.makedirs(self.path_to_experiment_recordings[:-1])
-            except FileExistsError:
-                pass
-
-            # Set path where to save the data
             if csv_name is None or csv_name == '':
-                if self.controller.has_optimizer:
-                    name_controller = self.controller_name + '_' + self.optimizer_name
-                else:
-                    name_controller = self.controller_name
-                self.csv_filepath = self.path_to_experiment_recordings + 'CP_' + name_controller + str(
-                    datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')) + '.csv'
-            else:
-                self.csv_filepath = csv_name
-                if csv_name[-4:] != '.csv':
-                    self.csv_filepath += '.csv'
+                csv_name = create_csv_file_name(self.controller, self.controller_name, self.optimizer_name)
+            csv_title = create_csv_title()
+            header = create_csv_header(self, length_of_experiment)
+            self.csv_filepath = create_csv_file(csv_name, self.dict_history.keys(),
+                                                path_to_experiment_recordings=self.path_to_experiment_recordings,
+                                                title=csv_title, header=header)
+        else:
+            save_data_to_csv_file(self.csv_filepath, self.dict_history, self.rounding_decimals, mode=mode)
 
-                # If such file exists, append index to the end (do not overwrite)
-                net_index = 1
-                logpath_new = self.csv_filepath
-                while True:
-                    if os.path.isfile(logpath_new):
-                        logpath_new = self.csv_filepath[:-4]
-                    else:
-                        self.csv_filepath = logpath_new
-                        break
-                    logpath_new = logpath_new + '-' + str(net_index) + '.csv'
-                    net_index += 1
-
-            print('Saving to the file: {}'.format(self.csv_filepath))
-            # Write the .csv file
-            with open(self.csv_filepath, "a", newline='') as outfile:
-                writer = csv.writer(outfile)
-
-                writer.writerow(['# ' + 'This is CartPole simulation from {} at time {}'
-                                .format(datetime.now().strftime('%d.%m.%Y'), datetime.now().strftime('%H:%M:%S'))])
-                try:
-                    repo = Repo()
-                    git_revision = repo.head.object.hexsha
-                except:
-                    git_revision = 'unknown'
-                writer.writerow(['# ' + 'Done with git-revision: {}'
-                                .format(git_revision)])
-
-                writer.writerow(['#'])
-                writer.writerow(['# Length of experiment: {} s'.format(str(length_of_experiment))])
-
-                writer.writerow(['#'])
-                writer.writerow(['# Time intervals dt:'])
-                writer.writerow(['# Simulation: {} s'.format(str(self.dt_simulation))])
-                writer.writerow(['# Controller update: {} s'.format(str(self.dt_controller))])
-                writer.writerow(['# Saving: {} s'.format(str(self.dt_save))])
-
-                writer.writerow(['#'])
-
-                writer.writerow(['# Controller: {}'.format(self.controller_name)])
-                if self.optimizer_name:
-                    writer.writerow(['# MPC Optimizer: {}'.format(self.optimizer_name)])
-
-                writer.writerow(['#'])
-                writer.writerow(['# Parameters:'])
-                for param_name in self.cpe.params.__dict__:
-                    parameter = getattr(self.cpe.params, param_name)
-                    if isinstance(parameter, dict):
-                        dict_string = ' '.join(f"{key}: {value};" for key, value in parameter.items())
-                        writer.writerow(['# ' + param_name + ':' + str(dict_string)])
-                    else:
-                        if param_name != 'lib':
-                            writer.writerow(['# ' + param_name + ': ' + str(parameter)])
-                writer.writerow(['#'])
-
-                writer.writerow(['# Data:'])
-                writer.writerow(self.dict_history.keys())
-
-        elif mode == 'save online':
-
-            # Save this dict
-            with open(self.csv_filepath, "a", newline='') as outfile:
-                writer = csv.writer(outfile)
-                if self.rounding_decimals == np.inf:
-                    pass
-                else:
-                    self.dict_history = {key: np.around(value, self.rounding_decimals)
-                                         for key, value in self.dict_history.items()}
-                writer.writerows(zip(*self.dict_history.values()))
-            self.save_now = False
-
-        elif mode == 'save offline':
-            # Round data to a set precision
-            with open(self.csv_filepath, "a", newline='') as outfile:
-                writer = csv.writer(outfile)
-                if self.rounding_decimals == np.inf:
-                    pass
-                else:
-                    self.dict_history = {key: np.around(value, self.rounding_decimals)
-                                         for key, value in self.dict_history.items()}
-                writer.writerows(zip(*self.dict_history.values()))
-            self.save_now = False
-            # Another possibility to save data.
-            # DF_history = pd.DataFrame.from_dict(self.dict_history).round(self.rounding_decimals)
-            # DF_history.to_csv(self.csv_filepath, index=False, header=False, mode='a') # Mode (a)ppend
 
     # load csv file with experiment recording (e.g. for replay)
     def load_history_csv(self, csv_name=None):
@@ -966,7 +854,6 @@ class CartPole(EnvironmentBatched):
 
             if save_mode == 'online' and self.save_flag:
                 self.save_history_csv(csv_name=csv, mode='save online')
-                self.save_flag = False
 
         data = pd.DataFrame(self.dict_history)
 
@@ -1117,37 +1004,16 @@ class CartPole(EnvironmentBatched):
         self.dt_controller_steps_counter = 0
 
         if reset_dict_history:
-            self.dict_history = {
-
-                                 'time': [self.time],
-
-                                 'angle': [self.s[ANGLE_IDX]],
-                                 'angleD': [self.s[ANGLED_IDX]],
-                                 'angleDD': [self.angleDD],
-                                 'angle_cos': [self.s[ANGLE_COS_IDX]],
-                                 'angle_sin': [self.s[ANGLE_SIN_IDX]],
-                                 'position': [self.s[POSITION_IDX]],
-                                 'positionD': [self.s[POSITIOND_IDX]],
-                                 'positionDD': [self.positionDD],
-
-                                 'Q_calculated': [self.Q_calculated],
-                                 'Q_applied': [self.Q_applied],
-                                 'u': [self.u],
-
-                                 'target_position': [self.target_position],
-                                 'target_equilibrium': [self.target_equilibrium],
-
-                                 'L': [float(L)],
-
-                                 'Q_update_time': [self.Q_update_time],
-
-                                 }
+            self.dict_history = HistoryClass()
+            self.dict_history.add_keys(keys=self.variables_to_log.keys())
             try:
-                self.dict_history.update(self.controller.controller_data_for_csv)
+                self.dict_history.add_keys(self.controller.controller_data_for_csv.keys())
+                self.dict_history.update_history(self.controller.controller_data_for_csv)
             except AttributeError:
                 pass
             except Exception:
                 print(traceback.format_exc())
+            self.dict_history.update_history(self.variables_to_log)
 
         else:  # If you don't want to reset dict_history you still need to add to the dictionary additional keys from controller.controller_data_for_csv
             ...

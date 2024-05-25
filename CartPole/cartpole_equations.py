@@ -6,6 +6,9 @@ from CartPole.cartpole_parameters import CartPoleParameters, TrackHalfLength
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 
+from scipy.integrate import solve_ivp
+import numpy as np
+
 
 # -> PLEASE UPDATE THE cartpole_model.nb (Mathematica file) IF YOU DO ANY CHANAGES HERE (EXCEPT \
 # FOR PARAMETERS VALUES), SO THAT THESE TWO FILES COINCIDE. AND LET EVERYBODY \
@@ -96,10 +99,20 @@ def _cartpole_ode(ca, sa, angleD, positionD, u,
 
     # making M go to infinity makes angleDD = (g/k*L)sin(angle) - angleD*J_fric/(k*m*L^2)
     # This is the same as equation derived directly for a pendulum.
-    # k is 4/3! It is the factor for pendulum with length 2L: I = k*m*L^2
+    # k is 1/3! It is the factor for pendulum with length 2L: I = k*m*L^2
 
     return angleDD, positionDD
 
+def cartpole_energy(ca, angleD, positionD,
+                  m_cart, m_pole, g, L):
+    T_cart = m_cart * positionD ** 2 / 2
+    T_pole_trans = m_pole * (positionD ** 2 - 2 * L * angleD * positionD * ca) / 2
+    T_pole_rot = 2/3 * m_pole * L ** 2 * angleD ** 2
+    V_pole = m_pole * g * L * ca
+
+    E_total = T_cart + T_pole_trans + T_pole_rot + V_pole
+
+    return E_total, T_cart, T_pole_trans, T_pole_rot, V_pole
 
 def Q2u(Q, u_max):
     """
@@ -135,6 +148,9 @@ class CartPoleEquations:
         else:
             self._cartpole_ode = _cartpole_ode
             self.edge_bounce = edge_bounce
+            # if lib == NumpyLibrary:
+            #     self.cartpole_integration = self._cartpole_integration_scipy
+            # else:
             self.cartpole_integration = self._cartpole_integration
 
 
@@ -230,8 +246,27 @@ class CartPoleEquations:
 
         return angle, angleD, position, positionD, angle_cos, angle_sin
 
+    # def cartpole_dynamics(self, t, y, u):
+    #     angle, angleD, position, positionD  = y
+    #
+    #     angleDD, positionDD = _cartpole_ode(np.cos(angle), np.sin(angle), angleD, positionD, u,
+    #                       self.params.k, self.params.m_cart, self.params.m_pole, self.params.g, self.params.J_fric, self.params.M_fric, self.params.L)
+    #
+    #     return [angleD, angleDD, positionD, positionDD]
+    #
+    #
+    # def _cartpole_integration_scipy(self, angle, angleD, angleDD, position, positionD, positionDD, t_step, u):
+    #     y0 = [angle, angleD, position, positionD]
+    #     t_span = [0, t_step]
+    #
+    #     sol = solve_ivp(self.cartpole_dynamics, t_span, y0, args=(u,), method='RK45')
+    #
+    #     angle_next, angleD_next, position_next, positionD_next = sol.y[:, -1]
+    #
+    #     return angle_next, angleD_next, position_next, positionD_next
+
     @CompileAdaptive
-    def _cartpole_integration(self, angle, angleD, angleDD, position, positionD, positionDD, t_step):
+    def _cartpole_integration(self, angle, angleD, angleDD, position, positionD, positionDD, t_step, u=None):
         angle_next = self.euler_step(angle, angleD, t_step)
         angleD_next = self.euler_step(angleD, angleDD, t_step)
         position_next = self.euler_step(position, positionD, t_step)
@@ -291,7 +326,7 @@ edge_bounce_numba = jit(edge_bounce, nopython=True, cache=True, fastmath=True)
 
 
 @jit(nopython=True, cache=True, fastmath=True)
-def cartpole_integration_numba(angle, angleD, angleDD, position, positionD, positionDD, t_step, ):
+def cartpole_integration_numba(angle, angleD, angleDD, position, positionD, positionDD, t_step, u=None):
     angle_next = euler_step_numba(angle, angleD, t_step)
     angleD_next = euler_step_numba(angleD, angleDD, t_step)
     position_next = euler_step_numba(position, positionD, t_step)
