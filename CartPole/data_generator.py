@@ -296,18 +296,18 @@ def run_data_generator(path_to_experiment_recordings=None):
 
         if run_for_ML_Pipeline:
             if i < int(frac_train * number_of_experiments):
-                csv = path_to_experiment_recordings + "/Train"
+                csv = "Train"
             elif i < int((frac_train + frac_val) * number_of_experiments):
-                csv = path_to_experiment_recordings + "/Validate"
+                csv = "Validate"
             else:
-                csv = path_to_experiment_recordings + "/Test"
+                csv = "Test"
 
             try:
-                os.makedirs(csv)
+                os.makedirs(os.path.join(path_to_experiment_recordings, csv))
             except:
                 pass
 
-            csv += "/Experiment"
+            csv = os.path.join(csv, "Experiment")
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
         # You may also specify some of the variables from above here, to make them change at each iteration.#
