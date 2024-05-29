@@ -1,3 +1,14 @@
+"""
+This script calculate the control signal along the prerecorded trajectories.
+There need to be no relationship between the controller with which the trajectories were recorded
+and the controller which is used here to calculate the control signal.
+
+In Pycharm to get the progress bars display correctly you need to set
+"Emulate terminal in output console" in the run configuration.
+
+"""
+
+
 from SI_Toolkit.data_preprocessing import transform_dataset
 
 import numpy as np
