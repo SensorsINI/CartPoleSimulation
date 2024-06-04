@@ -8,7 +8,7 @@ from others.globals_and_utils import create_rng, load_config
 
 get_files_from = 'SI_Toolkit_ASF/Experiments/Experiment-24-quant-10-shiftD-1/Recordings'
 save_files_to = 'SI_Toolkit_ASF/Experiments/Experiment-24-quant-10-shiftD-1/RecordingsAdaptiveTarget'
-new_target_position_variable_name = 'target_position_new'
+new_target_position_variable_name = 'target_position_offline'
 path_to_config = "config_data_gen.yml"
 
 
