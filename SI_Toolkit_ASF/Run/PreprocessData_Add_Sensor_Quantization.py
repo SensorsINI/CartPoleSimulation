@@ -26,5 +26,5 @@ variables_quantization_dict = {
 
 
 if __name__ == '__main__':
-    transform_dataset(get_files_from, save_files_to, transformation='apply_sensor_quantization',
+    transform_dataset(get_files_from, save_files_to, transformation='apply_sensors_quantization',
                       variables_quantization_dict=variables_quantization_dict)
