@@ -1360,10 +1360,7 @@ def Generate_Random_Trace_Function(
     def random_track_f_truncated(time):
 
         target_position = random_track_f(time)
-        if target_position > used_track_fraction * TrackHalfLength:
-            target_position = used_track_fraction * TrackHalfLength
-        elif target_position < -used_track_fraction * TrackHalfLength:
-            target_position = -used_track_fraction * TrackHalfLength
+        target_position = np.clip(target_position, -used_track_fraction * TrackHalfLength, used_track_fraction * TrackHalfLength)
 
         return target_position
 
