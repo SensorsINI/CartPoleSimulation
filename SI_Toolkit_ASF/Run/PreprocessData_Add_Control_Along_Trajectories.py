@@ -25,7 +25,11 @@ controller = {
     "environment_name": "CartPole",
     "action_space": MockSpace(-1.0, 1.0, (1,), np.float32),
     "state_components": STATE_VARIABLES,
-    "environment_attributes_list": ["target_position", "target_equilibrium", "L"]
+    "environment_attributes_list": {  # keys are names used by controller, values the csv column names
+        "target_position": "target_position",
+        "target_equilibrium": "target_equilibrium",
+        "L": "L",
+    },
 }
 
 controller_output_variable_name = 'Q_calculated_neural'
