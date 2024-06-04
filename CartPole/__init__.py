@@ -208,7 +208,6 @@ class CartPole(EnvironmentBatched):
 
         self.random_track_f = None  # Function interpolataing the random target position between turning points
         self.new_track_generated = False  # Flag informing that a new target position track is generated
-        self.t_max_pre = None  # Placeholder for the end time of the generated random experiment
         self.number_of_timesteps_in_random_experiment = None
         self.use_pregenerated_target_position = False  # Informs method performing experiment
         #                                                    not to take target position from environment
@@ -403,7 +402,7 @@ class CartPole(EnvironmentBatched):
         if self.use_pregenerated_target_position:
 
             # If time exceeds the max time for which target position was defined
-            if self.time >= self.t_max_pre:
+            if self.time >= self.length_of_experiment:
                 return
 
             self.target_position = self.random_track_f(self.time)
@@ -718,9 +717,9 @@ class CartPole(EnvironmentBatched):
         else:
             self.L_for_controller = float(self.L_initial)
 
-        self.random_track_f, self.new_track_generated, self.t_max_pre = Generate_Random_Trace_Function(
-            dt_simulation=self.dt_simulation,
-            length_of_experiment= self.length_of_experiment,
+        self.random_track_f = Generate_Random_Trace_Function(
+
+            length_of_experiment=self.length_of_experiment,
             rtf_rng=self.rng_CartPole,
 
             track_relative_complexity=self.track_relative_complexity,
@@ -733,6 +732,8 @@ class CartPole(EnvironmentBatched):
 
             used_track_fraction=self.used_track_fraction,
         )
+        self.new_track_generated = True
+
         self.use_pregenerated_target_position = 1
 
         self.number_of_timesteps_in_random_experiment = int(np.ceil(self.length_of_experiment / self.dt_simulation))
@@ -784,7 +785,7 @@ class CartPole(EnvironmentBatched):
         for _ in trange(self.number_of_timesteps_in_random_experiment):
 
             # Print an error message if it runs already to long (should stop before)
-            if self.time > self.t_max_pre:
+            if self.time > self.length_of_experiment:
                 raise Exception('ERROR: It seems the experiment is running too long...')
 
             self.update_state()
@@ -1285,7 +1286,6 @@ class CartPole(EnvironmentBatched):
 # in a form of a function interpolating between turning points
 def Generate_Random_Trace_Function(
 
-        dt_simulation,
         length_of_experiment,
         rtf_rng,
 
@@ -1332,29 +1332,27 @@ def Generate_Random_Trace_Function(
         else:
             y = np.array(turning_points)
 
-    number_of_timesteps = np.ceil(length_of_experiment / dt_simulation)
-    t_max_pre = number_of_timesteps * dt_simulation
-
     random_samples = number_of_turning_points - 2 if number_of_turning_points - 2 >= 0 else 0
 
-    # t_init = linspace(0, t_max_pre, num=track_relative_complexity, endpoint=True)
     if turning_points_period == 'random':
-        t_init = np.sort(rtf_rng.uniform(dt_simulation, t_max_pre - dt_simulation, random_samples))
+        t_init = np.sort(rtf_rng.uniform(0.0, 1.0, random_samples))
         t_init = np.insert(t_init, 0, 0.0)
-        t_init = np.append(t_init, t_max_pre)
+        t_init = np.append(t_init, 1.0)
     elif turning_points_period == 'regular':
-        t_init = np.linspace(0, t_max_pre, num=random_samples + 2, endpoint=True)
+        t_init = np.linspace(0, 1.0, num=random_samples + 2, endpoint=True)
     else:
         raise NotImplementedError('There is no mode corresponding to this value of turning_points_period variable')
+
+    t_init = t_init * length_of_experiment
 
     # Try algorithm setting derivative to 0 a each point
     if interpolation_type == '0-derivative-smooth':
         yder = [[y[i], 0] for i in range(len(y))]
-        random_track_f = BPoly.from_derivatives(t_init, yder)
+        random_track_f = BPoly.from_derivatives(t_init, yder, extrapolate='periodic')
     elif interpolation_type == 'linear':
-        random_track_f = interp1d(t_init, y, kind='linear')
+        random_track_f = interp1d(t_init, y, kind='linear', fill_value='extrapolate')
     elif interpolation_type == 'previous':
-        random_track_f = interp1d(t_init, y, kind='previous')
+        random_track_f = interp1d(t_init, y, kind='previous', fill_value='extrapolate')
     else:
         raise ValueError('Unknown interpolation type.')
 
@@ -1369,6 +1367,4 @@ def Generate_Random_Trace_Function(
 
         return target_position
 
-    new_track_generated = True
-
-    return random_track_f_truncated, new_track_generated, t_max_pre
+    return random_track_f_truncated
