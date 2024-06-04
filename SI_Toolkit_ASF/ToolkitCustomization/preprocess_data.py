@@ -13,3 +13,10 @@ def add_new_target_position(df, target_position_config, new_target_position_vari
     df[new_target_position_variable_name] = target_position_generating_function(time)
 
     return df
+
+
+def flip_target_equilibrium(df, new_target_equilibrium_variable_name, **kwargs):
+
+    df[new_target_equilibrium_variable_name] = -df['target_equilibrium']
+
+    return df
