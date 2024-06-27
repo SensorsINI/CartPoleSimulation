@@ -13,12 +13,31 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
 from others.globals_and_utils import create_rng, load_config
 from CartPole.cartpole_parameters import TrackHalfLength, L
 
+import argparse
 
-def get_record_path():
+
+def args_fun():
+    parser = argparse.ArgumentParser(description='Generate CartPole data.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-i', '--secondary_experiment_index', default=-1, type=int,
+                        help='Additional index to the experiment folder (ML Pipeline mode) or file (otherwise) name. -1 to skip.')
+
+
+    args = parser.parse_args()
+
+    if args.secondary_experiment_index == -1:
+        args.secondary_experiment_index = None
+
+    return args
+
+
+def get_record_path(secondary_experiment_index=None):
     config_SI = load_config(os.path.join("SI_Toolkit_ASF", "config_training.yml"))
     experiment_index = 1
     while True:
-        path_to_experiment_recordings = "Experiment-" + str(experiment_index)
+        experiment_basename = "Experiment-"
+        if secondary_experiment_index is not None:
+            experiment_basename += str(secondary_experiment_index) + "-"
+        path_to_experiment_recordings = experiment_basename + str(experiment_index)
         if os.path.exists(config_SI['paths']['PATH_TO_EXPERIMENT_FOLDERS'] + path_to_experiment_recordings):
             experiment_index += 1
         else:
@@ -258,9 +277,11 @@ def generate_random_initial_state(init_state_stub, init_limits, rng):
 def run_data_generator(path_to_experiment_recordings=None):
     config = load_config("config_data_gen.yml")
 
+    secondary_experiment_index = args_fun().secondary_experiment_index
+
     if config["ML_Pipeline_mode"]:
         run_for_ML_Pipeline = True
-        path_to_experiment_recordings = get_record_path()
+        path_to_experiment_recordings = get_record_path(secondary_experiment_index)
 
         # Save copy of configs in experiment folder
         if not os.path.exists(path_to_experiment_recordings):
@@ -270,9 +291,8 @@ def run_data_generator(path_to_experiment_recordings=None):
     else:
         run_for_ML_Pipeline = False
 
-    if path_to_experiment_recordings is None:
-        path_to_experiment_recordings = config["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
-        csv = 'Experiment'
+        if path_to_experiment_recordings is None:
+            path_to_experiment_recordings = config["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
     number_of_experiments = config["number_of_experiments"]
 
@@ -291,7 +311,7 @@ def run_data_generator(path_to_experiment_recordings=None):
     RES = random_experiment_setter()
 
     ############ END OF PARAMETERS SECTION ############
-
+    csvfile_basename = 'Experiment'
     for i in range(number_of_experiments):
 
         if run_for_ML_Pipeline:
@@ -307,7 +327,12 @@ def run_data_generator(path_to_experiment_recordings=None):
             except:
                 pass
 
-            csv = os.path.join(csv, "Experiment")
+            csv = os.path.join(csv, csvfile_basename)
+        else:
+            if secondary_experiment_index is not None:
+                csv = csvfile_basename + "-" + str(secondary_experiment_index)
+            else:
+                csv = csvfile_basename
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
         # You may also specify some of the variables from above here, to make them change at each iteration.#
