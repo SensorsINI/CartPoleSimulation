@@ -12,7 +12,7 @@ from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX
 import numpy as np
 
 #load constants from config file
-config = safe_load(open(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"), "r"))
+config = load_config(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"))
 
 print('\nConfig cost function:')
 for key, value in config["CartPole"]["quadratic_boundary_grad"].items():
