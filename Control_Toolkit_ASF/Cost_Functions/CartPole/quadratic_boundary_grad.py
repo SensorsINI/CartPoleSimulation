@@ -19,7 +19,8 @@ for key, value in config["CartPole"]["quadratic_boundary_grad"].items():
     print('{}: {}'.format(key, value))
 print()
 
-dd_weight = config["CartPole"]["quadratic_boundary_grad"]["dd_weight"]
+dd_quadratic_weight = config["CartPole"]["quadratic_boundary_grad"]["dd_quadratic_weight"]
+dd_linear_weight = config["CartPole"]["quadratic_boundary_grad"]["dd_linear_weight"]
 db_weight = config["CartPole"]["quadratic_boundary_grad"]["db_weight"]
 permissible_track_fraction = config["CartPole"]["quadratic_boundary_grad"]["permissible_track_fraction"]
 cc_weight = config["CartPole"]["quadratic_boundary_grad"]["cc_weight"]
@@ -31,17 +32,18 @@ R = config["CartPole"]["quadratic_boundary_grad"]["R"]
 
 
 class quadratic_boundary_grad(cost_function_base):
-    MAX_COST = dd_weight * 1.0e7 + ep_weight + ekp_weight * 25.0 + cc_weight * R * (u_max ** 2) + ccrc_weight * 4 * (u_max ** 2)
+    MAX_COST = dd_quadratic_weight * 1.0e7 + ep_weight + ekp_weight * 25.0 + cc_weight * R * (u_max ** 2) + ccrc_weight * 4 * (u_max ** 2)
 
     # cost for distance from track edge
-    # def _distance_difference_cost(self, position):
-    #     """Compute penalty for distance of cart to the target position"""
-    #     target_distance_cost = (
-    #         (position - self.variable_parameters.target_position) / (2.0 * TrackHalfLength)) ** 2
-    #
-    #     return target_distance_cost
+    def _distance_difference_cost_quadratic(self, position):
+        """Compute penalty for distance of cart to the target position"""
 
-    def _distance_difference_cost(self, position):
+        target_distance_cost = (
+            (position - self.variable_parameters.target_position) / (2*TrackHalfLength)) ** 2
+
+        return target_distance_cost
+
+    def _distance_difference_cost_linear(self, position):
         """Compute penalty for distance of cart to the target position"""
         target_distance_cost = self.lib.abs(
             (position - self.variable_parameters.target_position) / (2.0 * TrackHalfLength))
@@ -106,7 +108,10 @@ class quadratic_boundary_grad(cost_function_base):
 
     # all stage costs together
     def get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
-        dd = dd_weight * self._distance_difference_cost(
+        dd_quadratic = dd_quadratic_weight * self._distance_difference_cost_quadratic(
+            states[:, :, POSITION_IDX]
+        )
+        dd_linear = dd_linear_weight * self._distance_difference_cost_linear(
             states[:, :, POSITION_IDX]
         )
         db = db_weight * self._boundary_approach_cost(states[:, :, POSITION_IDX])
@@ -114,11 +119,11 @@ class quadratic_boundary_grad(cost_function_base):
         ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLED_IDX])
         cc = cc_weight * self._CC_cost(inputs)
         ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
-        stage_cost = dd + db + ep + ekp + cc + ccrc
+        stage_cost = dd_linear + dd_quadratic + db + ep + ekp + cc + ccrc
         return stage_cost
 
     def q_debug(self, s, u, u_prev):
-        dd = dd_weight * self._distance_difference_cost(
+        dd_quadratic = dd_quadratic_weight * self._distance_difference_cost_quadratic(
             s[:, :, POSITION_IDX]
         )
         ep = ep_weight * self._E_pot_cost(s[:, :, ANGLE_IDX])
@@ -126,5 +131,5 @@ class quadratic_boundary_grad(cost_function_base):
         ccrc = 0
         if u_prev is not None:
             ccrc = ccrc_weight * self._control_change_rate_cost(u, u_prev)
-        stage_cost = dd + ep + cc + ccrc
-        return stage_cost, dd, ep, cc, ccrc
+        stage_cost = dd_quadratic + ep + cc + ccrc
+        return stage_cost, dd_quadratic, ep, cc, ccrc
