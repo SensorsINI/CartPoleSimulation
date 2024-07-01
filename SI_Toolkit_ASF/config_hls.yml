@@ -22,4 +22,4 @@ backend: 'Vivado'  # VivadoAccelerator or Vivado
 
 with_brunton_testing: false
 
-output_dir: '../../HLS4ML/x3232_12_2_v3' # Must be a very short path neer to the root filesystem. Otherwise it crashes silently
+output_dir: '../../../../HLS4ML/x3232_12_2_v3' # Must be a very short path neer to the root filesystem. Otherwise it crashes silently
