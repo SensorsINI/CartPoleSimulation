@@ -3,9 +3,9 @@ cartpole:
   mode: stabilization
   seed: 1873  # This is a seed for rng for CartPole instance class only. If null random seed based on datetime is used
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
-  m_pole: 0.021  # mass of pole, kg # Checked by Antonio & Tobi
+  m_pole: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   m_cart: 0.230  # mass of cart, kg # Checked by Antonio
-  L: "0.092/2.0"  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi
+  L: "0.395/2.0"  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi
   u_max: 1.77  # max force produced by the motor, N # Checked by Marcin
   M_fric: 3.22  # cart friction on track, N/m/s # Checked by Marcin
   J_fric: 5.0e-5  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
