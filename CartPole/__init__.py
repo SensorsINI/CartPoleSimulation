@@ -24,9 +24,10 @@ from Control_Toolkit.others.globals_and_utils import (
 from others.globals_and_utils import MockSpace, create_rng, load_config
 from CartPole.cartpole_parameters import (J_fric, L, m_cart, M_fric, TrackHalfLength,
                                           controlBias, controlDisturbance, CP_PARAMETERS_DEFAULT,
-                                          g, k, m_pole, u_max, v_max)
+                                          g, k, m_pole, u_max, v_max, controlDisturbance_mode)
 # Interpolate function to create smooth random track
 from scipy.interpolate import BPoly, interp1d
+from scipy.stats import truncnorm
 # Run range() automatically adding progress bar in terminal
 from tqdm import trange
 
@@ -523,7 +524,7 @@ class CartPole(EnvironmentBatched):
                     {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium, 'L': float(self.L_for_controller)}
                 ))
                 self.Q_update_time = timeit.default_timer()-update_start
-                self.Q_applied = self.Q_calculated + controlDisturbance * rng.standard_normal(size=np.shape(self.Q_calculated), dtype=np.float32) + controlBias
+                self.Q_applied = add_control_noise(self.Q_calculated)
 
             self.Q = self.Q_applied
             self.dt_controller_steps_counter = 0
@@ -895,9 +896,9 @@ class CartPole(EnvironmentBatched):
             pass
 
         # reset global variables
-        global k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength
+        global k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength, controlDisturbance_mode
         (k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...],
-         controlDisturbance[...], controlBias[...], TrackHalfLength[...]) = CP_PARAMETERS_DEFAULT.export_parameters()
+         controlDisturbance[...], controlBias[...], TrackHalfLength[...], controlDisturbance_mode) = CP_PARAMETERS_DEFAULT.export_parameters()
 
         self.time = 0.0
         self.time_last_target_equilibrium_change = None
@@ -945,8 +946,7 @@ class CartPole(EnvironmentBatched):
                     self.time,
                     {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium, "L": float(self.L_for_controller)}
                 ))
-                self.Q_applied = self.Q_calculated + controlDisturbance * rng.standard_normal(
-                    size=np.shape(self.Q_calculated), dtype=np.float32) + controlBias
+                self.Q_applied = add_control_noise(self.Q_calculated)
 
 
             self.Q = self.Q_applied
@@ -1365,3 +1365,20 @@ def Generate_Random_Trace_Function(
         return target_position
 
     return random_track_f_truncated
+
+def add_control_noise(Q_calculated):
+
+    if controlDisturbance_mode == 'OFF':
+        Q_applied = Q_calculated
+    elif controlDisturbance_mode == 'additive':
+        Q_applied = Q_calculated + controlDisturbance * rng.standard_normal(
+            size=np.shape(Q_calculated), dtype=np.float32) + controlBias
+    elif controlDisturbance_mode == 'truncnorm':
+        scale = controlDisturbance
+        loc = Q_calculated + controlBias
+        Q_applied = truncnorm.rvs((-1.0 - loc) / scale, (1.0 - loc) / scale, loc=loc,
+                                  scale=scale, dtype=np.float32)
+    else:
+        raise ValueError('controlDisturbance_mode with value {} not valid'.format(controlDisturbance_mode))
+
+    return Q_applied
