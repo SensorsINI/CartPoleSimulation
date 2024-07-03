@@ -870,6 +870,7 @@ class CartPole(EnvironmentBatched):
 
             if save_mode == 'online' and self.save_flag:
                 self.save_history_csv(csv_name=csv, mode='save online')
+                self.save_flag = False
 
         data = pd.DataFrame(self.dict_history)
 
