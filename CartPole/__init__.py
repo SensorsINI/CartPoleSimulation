@@ -1377,7 +1377,8 @@ def add_control_noise(Q_calculated):
         scale = controlDisturbance
         loc = Q_calculated + controlBias
         Q_applied = truncnorm.rvs((-1.0 - loc) / scale, (1.0 - loc) / scale, loc=loc,
-                                  scale=scale, dtype=np.float32)
+                                  scale=scale, random_state=rng)
+        Q_applied = np.cast[np.float32](Q_applied)
     else:
         raise ValueError('controlDisturbance_mode with value {} not valid'.format(controlDisturbance_mode))
 
