@@ -7,7 +7,7 @@ import math
 import os
 import time
 from datetime import datetime
-from typing import Tuple
+from typing import Tuple, Any
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0' # all TF messages
 
@@ -206,17 +206,24 @@ def create_rng(id: str, seed: str, use_tf: bool=False):
         return Generator(SFC64(seed=seed))
 
 
-def load_config(filename: str) -> dict:
+def load_config(filename: str, return_path=False) -> Tuple[Any, str]:
     """Try loading config from yaml if os.getcwd() is one level above CartPoleSimulation. This would be the case if CartPoleSimulation is added as Git Submodule in another repository. If not found, load from the current os path.
 
     :param filename: e.g. 'config.yml'
+    :param return_path: if True, return the path of the loaded file
     :type filename: str
     """
     try:
-        config = load_yaml(os.path.join("CartPoleSimulation", filename), "r")
+        path = os.path.join("CartPoleSimulation", filename)
+        config = load_yaml(path, "r")
     except FileNotFoundError:
+        path = filename
         config = load_yaml(filename)
-    return config
+
+    if return_path:
+        return config, path
+    else:
+        return config
 
 
 class MockSpace:
