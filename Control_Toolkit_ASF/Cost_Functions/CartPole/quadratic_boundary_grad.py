@@ -11,28 +11,38 @@ from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX
 
 import numpy as np
 
-#load constants from config file
-config = load_config(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"))
 
-print('\nConfig cost function:')
-for key, value in config["CartPole"]["quadratic_boundary_grad"].items():
-    print('{}: {}'.format(key, value))
-print()
-
-dd_quadratic_weight = config["CartPole"]["quadratic_boundary_grad"]["dd_quadratic_weight"]
-dd_linear_weight = config["CartPole"]["quadratic_boundary_grad"]["dd_linear_weight"]
-db_weight = config["CartPole"]["quadratic_boundary_grad"]["db_weight"]
-permissible_track_fraction = config["CartPole"]["quadratic_boundary_grad"]["permissible_track_fraction"]
-cc_weight = config["CartPole"]["quadratic_boundary_grad"]["cc_weight"]
-ep_weight = config["CartPole"]["quadratic_boundary_grad"]["ep_weight"]
-admissible_angle = np.deg2rad(config["CartPole"]["quadratic_boundary_grad"]["admissible_angle"], dtype=np.float32)
-ekp_weight = config["CartPole"]["quadratic_boundary_grad"]["ekp_weight"]
-ccrc_weight = config["CartPole"]["quadratic_boundary_grad"]["ccrc_weight"]
-R = config["CartPole"]["quadratic_boundary_grad"]["R"]
 
 
 class quadratic_boundary_grad(cost_function_base):
-    MAX_COST = dd_quadratic_weight * 1.0e7 + ep_weight + ekp_weight * 25.0 + cc_weight * R * (u_max ** 2) + ccrc_weight * 4 * (u_max ** 2)
+
+    def __init__(self, variable_parameters, lib):
+        super().__init__(variable_parameters, lib)
+        # load constants from config file - these are quite ugly two lines which needs to be manually changed for each cost function
+        config, config_path = load_config(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"),
+                                          return_path=True)
+        self.config = config["CartPole"]["quadratic_boundary_grad"]
+
+        self.config_path = config_path
+
+        print('\nConfig cost function:')
+        for key, value in self.config.items():
+            if key == "admissible_angle":
+                setattr(self, key, self.lib.to_variable(self.lib.pi*value/180.0, self.lib.float32))
+            else:
+                setattr(self, key, self.lib.to_variable(value, self.lib.float32))
+            print('{}: {}'.format(key, value))
+        print()
+
+
+
+    def reload_cost_parameters_from_config(self):
+        for key, value in self.config.items():
+            var = getattr(self, key)
+            if key == "admissible_angle":
+                self.lib.assign(var, self.lib.to_variable(self.lib.pi*value/180.0, self.lib.float32))
+            else:
+                self.lib.assign(var, self.lib.to_variable(value, self.lib.float32))
 
     # cost for distance from track edge
     def _distance_difference_cost_quadratic(self, position):
@@ -53,10 +63,10 @@ class quadratic_boundary_grad(cost_function_base):
     def _boundary_approach_cost(self, position):
         """Compute penalty for approaching the boundary"""
         # Soft constraint: Do not crash into border
-        too_near_to_the_boundary = self.lib.cast(self.lib.abs(position) > permissible_track_fraction * TrackHalfLength, self.lib.float32)
+        too_near_to_the_boundary = self.lib.cast(self.lib.abs(position) > self.permissible_track_fraction * TrackHalfLength, self.lib.float32)
         return too_near_to_the_boundary * (
-                (self.lib.abs(position) - permissible_track_fraction * TrackHalfLength) / (
-                    (1 - permissible_track_fraction) * TrackHalfLength)
+                (self.lib.abs(position) - self.permissible_track_fraction * TrackHalfLength) / (
+                    (1 - self.permissible_track_fraction) * TrackHalfLength)
         ) ** 2
 
     # cost for difference from upright position
@@ -70,7 +80,7 @@ class quadratic_boundary_grad(cost_function_base):
 
     # actuation cost
     def _CC_cost(self, u):
-        return R * self.lib.sum(u**2, 2)
+        return self.R * self.lib.sum(u**2, 2)
 
     # final stage cost
     def get_terminal_cost(self, terminal_states: TensorType):
@@ -108,28 +118,28 @@ class quadratic_boundary_grad(cost_function_base):
 
     # all stage costs together
     def get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
-        dd_quadratic = dd_quadratic_weight * self._distance_difference_cost_quadratic(
+        dd_quadratic = self.dd_quadratic_weight * self._distance_difference_cost_quadratic(
             states[:, :, POSITION_IDX]
         )
-        dd_linear = dd_linear_weight * self._distance_difference_cost_linear(
+        dd_linear = self.dd_linear_weight * self._distance_difference_cost_linear(
             states[:, :, POSITION_IDX]
         )
-        db = db_weight * self._boundary_approach_cost(states[:, :, POSITION_IDX])
-        ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX])
-        ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLED_IDX])
-        cc = cc_weight * self._CC_cost(inputs)
-        ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
+        db = self.db_weight * self._boundary_approach_cost(states[:, :, POSITION_IDX])
+        ep = self.ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX])
+        ekp = self.ekp_weight * self._E_kin_cost(states[:, :, ANGLED_IDX])
+        cc = self.cc_weight * self._CC_cost(inputs)
+        ccrc = self.ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
         stage_cost = dd_linear + dd_quadratic + db + ep + ekp + cc + ccrc
         return stage_cost
 
     def q_debug(self, s, u, u_prev):
-        dd_quadratic = dd_quadratic_weight * self._distance_difference_cost_quadratic(
+        dd_quadratic = self.dd_quadratic_weight * self._distance_difference_cost_quadratic(
             s[:, :, POSITION_IDX]
         )
-        ep = ep_weight * self._E_pot_cost(s[:, :, ANGLE_IDX])
-        cc = cc_weight * self._CC_cost(u)
+        ep = self.ep_weight * self._E_pot_cost(s[:, :, ANGLE_IDX])
+        cc = self.cc_weight * self._CC_cost(u)
         ccrc = 0
         if u_prev is not None:
-            ccrc = ccrc_weight * self._control_change_rate_cost(u, u_prev)
+            ccrc = self.ccrc_weight * self._control_change_rate_cost(u, u_prev)
         stage_cost = dd_quadratic + ep + cc + ccrc
         return stage_cost, dd_quadratic, ep, cc, ccrc

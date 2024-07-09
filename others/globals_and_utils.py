@@ -214,11 +214,10 @@ def load_config(filename: str, return_path=False) -> Tuple[Any, str]:
     :type filename: str
     """
     try:
-        path = os.path.join("CartPoleSimulation", filename)
-        config = load_yaml(path, "r")
+        config, path = load_yaml(filename, return_path=True)
     except FileNotFoundError:
-        path = filename
-        config = load_yaml(filename)
+        path = os.path.join("CartPoleSimulation", filename)
+        config, path = load_yaml(path, "r", return_path=True)
 
     if return_path:
         return config, path
