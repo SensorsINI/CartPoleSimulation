@@ -13,7 +13,7 @@ CartPole:
     dd_quadratic_weight: 500.0
     dd_linear_weight: 0.0
     ep_weight: 1500.0
-    ekp_weight: 8.0
+    ekp_weight: 30.0
     db_weight: 10000
     permissible_track_fraction: 0.85
     cc_weight: 5.0
