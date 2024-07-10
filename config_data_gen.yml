@@ -36,7 +36,7 @@ dt:
   saving: 0.01  # save datapoints in csv in this interval, s
 turning_points:
   track_relative_complexity: 1  # Randomly placed target points/s
-  interpolation_type: '0-derivative-smooth'  # How to interpolate between turning points of random trace, Possible options: '0-derivative-smooth', 'linear', 'previous'
+  interpolation_type: 'previous'  # How to interpolate between turning points of random trace, Possible options: '0-derivative-smooth', 'linear', 'previous'
   turning_points: # List of target positions, can be None to simulate with random targets, Example: turning_points_DataGen = [0.0, 0.1, -0.1, 0.0]
   turning_points_period: 'regular' # How turning points should be distributed, Possible options: 'regular', 'random'; never used, leave it as it is
 save_mode: 'online'  # It was intended to save memory usage, but it doesn't seems to help, setit to "offline" only if you want to show summary plots
