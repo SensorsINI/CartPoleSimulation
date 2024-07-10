@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --array=49-72             # Create an array job with task IDs from 1 to 12
+#SBATCH --array=73-96             # Create an array job with task IDs from 1 to 12
 #SBATCH --cpus-per-task=1        # Assign the required number of CPUs per task
 #SBATCH --time=8:00:00           # Set the maximum job time
 #SBATCH --output=./others/EulerClusterScripts/slurm-%A_%a.out   # Output file
