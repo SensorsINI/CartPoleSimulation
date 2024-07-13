@@ -30,13 +30,14 @@ def args_fun():
     return args
 
 
-def get_record_path(secondary_experiment_index=None):
+def get_record_path(secondary_experiment_index=None, digits=None):
     config_SI = load_config(os.path.join("SI_Toolkit_ASF", "config_training.yml"))
     experiment_index = 1
     while True:
         experiment_basename = "Experiment-"
         if secondary_experiment_index is not None:
-            experiment_basename += str(secondary_experiment_index) + "-"
+            formatted_index = f"{secondary_experiment_index:0{digits}d}"
+            experiment_basename += formatted_index + "-"
         path_to_experiment_recordings = experiment_basename + str(experiment_index)
         if os.path.exists(config_SI['paths']['PATH_TO_EXPERIMENT_FOLDERS'] + path_to_experiment_recordings):
             experiment_index += 1
@@ -279,9 +280,11 @@ def run_data_generator(path_to_experiment_recordings=None):
 
     secondary_experiment_index = args_fun().secondary_experiment_index
 
+    digits = 3  # How many digits should have secondary index - leading zeros appended if necessary
+
     if config["ML_Pipeline_mode"]:
         run_for_ML_Pipeline = True
-        path_to_experiment_recordings = get_record_path(secondary_experiment_index)
+        path_to_experiment_recordings = get_record_path(secondary_experiment_index, digits=digits)
 
         # Save copy of configs in experiment folder
         if not os.path.exists(path_to_experiment_recordings):
@@ -330,7 +333,8 @@ def run_data_generator(path_to_experiment_recordings=None):
             csv = os.path.join(csv, csvfile_basename)
         else:
             if secondary_experiment_index is not None:
-                csv = csvfile_basename + "-" + str(secondary_experiment_index)
+                formatted_index = f"{secondary_experiment_index:0{digits}d}"
+                csv = csvfile_basename + "-" + formatted_index
             else:
                 csv = csvfile_basename
 
