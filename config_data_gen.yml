@@ -13,7 +13,7 @@ random_initial_state:
   target_position:
   init_limits: # The initial state is randomly chosen from below range if above is not assigned
     angle: [0.0, 180.0]  # degree, 0 is up, 180 down, set the range for right half plane, same will be applied to left
-    angleD: 12000.0
+    angleD: 2400.0
     position: 0.8  # Fraction of TrackHalfLength to each side
     positionD: 0.5 # Fraction of TrackHalfLength to each side
 start_at_target: True  # initial target position should be equal to initial state
@@ -31,12 +31,12 @@ L:  # Pole half-length
   L_change_mode: step  # 'uniform' to sample uniformly from L_range, 'step' to change by constant step within the L_range
   L_step: 0.02  # Only for L_change_mode 'step'
 dt:
-  simulation: 0.002  # simulation timestep, s
-  control: 0.02  # control rate, s
-  saving: 0.02  # save datapoints in csv in this interval, s
+  simulation: 0.001  # simulation timestep, s
+  control: 0.01  # control rate, s
+  saving: 0.01  # save datapoints in csv in this interval, s
 turning_points:
   track_relative_complexity: 1  # Randomly placed target points/s
-  interpolation_type: '0-derivative-smooth'  # How to interpolate between turning points of random trace, Possible options: '0-derivative-smooth', 'linear', 'previous'
+  interpolation_type: 'previous'  # How to interpolate between turning points of random trace, Possible options: '0-derivative-smooth', 'linear', 'previous'
   turning_points: # List of target positions, can be None to simulate with random targets, Example: turning_points_DataGen = [0.0, 0.1, -0.1, 0.0]
   turning_points_period: 'regular' # How turning points should be distributed, Possible options: 'regular', 'random'; never used, leave it as it is
 save_mode: 'online'  # It was intended to save memory usage, but it doesn't seems to help, setit to "offline" only if you want to show summary plots
