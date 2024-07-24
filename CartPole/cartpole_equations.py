@@ -144,14 +144,14 @@ class CartPoleEquations:
         if numba_compiled:
             self._cartpole_ode = _cartpole_ode_numba
             self.edge_bounce = edge_bounce_numba
-            self.cartpole_integration = cartpole_integration_numba
+            self.cartpole_integration = cartpole_integration_euler_cromer_numba
         else:
             self._cartpole_ode = _cartpole_ode
             self.edge_bounce = edge_bounce
             # if lib == NumpyLibrary:
             #     self.cartpole_integration = self._cartpole_integration_scipy
             # else:
-            self.cartpole_integration = self._cartpole_integration
+            self.cartpole_integration = self._cartpole_integration_euler_cromer
 
 
     @CompileAdaptive
@@ -273,6 +273,19 @@ class CartPoleEquations:
         angleD_next = self.euler_step(angleD, angleDD, t_step)
         position_next = self.euler_step(position, positionD, t_step)
         positionD_next = self.euler_step(positionD, positionDD, t_step)
+
+        return angle_next, angleD_next, position_next, positionD_next
+
+    @CompileAdaptive
+    def _cartpole_integration_euler_cromer(self, angle, angleD, angleDD, position, positionD, positionDD, t_step, u=None,
+                              k=None, m_cart=None, m_pole=None, g=None, J_fric=None, M_fric=None, L=None):
+        # Update velocities first
+        angleD_next = self.euler_step(angleD, angleDD, t_step)
+        positionD_next = self.euler_step(positionD, positionDD, t_step)
+
+        # Then update positions using the updated velocities
+        angle_next = self.euler_step(angle, angleD_next, t_step)
+        position_next = self.euler_step(position, positionD_next, t_step)
 
         return angle_next, angleD_next, position_next, positionD_next
 
