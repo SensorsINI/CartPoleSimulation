@@ -400,18 +400,18 @@ class CartPole(EnvironmentBatched):
         return s
 
     def update_target_position(self):
-        if self.use_pregenerated_target_position:
-
-            # If time exceeds the max time for which target position was defined
-            if self.time >= self.length_of_experiment:
-                return
-
-            self.target_position = self.random_track_f(self.time)
-            self.slider_value = self.target_position/TrackHalfLength  # Assign target position to slider to display it
+        if self.controller_name == 'manual-stabilization':
+            self.target_position = 0.0  # In this case target position is not used.
+            # This just fill the corresponding column in history with zeros
         else:
-            if self.controller_name == 'manual-stabilization':
-                self.target_position = 0.0  # In this case target position is not used.
-                # This just fill the corresponding column in history with zeros
+            if self.use_pregenerated_target_position:
+
+                # If time exceeds the max time for which target position was defined
+                if self.time >= self.length_of_experiment:
+                    return
+
+                self.target_position = self.random_track_f(self.time)
+                self.slider_value = self.target_position/TrackHalfLength  # Assign target position to slider to display it
             else:
                 self.target_position = self.slider_value * TrackHalfLength  # Get target position from slider
 
@@ -520,7 +520,8 @@ class CartPole(EnvironmentBatched):
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                self.Q_applied = self.slider_value
+                self.Q_calculated = self.slider_value
+                self.Q_update_time = 0.0
             else:  # in this case slider gives a target position, lqr regulator
                 update_start = timeit.default_timer()
                 self.Q_calculated = float(self.controller.step(
@@ -529,7 +530,8 @@ class CartPole(EnvironmentBatched):
                     {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium, 'L': float(self.L_for_controller)}
                 ))
                 self.Q_update_time = timeit.default_timer()-update_start
-                self.Q_applied = add_control_noise(self.Q_calculated, rng)
+
+            self.Q_applied = add_control_noise(self.Q_calculated, rng)
 
             self.Q = self.Q_applied
             self.dt_controller_steps_counter = 0
@@ -944,15 +946,15 @@ class CartPole(EnvironmentBatched):
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                self.Q_applied = self.slider_value
+                self.Q_calculated = self.slider_value
             else:  # in this case slider gives a target position, lqr regulator
                 self.Q_calculated = float(self.controller.step(
                     self.s,
                     self.time,
                     {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium, "L": float(self.L_for_controller)}
                 ))
-                self.Q_applied = add_control_noise(self.Q_calculated, rng)
 
+            self.Q_applied = add_control_noise(self.Q_calculated, rng)
 
             self.Q = self.Q_applied
             self.u = self.cpe.Q2u(self.Q)  # Calculate CURRENT control input
