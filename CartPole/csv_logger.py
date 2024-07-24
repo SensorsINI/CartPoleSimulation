@@ -103,7 +103,7 @@ def create_csv_file_name(controller='', controller_name='', optimizer_name='',
 
     if controller_name == '':
         name_controller = ''
-    elif controller.has_optimizer:
+    elif controller is not None and hasattr(controller, "has_optimizer") and controller.has_optimizer:
         name_controller = '_' + controller_name + '_' + optimizer_name
     else:
         name_controller = '_' + controller_name

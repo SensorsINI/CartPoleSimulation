@@ -205,7 +205,8 @@ class MainWindow(QMainWindow):
         self.rbs_optimizers = []
         for optimizer_name in self.CartPoleInstance.optimizer_names:
             self.rbs_optimizers.append(QRadioButton(optimizer_name))
-        self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)
+        if self.CartPoleInstance.controller is not None and hasattr(self.CartPoleInstance.controller, 'has_optimizer'):
+            self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)
 
         # Ensures that radio buttons are exclusive
         self.controllers_buttons_group = QButtonGroup()
