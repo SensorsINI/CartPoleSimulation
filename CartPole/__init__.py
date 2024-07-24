@@ -487,7 +487,12 @@ class CartPole(EnvironmentBatched):
         """
 
         self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = \
-            self.cpe.cartpole_integration(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD, self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation, u=self.u)
+            self.cpe.cartpole_integration(
+                self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD,
+                self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.positionDD,
+                self.dt_simulation, u=self.u,
+                k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L
+            )
 
 
     def edge_bounce(self):

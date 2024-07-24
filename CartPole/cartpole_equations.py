@@ -233,7 +233,8 @@ class CartPoleEquations:
             # Find NEXT "k+1" state [angle, angleD, position, positionD]
             angle, angleD, position, positionD = self.cartpole_integration(angle, angleD, angleDD, position,
                                                                       positionD,
-                                                                      positionDD, t_step, )
+                                                                      positionDD, t_step, u,
+                                                                      k, m_cart, m_pole, g, J_fric, M_fric, L)
 
             # The edge bounce calculation seems to be too much for a GPU to tackle
             # angle_cos = tf.cos(angle)
@@ -266,7 +267,8 @@ class CartPoleEquations:
     #     return angle_next, angleD_next, position_next, positionD_next
 
     @CompileAdaptive
-    def _cartpole_integration(self, angle, angleD, angleDD, position, positionD, positionDD, t_step, u=None):
+    def _cartpole_integration(self, angle, angleD, angleDD, position, positionD, positionDD, t_step, u=None,
+                              k=None, m_cart=None, m_pole=None, g=None, J_fric=None, M_fric=None, L=None):
         angle_next = self.euler_step(angle, angleD, t_step)
         angleD_next = self.euler_step(angleD, angleDD, t_step)
         position_next = self.euler_step(position, positionD, t_step)
@@ -326,11 +328,47 @@ edge_bounce_numba = jit(edge_bounce, nopython=True, cache=True, fastmath=True)
 
 
 @jit(nopython=True, cache=True, fastmath=True)
-def cartpole_integration_numba(angle, angleD, angleDD, position, positionD, positionDD, t_step, u=None):
+def cartpole_integration_numba(angle, angleD, angleDD, position, positionD, positionDD, t_step, u=None,
+                               k=None, m_cart=None, m_pole=None, g=None, J_fric=None, M_fric=None, L=None):
     angle_next = euler_step_numba(angle, angleD, t_step)
     angleD_next = euler_step_numba(angleD, angleDD, t_step)
     position_next = euler_step_numba(position, positionD, t_step)
     positionD_next = euler_step_numba(positionD, positionDD, t_step)
+
+    return angle_next, angleD_next, position_next, positionD_next
+
+
+@jit(nopython=True, cache=True, fastmath=True)
+def cartpole_integration_euler_cromer_numba(angle, angleD, angleDD, position, positionD, positionDD, t_step, u=None,
+                                            k=None, m_cart=None, m_pole=None, g=None, J_fric=None, M_fric=None, L=None):
+    # Update velocities first
+    angleD_next = euler_step_numba(angleD, angleDD, t_step)
+    positionD_next = euler_step_numba(positionD, positionDD, t_step)
+
+    # Then update positions using the updated velocities
+    angle_next = euler_step_numba(angle, angleD_next, t_step)
+    position_next = euler_step_numba(position, positionD_next, t_step)
+
+    return angle_next, angleD_next, position_next, positionD_next
+
+@jit(nopython=True, cache=True, fastmath=True)
+def cartpole_integration_leapfrog_numba(angle, angleD, angleDD, position, positionD, positionDD, t_step, u,
+                                        k, m_cart, m_pole, g, J_fric, M_fric, L):
+    # Half step for velocities
+    angleD_half = euler_step_numba(angleD, angleDD, 0.5 * t_step)
+    positionD_half = euler_step_numba(positionD, positionDD, 0.5 * t_step)
+
+    # Full step for positions
+    angle_next = euler_step_numba(angle, angleD_half, t_step)
+    position_next = euler_step_numba(position, positionD_half, t_step)
+
+    # Compute new accelerations
+    angleDD_next, positionDD_next = _cartpole_ode_numba(np.cos(angle_next), np.sin(angle_next), angleD_half, positionD_half, u,
+                                                        k, m_cart, m_pole, g, J_fric, M_fric, L)
+
+    # Another half step for velocities
+    angleD_next = euler_step_numba(angleD_half, angleDD_next, 0.5 * t_step)
+    positionD_next = euler_step_numba(positionD_half, positionDD_next, 0.5 * t_step)
 
     return angle_next, angleD_next, position_next, positionD_next
 
