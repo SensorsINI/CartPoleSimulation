@@ -6,7 +6,7 @@ The client side must be run by the program sending the data to be visualized.
 
 GUI = True
 
-KEEP_SAMPLES_DEFAULT = 100  # at least 10
+KEEP_SAMPLES_DEFAULT = 500  # at least 10
 DEFAULT_ADDRESS = ('0.0.0.0', 6000)
 
 if GUI:
