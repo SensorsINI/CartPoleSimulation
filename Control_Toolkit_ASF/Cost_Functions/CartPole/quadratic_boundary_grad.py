@@ -37,14 +37,14 @@ class quadratic_boundary_grad(cost_function_base):
         self.stage_cost, self.dd_linear, self.dd_quadratic, self.db, self.ep, self.ekp, self.cc, self.ccrc = [None]*8
 
         self.set_logged_attributes({
-            "cost_component_total_stage_cost": lambda: self.stage_cost,
-            "cost_component_dd_liear": lambda: self.dd_linear,
-            "cost_component_dd_quadratic": lambda: self.dd_quadratic,
-            "cost_component_db": lambda: self.db,
-            "cost_component_ep": lambda: self.ep,
-            "cost_component_ekp": lambda: self.ekp,
-            "cost_component_cc": lambda: self.cc,
-            "cost_component_ccrc": lambda: self.ccrc,
+            "cost_component_total_stage_cost": lambda: self.lib.to_value(self.stage_cost),
+            "cost_component_dd_liear": lambda: self.lib.to_value(self.dd_linear),
+            "cost_component_dd_quadratic": lambda: self.lib.to_value(self.dd_quadratic),
+            "cost_component_db": lambda: self.lib.to_value(self.db),
+            "cost_component_ep": lambda: self.lib.to_value(self.ep),
+            "cost_component_ekp": lambda: self.lib.to_value(self.ekp),
+            "cost_component_cc": lambda: self.lib.to_value(self.cc),
+            "cost_component_ccrc": lambda: self.lib.to_value(self.ccrc),
         })
 
 
