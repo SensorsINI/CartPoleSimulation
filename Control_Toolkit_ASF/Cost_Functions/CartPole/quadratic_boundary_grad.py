@@ -34,17 +34,18 @@ class quadratic_boundary_grad(cost_function_base):
             print('{}: {}'.format(key, value))
         print()
 
-        self.stage_cost, self.dd_linear, self.dd_quadratic, self.db, self.ep, self.ekp, self.cc, self.ccrc = [None]*8
-
+        self.stage_cost, self.dd_linear, self.dd_quadratic, self.db, self.ep, self.ekp, self.cc, self.ccrc = [
+            self.lib.to_variable((0.0,), self.lib.float32) for _ in range(8)
+        ]
         self.set_logged_attributes({
-            "cost_component_total_stage_cost": lambda: self.lib.to_value(self.stage_cost),
-            "cost_component_dd_liear": lambda: self.lib.to_value(self.dd_linear),
-            "cost_component_dd_quadratic": lambda: self.lib.to_value(self.dd_quadratic),
-            "cost_component_db": lambda: self.lib.to_value(self.db),
-            "cost_component_ep": lambda: self.lib.to_value(self.ep),
-            "cost_component_ekp": lambda: self.lib.to_value(self.ekp),
-            "cost_component_cc": lambda: self.lib.to_value(self.cc),
-            "cost_component_ccrc": lambda: self.lib.to_value(self.ccrc),
+            "cost_component_total_stage_cost": lambda: float(self.stage_cost),
+            "cost_component_dd_liear": lambda: float(self.dd_linear),
+            "cost_component_dd_quadratic": lambda: float(self.dd_quadratic),
+            "cost_component_db": lambda: float(self.db),
+            "cost_component_ep": lambda: float(self.ep),
+            "cost_component_ekp": lambda: float(self.ekp),
+            "cost_component_cc": lambda: float(self.cc),
+            "cost_component_ccrc": lambda: float(self.ccrc),
         })
 
 
@@ -176,15 +177,15 @@ class quadratic_boundary_grad(cost_function_base):
 
         dd_quadratic, dd_linear, db, ep, ekp, cc, ccrc = self.stage_cost_components(states, inputs, previous_input)
 
-        self.dd_quadratic = self.lib.sum(dd_quadratic, 1)
-        self.dd_linear = self.lib.sum(dd_linear, 1)
-        self.db = self.lib.sum(db, 1)
-        self.ep = self.lib.sum(ep, 1)
-        self.ekp = self.lib.sum(ekp, 1)
-        self.cc = self.lib.sum(cc, 1)
-        self.ccrc = self.lib.sum(ccrc, 1)
+        self.lib.assign(self.dd_quadratic, self.lib.sum(dd_quadratic, 1))
+        self.lib.assign(self.dd_linear, self.lib.sum(dd_linear, 1))
+        self.lib.assign(self.db, self.lib.sum(db, 1))
+        self.lib.assign(self.ep, self.lib.sum(ep, 1))
+        self.lib.assign(self.ekp, self.lib.sum(ekp, 1))
+        self.lib.assign(self.cc, self.lib.sum(cc, 1))
+        self.lib.assign(self.ccrc, self.lib.sum(ccrc, 1))
 
-        self.stage_cost = self.dd_linear + self.dd_quadratic + self.db + self.ep + self.ekp + self.cc + self.ccrc
+        self.lib.assign(self.stage_cost, self.dd_linear + self.dd_quadratic + self.db + self.ep + self.ekp + self.cc + self.ccrc)
         return self.stage_cost
 
     def q_debug(self, s, u, u_prev):
