@@ -116,19 +116,38 @@ class quadratic_boundary_grad(cost_function_base):
         )
         return self.lib.sum((u - u_prev_vec) ** 2, 2)
 
+    def weights(self):
+
+        def weights_up():
+            return (self.dd_quadratic_weight_up, self.dd_linear_weight_up, self.db_weight_up,
+                    self.ep_weight_up, self.ekp_weight_up,
+                    self.cc_weight_up, self.ccrc_weight_up)
+
+        def weights_down():
+            return (self.dd_quadratic_weight_down, self.dd_linear_weight_down, self.db_weight_down,
+                    self.ep_weight_down, self.ekp_weight_down,
+                    self.cc_weight_down, self.ccrc_weight_down)
+
+        return self.lib.cond(
+            self.lib.equal(self.variable_parameters.target_equilibrium, 1.0),
+            true_fn=weights_up,
+            false_fn=weights_down
+        )
+
     # all stage costs together
     def get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
-        dd_quadratic = self.dd_quadratic_weight * self._distance_difference_cost_quadratic(
+        dd_quadratic_weight, dd_linear_weight, db_weight, ep_weight, ekp_weight, cc_weight, ccrc_weight = self.weights()
+        dd_quadratic = dd_quadratic_weight * self._distance_difference_cost_quadratic(
             states[:, :, POSITION_IDX]
         )
-        dd_linear = self.dd_linear_weight * self._distance_difference_cost_linear(
+        dd_linear = dd_linear_weight * self._distance_difference_cost_linear(
             states[:, :, POSITION_IDX]
         )
-        db = self.db_weight * self._boundary_approach_cost(states[:, :, POSITION_IDX])
-        ep = self.ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX])
-        ekp = self.ekp_weight * self._E_kin_cost(states[:, :, ANGLED_IDX])
-        cc = self.cc_weight * self._CC_cost(inputs)
-        ccrc = self.ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
+        db = db_weight * self._boundary_approach_cost(states[:, :, POSITION_IDX])
+        ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX])
+        ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLED_IDX])
+        cc = cc_weight * self._CC_cost(inputs)
+        ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
         stage_cost = dd_linear + dd_quadratic + db + ep + ekp + cc + ccrc
         return stage_cost
 
