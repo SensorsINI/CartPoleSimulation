@@ -34,6 +34,19 @@ class quadratic_boundary_grad(cost_function_base):
             print('{}: {}'.format(key, value))
         print()
 
+        self.stage_cost, self.dd_linear, self.dd_quadratic, self.db, self.ep, self.ekp, self.cc, self.ccrc = [None]*8
+
+        self.set_logged_attributes({
+            "cost_component_total_stage_cost": lambda: self.stage_cost,
+            "cost_component_dd_liear": lambda: self.dd_linear,
+            "cost_component_dd_quadratic": lambda: self.dd_quadratic,
+            "cost_component_db": lambda: self.db,
+            "cost_component_ep": lambda: self.ep,
+            "cost_component_ekp": lambda: self.ekp,
+            "cost_component_cc": lambda: self.cc,
+            "cost_component_ccrc": lambda: self.ccrc,
+        })
+
 
 
     def reload_cost_parameters_from_config(self):
@@ -134,9 +147,12 @@ class quadratic_boundary_grad(cost_function_base):
             false_fn=weights_down
         )
 
+    # This is the old/standard cost function, below second one, but adapted for easier logging
     # all stage costs together
-    def get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
+
+    def stage_cost_components(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
         dd_quadratic_weight, dd_linear_weight, db_weight, ep_weight, ekp_weight, cc_weight, ccrc_weight = self.weights()
+
         dd_quadratic = dd_quadratic_weight * self._distance_difference_cost_quadratic(
             states[:, :, POSITION_IDX]
         )
@@ -148,8 +164,28 @@ class quadratic_boundary_grad(cost_function_base):
         ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLED_IDX])
         cc = cc_weight * self._CC_cost(inputs)
         ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
-        stage_cost = dd_linear + dd_quadratic + db + ep + ekp + cc + ccrc
+
+        return dd_quadratic, dd_linear, db, ep, ekp, cc, ccrc
+
+    def get_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
+        dd_quadratic, dd_linear, db, ep, ekp, cc, ccrc = self.stage_cost_components(states, inputs, previous_input)
+        stage_cost = dd_linear + dd_quadratic + db + ep + ekp + cc +  ccrc
         return stage_cost
+
+    def get_summed_stage_cost(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
+
+        dd_quadratic, dd_linear, db, ep, ekp, cc, ccrc = self.stage_cost_components(states, inputs, previous_input)
+
+        self.dd_quadratic = self.lib.sum(dd_quadratic, 1)
+        self.dd_linear = self.lib.sum(dd_linear, 1)
+        self.db = self.lib.sum(db, 1)
+        self.ep = self.lib.sum(ep, 1)
+        self.ekp = self.lib.sum(ekp, 1)
+        self.cc = self.lib.sum(cc, 1)
+        self.ccrc = self.lib.sum(ccrc, 1)
+
+        self.stage_cost = self.dd_linear + self.dd_quadratic + self.db + self.ep + self.ekp + self.cc + self.ccrc
+        return self.stage_cost
 
     def q_debug(self, s, u, u_prev):
         dd_quadratic = self.dd_quadratic_weight * self._distance_difference_cost_quadratic(
