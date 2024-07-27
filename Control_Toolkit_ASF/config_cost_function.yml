@@ -26,6 +26,7 @@ CartPole:
     cc_weight_down: 5.0
     ccrc_weight_down: 0.0
 
+    target_angular_speed_sqr_max_correction: 0.0
     permissible_track_fraction: 0.85
     cc_discount: 1.1
     admissible_angle: 0.0

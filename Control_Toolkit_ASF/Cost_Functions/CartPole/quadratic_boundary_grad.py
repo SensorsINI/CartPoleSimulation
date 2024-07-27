@@ -88,9 +88,18 @@ class quadratic_boundary_grad(cost_function_base):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
         return ((2.0 - self.variable_parameters.target_equilibrium*self.lib.cos(angle)) ** 2)-1.0
 
-    def _E_kin_cost(self, angleD):
-        """Compute penalty for not balancing pole upright (penalize large angles)"""
-        return angleD ** 2
+    # def _E_kin_cost(self, angleD):
+    #     """Compute penalty for not balancing pole upright (penalize large angles)"""
+    #     return angleD ** 2
+
+    def _E_kin_cost(self, angle, angleD):
+        target_angular_speed_sqr_max = 720.0
+        target_angular_speed_sqr = self.lib.stop_gradient(
+            (target_angular_speed_sqr_max + self.target_angular_speed_sqr_max_correction)
+            *(1.0-self.variable_parameters.target_equilibrium*self.lib.cos(angle)))
+        argument = angleD**2 - target_angular_speed_sqr
+        # return argument ** 2
+        return self.lib.abs(argument)
 
     # actuation cost
     def _CC_cost(self, u):
@@ -162,7 +171,8 @@ class quadratic_boundary_grad(cost_function_base):
         )
         db = db_weight * self._boundary_approach_cost(states[:, :, POSITION_IDX])
         ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX])
-        ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLED_IDX])
+        ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLE_IDX], states[:, :, ANGLED_IDX])
+        # ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLED_IDX])
         cc = cc_weight * self._CC_cost(inputs)
         ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
 
