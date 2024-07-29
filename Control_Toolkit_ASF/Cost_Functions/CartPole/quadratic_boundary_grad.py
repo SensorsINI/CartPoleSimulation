@@ -84,7 +84,7 @@ class quadratic_boundary_grad(cost_function_base):
         distance_to_target = self.lib.norm(vector_to_target, axis=0)
 
         # Determine the clipping factor
-        clipping_factor = self.lib.min(1.0, self.admissible_target_distance * TrackHalfLength / distance_to_target)
+        clipping_factor = self.lib.min(1.0, self.admissible_target_distance * 2 * TrackHalfLength / distance_to_target)
 
         # Clip the vector to target position to make sure it does not exceed the admissible distance
         target_position_efficient = self.lib.reshape(position[:, 0] + vector_to_target * clipping_factor, (-1, 1))
