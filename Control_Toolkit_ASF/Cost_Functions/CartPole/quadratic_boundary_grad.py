@@ -25,6 +25,8 @@ class quadratic_boundary_grad(cost_function_base):
 
         self.config_path = config_path
 
+        self.target_angular_speed_sqr_max_correction = self.lib.to_variable(0.0, self.lib.float32)
+
         print('\nConfig cost function:')
         for key, value in self.config.items():
             if key == "admissible_angle":
@@ -84,7 +86,7 @@ class quadratic_boundary_grad(cost_function_base):
         distance_to_target = self.lib.norm(vector_to_target, axis=0)
 
         # Determine the clipping factor
-        clipping_factor = self.lib.min(1.0, self.admissible_target_distance * TrackHalfLength / distance_to_target)
+        clipping_factor = self.lib.min(1.0, self.admissible_target_distance * 2 * TrackHalfLength / distance_to_target)
 
         # Clip the vector to target position to make sure it does not exceed the admissible distance
         target_position_efficient = self.lib.reshape(position[:, 0] + vector_to_target * clipping_factor, (-1, 1))
@@ -111,11 +113,31 @@ class quadratic_boundary_grad(cost_function_base):
     #     return angleD ** 2
 
     def _E_kin_cost(self, angle, angleD):
-        target_angular_speed_sqr_max = 720.0
+
+        te = self.variable_parameters.target_equilibrium
+
+        # The lines below would set the target angular speed to a value
+        # dictated by conservation of energy (target_angular_speed_sqr_max) for target equilibrium up
+        # and to 0 to target equilibrium down
+        target_angular_speed_sqr_max = 120.0
+        default_target_angular_speed_sqr_max = (target_angular_speed_sqr_max*(1.0+self.variable_parameters.target_equilibrium)/2.0)
+
+        # There is additional correction on top of this default speed
+        # For equilibrium up it accounts for the very rough estimation of target_angular_speed_sqr_max
+        # For equilibrium down it encourages the pole to leave the upright position
+        # (which would be a minimum otherwise)
+        target_angular_speed_sqr_max = self.lib.abs(default_target_angular_speed_sqr_max + self.target_angular_speed_sqr_max_correction)
+
+        # We still have problem with this cost causing jitter while down
+
+        basic_scaling = self.lib.stop_gradient((1.0-te*self.lib.cos(angle))/2)  # From energy conservation
+        condition = te * (self.lib.cos(angle) - self.lib.cos(self.admissible_angle)) > 0  # setting to 0 small angles
+        scaling = self.lib.stop_gradient(self.lib.where(condition, 0.0, basic_scaling))
+
         target_angular_speed_sqr = self.lib.stop_gradient(
-            (target_angular_speed_sqr_max + self.target_angular_speed_sqr_max_correction)
-            *(1.0-self.variable_parameters.target_equilibrium*self.lib.cos(angle)))
-        argument = angleD**2 - target_angular_speed_sqr
+            target_angular_speed_sqr_max * scaling
+        )
+        argument = (angleD**2 - target_angular_speed_sqr)  # *basic_scaling
         # return argument ** 2
         return self.lib.abs(argument)
 
@@ -160,11 +182,13 @@ class quadratic_boundary_grad(cost_function_base):
     def weights(self):
 
         def weights_up():
+            self.lib.assign(self.target_angular_speed_sqr_max_correction, self.target_angular_speed_sqr_max_correction_up)
             return (self.dd_quadratic_weight_up, self.dd_linear_weight_up, self.db_weight_up,
                     self.ep_weight_up, self.ekp_weight_up,
                     self.cc_weight_up, self.ccrc_weight_up)
 
         def weights_down():
+            self.lib.assign(self.target_angular_speed_sqr_max_correction, self.target_angular_speed_sqr_max_correction_down)
             return (self.dd_quadratic_weight_down, self.dd_linear_weight_down, self.db_weight_down,
                     self.ep_weight_down, self.ekp_weight_down,
                     self.cc_weight_down, self.ccrc_weight_down)
@@ -180,10 +204,10 @@ class quadratic_boundary_grad(cost_function_base):
 
     def stage_cost_components(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
 
-        # target_position_efficient = self.get_target_position_efficient(states[:, :, POSITION_IDX])
 
         dd_quadratic_weight, dd_linear_weight, db_weight, ep_weight, ekp_weight, cc_weight, ccrc_weight = self.weights()
 
+        # target_position_efficient = self.get_target_position_efficient(states[:, :, POSITION_IDX])
         # dd_quadratic = dd_quadratic_weight * self._distance_difference_cost_quadratic(
         #     states[:, :, POSITION_IDX],
         #     target_position_efficient
