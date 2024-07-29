@@ -8,7 +8,7 @@ random_initial_state:
   # Unassigned variables will be randomly initialized (see below)
   position:
   positionD:
-  angle:
+  angle:  #Seems to be in radian
   angleD:
   target_position:
   init_limits: # The initial state is randomly chosen from below range if above is not assigned
