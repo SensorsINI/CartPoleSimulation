@@ -28,6 +28,7 @@ CartPole:
 
     target_angular_speed_sqr_max_correction: 0.0
     permissible_track_fraction: 0.85
+    admissible_target_distance: 0.5  # As fraction of total track length
     cc_discount: 1.1
     admissible_angle: 0.0
     R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in optimizer config, as it plays a special role in the optimization algorithm as well as is used in cost functions!

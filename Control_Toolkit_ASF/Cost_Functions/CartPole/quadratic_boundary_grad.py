@@ -59,20 +59,38 @@ class quadratic_boundary_grad(cost_function_base):
                 self.lib.assign(var, self.lib.to_variable(value, self.lib.float32))
 
     # cost for distance from track edge
-    def _distance_difference_cost_quadratic(self, position):
+    def _distance_difference_cost_quadratic(self, position, target_position):
         """Compute penalty for distance of cart to the target position"""
 
         target_distance_cost = (
-            (position - self.variable_parameters.target_position) / (2*TrackHalfLength)) ** 2
+            (position - target_position) / (2*TrackHalfLength)) ** 2
 
         return target_distance_cost
 
-    def _distance_difference_cost_linear(self, position):
+    def _distance_difference_cost_linear(self, position, target_position):
         """Compute penalty for distance of cart to the target position"""
         target_distance_cost = self.lib.abs(
-            (position - self.variable_parameters.target_position) / (2.0 * TrackHalfLength))
+            (position - target_position) / (2.0 * TrackHalfLength))
 
         return target_distance_cost
+
+    def get_target_position_efficient(self, position):
+        target_position_clipped = self.lib.clip(self.variable_parameters.target_position, -self.permissible_track_fraction * TrackHalfLength, self.permissible_track_fraction * TrackHalfLength)
+
+        # Compute the vector from position to target_position
+        vector_to_target = target_position_clipped - position[:, 0]
+
+        # Calculate the current distance to the target
+        distance_to_target = self.lib.norm(vector_to_target, axis=0)
+
+        # Determine the clipping factor
+        clipping_factor = self.lib.min(1.0, self.admissible_target_distance * TrackHalfLength / distance_to_target)
+
+        # Clip the vector to target position to make sure it does not exceed the admissible distance
+        target_position_efficient = self.lib.reshape(position[:, 0] + vector_to_target * clipping_factor, (-1, 1))
+
+        return self.lib.stop_gradient(target_position_efficient)
+
 
     def _boundary_approach_cost(self, position):
         """Compute penalty for approaching the boundary"""
@@ -161,14 +179,29 @@ class quadratic_boundary_grad(cost_function_base):
     # all stage costs together
 
     def stage_cost_components(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
+
+        # target_position_efficient = self.get_target_position_efficient(states[:, :, POSITION_IDX])
+
         dd_quadratic_weight, dd_linear_weight, db_weight, ep_weight, ekp_weight, cc_weight, ccrc_weight = self.weights()
 
+        # dd_quadratic = dd_quadratic_weight * self._distance_difference_cost_quadratic(
+        #     states[:, :, POSITION_IDX],
+        #     target_position_efficient
+        # )
+        # dd_linear = dd_linear_weight * self._distance_difference_cost_linear(
+        #     states[:, :, POSITION_IDX],
+        #     target_position_efficient
+        # )
+
         dd_quadratic = dd_quadratic_weight * self._distance_difference_cost_quadratic(
-            states[:, :, POSITION_IDX]
+            states[:, :, POSITION_IDX],
+            self.variable_parameters.target_position
         )
         dd_linear = dd_linear_weight * self._distance_difference_cost_linear(
-            states[:, :, POSITION_IDX]
+            states[:, :, POSITION_IDX],
+            self.variable_parameters.target_position
         )
+
         db = db_weight * self._boundary_approach_cost(states[:, :, POSITION_IDX])
         ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX])
         ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLE_IDX], states[:, :, ANGLED_IDX])
