@@ -204,10 +204,10 @@ class quadratic_boundary_grad(cost_function_base):
 
     def stage_cost_components(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
 
-        # target_position_efficient = self.get_target_position_efficient(states[:, :, POSITION_IDX])
 
         dd_quadratic_weight, dd_linear_weight, db_weight, ep_weight, ekp_weight, cc_weight, ccrc_weight = self.weights()
 
+        # target_position_efficient = self.get_target_position_efficient(states[:, :, POSITION_IDX])
         # dd_quadratic = dd_quadratic_weight * self._distance_difference_cost_quadratic(
         #     states[:, :, POSITION_IDX],
         #     target_position_efficient
