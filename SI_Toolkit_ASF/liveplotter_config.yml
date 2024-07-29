@@ -1,0 +1,7 @@
+# Sets the features for the live plotter to start with
+# Each row is one chart
+- ['Angle', 'None', 'None']
+- ['Target Position', 'Position', 'None']
+- ['Q', 'None', 'None']
+- ['None', 'None', 'None']
+- ['None', 'None', 'None']
