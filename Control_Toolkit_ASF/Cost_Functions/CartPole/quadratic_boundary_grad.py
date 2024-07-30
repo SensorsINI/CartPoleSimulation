@@ -113,7 +113,7 @@ class quadratic_boundary_grad(cost_function_base):
     #     """Compute penalty for not balancing pole upright (penalize large angles)"""
     #     return angleD ** 2
 
-    def _E_kin_cost(self, angle, angleD):
+    def _E_kin_cost(self, angle_cos, angleD):
 
         te = self.variable_parameters.target_equilibrium
 
@@ -131,12 +131,12 @@ class quadratic_boundary_grad(cost_function_base):
 
         # We still have problem with this cost causing jitter while down
 
-        basic_scaling = self.lib.stop_gradient((1.0-te*self.lib.cos(angle))/2)  # From energy conservation
-        condition = te * (self.lib.cos(angle) - self.lib.cos(self.admissible_angle)) > 0  # setting to 0 small angles
-        scaling = self.lib.stop_gradient(self.lib.where(condition, 0.0, basic_scaling))
+        basic_scaling_minus = self.lib.stop_gradient((1.0-te*angle_cos)/2)  # From energy conservation
+        condition = te * (angle_cos - self.lib.cos(self.admissible_angle)) > 0  # setting to 0 small angles
+        scaling = self.lib.stop_gradient(self.lib.where(condition, 0.0, basic_scaling_minus))
 
         target_angular_speed_sqr = self.lib.stop_gradient(
-            target_angular_speed_sqr_max * scaling
+            target_angular_speed_sqr_max * basic_scaling_minus
         )
         argument = (angleD**2 - target_angular_speed_sqr)  # *basic_scaling
         # return argument ** 2
@@ -229,7 +229,7 @@ class quadratic_boundary_grad(cost_function_base):
 
         db = db_weight * self._boundary_approach_cost(states[:, :, POSITION_IDX])
         ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX])
-        ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLE_IDX], states[:, :, ANGLED_IDX])
+        ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLE_COS_IDX], states[:, :, ANGLED_IDX])
         # ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLED_IDX])
         cc = cc_weight * self._CC_cost(inputs)
         ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
