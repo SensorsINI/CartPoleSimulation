@@ -2,7 +2,7 @@
 """
 CartPole Class:
 The file holds the main class of our simulator - it corresponds to a physical cartpole.
-You can find here methods with performing experiment, saving data, displaying CartPole graphically
+You can find here methods with performing experiment, saving data,
 and many more. To run it needs some "environment": we provide you with GUI and data_generator
 @author: Marcin
 """
