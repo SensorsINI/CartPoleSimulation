@@ -16,7 +16,6 @@ import timeit
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.others.environment import EnvironmentBatched
@@ -40,6 +39,7 @@ from CartPole.random_target_generator import Generate_Random_Trace_Function
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 from CartPole.state_utilities import create_cartpole_state
+from CartPole.summary_plots import summary_plots
 
 s0 = create_cartpole_state()
 
@@ -531,69 +531,6 @@ class CartPole(EnvironmentBatched):
         data = load_csv_recording(file_paths[0])
         return data, file_paths[0]
 
-    # Method plotting the dynamic evolution over time of the CartPole
-    # It should be called after an experiment and only if experiment data was saved
-    def summary_plots(self, adaptive_mode=False, title=''):
-
-        if adaptive_mode:
-            number_of_subplots = 5
-            fontsize_labels = 10
-            fontsize_ticks = 10
-        else:
-            number_of_subplots = 4
-            fontsize_labels = 14
-            fontsize_ticks = 12
-
-        fig, axs = plt.subplots(number_of_subplots, 1, figsize=(16, 9), sharex=True)  # share x axis so zoom zooms all plots
-        fig.suptitle(title, fontsize=16)
-
-        # Plot angle error
-        axs[0].set_ylabel("Angle (deg)", fontsize=fontsize_labels)
-        axs[0].plot(np.array(self.dict_history['time']), np.array(self.dict_history['angle']) * 180.0 / np.pi,
-                    'b', markersize=12, label='Ground Truth')
-        axs[0].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
-
-        # Plot position
-        axs[1].set_ylabel("position (m)", fontsize=fontsize_labels)
-        axs[1].plot(self.dict_history['time'], self.dict_history['position'], 'g', markersize=12,
-                    label='Ground Truth')
-        axs[1].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
-
-        # Plot motor input command
-        try:
-            axs[2].set_ylabel("motor (N)", fontsize=fontsize_labels)
-            axs[2].plot(self.dict_history['time'], self.dict_history['u'], 'r', markersize=12,
-                        label='motor')
-            axs[2].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
-            axs[2].set_ylim(bottom=-1.05*u_max, top=1.05*u_max)
-        except KeyError:
-            axs[2].set_ylabel("motor normalized (-)", fontsize=fontsize_labels)
-            axs[2].plot(self.dict_history['time'], self.dict_history['Q'], 'r', markersize=12,
-                        label='motor')
-            axs[2].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
-            axs[2].set_ylim(bottom=-1.05, top=1.05)
-
-        # Plot target position
-        axs[3].set_ylabel("position target (m)", fontsize=fontsize_labels)
-        axs[3].plot(self.dict_history['time'], self.dict_history['target_position'], 'k')
-        axs[3].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
-
-
-
-        if adaptive_mode:
-            ...
-            axs[4].set_xlabel('Time (s)', fontsize=fontsize_labels)
-        else:
-            axs[3].set_xlabel('Time (s)', fontsize=fontsize_labels)
-
-        fig.align_ylabels()
-
-        plt.show()
-
-        return fig, axs
-
-    # endregion
-
     # region 3. Methods for generating random target position for generation of random experiment
 
     # Prepare CartPole Instance to perform an experiment with random target position trace
@@ -767,7 +704,7 @@ class CartPole(EnvironmentBatched):
         if save_mode == 'offline':
             self.save_history_csv(csv_name=csv, mode='save offline')
         
-        if show_summary_plots: self.summary_plots()
+        if show_summary_plots: summary_plots(self.dict_history)
 
         mean_abs_dist = np.mean([np.abs(self.dict_history["position"][i] - self.dict_history["target_position"][i]) for i in range(len(self.dict_history["target_position"]))])
         mean_abs_angle = np.mean(np.abs(self.dict_history["angle"])) * 180.0 / np.pi

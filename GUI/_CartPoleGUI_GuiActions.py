@@ -497,7 +497,7 @@ class CartPole_GuiActions:
             self.PhysicalCartPoleDriverInstance = None
 
         if self.show_experiment_summary:
-            self.w_summary = SummaryWindow(summary_plots=self.CartPoleInstance.summary_plots)
+            self.w_summary = SummaryWindow(dict_history=self.CartPoleInstance.dict_history)
 
         # Reset variables and redraw the figures
         self.reset_variables(0)
