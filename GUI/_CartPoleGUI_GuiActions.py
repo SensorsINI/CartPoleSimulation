@@ -399,11 +399,11 @@ class CartPole_GuiActions:
     def pause_unpause_button(self):
         if self.simulator_mode == 'Physical CP':
             if self.pause_or_unpause_action == 'PAUSE' and self.start_or_stop_action == 'STOP!':
-                self.PhysicalCartPoleDriverInstance.danceEnabled = True
+                self.PhysicalCartPoleDriverInstance.dancer.danceEnabled = True
                 self.pause_or_unpause_action = 'UNPAUSE'
                 self.gui.bp.setText("Stop dancing!")
             else:
-                self.PhysicalCartPoleDriverInstance.danceEnabled = False
+                self.PhysicalCartPoleDriverInstance.dancer.danceEnabled = False
                 self.pause_or_unpause_action = 'PAUSE'
                 self.gui.bp.setText("Dance!")
         else:
@@ -624,7 +624,7 @@ class CartPole_GuiActions:
     # and updates the slider
     def on_mouse_movement(self, event):
         condition = self.simulator_mode == 'Slider-Controlled Experiment' or (
-                self.simulator_mode == 'Physical CP' and not self.PhysicalCartPoleDriverInstance.danceEnabled
+                self.simulator_mode == 'Physical CP' and not self.PhysicalCartPoleDriverInstance.dancer.danceEnabled
         )
         if condition:
             if event.xdata == None or event.ydata == None:
@@ -640,7 +640,7 @@ class CartPole_GuiActions:
     # and updates the slider
     def on_mouse_click(self, event):
         condition = self.simulator_mode == 'Slider-Controlled Experiment' or (
-                self.simulator_mode == 'Physical CP' and not self.PhysicalCartPoleDriverInstance.danceEnabled
+                self.simulator_mode == 'Physical CP' and not self.PhysicalCartPoleDriverInstance.dancer.danceEnabled
         )
         if condition:
             if event.xdata == None or event.ydata == None:
