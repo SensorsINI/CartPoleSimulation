@@ -756,10 +756,11 @@ class CartPole(EnvironmentBatched):
             
                 
         # Set the maximal allowed value of the slider - relevant only for GUI
-        if self.controller_name == 'manual-stabilization':
-            self.slider.Slider_Arrow.set_positions((0, 0), (0, 0))
-        else:
-            self.slider.Slider_Bar.set_width(0.0)
+        if self.slider is not None:
+            if self.controller_name == 'manual-stabilization':
+                self.slider.Slider_Arrow.set_positions((0, 0), (0, 0))
+            else:
+                self.slider.Slider_Bar.set_width(0.0)
 
         # TODO: optimally reset_dict_history would be False and the controller could be switched during experiment
         #   The False option is not implemented yet. So it is possible to switch controller only when the experiment is not running.
@@ -820,14 +821,18 @@ class CartPole(EnvironmentBatched):
                 self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
                 self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
-                self.slider.value = self.target_position = target_position
+                if self.slider is not None:
+                    self.slider.value = self.target_position = target_position
 
             else:
                 raise ValueError('s, Q or target position not provided for initial state')
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                self.Q_calculated = self.slider.value
+                if self.slider is not None:
+                    self.Q_calculated = self.slider.value
+                else:
+                    self.Q_calculated = 0.0
             else:  # in this case slider gives a target position, lqr regulator
                 self.Q_calculated = float(self.controller.step(
                     self.s,
