@@ -13,6 +13,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from CartPole import CartPole
+from CartPole.cartpole_drawer import CartPoleDrawer
+from CartPole.cartpole_target_slider import TargetSlider
 from CartPole.cartpole_parameters import TrackHalfLength
 from CartPole.state_utilities import ANGLED_IDX, ANGLE_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
 
@@ -62,11 +64,12 @@ class CartPole_GuiActions:
         self.turning_points_init = config['random_trace_generation'].get('turning_points_init',
                                                                     None)  # Using .get for optional keys
 
+        self.target_slider = TargetSlider()
         # region Create CartPole instance and load initial settings
 
         # Create CartPole instance
         self.initial_state = create_cartpole_state()
-        self.CartPoleInstance = CartPole(initial_state=self.initial_state)
+        self.CartPoleInstance = CartPole(initial_state=self.initial_state, target_slider=self.target_slider)
 
         # Set timescales
         self.CartPoleInstance.dt_simulation = dt_simulation
@@ -102,6 +105,8 @@ class CartPole_GuiActions:
 
         # endregion
 
+        self.cp_drawer = CartPoleDrawer(self.CartPoleInstance, self.target_slider)
+
         # region Initialize loop-timer
         # This timer allows to relate the simulation time to user time
         # And (if your computer is fast enough) run simulation
@@ -130,7 +135,7 @@ class CartPole_GuiActions:
 
         # Slider instant value (which is draw in GUI) differs from value saved in CartPole instance
         # if the option updating slider "on-click" is enabled.
-        self.slider_instant_value = self.CartPoleInstance.slider_value
+        self.slider_instant_value = self.target_slider.value
 
         self.noise = 'OFF'
         self.CartPoleInstance.NoiseAdderInstance.noise_mode = self.noise
@@ -142,7 +147,7 @@ class CartPole_GuiActions:
         self.fig.AxSlider = self.axes[1]
         self.fig.AxSlider.set_ylim(0, 1)
 
-        self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
+        self.cp_drawer.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
 
         self.threadpool = None
         self.canvas = None
@@ -179,7 +184,7 @@ class CartPole_GuiActions:
         # region Start animation repeatedly redrawing changing elements of matplotlib figures (CartPole drawing and slider)
         # This animation runs ALWAYS when the GUI is open
         # The buttons of GUI only decide if new parameters are calculated or not
-        self.anim = self.CartPoleInstance.run_animation(self.fig)
+        self.anim = self.cp_drawer.run_animation(self.fig)
         # endregion
 
     # region Thread performing CartPole experiment, slider-controlled or random
@@ -303,9 +308,9 @@ class CartPole_GuiActions:
             self.CartPoleInstance.Q = row['Q_applied']
             self.CartPoleInstance.target_position = row['target_position']
             if self.CartPoleInstance.controller_name == 'manual-stabilization':
-                self.CartPoleInstance.slider_value = self.CartPoleInstance.Q
+                self.target_slider.value = self.CartPoleInstance.Q
             else:
-                self.CartPoleInstance.slider_value = self.CartPoleInstance.target_position / TrackHalfLength
+                self.target_slider.value = self.CartPoleInstance.target_position / TrackHalfLength
 
             # TODO: Make it more general for all possible parameters
             try:
@@ -348,9 +353,9 @@ class CartPole_GuiActions:
             self.PhysicalCartPoleDriverInstance.experiment_sequence()
 
             if self.CartPoleInstance.controller_name == 'manual-stabilization':
-                self.CartPoleInstance.slider_value = self.CartPoleInstance.Q
+                self.target_slider.value = self.CartPoleInstance.Q
             else:
-                self.CartPoleInstance.slider_value = self.CartPoleInstance.target_position / TrackHalfLength
+                self.target_slider.value = self.CartPoleInstance.target_position / TrackHalfLength
 
         self.PhysicalCartPoleDriverInstance.terminate_experiment = True
         self.terminate_experiment_or_replay_thread = True
@@ -394,11 +399,11 @@ class CartPole_GuiActions:
     def pause_unpause_button(self):
         if self.simulator_mode == 'Physical CP':
             if self.pause_or_unpause_action == 'PAUSE' and self.start_or_stop_action == 'STOP!':
-                self.PhysicalCartPoleDriverInstance.danceEnabled = True
+                self.PhysicalCartPoleDriverInstance.dancer.danceEnabled = True
                 self.pause_or_unpause_action = 'UNPAUSE'
                 self.gui.bp.setText("Stop dancing!")
             else:
-                self.PhysicalCartPoleDriverInstance.danceEnabled = False
+                self.PhysicalCartPoleDriverInstance.dancer.danceEnabled = False
                 self.pause_or_unpause_action = 'PAUSE'
                 self.gui.bp.setText("Dance!")
         else:
@@ -492,13 +497,13 @@ class CartPole_GuiActions:
             self.PhysicalCartPoleDriverInstance = None
 
         if self.show_experiment_summary:
-            self.w_summary = SummaryWindow(summary_plots=self.CartPoleInstance.summary_plots)
+            self.w_summary = SummaryWindow(dict_history=self.CartPoleInstance.dict_history)
 
         # Reset variables and redraw the figures
         self.reset_variables(0)
 
         # Draw figures
-        self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
+        self.cp_drawer.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
         self.canvas.draw()
 
         # Enable back all elements of GUI:
@@ -619,7 +624,7 @@ class CartPole_GuiActions:
     # and updates the slider
     def on_mouse_movement(self, event):
         condition = self.simulator_mode == 'Slider-Controlled Experiment' or (
-                self.simulator_mode == 'Physical CP' and not self.PhysicalCartPoleDriverInstance.danceEnabled
+                self.simulator_mode == 'Physical CP' and not self.PhysicalCartPoleDriverInstance.dancer.danceEnabled
         )
         if condition:
             if event.xdata == None or event.ydata == None:
@@ -628,21 +633,21 @@ class CartPole_GuiActions:
                 if event.inaxes == self.fig.AxSlider:
                     self.slider_instant_value = event.xdata
                     if not self.slider_on_click:
-                        self.CartPoleInstance.update_slider(mouse_position=event.xdata)
+                        self.target_slider.update_slider(mouse_position=event.xdata)
 
     # Function evoked at a mouse click
     # If the mouse cursor is over the lower chart it reads the corresponding value
     # and updates the slider
     def on_mouse_click(self, event):
         condition = self.simulator_mode == 'Slider-Controlled Experiment' or (
-                self.simulator_mode == 'Physical CP' and not self.PhysicalCartPoleDriverInstance.danceEnabled
+                self.simulator_mode == 'Physical CP' and not self.PhysicalCartPoleDriverInstance.dancer.danceEnabled
         )
         if condition:
             if event.xdata == None or event.ydata == None:
                 pass
             else:
                 if event.inaxes == self.fig.AxSlider:
-                    self.CartPoleInstance.update_slider(mouse_position=event.xdata)
+                    self.target_slider.update_slider(mouse_position=event.xdata)
 
     # endregion
 
@@ -673,7 +678,7 @@ class CartPole_GuiActions:
         # Reset the state of GUI and of the Cart instance after the mode has changed
         # TODO: Do I need the follwowing lines?
         self.reset_variables(0)
-        self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
+        self.cp_drawer.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
         self.canvas.draw()
 
     def update_rbs_optimizers_status(self, visible: bool):
@@ -714,7 +719,7 @@ class CartPole_GuiActions:
             if self.PhysicalCartPoleDriverInstance:
                 self.PhysicalCartPoleDriverInstance.terminate_experiment = True
 
-        self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
+        self.cp_drawer.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
         self.canvas.draw()
 
     # Chose the equilibrium - stabilize up or down
@@ -836,7 +841,7 @@ class CartPole_GuiActions:
             self.CartPoleInstance.show_hanging_pole = True
         else:
             self.CartPoleInstance.show_hanging_pole = False
-        self.CartPoleInstance.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
+        self.cp_drawer.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
         self.canvas.draw()
 
     # endregion

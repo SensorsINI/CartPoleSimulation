@@ -2,17 +2,19 @@ from PyQt6.QtWidgets import QVBoxLayout, QWidget, QPushButton
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
+from CartPole.summary_plots import summary_plots
+
 
 # Window displaying summary (matplotlib plots) of an experiment with CartPole after clicking Stop button
 # (if experiment was previously running)
 class SummaryWindow(QWidget):
-    def __init__(self, summary_plots=None):
+    def __init__(self, dict_history):
         super(SummaryWindow, self).__init__()
 
         ## Create GUI Layout
         layout = QVBoxLayout()
 
-        self.fig, self.axs = summary_plots()
+        self.fig, self.axs = summary_plots(dict_history)
         for axis in self.axs:
             axis.tick_params(axis='both', which='major', labelsize=9)
             axis.xaxis.label.set_fontsize(10)
