@@ -23,8 +23,10 @@ from Control_Toolkit.others.globals_and_utils import (
     get_available_controller_names, get_available_optimizer_names, get_controller_name, get_optimizer_name, import_controller_by_name)
 from others.globals_and_utils import MockSpace, create_rng, load_config
 from CartPole.cartpole_parameters import (J_fric, L, m_cart, M_fric, TrackHalfLength,
-                                          controlBias, controlDisturbance, CP_PARAMETERS_DEFAULT,
-                                          g, k, m_pole, u_max, v_max, controlDisturbance_mode)
+                                          CP_PARAMETERS_DEFAULT,
+                                          g, k, m_pole, u_max, v_max,
+                                          controlBias, controlDisturbance, controlDisturbance_mode
+                                          )
 # Interpolate function to create smooth random track
 # Run range() automatically adding progress bar in terminal
 from tqdm import trange
@@ -101,6 +103,7 @@ class CartPole(EnvironmentBatched):
         # Variables for control input and target position.
         self.u = 0.0  # Physical force acting on the cart
         self.Q_applied = 0.0
+        self.Q_ccrc = 0.0
         self.Q_calculated = 0.0
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
 
@@ -225,6 +228,7 @@ class CartPole(EnvironmentBatched):
 
                 'Q_calculated': lambda: self.Q_calculated,
                 'Q_applied': lambda: self.Q_applied,
+                'Q_ccrc': lambda: self.Q_ccrc,
                 'u': lambda: self.u,
 
                 # The target_position is not always meaningful
@@ -467,15 +471,24 @@ class CartPole(EnvironmentBatched):
                 self.Q_calculated = self.slider.value
                 self.Q_update_time = 0.0
             else:  # in this case slider gives a target position, lqr regulator
+                # self.Q_ccrc = add_control_noise(self.Q_calculated, rng,
+                #                                 controlDisturbance_mode, controlDisturbance, controlBias)
+                self.Q_ccrc = self.Q_applied
                 update_start = timeit.default_timer()
                 self.Q_calculated = float(self.controller.step(
                     self.s_with_noise_and_latency,
                     self.time,
-                    {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium, 'L': float(self.L_for_controller)}
+                    {
+                        "target_position": self.target_position,
+                        "target_equilibrium": self.target_equilibrium,
+                        'L': float(self.L_for_controller),
+                        "Q_ccrc": self.Q_ccrc,
+                    }
                 ))
                 self.Q_update_time = timeit.default_timer()-update_start
 
-            self.Q_applied = add_control_noise(self.Q_calculated, rng)
+                self.Q_applied = add_control_noise(self.Q_calculated, rng,
+                                                   controlDisturbance_mode, controlDisturbance, controlBias)
 
             self.Q = self.Q_applied
             self.dt_controller_steps_counter = 0
@@ -740,7 +753,8 @@ class CartPole(EnvironmentBatched):
                 initial_environment_attributes={
                     "target_position": self.target_position,
                     "target_equilibrium": self.target_equilibrium,
-                    "L": float(self.L_for_controller)
+                    "L": float(self.L_for_controller),
+                    "Q_ccrc": self.Q_ccrc,
                 },
                 control_limits=(self.action_space.low, self.action_space.high),
             )
@@ -829,13 +843,20 @@ class CartPole(EnvironmentBatched):
                 # in this case slider corresponds already to the power of the motor
                 self.Q_calculated = self.slider.value
             else:  # in this case slider gives a target position, lqr regulator
+                self.Q_ccrc = 0.0
                 self.Q_calculated = float(self.controller.step(
                     self.s,
                     self.time,
-                    {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium, "L": float(self.L_for_controller)}
+                    {
+                        "target_position": self.target_position,
+                        "target_equilibrium": self.target_equilibrium,
+                        "L": float(self.L_for_controller),
+                        "Q_ccrc": self.Q_ccrc,
+                    }
                 ))
 
-            self.Q_applied = add_control_noise(self.Q_calculated, rng)
+            self.Q_applied = add_control_noise(self.Q_calculated, rng,
+                                               controlDisturbance_mode, controlDisturbance, controlBias)
 
             self.Q = self.Q_applied
             self.u = self.cpe.Q2u(self.Q)  # Calculate CURRENT control input
