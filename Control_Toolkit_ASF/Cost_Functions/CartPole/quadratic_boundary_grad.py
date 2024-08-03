@@ -83,10 +83,10 @@ class quadratic_boundary_grad(cost_function_base):
         vector_to_target = target_position_clipped - position[:, 0]
 
         # Calculate the current distance to the target
-        distance_to_target = self.lib.norm(vector_to_target, axis=0)
+        distance_to_target = self.lib.abs(vector_to_target)
 
         # Determine the clipping factor
-        clipping_factor = self.lib.min(1.0, self.admissible_target_distance * 2 * TrackHalfLength / distance_to_target)
+        clipping_factor = self.lib.min(1.0, self.admissible_target_distance / distance_to_target)
 
         # Clip the vector to target position to make sure it does not exceed the admissible distance
         target_position_efficient = self.lib.reshape(position[:, 0] + vector_to_target * clipping_factor, (-1, 1))
@@ -121,7 +121,8 @@ class quadratic_boundary_grad(cost_function_base):
         # dictated by conservation of energy (target_angular_speed_sqr_max) for target equilibrium up
         # and to 0 to target equilibrium down
         target_angular_speed_sqr_max = 120.0
-        default_target_angular_speed_sqr_max = (target_angular_speed_sqr_max*(1.0+self.variable_parameters.target_equilibrium)/2.0)
+        up_only = (1.0+self.variable_parameters.target_equilibrium)/2.0
+        default_target_angular_speed_sqr_max = target_angular_speed_sqr_max * up_only
 
         # There is additional correction on top of this default speed
         # For equilibrium up it accounts for the very rough estimation of target_angular_speed_sqr_max
@@ -132,11 +133,11 @@ class quadratic_boundary_grad(cost_function_base):
         # We still have problem with this cost causing jitter while down
 
         basic_scaling_minus = self.lib.stop_gradient((1.0-te*angle_cos)/2)  # From energy conservation
-        condition = te * (angle_cos - self.lib.cos(self.admissible_angle)) > 0  # setting to 0 small angles
+        condition = te * angle_cos - self.lib.cos(self.admissible_angle) >= 0  # setting to 0 small angles
         scaling = self.lib.stop_gradient(self.lib.where(condition, 0.0, basic_scaling_minus))
 
         target_angular_speed_sqr = self.lib.stop_gradient(
-            target_angular_speed_sqr_max * basic_scaling_minus
+            target_angular_speed_sqr_max * scaling
         )
         argument = (angleD**2 - target_angular_speed_sqr)  # *basic_scaling
         # return argument ** 2
@@ -208,30 +209,34 @@ class quadratic_boundary_grad(cost_function_base):
 
         dd_quadratic_weight, dd_linear_weight, db_weight, ep_weight, ekp_weight, cc_weight, ccrc_weight = self.weights()
 
-        # target_position_efficient = self.get_target_position_efficient(states[:, :, POSITION_IDX])
-        # dd_quadratic = dd_quadratic_weight * self._distance_difference_cost_quadratic(
-        #     states[:, :, POSITION_IDX],
-        #     target_position_efficient
-        # )
-        # dd_linear = dd_linear_weight * self._distance_difference_cost_linear(
-        #     states[:, :, POSITION_IDX],
-        #     target_position_efficient
-        # )
-
+        te = self.variable_parameters.target_equilibrium
+        up_only = (1.0 + self.variable_parameters.target_equilibrium) / 2.0
+        basic_scaling_minus = self.lib.stop_gradient((1.0 - te * states[:, :, ANGLE_COS_IDX]) / 2)  # minimum at target
+        basic_scaling_plus = self.lib.stop_gradient((1.0 + te * states[:, :, ANGLE_COS_IDX]) / 2)  # max at target
+        target_position_efficient = self.get_target_position_efficient(states[:, :, POSITION_IDX])
         dd_quadratic = dd_quadratic_weight * self._distance_difference_cost_quadratic(
             states[:, :, POSITION_IDX],
-            self.variable_parameters.target_position
+            target_position_efficient
         )
         dd_linear = dd_linear_weight * self._distance_difference_cost_linear(
             states[:, :, POSITION_IDX],
-            self.variable_parameters.target_position
+            target_position_efficient
         )
 
+        # dd_quadratic = dd_quadratic_weight * self._distance_difference_cost_quadratic(
+        #     states[:, :, POSITION_IDX],
+        #     self.variable_parameters.target_position
+        # ) * basic_scaling_plus
+        # dd_linear = dd_linear_weight * self._distance_difference_cost_linear(
+        #     states[:, :, POSITION_IDX],
+        #     self.variable_parameters.target_position
+        # ) * basic_scaling_plus
+
         db = db_weight * self._boundary_approach_cost(states[:, :, POSITION_IDX])
-        ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX])
-        ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLE_COS_IDX], states[:, :, ANGLED_IDX])
+        ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX]) * (basic_scaling_minus*up_only + ((1.0 - te)/2.0))
+        ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLE_COS_IDX], states[:, :, ANGLED_IDX]) * (basic_scaling_minus*up_only + ((1.0 - te)/2.0))
         # ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLED_IDX])
-        cc = cc_weight * self._CC_cost(inputs)
+        cc = cc_weight * self._CC_cost(inputs) #* (basic_scaling_plus[:, :inputs.shape[1]]*up_only + ((1.0 - te)/2.0))
         ccrc = ccrc_weight * self._control_change_rate_cost(inputs, previous_input)
 
         return dd_quadratic, dd_linear, db, ep, ekp, cc, ccrc
