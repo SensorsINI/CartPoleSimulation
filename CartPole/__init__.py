@@ -359,7 +359,8 @@ class CartPole(EnvironmentBatched):
                     return
 
                 self.target_position = self.random_track_f(self.time)
-                self.slider.value = self.target_position/TrackHalfLength  # Assign target position to slider to display it
+                if self.slider:
+                    self.slider.value = self.target_position/TrackHalfLength  # Assign target position to slider to display it
             else:
                 self.target_position = self.slider.value * TrackHalfLength  # Get target position from slider
 
