@@ -39,13 +39,13 @@ def args_fun():
 
 formatted_index = args_fun()
 if formatted_index is not None:
-    get_files_from = f'SI_Toolkit_ASF/Experiments/GRU_recordings/previous/Experiment-{formatted_index}.csv'
+    get_files_from = f'GRU_recordings/smooth_up/Experiment-{formatted_index}.csv'
 else:
-    get_files_from = 'SI_Toolkit_ASF/Experiments/GRU_recordings/'
+    get_files_from = 'GRU_recordings/smooth_up/'
     # get_files_from = 'Test'
 
 
-save_files_to = 'SI_Toolkit_ASF/Experiments/GRU_recordings_processed/previous/'
+save_files_to = 'GRU_recordings_processed/smooth_up/'
 # save_files_to = 'Test_new'
 
 controller = {
