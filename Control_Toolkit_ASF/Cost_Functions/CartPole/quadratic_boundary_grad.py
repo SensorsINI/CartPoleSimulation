@@ -175,6 +175,7 @@ class quadratic_boundary_grad(cost_function_base):
 
     # cost of changing control to fast
     def _control_change_rate_cost(self, u, u_prev):
+        u_prev = self.variable_parameters.Q_ccrc
         """Compute penalty of control jerk, i.e. difference to previous control input"""
         u_prev_vec = self.lib.concat(
             (self.lib.ones((u.shape[0], 1, u.shape[2])) * u_prev, u[:, :-1, :]), 1
