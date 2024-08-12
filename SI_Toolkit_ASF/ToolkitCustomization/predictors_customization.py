@@ -35,7 +35,7 @@ class next_state_predictor_ODE:
         self.t_step = self.lib.to_tensor(dt / float(self.intermediate_steps), dtype=self.lib.float32)
         self.variable_parameters = variable_parameters
 
-        self.cpe = CartPoleEquations(lib=self.lib, get_parameters_from='rpgd_cartpole_physical_parameters.yml')
+        self.cpe = CartPoleEquations(lib=self.lib, get_parameters_from='cartpole_physical_parameters.yml')
         self.params = self.cpe.params
 
         if disable_individual_compilation:
