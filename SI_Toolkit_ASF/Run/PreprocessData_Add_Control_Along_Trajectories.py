@@ -58,6 +58,7 @@ controller = {
         "target_position": "target_position",
         "target_equilibrium": "target_equilibrium",
         "L": "L",
+        "Q_ccrc": "Q_applied_-1",
     },
 }
 
