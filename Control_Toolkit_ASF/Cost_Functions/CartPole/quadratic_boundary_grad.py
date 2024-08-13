@@ -71,8 +71,19 @@ class quadratic_boundary_grad(cost_function_base):
 
     def _distance_difference_cost_linear(self, position, target_position):
         """Compute penalty for distance of cart to the target position"""
+        distance_to_target = self.lib.abs(position - target_position)
+
+        acceptable_distance_to_target = self.lib.to_tensor(0.005, self.lib.float32)
+
+        # Apply the condition and set values to 0 where the condition is met
+        adjusted_distance = self.lib.where(
+            distance_to_target < acceptable_distance_to_target,  # Condition
+            self.lib.zeros_like(distance_to_target),  # If condition is true, set to 0
+            distance_to_target  # Otherwise, keep original value
+        )
+
         target_distance_cost = self.lib.abs(
-            (position - target_position) / (2.0 * TrackHalfLength))
+            adjusted_distance / (2.0 * TrackHalfLength))
 
         return target_distance_cost
 
