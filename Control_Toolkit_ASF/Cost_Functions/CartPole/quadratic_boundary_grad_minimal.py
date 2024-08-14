@@ -21,7 +21,7 @@ class quadratic_boundary_grad_minimal(cost_function_base):
         # load constants from config file - these are quite ugly two lines which needs to be manually changed for each cost function
         config, config_path = load_config(os.path.join("Control_Toolkit_ASF", "config_cost_function.yml"),
                                           return_path=True)
-        self.config = config["CartPole"]["quadratic_boundary_grad"]
+        self.config = config["CartPole"]["quadratic_boundary_grad_minimal"]
 
         self.config_path = config_path
 
