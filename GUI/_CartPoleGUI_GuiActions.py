@@ -898,11 +898,12 @@ class CartPole_GuiActions:
 
     # region Buttons for providing a kick to the pole
 
-    def kick_pole(self):
-        if self.gui.sender().text() == "Left":
-            self.CartPoleInstance.s[ANGLED_IDX] += .6
-        elif self.gui.sender().text() == "Right":
-            self.CartPoleInstance.s[ANGLED_IDX] -= .6
+    def kick_pole(self, direction):
+        # Adjust the angle based on the direction passed
+        if direction == "Left":
+            self.CartPoleInstance.s[ANGLED_IDX] += .6  # Adjust angle for left kick
+        elif direction == "Right":
+            self.CartPoleInstance.s[ANGLED_IDX] -= .6  # Adjust angle for right kick
 
     # endregion
     # TODO: Porobably bad idea with these properties.
