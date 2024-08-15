@@ -13,6 +13,7 @@ CartPole:
     dd_quadratic_weight_up: 500.0
     dd_linear_weight_up: 0.0
     ep_weight_up: 6000.0
+    target_angular_speed_sqr_max_correction_up: 0.0
     ekp_weight_up: 30.0
     db_weight_up: 10000
     cc_weight_up: 5.0
@@ -21,6 +22,7 @@ CartPole:
     dd_quadratic_weight_down: 500.0
     dd_linear_weight_down: 0.0
     ep_weight_down: 6000.0
+    target_angular_speed_sqr_max_correction_down: 100.0
     ekp_weight_down: 30.0
     db_weight_down: 10000
     cc_weight_down: 5.0
