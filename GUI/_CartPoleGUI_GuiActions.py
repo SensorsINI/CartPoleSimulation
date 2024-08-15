@@ -140,6 +140,8 @@ class CartPole_GuiActions:
         self.noise = 'OFF'
         self.CartPoleInstance.NoiseAdderInstance.noise_mode = self.noise
 
+        self.zero_angle_shift_handler = ZeroAngleShiftHandler(self.CartPoleInstance)
+
         # region - Matplotlib figures (CartPole drawing and Slider)
         # Draw Figure
         self.fig, self.axes = plt.subplots(2, 1, figsize=(25, 10))  # Regulates the size of Figure in inches, before scaling to window size.
@@ -956,3 +958,29 @@ class CartPole_GuiActions:
     def max_latency(self):
         return self.CartPoleInstance.LatencyAdderInstance.max_latency
 
+
+class ZeroAngleShiftHandler:
+    def __init__(self, cart_pole_instance):
+        self.cart_pole_instance = cart_pole_instance
+        self.textbox = None
+
+    def connect_textbox(self, textbox):
+        self.textbox = textbox
+
+        # Connect the editingFinished signal
+        self.textbox.editingFinished.connect(self.on_user_input_finished)
+
+    def on_user_input_finished(self):
+        # Now process the input and update the internal value
+        self.update_zero_angle_shift()
+
+    def update_zero_angle_shift(self):
+        # Get the value from the textbox
+        try:
+            value = np.deg2rad(float(self.textbox.text()))
+        except ValueError:
+            # Handle invalid input (non-float) by ignoring it or resetting the value
+            return
+
+        # Update the CartPoleInstance's zero_angle_shift
+        self.cart_pole_instance.zero_angle_shift = value
