@@ -14,6 +14,10 @@ dist/
 eggs/
 *.egg-info/
 *.egg
+
+.idea/*
+
 /Modeling/SI_Toolkit/TF/NNI/NNI_Results
 
 /SI_Toolkit_ASF/Experiments/*
+others/EulerClusterScripts/slurm-*.out

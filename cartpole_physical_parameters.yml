@@ -3,16 +3,17 @@ cartpole:
   mode: stabilization
   seed: 1873  # This is a seed for rng for CartPole instance class only. If null random seed based on datetime is used
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
-  m_pole: 0.021  # mass of pole, kg, 0.021 for short pole, 0.087 for long pole
+  m_pole: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   m_cart: 0.230  # mass of cart, kg # Checked by Antonio
-  L: "0.092/2.0"  # HALF (!!!) length of pend, m, "0.092/2.0" for short pole, "0.395/2.0" for long pole
-  u_max: 2.62  # max force produced by the motor, N # Checked by Marcin
-  M_fric: 4.77  # cart friction on track, N/m/s # Checked by Marcin
-  J_fric: 5.0e-5  # friction coefficient on angular velocity in pole joint, Nm/rad/s, it was J_fric: 2.5e-4, until we switched to short pole and remeasured, old value did not worked in simulation for swing-up with short pole
+  L: "0.395/2.0"  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi
+  u_max: 1.77  # max force produced by the motor, N # Checked by Marcin
+  M_fric: 3.22  # cart friction on track, N/m/s # Checked by Marcin
+  J_fric: 5.0e-5  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
   v_max: 0.8  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented in model, but needed for MPC
   cart_length: 4.4e-2  # m, checked by Marcin&Asude
   track_length: 44.0e-2  # m, checked by Marcin&Asude, Total track length, usable track length is track_length-cart_length
-  controlDisturbance: 0.0  # disturbance, as factor of u_max # I used 0.2-0.5 for data collection
+  controlDisturbance_mode: "OFF"  # 'truncnorm' (with mu=Q+controlBias and scale controlDisturbance, trunc -1,1), 'additive' (old, Q+controlDisturbance*std_normal+controlBias), 'OFF'
+  controlDisturbance: 0.5  # disturbance, as factor of u_max # I used 0.2-0.5 for data collection
   controlBias: 0.0  # bias of control input
   g: 9.81  # absolute value of gravity acceleration, m/s^2
   k: "1.0/3.0"  # Dimensionless factor of moment of inertia of the pole with length 2L: I: (1/3)*m*(2L)^2 = (4/3)*m*(L)^2

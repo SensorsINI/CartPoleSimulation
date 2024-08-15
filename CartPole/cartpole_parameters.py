@@ -17,6 +17,8 @@ class CartPoleParameters:
                 value = float(value.split("/")[0])/float(value.split("/")[1])
             elif key == 'k':
                 value = float(value.split("/")[0])/float(value.split("/")[1])
+            elif key == 'controlDisturbance_mode':
+                value = value
             if key in ['k', 'm_cart', 'm_pole', 'g', 'J_fric', 'M_fric', 'L', 'v_max', 'u_max',
                        'controlDisturbance', 'controlBias', 'TrackHalfLength']:
                 value = lib.to_tensor(value, dtype=lib.float32)
@@ -56,10 +58,11 @@ class CartPoleParameters:
             convert(self.u_max),
             convert(self.controlDisturbance),
             convert(self.controlBias),
-            convert(self.TrackHalfLength)
+            convert(self.TrackHalfLength),
+            self.controlDisturbance_mode
         )
 
 
 CP_PARAMETERS_DEFAULT = CartPoleParameters()
 (k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max,
- controlDisturbance, controlBias, TrackHalfLength) = CP_PARAMETERS_DEFAULT.export_parameters()
+ controlDisturbance, controlBias, TrackHalfLength, controlDisturbance_mode) = CP_PARAMETERS_DEFAULT.export_parameters()

@@ -37,4 +37,5 @@ class Worker(QRunnable):
         else:
             self.signals.result.emit(result)  # Return the result of the processing
         finally:
-            self.signals.finished.emit()
+            if hasattr(self, 'signals'):
+                self.signals.finished.emit()

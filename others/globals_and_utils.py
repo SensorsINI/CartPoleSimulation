@@ -7,7 +7,7 @@ import math
 import os
 import time
 from datetime import datetime
-from typing import Tuple
+from typing import Tuple, Any
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0' # all TF messages
 
@@ -198,7 +198,15 @@ log=my_logger(__name__)
 def create_rng(id: str, seed: str, use_tf: bool=False):
     if seed == None:
         log.info(f"{id}: No random seed specified. Seeding with datetime.")
-        seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)  # Fully random
+
+        # Get the current time in nanoseconds for higher precision
+        current_time_ns = time.time_ns()
+
+        # Get the process ID (unique for each parallel process)
+        process_id = os.getpid()
+
+        # Combine the current time and the process ID to generate a more unique seed
+        seed = current_time_ns ^ process_id
     
     if use_tf:
         return tf.random.Generator.from_seed(seed=seed)
@@ -206,17 +214,23 @@ def create_rng(id: str, seed: str, use_tf: bool=False):
         return Generator(SFC64(seed=seed))
 
 
-def load_config(filename: str) -> dict:
+def load_config(filename: str, return_path=False) -> Tuple[Any, str]:
     """Try loading config from yaml if os.getcwd() is one level above CartPoleSimulation. This would be the case if CartPoleSimulation is added as Git Submodule in another repository. If not found, load from the current os path.
 
     :param filename: e.g. 'config.yml'
+    :param return_path: if True, return the path of the loaded file
     :type filename: str
     """
     try:
-        config = load_yaml(os.path.join("CartPoleSimulation", filename), "r")
+        config, path = load_yaml(filename, return_path=True)
     except FileNotFoundError:
-        config = load_yaml(filename)
-    return config
+        path = os.path.join("CartPoleSimulation", filename)
+        config, path = load_yaml(path, "r", return_path=True)
+
+    if return_path:
+        return config, path
+    else:
+        return config
 
 
 class MockSpace:

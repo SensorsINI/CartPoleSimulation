@@ -28,7 +28,7 @@ from numba import jit
 from numpy.random import SFC64, Generator
 from CartPole.cartpole_parameters import TrackHalfLength
 from scipy.interpolate import interp1d
-from SI_Toolkit.Predictors.predictor_ODE import predictor_ODE
+from SI_Toolkit.Predictors.predictor_ODE_v0 import predictor_ODE_v0
 from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper
 
 # from SI_Toolkit.Predictors.predictor_autoregressive_GP import predictor_autoregressive_GP
@@ -60,7 +60,7 @@ if predictor.predictor_config['predictor_type'] == 'neural':
 else:
     NET_TYPE = None
 
-predictor_ground_truth = predictor_ODE(
+predictor_ground_truth = predictor_ODE_v0(
     horizon=mpc_horizon, dt=dt, intermediate_steps=10
 )
 
@@ -505,7 +505,7 @@ class controller_mppi_cartpole(template_controller):
                 # Compute one rollout of shape (mpc_horizon + 1) x s.size
                 if predictor.predictor_type == "ODE":
                     rollout_trajectory = predictor.predict(np.copy(self.s), self.u[:, np.newaxis])
-                elif predictor.predictor_type in ["neural", "ODE_TF", "GP"]:
+                elif predictor.predictor_type in ["neural", "ODE", "GP"]:
                     # This is a lot of unnecessary calculation, but a stateful RNN in TF has frozen batch size
                     # FIXME: Problaby you can reduce it!
 

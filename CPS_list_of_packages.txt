@@ -1,41 +1,26 @@
-onnx==1.12 # Installed also automatically, but in a higher version causing conflict
-protobuf==3.20 # Installed also automatically, but in a higher version causing conflict
-GitPython
 gym
 imageio
 engineering_notation
-derivative
 gpflow
 gym
 pygame
-matplotlib
 numba
-numpy
-pandas
 pip
 pygame
-PyYAML
 scikit-learn
-scipy
+scipy==1.9.1
 setuptools
-# sklearn
 sympy
 tqdm
 typing-extensions
-PyQt6
 tensorflow-probability
 Pillow
 gymnasium
 pyserial
-tensorflow_model_optimization
-
-torch
-tensorflow
 
 do-mpc==4.1.1
 casadi
 
-qkeras
 hls4ml
 # nni
 
