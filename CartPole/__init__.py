@@ -137,6 +137,11 @@ class CartPole(EnvironmentBatched):
         self.zero_angle_shift_mode = self.config['zero_angle_shift']['mode']
         self.zero_angle_shift_increment = np.deg2rad(self.config['zero_angle_shift']['increment'])
 
+        self.zero_angle_shift_every = 4.0  # seconds
+        self.zero_angle_shift_length = 1.0  # seconds
+        self.time_of_last_zero_angle_shift = 0.0
+
+
         # region Time scales for simulation step, controller update and saving data
         # See last paragraph of "Time scales" section for explanations
         # ∆t in number of steps (related to simulation time step)
@@ -338,9 +343,20 @@ class CartPole(EnvironmentBatched):
         elif self.zero_angle_shift_mode == 'increase':
             self.zero_angle_shift_increment *= 1.000
             da = self.zero_angle_shift_increment
+        elif self.zero_angle_shift_mode == 'random':
+            if self.time-self.time_of_last_zero_angle_shift > self.zero_angle_shift_every:
+                if self.time-self.time_of_last_zero_angle_shift > self.zero_angle_shift_every+self.zero_angle_shift_length:
+                    self.time_of_last_zero_angle_shift = self.time
+                    self.zero_angle_shift = 0.0
+                else:
+                    if self.zero_angle_shift == 0.0:
+                        self.zero_angle_shift = np.random.uniform(-np.pi, np.pi)
         else:
             raise ValueError('zero_angle_shift_mode with value {} not valid'.format(self.zero_angle_shift_mode))
-        self.zero_angle_shift += da
+
+        if not self.zero_angle_shift_mode == 'random':
+            self.zero_angle_shift += da
+
         s[ANGLE_IDX] = wrap_angle_rad(s[ANGLE_IDX]+self.zero_angle_shift)
         s[ANGLE_COS_IDX] = np.cos(s[ANGLE_IDX])
         s[ANGLE_SIN_IDX] = np.sin(s[ANGLE_IDX])
