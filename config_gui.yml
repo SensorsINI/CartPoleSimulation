@@ -42,9 +42,6 @@ gui_settings: # Can be changed in GUI
   # E.g. 2.0 means that you watch simulation double speed
   # WARNING: This is the target value, max speedup is limited by speed of performing CartPole simulation
   # True instantaneous speedup is displayed in CartPole GUI as "Speed-up(measured)"
-  show_hanging_pole_init: false # Action toggling between showing the ground level and above
-  # and showing above and below ground level.
-  # Second option is good for visualizing swing-up
 
 random_trace_generation:  # Can be partly modified in GUI.
   # Variables for random trace generation - GUI only
