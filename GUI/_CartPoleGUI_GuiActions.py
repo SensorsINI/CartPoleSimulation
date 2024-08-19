@@ -181,6 +181,8 @@ class CartPole_GuiActions:
         self.threadpool.start(worker_labels)
         # endregion
 
+        self.RadioButtons_simulator_mode()
+
         # region Start animation repeatedly redrawing changing elements of matplotlib figures (CartPole drawing and slider)
         # This animation runs ALWAYS when the GUI is open
         # The buttons of GUI only decide if new parameters are calculated or not
@@ -626,7 +628,9 @@ class CartPole_GuiActions:
     # and updates the slider
     def on_mouse_movement(self, event):
         condition = self.simulator_mode == 'Slider-Controlled Experiment' or (
-                self.simulator_mode == 'Physical CP' and not self.PhysicalCartPoleDriverInstance.dancer.danceEnabled
+                self.simulator_mode == 'Physical CP'
+                and self.PhysicalCartPoleDriverInstance is not None
+                and not self.PhysicalCartPoleDriverInstance.dancer.danceEnabled
         )
         if condition:
             if event.xdata == None or event.ydata == None:
