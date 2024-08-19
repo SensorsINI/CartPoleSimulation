@@ -350,23 +350,25 @@ class CartPole_GuiActions:
         except:
             pass
 
-        while not self.PhysicalCartPoleDriverInstance.terminate_experiment and not self.terminate_experiment_or_replay_thread:
+        with self.PhysicalCartPoleDriverInstance.mlm.terminal_manager():
 
-            self.PhysicalCartPoleDriverInstance.experiment_sequence()
+            while not self.PhysicalCartPoleDriverInstance.terminate_experiment and not self.terminate_experiment_or_replay_thread:
 
-            if self.CartPoleInstance.controller_name == 'manual-stabilization':
-                self.target_slider.value = self.CartPoleInstance.Q
-            else:
-                self.target_slider.value = self.CartPoleInstance.target_position / TrackHalfLength
+                self.PhysicalCartPoleDriverInstance.experiment_sequence()
 
-        self.PhysicalCartPoleDriverInstance.terminate_experiment = True
-        self.terminate_experiment_or_replay_thread = True
+                if self.CartPoleInstance.controller_name == 'manual-stabilization':
+                    self.target_slider.value = self.CartPoleInstance.Q
+                else:
+                    self.target_slider.value = self.CartPoleInstance.target_position / TrackHalfLength
 
-        self.PhysicalCartPoleDriverInstance.quit_experiment()
+            self.PhysicalCartPoleDriverInstance.terminate_experiment = True
+            self.terminate_experiment_or_replay_thread = True
 
-        self.PhysicalCartPoleDriverInstance = None
+            self.PhysicalCartPoleDriverInstance.quit_experiment()
 
-        self.experiment_or_replay_thread_terminated = True
+            self.PhysicalCartPoleDriverInstance = None
+
+            self.experiment_or_replay_thread_terminated = True
 
     # endregion
 
@@ -711,7 +713,8 @@ class CartPole_GuiActions:
             print("\n\nSetting up physical cartpole driver...")
             from DriverFunctions.PhysicalCartPoleDriver import PhysicalCartPoleDriver
             self.PhysicalCartPoleDriverInstance = PhysicalCartPoleDriver(self.CartPoleInstance)
-            self.PhysicalCartPoleDriverInstance.setup()
+            with self.PhysicalCartPoleDriverInstance.mlm.terminal_manager():
+                self.PhysicalCartPoleDriverInstance.setup()
             worker = Worker(self.physical_experiment_thread)
             worker.signals.finished.connect(self.finish_thread)
             # Execute
