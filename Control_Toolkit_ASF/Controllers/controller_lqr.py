@@ -16,10 +16,10 @@ from CartPole.state_utilities import create_cartpole_state
 from CartPole.state_utilities import (ANGLE_IDX, ANGLED_IDX, POSITION_IDX,
                                       POSITIOND_IDX)
 from Control_Toolkit.Controllers import template_controller
-from others.globals_and_utils import create_rng
+from others.globals_and_utils import create_rng, load_config
 
 s0 = create_cartpole_state()
-config = yaml.load(open("cartpole_physical_parameters.yml", "r"), Loader=yaml.FullLoader)
+config = load_config("cartpole_physical_parameters.yml")
 actuator_noise = config["cartpole"]["actuator_noise"]
 
 
