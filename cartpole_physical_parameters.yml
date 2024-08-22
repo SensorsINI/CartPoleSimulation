@@ -1,7 +1,7 @@
 cartpole:
   actuator_noise: 0.1  #Only for lqr and old mppi, for new MPC use controlDisturbance instead. Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
   mode: stabilization
-  seed: 1873  # This is a seed for rng for CartPole instance class only. If null random seed based on datetime is used
+  seed:  # This is a seed for rng for CartPole instance class only. If null random seed based on datetime is used
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m_pole: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   m_cart: 0.230  # mass of cart, kg # Checked by Antonio
@@ -26,6 +26,6 @@ cartpole:
     sigma_positionD: 0.005
   zero_angle_shift:
     init: 0.0  # deg
-    mode: 'constant'  # 'constant', 'random_walk', 'increase'
+    mode: 'constant'  # 'constant', 'random_walk', 'increase', 'random'
     increment: 1.0
   num_control_inputs: 1
