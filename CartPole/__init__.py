@@ -378,7 +378,10 @@ class CartPole(EnvironmentBatched):
                 if self.slider:
                     self.slider.value = self.target_position/TrackHalfLength  # Assign target position to slider to display it
             else:
-                self.target_position = self.slider.value * TrackHalfLength  # Get target position from slider
+                if self.slider:
+                    self.target_position = self.slider.value * TrackHalfLength  # Get target position from slider
+                else:
+                    self.target_position = 0.0
 
     def update_target_equilibrium(self):
         if self.time_last_target_equilibrium_change is None:
@@ -485,7 +488,10 @@ class CartPole(EnvironmentBatched):
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                self.Q_calculated = self.slider.value
+                if self.slider:
+                    self.Q_calculated = self.slider.value
+                else:
+                    raise AttributeError("Manual stabilization mode activated and no slider object created.")
                 self.Q_update_time = 0.0
             else:  # in this case slider gives a target position, lqr regulator
                 # self.Q_ccrc = add_control_noise(self.Q_calculated, rng,
@@ -830,7 +836,9 @@ class CartPole(EnvironmentBatched):
             self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
             self.target_position = 0.0
-            self.slider.value = 0.0
+
+            if self.slider:
+                self.slider.value = 0.0
 
         elif reset_mode == 1:  # You may change this but be careful with other user. Better use 3
             # You can change here with which initial parameters you wish to start the simulation
@@ -843,7 +851,9 @@ class CartPole(EnvironmentBatched):
             self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
             self.target_position = 0.0
-            self.slider.value = 0.0
+
+            if self.slider:
+                self.slider.value = 0.0
 
         elif reset_mode == 2:  # Don't change it
             if (s is not None) and (target_position is not None):
@@ -852,7 +862,7 @@ class CartPole(EnvironmentBatched):
                 self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
                 self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
-                if self.slider is not None:
+                if self.slider:
                     self.slider.value = self.target_position = target_position
 
             else:
@@ -860,7 +870,7 @@ class CartPole(EnvironmentBatched):
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                if self.slider is not None:
+                if self.slider:
                     self.Q_calculated = self.slider.value
                 else:
                     self.Q_calculated = 0.0
