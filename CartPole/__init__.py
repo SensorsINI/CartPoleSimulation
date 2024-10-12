@@ -243,6 +243,10 @@ class CartPole(EnvironmentBatched):
 
                 'L': lambda: float(L),
 
+                'zero_angle_shift': lambda: self.zero_angle_shift,
+                'zero_angle_shift_cos': lambda: np.cos(self.zero_angle_shift),
+                'zero_angle_shift_sin': lambda: np.sin(self.zero_angle_shift),
+
                 'Q_update_time': lambda: self.Q_update_time,
 
             }
