@@ -11,6 +11,14 @@ from gymnasium.vector import VectorEnv
 from gymnasium.vector.utils import batch_space
 
 
+ANGLE_IDX = 2
+ANGLED_IDX = 3
+POSITION_IDX = 0
+POSITIOND_IDX = 1
+ANGLE_COS_IDX = 4
+ANGLE_SIN_IDX = 5
+
+
 class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     """
     ## Description
@@ -23,11 +31,8 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
     ## Action Space
 
-    The action is a `ndarray` with shape `(1,)` which can take values `{0, 1}` indicating the direction
-     of the fixed force the cart is pushed with.
-
-    - 0: Push cart to the left
-    - 1: Push cart to the right
+    The action is a `ndarray` with shape `(1,)` which can take values in the range `[-1, 1]` indicating the direction and magnitude
+     of the force the cart is pushed with.
 
     **Note**: The velocity that is reduced or increased by the applied force is not fixed and it depends on the angle
      the pole is pointing. The center of gravity of the pole varies the amount of energy needed to move the cart underneath it
@@ -45,7 +50,7 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
     **Note:** While the ranges above denote the possible values for observation space of each element,
         it is not reflective of the allowed values of the state space in an unterminated episode. Particularly:
-    -  The cart x-position (index 0) can be take values between `(-4.8, 4.8)`, but the episode terminates
+    -  The cart x-position can be take values between `(-4.8, 4.8)`, but the episode terminates
        if the cart leaves the `(-2.4, 2.4)` range.
     -  The pole angle can be observed between  `(-.418, .418)` radians (or **±24°**), but the episode terminates
        if the pole angle is not in the range `(-.2095, .2095)` (or **±12°**)
@@ -71,11 +76,11 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     On reset, the `options` parameter allows the user to change the bounds used to determine the new random state.
 
     ```python
-    >>> import gymnasium as gym
-    >>> env = gym.make("CartPole-v1", render_mode="rgb_array")
-    >>> env
+    import gymnasium as gym
+    env = gym.make("CartPole-v1", render_mode="rgb_array")
+    env
     <TimeLimit<OrderEnforcing<PassiveEnvChecker<CartPoleEnv<CartPole-v1>>>>>
-    >>> env.reset(seed=123, options={"low": -0.1, "high": 0.1})  # default low=-0.05, high=0.05
+    env.reset(seed=123, options={"low": -0.1, "high": 0.1})  # default low=-0.05, high=0.05
     (array([ 0.03647037, -0.0892358 , -0.05592803, -0.06312564], dtype=float32), {})
 
     ```
@@ -89,12 +94,12 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     To increase steps per seconds, users can use a custom vector environment or with an environment vectorizor.
 
     ```python
-    >>> import gymnasium as gym
-    >>> envs = gym.make_vec("CartPole-v1", num_envs=3, vectorization_mode="vector_entry_point")
-    >>> envs
+    import gymnasium as gym
+    envs = gym.make_vec("CartPole-v1", num_envs=3, vectorization_mode="vector_entry_point")
+    envs
     CartPoleVectorEnv(CartPole-v1, num_envs=3)
-    >>> envs = gym.make_vec("CartPole-v1", num_envs=3, vectorization_mode="sync")
-    >>> envs
+    envs = gym.make_vec("CartPole-v1", num_envs=3, vectorization_mode="sync")
+    envs
     SyncVectorEnv(CartPole-v1, num_envs=3)
 
     ```
@@ -111,10 +116,8 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     }
 
     def __init__(
-        self,
+        self, sutton_barto_reward: bool = False, render_mode: Optional[str] = None,
         max_episode_steps: int = 500,
-        sutton_barto_reward: bool = False,
-        render_mode: Optional[str] = None
     ):
         self.max_episode_steps = max_episode_steps
         self._sutton_barto_reward = sutton_barto_reward
@@ -171,62 +174,16 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             action
         ), f"{action!r} ({type(action)}) invalid"
         assert self.state is not None, "Call reset before using step method."
-        x, x_dot, theta, theta_dot = self.state
-        force = self.force_mag * float(action)
-        costheta = np.cos(theta)
-        sintheta = np.sin(theta)
+        self.state = self.get_next_state_OpenAI(self.state, action)
 
-        # For the interested reader:
-        # https://coneural.org/florian/papers/05_cart_pole.pdf
-        temp = (
-            force + self.polemass_length * np.square(theta_dot) * sintheta
-        ) / self.total_mass
-        thetaacc = (self.gravity * sintheta - costheta * temp) / (
-            self.length
-            * (4.0 / 3.0 - self.masspole * np.square(costheta) / self.total_mass)
-        )
-        xacc = temp - self.polemass_length * thetaacc * costheta / self.total_mass
-
-        if self.kinematics_integrator == "euler":
-            x = x + self.tau * x_dot
-            x_dot = x_dot + self.tau * xacc
-            theta = theta + self.tau * theta_dot
-            theta_dot = theta_dot + self.tau * thetaacc
-        else:  # semi-implicit euler
-            x_dot = x_dot + self.tau * xacc
-            x = x + self.tau * x_dot
-            theta_dot = theta_dot + self.tau * thetaacc
-            theta = theta + self.tau * theta_dot
-
-        self.state = np.array((x, x_dot, theta, theta_dot), dtype=np.float64)
-
-        terminated = bool(
-            x < -self.x_threshold
-            or x > self.x_threshold
-            or theta < -self.theta_threshold_radians
-            or theta > self.theta_threshold_radians
-        )
+        terminated = self.termination_condition_OpenAI(self.state)
 
         self.steps += 1
 
         truncated = self.steps >= self.max_episode_steps
 
-        if not terminated:
-            reward = 0.0 if self._sutton_barto_reward else 1.0
-        elif self.steps_beyond_terminated is None:
-            # Pole just fell!
-            self.steps_beyond_terminated = 0
-
-            reward = -1.0 if self._sutton_barto_reward else 1.0
-        else:
-            if self.steps_beyond_terminated == 0:
-                logger.warn(
-                    "You are calling 'step()' even though this environment has already returned terminated = True. "
-                    "You should always call 'reset()' once you receive 'terminated = True' -- any further steps are undefined behavior."
-                )
-            self.steps_beyond_terminated += 1
-
-            reward = -1.0 if self._sutton_barto_reward else 0.0
+        # reward = self.reward_assignment_OpenAI(self.state, action, terminated)
+        reward = self.reward_assignment(self.state, action, terminated)
 
         if self.render_mode == "human":
             self.render()
@@ -294,14 +251,12 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         if self.state is None:
             return None
 
-        x = self.state
-
         self.surf = pygame.Surface((self.screen_width, self.screen_height))
         self.surf.fill((255, 255, 255))
 
         l, r, t, b = -cartwidth / 2, cartwidth / 2, cartheight / 2, -cartheight / 2
         axleoffset = cartheight / 4.0
-        cartx = x[0] * scale + self.screen_width / 2.0  # MIDDLE OF CART
+        cartx = self.state[POSITION_IDX] * scale + self.screen_width / 2.0  # MIDDLE OF CART
         carty = 100  # TOP OF CART
         cart_coords = [(l, b), (l, t), (r, t), (r, b)]
         cart_coords = [(c[0] + cartx, c[1] + carty) for c in cart_coords]
@@ -317,7 +272,7 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         pole_coords = []
         for coord in [(l, b), (l, t), (r, t), (r, b)]:
-            coord = pygame.math.Vector2(coord).rotate_rad(-x[2])
+            coord = pygame.math.Vector2(coord).rotate_rad(-self.state[ANGLE_IDX])
             coord = (coord[0] + cartx, coord[1] + carty + axleoffset)
             pole_coords.append(coord)
         gfxdraw.aapolygon(self.surf, pole_coords, (202, 152, 101))
@@ -367,3 +322,72 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             pygame.display.quit()
             pygame.quit()
             self.isopen = False
+
+    def get_next_state_OpenAI(self, state, action):
+        x, x_dot, theta, theta_dot = state[POSITION_IDX], state[POSITIOND_IDX], state[ANGLE_IDX], state[ANGLED_IDX]
+        force = self.force_mag * float(action)
+        costheta = np.cos(theta)
+        sintheta = np.sin(theta)
+
+        # For the interested reader:
+        # https://coneural.org/florian/papers/05_cart_pole.pdf
+        temp = (
+                       force + self.polemass_length * np.square(theta_dot) * sintheta
+               ) / self.total_mass
+        thetaacc = (self.gravity * sintheta - costheta * temp) / (
+                self.length
+                * (4.0 / 3.0 - self.masspole * np.square(costheta) / self.total_mass)
+        )
+        xacc = temp - self.polemass_length * thetaacc * costheta / self.total_mass
+
+        if self.kinematics_integrator == "euler":
+            x = x + self.tau * x_dot
+            x_dot = x_dot + self.tau * xacc
+            theta = theta + self.tau * theta_dot
+            theta_dot = theta_dot + self.tau * thetaacc
+        else:  # semi-implicit euler
+            x_dot = x_dot + self.tau * xacc
+            x = x + self.tau * x_dot
+            theta_dot = theta_dot + self.tau * thetaacc
+            theta = theta + self.tau * theta_dot
+
+        new_state = np.zeros((4,), dtype=np.float64)
+        new_state[POSITION_IDX], new_state[POSITIOND_IDX], new_state[ANGLE_IDX], new_state[ANGLED_IDX] = x, x_dot, theta, theta_dot
+
+        return new_state
+
+    def reward_assignment_OpenAI(self, state, action, terminated):
+        if not terminated:
+            reward = 0.0 if self._sutton_barto_reward else 1.0
+        elif self.steps_beyond_terminated is None:
+            # Pole just fell!
+            self.steps_beyond_terminated = 0
+
+            reward = -1.0 if self._sutton_barto_reward else 1.0
+        else:
+            if self.steps_beyond_terminated == 0:
+                logger.warn(
+                    "You are calling 'step()' even though this environment has already returned terminated = True. "
+                    "You should always call 'reset()' once you receive 'terminated = True' -- any further steps are undefined behavior."
+                )
+            self.steps_beyond_terminated += 1
+
+            reward = -1.0 if self._sutton_barto_reward else 0.0
+
+        return reward
+
+
+    def reward_assignment(self, state, action, terminated):
+        reward = 1.0
+        return reward
+
+
+    def termination_condition_OpenAI(self, state):
+        terminated = bool(
+            state[POSITION_IDX] < -self.x_threshold
+            or state[POSITION_IDX] > self.x_threshold
+            or state[ANGLE_IDX] < -self.theta_threshold_radians
+            or state[ANGLE_IDX] > self.theta_threshold_radians
+        )
+
+        return terminated

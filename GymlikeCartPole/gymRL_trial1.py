@@ -22,7 +22,7 @@ env = CartPoleContEnv(render_mode=None)
 env = DummyVecEnv([lambda: env])
 model = PPO('MlpPolicy', env, verbose=1)
 
-model.learn(total_timesteps=15000, progress_bar=True)
+model.learn(total_timesteps=150000, progress_bar=True)
 
 model.save('ppo model')
 
