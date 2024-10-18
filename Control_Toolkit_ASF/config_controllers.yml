@@ -97,7 +97,7 @@ mpc-opti:
 neural-imitator:
   seed: null                            # If null, random seed based on datetime is used
   PATH_TO_MODELS: './GymlikeCartPole/'
-  net_name: 'Dense-7IN-32H1-32H2-1OUT-8'  # TF
+  net_name: 'Dense-7IN-32H1-32H2-1OUT-0'  # TF
 #  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'  # Pytorch
   input_at_input: False
   input_precision: 'float'  #'ap_fixed<20,6>'   # Can be 'float' - currently do nothing, or 'ap_fixed<total number of bits, integer bits + 1 sign bit>' - adjusting the number precision of the input

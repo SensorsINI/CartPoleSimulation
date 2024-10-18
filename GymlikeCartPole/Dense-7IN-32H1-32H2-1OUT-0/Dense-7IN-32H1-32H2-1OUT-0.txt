@@ -1,8 +1,8 @@
 CREATED:
-2024-03-02 at time 01:10:06
+2024-08-21 at time 21:30:18
 
 WITH GIT REVISION:
-unknown
+9a12db8b26d59e6dad4bf2020338e44d750d6b53
 
 LIBRARY:
 TF
@@ -11,13 +11,13 @@ NET NAME:
 Dense-32H1-32H2
 
 NET FULL NAME:
-Dense-7IN-32H1-32H2-1OUT-8
+Dense-7IN-32H1-32H2-1OUT-0
 
 INPUTS:
 angleD, angle_cos, angle_sin, position, positionD, target_equilibrium, target_position
 
 OUTPUTS:
-Q_calculated
+Q_calculated_offline
 
 TRANSLATION INVARIANT VARIABLES:
 
@@ -26,7 +26,7 @@ TYPE:
 Dense
 
 NORMALIZATION:
-./SI_Toolkit_ASF/Experiments/Experiment-14/Models/Dense-7IN-32H1-32H2-1OUT-8/NI_2024-02-28_02-25-27.csv
+./SI_Toolkit_ASF/Experiments/Trial_14__17_08_2024/Models/Dense-7IN-32H1-32H2-1OUT-0/NI_2024-08-17_22-23-01.csv
 
 NORMALIZE:
 True
@@ -38,7 +38,7 @@ WASH OUT LENGTH:
 0
 
 POST WASH OUT LENGTH:
-1
+50
 
 SHIFT LABELS:
 0
@@ -47,13 +47,13 @@ CONSTRUCT NETWORK:
 with cells
 
 TRAINING_FILES:
-./SI_Toolkit_ASF/Experiments/Experiment-14/Recordings/Train
+./SI_Toolkit_ASF/Experiments/Trial_14__17_08_2024/Recordings/Train
 
 VALIDATION_FILES:
-./SI_Toolkit_ASF/Experiments/Experiment-14/Recordings/Validate
+./SI_Toolkit_ASF/Experiments/Trial_14__17_08_2024/Recordings/Validate
 
 TEST_FILES:
-./SI_Toolkit_ASF/Experiments/Experiment-14/Recordings/Test
+./SI_Toolkit_ASF/Experiments/Trial_14__17_08_2024/Recordings/Test
 
 TIMESTEP MEAN [s]:
 0.0

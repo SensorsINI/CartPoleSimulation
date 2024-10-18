@@ -14,11 +14,6 @@ except ModuleNotFoundError:
 
 from SI_Toolkit.Functions.TF.Dataset import Dataset
 
-try:
-    from SI_Toolkit_ASF.DataSelector import DataSelector
-except:
-    print('No DataSelector found.')
-
 from SI_Toolkit.Functions.TF.Loss import LossMSRSequence, LossMSRSequenceCustomizableRelative
 
 
@@ -27,10 +22,6 @@ from SI_Toolkit.Functions.TF.Loss import LossMSRSequence, LossMSRSequenceCustomi
 # @profile(precision=4)
 def train_network_core(net, net_info, training_dfs, validation_dfs, test_dfs, a):
 
-    # region Prepare data for training
-    # DataSelectorInstance = DataSelector(a)
-    # DataSelectorInstance.load_data_into_selector(training_dfs_norm)
-    # training_dataset = DataSelectorInstance.return_dataset_for_training(shuffle=True, inputs=net_info.inputs, outputs=net_info.outputs)
     training_dataset = Dataset(training_dfs, a, shuffle=True, inputs=net_info.inputs, outputs=net_info.outputs)
 
     validation_dataset = Dataset(validation_dfs, a, shuffle=False, inputs=net_info.inputs,
@@ -109,6 +100,16 @@ def train_network_core(net, net_info, training_dfs, validation_dfs, test_dfs, a)
     callbacks_for_training.append(AdditionalValidation(dataset=training_dataset))
 
 
+    class saving_Callback(keras.callbacks.Callback):
+        def __init__(self, path_to_save):
+            super().__init__()
+            self.path_to_save = path_to_save
+
+        def on_epoch_end(self, epoch, logs=None):
+            self.model.save(self.path_to_save)
+
+    callbacks_for_training.append(saving_Callback(os.path.join(net_info.path_to_net, net_info.net_full_name + '.keras')))
+
     csv_logger = keras.callbacks.CSVLogger(os.path.join(net_info.path_to_net, 'log_training.csv'), append=False, separator=';')
     callbacks_for_training.append(csv_logger)
 
@@ -152,8 +153,11 @@ def train_network_core(net, net_info, training_dfs, validation_dfs, test_dfs, a)
     if net_info.quantization['ACTIVATED']:
         from qkeras.utils import model_save_quantized_weights
         model_save_quantized_weights(net, os.path.join(net_info.path_to_net, net_info.net_full_name + '.h5'))
-        from SI_Toolkit.HLS4ML.convert_with_hls4ml import convert_model_with_hls4ml
-        convert_model_with_hls4ml(net)
+        try:
+            from SI_Toolkit.HLS4ML.convert_with_hls4ml import convert_model_with_hls4ml
+            convert_model_with_hls4ml(net)
+        except ImportError:
+            print('HLS4ML not found. No corresponding info possible.')
 
     net.save(os.path.join(net_info.path_to_net, net_info.net_full_name + '.keras'))
     net.save_weights(os.path.join(net_info.path_to_net, 'ckpt' + '.ckpt'))
