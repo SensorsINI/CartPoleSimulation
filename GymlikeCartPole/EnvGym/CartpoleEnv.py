@@ -8,12 +8,11 @@ import gymnasium as gym
 from gymnasium.envs.classic_control import utils
 from gymnasium.error import DependencyNotInstalled
 
-from GymlikeCartPole.Cartpole_OpenAI import Cartpole_OpenAI
-from GymlikeCartPole.Cartpole_Sensors import Cartpole_Sensors
-from GymlikeCartPole.state_utils import *
+from GymlikeCartPole.Cartpole_RL.Cartpole_Sensors import Cartpole_Sensors
+from GymlikeCartPole.EnvGym.state_utils import *
 
 
-class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
+class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
     metadata = {
         "render_modes": ["human", "rgb_array"],
@@ -27,8 +26,8 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     ):
         self.max_episode_steps = max_episode_steps
 
-        self.cartpole_rl = Cartpole_OpenAI()
-        # self.cartpole_rl = Cartpole_Sensors()
+        # self.cartpole_rl = Cartpole_OpenAI()
+        self.cartpole_rl = Cartpole_Sensors()
 
         self.action_space = self.cartpole_rl.action_space
         self.observation_space = self.cartpole_rl.observation_space
@@ -46,10 +45,13 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         self.target_position = 0.0
 
+        self.reset()
+
     def step(self, action):
-        assert self.action_space.contains(
+        if not self.action_space.contains(
             action
-        ), f"{action!r} ({type(action)}) invalid"
+        ):
+            f"{action!r} ({type(action)}) invalid"
         assert self.state is not None, "Call reset before using step method."
         self.state = self.cartpole_rl.get_next_state(self.state, action)
 
@@ -59,7 +61,6 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         truncated = self.steps >= self.max_episode_steps
 
-        # reward = self.reward_assignment_OpenAI(self.state, action, terminated)
         reward = self.cartpole_rl.reward_assignment(self.state, action, terminated)
 
         if self.render_mode == "human":
@@ -81,6 +82,8 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             options, -0.05, 0.05  # default low
         )  # default high
         self.state = self.np_random.uniform(low=low, high=high, size=(6,))
+        self.state[ANGLE_COS_IDX] = np.cos(self.state[ANGLE_IDX])
+        self.state[ANGLE_SIN_IDX] = np.sin(self.state[ANGLE_IDX])
         self.steps = 0
         self.cartpole_rl.reset()
 
@@ -121,7 +124,7 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         world_width = self.cartpole_rl.x_threshold * 2
         scale = self.screen_width / world_width
         polewidth = 10.0
-        polelen = scale * (2 * self.cartpole_rl.pole_length)
+        polelen = scale * self.cartpole_rl.pole_length_rendering
         cartwidth = 50.0
         cartheight = 30.0
 
@@ -199,24 +202,3 @@ class CartPoleContEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             pygame.display.quit()
             pygame.quit()
             self.isopen = False
-
-
-class cartpole_rl_template:
-    def __init__(self):
-
-        self.x_threshold = None
-        self.pole_length = None
-
-        self.action_space = None
-        self.observation_space = None
-
-        self.steps_beyond_terminated = None
-
-    def get_next_state(self, state, action):
-        raise NotImplementedError
-
-    def reward_assignment(self, state, action, terminated):
-        raise NotImplementedError
-
-    def termination_condition_OpenAI(self, state):
-        raise NotImplementedError

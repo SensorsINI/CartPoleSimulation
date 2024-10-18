@@ -4,12 +4,12 @@ import numpy as np
 
 from gymnasium import logger, spaces
 
-from GymlikeCartPole.state_utils import *
-from GymlikeCartPole.cartpole_rl_template import CartPoleRLTemplate
+from GymlikeCartPole.EnvGym.state_utils import *
+from GymlikeCartPole.Cartpole_RL._cartpole_rl_template import CartPoleRLTemplate
 
 from SI_Toolkit.computation_library import NumpyLibrary
 from CartPole.cartpole_equations import CartPoleEquations
-
+from CartPole.data_generator import random_experiment_setter
 
 
 class Cartpole_Sensors(CartPoleRLTemplate):
@@ -18,10 +18,12 @@ class Cartpole_Sensors(CartPoleRLTemplate):
 
         self.cpe = CartPoleEquations(lib=NumpyLibrary)
 
-        self.simulation_time_step = 0.02
-        self.number_of_intermediate_integration_steps = 10
+        self.RES = random_experiment_setter()
 
-        self.pole_length = 2*self.cpe.params.L
+        self.simulation_time_step = self.RES.dt_simulation
+        self.number_of_intermediate_integration_steps = int(self.RES.dt_controller_update/self.RES.dt_simulation)
+
+        self.pole_length_rendering = 0.5 * self.cpe.params.L  # Heuristic, for rendering only, proportional to physical pole length
 
         # Angle at which to fail the episode
         self.theta_threshold_radians = 12 * 2 * math.pi / 360

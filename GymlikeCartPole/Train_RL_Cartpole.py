@@ -1,11 +1,8 @@
-from asyncio import SafeChildWatcher
-
-import gymnasium as gym
-from stable_baselines3 import PPO, SAC
+from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.evaluation import evaluate_policy
 
-from GymlikeCartPole.CartpoleEnvGym import CartPoleContEnv
+from GymlikeCartPole.EnvGym.CartpoleEnv import CartPoleEnv
 
 import matplotlib.pyplot as plt
 
@@ -18,7 +15,7 @@ import numpy as np
 
 
 # env = gym.make(env_name, render_mode=None)
-env = CartPoleContEnv(render_mode=None)
+env = CartPoleEnv(render_mode=None)
 env = DummyVecEnv([lambda: env])
 model = PPO('MlpPolicy', env, verbose=1)
 
@@ -28,13 +25,13 @@ model.save('ppo model')
 
 
 # env = gym.make(env_name, render_mode="human")
-env = CartPoleContEnv(render_mode="human")
+env = CartPoleEnv(render_mode="human")
 env = DummyVecEnv([lambda: env])
 evaluate_policy(model, env, n_eval_episodes=2, render=True)
 env.close()
 
 
-env = CartPoleContEnv(render_mode=None)
+env = CartPoleEnv(render_mode=None)
 env = DummyVecEnv([lambda: env])
 
 for episode in range(1, 3):
@@ -58,6 +55,7 @@ for episode in range(1, 3):
     action_buf = np.squeeze(action_buf)
     plt.figure()
     plt.plot(action_buf)
+    plt.title('Actions of RL agent')
     plt.xlabel('Timesteps')
     plt.ylabel('Action')
     plt.show()

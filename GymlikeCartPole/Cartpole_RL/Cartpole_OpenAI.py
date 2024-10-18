@@ -99,8 +99,8 @@ import math
 import numpy as np
 
 from gymnasium import logger, spaces
-from GymlikeCartPole.state_utils import *
-from GymlikeCartPole.cartpole_rl_template import CartPoleRLTemplate
+from GymlikeCartPole.EnvGym.state_utils import *
+from GymlikeCartPole.Cartpole_RL._cartpole_rl_template import CartPoleRLTemplate
 
 
 class Cartpole_OpenAI(CartPoleRLTemplate):
@@ -116,6 +116,8 @@ class Cartpole_OpenAI(CartPoleRLTemplate):
         self.polemass_length = self.masspole * self.pole_length
         self.force_mag = 10.0
         self.tau = 0.02  # seconds between state updates
+
+        self.pole_length_rendering = 2 * self.pole_length  # Heuristic, for rendering only, proportional to physical pole length
 
         self.kinematics_integrator = "euler"
 
