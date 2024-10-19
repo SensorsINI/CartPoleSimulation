@@ -24,7 +24,7 @@ def flip_target_equilibrium(df, new_target_equilibrium_variable_name, **kwargs):
     return df
 
 
-def add_fake_trajectories(df, fake_trajectory_every, fake_trajectory_min_len, fake_trajectory_max_len):
+def add_fake_trajectories(df, fake_trajectory_every_min, fake_trajectory_every_max, fake_trajectory_min_len, fake_trajectory_max_len):
     # Copy of the original DataFrame to avoid modifying it directly
     df_copy = df.copy()
 
@@ -41,8 +41,12 @@ def add_fake_trajectories(df, fake_trajectory_every, fake_trajectory_min_len, fa
     columns_to_preserve = df.columns.difference(['angle', 'angle_cos', 'angle_sin', 'angleD', 'position', 'positionD'])
 
     i = 0
+    fake_trajectory_every = np.random.randint(fake_trajectory_every_min, fake_trajectory_every_max + 1)
+    last_fake_trajectory_idx = 0
     while i < len(df_copy):
-        if i % fake_trajectory_every == 0:
+
+        if i != 0 and (i-last_fake_trajectory_idx) % fake_trajectory_every == 0:
+            last_fake_trajectory_idx = i
             trajectory_len = np.random.randint(fake_trajectory_min_len, fake_trajectory_max_len + 1)
 
             if i + trajectory_len >= len(df_copy):

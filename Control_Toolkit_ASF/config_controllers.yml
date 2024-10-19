@@ -96,13 +96,13 @@ mpc-opti:
   controller_logging: True
 neural-imitator:
   seed: null                            # If null, random seed based on datetime is used
-  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments/Experiment-23-quant-10-shiftD-1/Models/'
-  net_name: 'Dense-7IN-32H1-32H2-1OUT-1'  # TF
+  PATH_TO_MODELS: './GymlikeCartPole/'
+  net_name: 'Dense-7IN-32H1-32H2-1OUT-0'  # TF
 #  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'  # Pytorch
   input_at_input: False
-  input_precision: 'ap_fixed<12,2>'   #'ap_fixed<20,6>'   # Can be 'float' - currently do nothing, or 'ap_fixed<total number of bits, integer bits + 1 sign bit>' - adjusting the number precision of the input
+  input_precision: 'float'  #'ap_fixed<20,6>'   # Can be 'float' - currently do nothing, or 'ap_fixed<total number of bits, integer bits + 1 sign bit>' - adjusting the number precision of the input
   controller_logging: True
-  hls4ml: True
+  hls4ml: false
 secloc:
   log_base: 1.05
   ref_period: 1
