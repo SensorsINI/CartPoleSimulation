@@ -118,6 +118,7 @@ class Cartpole_OpenAI(CartPoleRLTemplate):
         self.tau = 0.02  # seconds between state updates
 
         self.pole_length_rendering = 2 * self.pole_length  # Heuristic, for rendering only, proportional to physical pole length
+        self.angle_rotation_direction_rendering = -1  # Heuristic, for rendering only, 1 or -1
 
         self.kinematics_integrator = "euler"
 

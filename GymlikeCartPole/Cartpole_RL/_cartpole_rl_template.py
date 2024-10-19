@@ -66,6 +66,7 @@ class CartPoleRLTemplate(ABC, metaclass=AttributeCheckMeta):
     # Define required attributes using Annotated with their actual types and Required marker
     x_threshold: Annotated[float, Required]
     pole_length_rendering: Annotated[float, Required]
+    angle_rotation_direction_rendering: Annotated[int, Required]
     action_space: Annotated[spaces.Box, Required]
     observation_space: Annotated[spaces.Box, Required]
 

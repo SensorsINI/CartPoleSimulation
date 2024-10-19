@@ -24,6 +24,7 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         self.number_of_intermediate_integration_steps = int(self.RES.dt_controller_update/self.RES.dt_simulation)
 
         self.pole_length_rendering = 0.5 * self.cpe.params.L  # Heuristic, for rendering only, proportional to physical pole length
+        self.angle_rotation_direction_rendering = 1  # Heuristic, for rendering only, 1 or -1
 
         # Angle at which to fail the episode
         self.theta_threshold_radians = 12 * 2 * math.pi / 360
