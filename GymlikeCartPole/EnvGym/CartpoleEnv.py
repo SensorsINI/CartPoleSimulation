@@ -11,6 +11,8 @@ from gymnasium.error import DependencyNotInstalled
 from GymlikeCartPole.Cartpole_RL.Cartpole_Sensors import Cartpole_Sensors
 from GymlikeCartPole.EnvGym.state_utils import *
 
+import math #testing
+
 
 class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
@@ -62,9 +64,16 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         truncated = self.steps >= self.max_episode_steps
 
         reward = self.cartpole_rl.reward_assignment(self.state, action, terminated)
+        # print(reward)
+        # print(self.state[ANGLE_IDX])
 
         if self.render_mode == "human":
             self.render()
+
+        if terminated:
+            # reward -= 1.0
+            print("crashed")
+            # self.reset()
 
         # truncation=False as the time limit is handled by the `TimeLimit` wrapper added during `make`
         return np.array(self.state, dtype=np.float32), reward, terminated, truncated, {}
@@ -84,9 +93,10 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         # low, high = utils.maybe_parse_reset_bounds(
         #     options, -0.1, 0.1  # default low
         # )  # default high
-        #custom states for reset:
+        # custom states for reset:
         self.state = self.np_random.uniform(low=low, high=high, size=(6,))
         self.state[ANGLE_IDX] = self.np_random.uniform(low=-3.14, high=3.14, size=(1, ))
+        # self.state[ANGLE_IDX] = 3.14
         # self.state[ANGLE_IDX] = -3.14
         self.state[ANGLE_COS_IDX] = np.cos(self.state[ANGLE_IDX])
         self.state[ANGLE_SIN_IDX] = np.sin(self.state[ANGLE_IDX])

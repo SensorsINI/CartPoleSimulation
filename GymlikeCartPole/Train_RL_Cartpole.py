@@ -19,10 +19,10 @@ env = CartPoleEnv(render_mode=None)
 env = DummyVecEnv([lambda: env])
 model = PPO('MlpPolicy', env, verbose=1)
 
-# model.learn(total_timesteps=500000, progress_bar=True)
-model.learn(total_timesteps=100000, progress_bar=True)
+model.learn(total_timesteps=500000, progress_bar=True)
+# model.learn(total_timesteps=100000, progress_bar=True)
 
-model.save('ppo model swing up')
+model.save('ppo_cartpole_swing_up_origin')
 
 
 # env = gym.make(env_name, render_mode="human")

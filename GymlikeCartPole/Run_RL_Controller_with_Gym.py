@@ -22,11 +22,22 @@ logger = my_logger(__name__)
 # model_path = 'GymlikeCartPole/sac_cartpole_random_angle'
 # model = SAC.load(model_path)
 
+# model_path = 'GymlikeCartPole/sac_cartpole_random_angle_speed'
+# model = SAC.load(model_path)
+
 # model_path = 'GymlikeCartPole/ppo model'
 # model = PPO.load(model_path)
+#
+# model_path = 'GymlikeCartPole/ppo model swing up'
+# model = PPO.load(model_path)
 
-model_path = 'GymlikeCartPole/ppo model swing up'
-model = PPO.load(model_path)
+# model_path = 'GymlikeCartPole/sac_cartpole_swing_up_origin'
+# model = SAC.load(model_path)
+
+# model_path = 'GymlikeCartPole/ppo_cartpole_swing_up_origin_5'
+# model = PPO.load(model_path)
+
+
 
 model_name = model_path.split('/')[-1]
 print(model_name)
@@ -40,6 +51,7 @@ print(state)
 # state = env.reset()
 action_buf = []
 obs_buf = []
+total_reward = 0
 
 for k in range(500):
     env.render()
@@ -50,9 +62,11 @@ for k in range(500):
     # action = env.action_space.sample()  # take a random action
     state, reward, terminated, truncated, _ = env.step(action)
     logger.info(f"Iteration {k}: Reward = {reward}")
+    total_reward += reward
     if done:
         break
 
+print("total reward: " + str(total_reward))
 action_buf = np.stack(action_buf)
 action_buf = np.squeeze(action_buf)
 plt.figure()

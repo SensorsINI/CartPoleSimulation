@@ -37,13 +37,13 @@ def linear_schedule(initial_value: float) -> Callable[[float], float]:
 # env = gym.make(env_name, render_mode=None)
 env = CartPoleEnv(render_mode=None)
 env = DummyVecEnv([lambda: env])
-model = SAC('MlpPolicy', env, learning_rate=linear_schedule(0.01), verbose=1)
-# model = SAC('MlpPolicy', env, verbose=1)
+# model = SAC('MlpPolicy', env, learning_rate=linear_schedule(0.01), verbose=1)
+model = SAC('MlpPolicy', env, verbose=1)
 
 model.learn(total_timesteps=100000, progress_bar=True)
-# model.learn(total_timesteps=10000, progress_bar=True)
+# model.learn(total_timesteps=30000, progress_bar=True)
 
-model.save('sac_cartpole_random_angle')
+model.save('sac_cartpole_swing_up_origin')
 
 
 # env = gym.make(env_name, render_mode="human")
@@ -71,7 +71,7 @@ for episode in range(1, 3):
         obs, reward, done, info = env.step(action)
         # print(reward)
         obs_buf.append(obs)
-        # score += reward
+        score += reward
         # score_buf.append(score)
 
     print('Episode:', episode, 'Score:', score)

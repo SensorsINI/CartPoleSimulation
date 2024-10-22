@@ -3,6 +3,7 @@ import math
 import numpy as np
 
 from gymnasium import logger, spaces
+from numpy.ma.core import absolute
 
 from GymlikeCartPole.EnvGym.state_utils import *
 from GymlikeCartPole.Cartpole_RL._cartpole_rl_template import CartPoleRLTemplate
@@ -71,6 +72,26 @@ class Cartpole_Sensors(CartPoleRLTemplate):
                 )
             self.steps_beyond_terminated += 1
             reward = 0.0
+            # reward = -1.0
+
+        #penalize deviation from upright position:
+        reward -= (abs(state[ANGLE_IDX]/math.pi))
+
+        #penalize high pole velocity near upright position:
+        reward -= 0.1 * (((state[ANGLE_COS_IDX]+1)/2) * abs(state[ANGLED_IDX]))
+
+        # #small penalty to movement when its upright (should be removed, when its made to track x position):
+        # reward -= 0.01*(((state[ANGLE_COS_IDX]+1)/2) * abs(state[POSITIOND_IDX]))
+
+        #penalty for being not in origin near upright:
+        #TODO: train with higher value?
+        reward -= 0.05 * (((state[ANGLE_COS_IDX]+1)/2) * abs(state[POSITION_IDX]))
+
+
+        # if -self.theta_threshold_radians < state[ANGLE_IDX] < self.theta_threshold_radians:
+        #     reward += 10.0
+        # else:
+        #     reward -= 0.5
 
         return reward
 
@@ -78,8 +99,8 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         terminated = bool(
             state[POSITION_IDX] < -self.x_threshold
             or state[POSITION_IDX] > self.x_threshold
-            or state[ANGLE_IDX] < -self.theta_threshold_radians
-            or state[ANGLE_IDX] > self.theta_threshold_radians
+            # or state[ANGLE_IDX] < -self.theta_threshold_radians
+            # or state[ANGLE_IDX] > self.theta_threshold_radians
         )
 
         return terminated
