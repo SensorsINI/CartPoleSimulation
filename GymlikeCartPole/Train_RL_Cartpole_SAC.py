@@ -43,7 +43,7 @@ model = SAC('MlpPolicy', env, verbose=1)
 model.learn(total_timesteps=100000, progress_bar=True)
 # model.learn(total_timesteps=30000, progress_bar=True)
 
-model.save('sac_cartpole_swing_up_origin')
+model.save('sac_cartpole_swing_up_origin_laptop')
 
 
 # env = gym.make(env_name, render_mode="human")
@@ -66,7 +66,7 @@ for episode in range(1, 3):
 
     while not done:
         env.render()
-        action, _ = model.predict(obs)
+        action, _ = model.predict(obs, deterministic=True)
         action_buf.append(action)
         obs, reward, done, info = env.step(action)
         # print(reward)

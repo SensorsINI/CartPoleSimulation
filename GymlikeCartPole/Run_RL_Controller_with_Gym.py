@@ -34,6 +34,15 @@ logger = my_logger(__name__)
 # model_path = 'GymlikeCartPole/sac_cartpole_swing_up_origin'
 # model = SAC.load(model_path)
 
+# model_path = 'GymlikeCartPole/sac_cartpole_swing_up_origin_laptop'
+# model = SAC.load(model_path)
+
+# model_path = 'GymlikeCartPole/ppo_cartpole_swing_up_origin'
+# model = PPO.load(model_path)
+
+model_path = 'GymlikeCartPole/ppo_cartpole_swing_up_origin_laptop_stricter'
+model = PPO.load(model_path)
+
 # model_path = 'GymlikeCartPole/ppo_cartpole_swing_up_origin_5'
 # model = PPO.load(model_path)
 

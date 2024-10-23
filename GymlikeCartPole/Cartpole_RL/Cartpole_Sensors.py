@@ -84,8 +84,8 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         # reward -= 0.01*(((state[ANGLE_COS_IDX]+1)/2) * abs(state[POSITIOND_IDX]))
 
         #penalty for being not in origin near upright:
-        #TODO: train with higher value?
-        reward -= 0.05 * (((state[ANGLE_COS_IDX]+1)/2) * abs(state[POSITION_IDX]))
+        #TODO: train with higher value than 0.05? -> laptop  used 0.1
+        reward -= 0.5 * (((state[ANGLE_COS_IDX]+1)/2) * abs(state[POSITION_IDX]))
 
 
         # if -self.theta_threshold_radians < state[ANGLE_IDX] < self.theta_threshold_radians:

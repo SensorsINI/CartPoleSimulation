@@ -22,7 +22,7 @@ model = PPO('MlpPolicy', env, verbose=1)
 model.learn(total_timesteps=500000, progress_bar=True)
 # model.learn(total_timesteps=100000, progress_bar=True)
 
-model.save('ppo_cartpole_swing_up_origin')
+model.save('ppo_cartpole_swing_up_origin_laptop_stricter')
 
 
 # env = gym.make(env_name, render_mode="human")
