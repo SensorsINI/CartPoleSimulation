@@ -9,11 +9,12 @@ import threading
 
 import numpy as np
 
-from CartPoleSimulation.CartPole.csv_logger import create_csv_file
-
 
 class DataManager:
-    def __init__(self):
+    def __init__(self, create_csv_file):
+
+        self.create_csv_file = create_csv_file
+
         self._store_data = False  # Weather to store the history data
         self._save_mode = 'online'  # disabled (no saving to csv), "online" (save at each step), "offline"(save in the end)
         self.history = {}
@@ -102,7 +103,7 @@ class DataManager:
             self.initialize_history(keys)
             # Create the csv file
             if self.save_mode != 'disabled':
-                self.csv_filepath = create_csv_file(csv_name, keys, path_to_experiment_recordings=path_to_experiment_recordings,
+                self.csv_filepath = self.create_csv_file(csv_name, keys, path_to_experiment_recordings=path_to_experiment_recordings,
                                                     title=title, header=header)
             if self.save_mode == 'online':
                 self.csv_file = open(self.csv_filepath, 'a', newline='')
