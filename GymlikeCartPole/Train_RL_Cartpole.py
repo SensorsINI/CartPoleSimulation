@@ -8,21 +8,44 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
+from typing import Callable
+
 # env_name = "MountainCarContinuous-v0" # Not working
 # env_name = "Pendulum-v1"
 # env_name = "CartPole-v0"
 # env = gym.make(env_name)
 
 
+def linear_schedule(initial_value: float) -> Callable[[float], float]:
+    """
+    Linear learning rate schedule.
+
+    :param initial_value: Initial learning rate.
+    :return: schedule that computes
+      current learning rate depending on remaining progress
+    """
+    def func(progress_remaining: float) -> float:
+        """
+        Progress will decrease from 1 (beginning) to 0.
+
+        :param progress_remaining:
+        :return: current learning rate
+        """
+        return progress_remaining * initial_value
+
+    return func
+
 # env = gym.make(env_name, render_mode=None)
 env = CartPoleEnv(render_mode=None)
 env = DummyVecEnv([lambda: env])
-model = PPO('MlpPolicy', env, verbose=1)
+model = PPO('MlpPolicy', env, learning_rate=linear_schedule(0.001), verbose=1)
 
+#150'000 -> 5min
+# model.learn(total_timesteps=1000000, progress_bar=True)
 model.learn(total_timesteps=500000, progress_bar=True)
-# model.learn(total_timesteps=100000, progress_bar=True)
+# model.learn(total_timesteps=3000000, progress_bar=True)
 
-model.save('ppo_cartpole_swing_up_origin_laptop_stricter')
+model.save('ppo_cartpole_no_survive_reward')
 
 
 # env = gym.make(env_name, render_mode="human")

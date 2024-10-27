@@ -74,24 +74,31 @@ class Cartpole_Sensors(CartPoleRLTemplate):
             reward = 0.0
             # reward = -1.0
 
+        ###OLD REWARD
         #penalize deviation from upright position:
         reward -= (abs(state[ANGLE_IDX]/math.pi))
 
         #penalize high pole velocity near upright position:
-        reward -= 0.1 * (((state[ANGLE_COS_IDX]+1)/2) * abs(state[ANGLED_IDX]))
+        reward -= 0.1 * ((state[ANGLE_COS_IDX]+1)/2) * abs(state[ANGLED_IDX])
 
-        # #small penalty to movement when its upright (should be removed, when its made to track x position):
-        # reward -= 0.01*(((state[ANGLE_COS_IDX]+1)/2) * abs(state[POSITIOND_IDX]))
+        #penalty for being not in origin when near upright:
+        #Track length -> 44.0e-2
+        # reward -= 0.1 * (((state[ANGLE_COS_IDX] + 1) / 2) *
+        #                  (math.sqrt(abs(state[POSITION_IDX]) / (44.0e-2 / 2)) + abs(state[POSITION_IDX])/(44.0e-2/2)))
+        #
+        reward -= 0.5 * ((state[ANGLE_COS_IDX]+1)/2) * (abs(state[POSITION_IDX])/(44.0e-2/2))
 
-        #penalty for being not in origin near upright:
-        #TODO: train with higher value than 0.05? -> laptop  used 0.1
-        reward -= 0.5 * (((state[ANGLE_COS_IDX]+1)/2) * abs(state[POSITION_IDX]))
+        ###debug prints:
+        # print('Pos Term: ' + str(abs(state[POSITION_IDX])/(44.0e-2/2)))
+        # print('Scaled Pos Term: ' + str(0.5 * ((state[ANGLE_COS_IDX]+1)/2) * (abs(state[POSITION_IDX])/(44.0e-2/2))))
+        #
+        # print('Upright term: ' + str((abs(state[ANGLE_IDX]/math.pi))))
+        # print('Velocity term: ' + str(0.1 * ((state[ANGLE_COS_IDX]+1)/2) * abs(state[ANGLED_IDX])))
 
+        #TODO: could try to add a reward which takes the proportion of uprightness to
+        ###OLD REWARD
 
-        # if -self.theta_threshold_radians < state[ANGLE_IDX] < self.theta_threshold_radians:
-        #     reward += 10.0
-        # else:
-        #     reward -= 0.5
+        # reward -= abs((state[ANGLE_IDX]/math.pi)) + 0.1 * (state[ANGLED_IDX] ** 2) + 0.001*((state[POSITION_IDX]/(44.0e-2/2)) ** 2)
 
         return reward
 

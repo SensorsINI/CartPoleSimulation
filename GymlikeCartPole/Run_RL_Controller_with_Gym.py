@@ -34,19 +34,44 @@ logger = my_logger(__name__)
 # model_path = 'GymlikeCartPole/sac_cartpole_swing_up_origin'
 # model = SAC.load(model_path)
 
+# model_path = 'GymlikeCartPole/sac_cartpole_origin_good_swingup'
+# model = SAC.load(model_path)
+
 # model_path = 'GymlikeCartPole/sac_cartpole_swing_up_origin_laptop'
+# model = SAC.load(model_path)
+
+# model_path = 'GymlikeCartPole/sac_cartpole_swing_up_origin_laptop_65_strict'
+# model = SAC.load(model_path)
+
+# model_path = 'GymlikeCartPole/sac_cartpole_swing_up_origin_laptop_100_strict'
 # model = SAC.load(model_path)
 
 # model_path = 'GymlikeCartPole/ppo_cartpole_swing_up_origin'
 # model = PPO.load(model_path)
 
-model_path = 'GymlikeCartPole/ppo_cartpole_swing_up_origin_laptop_stricter'
-model = PPO.load(model_path)
+# model_path = 'GymlikeCartPole/ppo_cartpole_swing_up_origin_laptop_stricter'
+# model = PPO.load(model_path)
 
 # model_path = 'GymlikeCartPole/ppo_cartpole_swing_up_origin_5'
 # model = PPO.load(model_path)
 
+# model_path = 'GymlikeCartPole/ppo_cartpole_test'
+# model = PPO.load(model_path)
 
+model_path = 'GymlikeCartPole/ppo_cartpole_angle_dependent_reward'
+model = PPO.load(model_path)
+
+# model_path = 'GymlikeCartPole/ppo_cartpole_newest'
+# model = PPO.load(model_path)
+
+# model_path = 'GymlikeCartPole/sac_cartpole_angle_dependent_reward'
+# model = SAC.load(model_path)
+
+# model_path = 'GymlikeCartPole/sac_cartpole_linear_square_scheduler'
+# model = SAC.load(model_path)
+
+# model_path = 'GymlikeCartPole/sac_cartpole_origin_linear'
+# model = SAC.load(model_path)
 
 model_name = model_path.split('/')[-1]
 print(model_name)
@@ -70,6 +95,7 @@ for k in range(500):
     action_buf.append(action)
     # action = env.action_space.sample()  # take a random action
     state, reward, terminated, truncated, _ = env.step(action)
+    # print(state)
     logger.info(f"Iteration {k}: Reward = {reward}")
     total_reward += reward
     if done:

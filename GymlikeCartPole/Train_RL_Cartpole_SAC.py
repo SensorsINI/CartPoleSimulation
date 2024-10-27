@@ -37,13 +37,13 @@ def linear_schedule(initial_value: float) -> Callable[[float], float]:
 # env = gym.make(env_name, render_mode=None)
 env = CartPoleEnv(render_mode=None)
 env = DummyVecEnv([lambda: env])
-# model = SAC('MlpPolicy', env, learning_rate=linear_schedule(0.01), verbose=1)
-model = SAC('MlpPolicy', env, verbose=1)
+model = SAC('MlpPolicy', env, learning_rate=linear_schedule(0.001), verbose=1)
+# model = SAC('MlpPolicy', env, verbose=1)
 
-model.learn(total_timesteps=100000, progress_bar=True)
+model.learn(total_timesteps=150000, progress_bar=True)
 # model.learn(total_timesteps=30000, progress_bar=True)
 
-model.save('sac_cartpole_swing_up_origin_laptop')
+model.save('sac_cartpole_angle_dependent_reward')
 
 
 # env = gym.make(env_name, render_mode="human")
