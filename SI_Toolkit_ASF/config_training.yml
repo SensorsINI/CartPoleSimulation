@@ -40,7 +40,11 @@ training_default:
   CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch; 'with cells' or 'with modules'
   VALIDATE_ALSO_ON_TRAINING_SET: false
   PLOT_WEIGHTS_DISTRIBUTION: true # CalculTFate histograms of weights and biases and activations, take long time
-  AUGMENT_DATA: False  # If true transforms training data with function specified in SI_Toolkit_ASF/data_augmentation.py at the beginning of the training and at the end of each epoch.
+
+CONFIG_SERIES_MODIFICATION:
+  MODE: None #'train_for_random_vertical_angle_shift'
+  NOISE_LEVEL:
+    FEATURES: 0.0
 
 REGULARIZATION:   # Implemented only for TF, no regularization for Pytorch
   ACTIVATED: false
