@@ -105,9 +105,9 @@ FILTERS:
 #    absolute: true
 # Translates to a condition df = df[abs(df['angleD']) < 20.0]
 # Allowed are <, <=, >, >=, ==, !=
-  - column: angleD
-    condition: "< 20.0"
-    absolute: true
-  - column: positionD
-    condition: "< 1.0"
-    absolute: true
+#  - column: angleD
+#    condition: "< 20.0"
+#    absolute: true
+#  - column: positionD
+#    condition: "< 1.0"
+#    absolute: true
