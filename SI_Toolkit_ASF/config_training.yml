@@ -1,6 +1,7 @@
 library: 'TF'  # TF or Pytorch
 modeling:
   NET_NAME: 'Dense-32H1-32H2'
+#  NET_NAME: 'Custom-ODE_module-ODEModel'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
   path_to_experiment: 'CPS-17-02-2023-UpDown'
