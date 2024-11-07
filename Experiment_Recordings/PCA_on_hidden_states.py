@@ -21,7 +21,9 @@ save_pca_path = None
 load_pca_path = '../PCA/pca_model.joblib'
 # load_pca_path = None
 
-feature_to_visualize = 'angle_offset'
+feature_to_visualize = 'target_position'
+additional_feature = 'angle_offset'
+# additional_feature = None
 
 
 def PCA_on_hidden_states(df, save_pca_path=None, load_pca_path=None):
@@ -71,7 +73,7 @@ def PCA_on_hidden_states(df, save_pca_path=None, load_pca_path=None):
     df['PCA2'] = pca_components[:, 1]
 
     # visualize_pca(df)
-    visualize_pca_with_feature(df, feature_to_visualize, step=2)
+    visualize_pca_with_feature(df, feature_to_visualize, step=10, additional_feature=additional_feature)
 
     return df
 
