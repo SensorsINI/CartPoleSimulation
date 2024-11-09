@@ -97,7 +97,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         # custom states for reset:
         self.state = self.np_random.uniform(low=low, high=high, size=(6,))
         self.state[ANGLE_IDX] = self.np_random.uniform(low=-3.14, high=3.14, size=(1, ))
-        self.state[ANGLE_IDX] = 3.14
+        # self.state[ANGLE_IDX] = 3.14
         # self.state[ANGLE_IDX] = -3.14
         self.state[ANGLE_COS_IDX] = np.cos(self.state[ANGLE_IDX])
         self.state[ANGLE_SIN_IDX] = np.sin(self.state[ANGLE_IDX])
