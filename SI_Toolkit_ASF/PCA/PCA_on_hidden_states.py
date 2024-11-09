@@ -7,18 +7,17 @@ from sklearn.preprocessing import StandardScaler
 
 from SI_Toolkit.data_preprocessing import transform_dataset
 
-from Experiment_Recordings.visualization_pca import visualize_pca, visualize_pca_with_feature
-
+from visualization_pca import visualize_pca, visualize_pca_with_feature
 
 save_files_to = None
 
-# get_files_from = '../PCA/'
-# save_pca_path = '../PCA/pca_model.joblib'
+# get_files_from = './Experiment/'
+# save_pca_path = './PrecomputedPCA/pca_model.joblib'
 # load_pca_path = None
 
-get_files_from = './'
+get_files_from = './Experiment/'
 save_pca_path = None
-load_pca_path = '../PCA/pca_model.joblib'
+load_pca_path = './PrecomputedPCA/pca_model.joblib'
 # load_pca_path = None
 
 feature_to_visualize = 'target_position'
