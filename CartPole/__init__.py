@@ -137,9 +137,10 @@ class CartPole(EnvironmentBatched):
         self.zero_angle_shift_mode = self.config['zero_angle_shift']['mode']
         self.zero_angle_shift_increment = np.deg2rad(self.config['zero_angle_shift']['increment'])
 
-        self.zero_angle_shift_every = 4.0  # seconds
-        self.zero_angle_shift_length = 1.0  # seconds
+        self.zero_angle_shift_every = self.config['zero_angle_shift']['zero_angle_shift_every']  # seconds
+        self.zero_angle_shift_reset_after = self.config['zero_angle_shift']['zero_angle_shift_reset_after']  # seconds
         self.time_of_last_zero_angle_shift = 0.0
+        self.time_of_last_zero_angle_reset = 0.0
 
 
         # region Time scales for simulation step, controller update and saving data
@@ -243,9 +244,9 @@ class CartPole(EnvironmentBatched):
 
                 'L': lambda: float(L),
 
-                'angle_offset': lambda: self.zero_angle_shift,
-                'angle_offset_cos': lambda: np.cos(self.zero_angle_shift),
-                'angle_offset_sin': lambda: np.sin(self.zero_angle_shift),
+                'angle_offset': lambda: float(self.zero_angle_shift),
+                'angle_offset_cos': lambda: float(np.cos(self.zero_angle_shift)),
+                'angle_offset_sin': lambda: float(np.sin(self.zero_angle_shift)),
 
                 'Q_update_time': lambda: self.Q_update_time,
 
@@ -340,26 +341,29 @@ class CartPole(EnvironmentBatched):
         self.u = self.cpe.Q2u(self.Q)
 
     def update_zero_angle_shift(self, s):
-        if self.zero_angle_shift_mode == 'constant':
-            da = 0.0
-        elif self.zero_angle_shift_mode == 'random walk':
-            da  = (1.0 if random() < 0.5 else -1.0)*self.zero_angle_shift_increment
-        elif self.zero_angle_shift_mode == 'increase':
-            self.zero_angle_shift_increment *= 1.000
-            da = self.zero_angle_shift_increment
-        elif self.zero_angle_shift_mode == 'random':
-            if self.time-self.time_of_last_zero_angle_shift > self.zero_angle_shift_every:
-                if self.time-self.time_of_last_zero_angle_shift > self.zero_angle_shift_every+self.zero_angle_shift_length:
-                    self.time_of_last_zero_angle_shift = self.time
-                    self.zero_angle_shift = 0.0
-                else:
-                    if self.zero_angle_shift == 0.0:
-                        self.zero_angle_shift = np.random.uniform(-np.pi, np.pi)
+        if self.zero_angle_shift_every and self.time-self.time_of_last_zero_angle_shift<self.zero_angle_shift_every:
+            pass
+        elif self.zero_angle_shift_reset_after and self.zero_angle_shift_mode != 'constant' and self.time-self.time_of_last_zero_angle_reset >= self.zero_angle_shift_reset_after:
+            self.time_of_last_zero_angle_reset = self.time
+            self.zero_angle_shift = 0.0
         else:
-            raise ValueError('zero_angle_shift_mode with value {} not valid'.format(self.zero_angle_shift_mode))
+            self.time_of_last_zero_angle_shift = self.time
 
-        if not self.zero_angle_shift_mode == 'random':
-            self.zero_angle_shift += da
+
+            if self.zero_angle_shift_mode == 'constant':
+                da = 0.0
+            elif self.zero_angle_shift_mode == 'random walk':
+                da  = (1.0 if random() < 0.5 else -1.0)*self.zero_angle_shift_increment
+            elif self.zero_angle_shift_mode == 'increase':
+                self.zero_angle_shift_increment *= 1.000
+                da = self.zero_angle_shift_increment
+            elif self.zero_angle_shift_mode == 'random':
+                 self.zero_angle_shift = np.random.uniform(-np.pi, np.pi)
+            else:
+                raise ValueError('zero_angle_shift_mode with value {} not valid'.format(self.zero_angle_shift_mode))
+
+            if not self.zero_angle_shift_mode == 'random':
+                self.zero_angle_shift += da
 
         s[ANGLE_IDX] = wrap_angle_rad(s[ANGLE_IDX]+self.zero_angle_shift)
         s[ANGLE_COS_IDX] = np.cos(s[ANGLE_IDX])
