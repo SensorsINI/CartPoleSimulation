@@ -5,6 +5,10 @@ from tqdm import tqdm
 from typing import Callable
 
 from GymlikeCartPole.EnvGym.CartpoleEnv import CartPoleEnv
+from GymlikeCartPole.mpc_cost_function import MPC_CostFunction
+
+from SI_Toolkit.computation_library import NumpyLibrary
+
 
 import matplotlib.pyplot as plt
 
@@ -56,6 +60,10 @@ env.close()
 env = CartPoleEnv(render_mode=None)
 env = DummyVecEnv([lambda: env])
 
+initial_environment_attributes = {'target_position': 0.0, 'target_equilibrium': 1.0}
+lib = NumpyLibrary
+mpc_cost = MPC_CostFunction(lib, initial_environment_attributes)
+
 for episode in range(1, 3):
     score = 0
     action_buf = []
@@ -63,12 +71,18 @@ for episode in range(1, 3):
     # score_buf = []
     obs = env.reset()
     done = False
+    environment_attributes = initial_environment_attributes
 
     while not done:
         env.render()
         action, _ = model.predict(obs, deterministic=True)
         action_buf.append(action)
         obs, reward, done, info = env.step(action)
+
+        environment_attributes = {'target_position': 0.0,
+                                  'target_equilibrium': 1.0}  # This would probably come from info of the environment or augmented state
+        mpc_reward = -mpc_cost.get_cost(obs, action, environment_attributes=environment_attributes)
+        reward = mpc_reward
         # print(reward)
         obs_buf.append(obs)
         score += reward
