@@ -3,6 +3,7 @@ import math
 import numpy as np
 
 from gymnasium import logger, spaces
+from numpy.ma.core import absolute
 
 from GymlikeCartPole.EnvGym.state_utils import *
 from GymlikeCartPole.Cartpole_RL._cartpole_rl_template import CartPoleRLTemplate
@@ -71,6 +72,33 @@ class Cartpole_Sensors(CartPoleRLTemplate):
                 )
             self.steps_beyond_terminated += 1
             reward = 0.0
+            # reward = -1.0
+
+        ###OLD REWARD
+        #penalize deviation from upright position:
+        reward -= (abs(state[ANGLE_IDX]/math.pi))
+
+        #penalize high pole velocity near upright position:
+        reward -= 0.1 * ((state[ANGLE_COS_IDX]+1)/2) * abs(state[ANGLED_IDX])
+
+        #penalty for being not in origin when near upright:
+        #Track length -> 44.0e-2
+        # reward -= 0.1 * (((state[ANGLE_COS_IDX] + 1) / 2) *
+        #                  (math.sqrt(abs(state[POSITION_IDX]) / (44.0e-2 / 2)) + abs(state[POSITION_IDX])/(44.0e-2/2)))
+        #
+        reward -= 0.5 * ((state[ANGLE_COS_IDX]+1)/2) * (abs(state[POSITION_IDX])/(44.0e-2/2))
+
+        ###debug prints:
+        # print('Pos Term: ' + str(abs(state[POSITION_IDX])/(44.0e-2/2)))
+        # print('Scaled Pos Term: ' + str(0.5 * ((state[ANGLE_COS_IDX]+1)/2) * (abs(state[POSITION_IDX])/(44.0e-2/2))))
+        #
+        # print('Upright term: ' + str((abs(state[ANGLE_IDX]/math.pi))))
+        # print('Velocity term: ' + str(0.1 * ((state[ANGLE_COS_IDX]+1)/2) * abs(state[ANGLED_IDX])))
+
+        #TODO: could try to add a reward which takes the proportion of uprightness to
+        ###OLD REWARD
+
+        # reward -= abs((state[ANGLE_IDX]/math.pi)) + 0.1 * (state[ANGLED_IDX] ** 2) + 0.001*((state[POSITION_IDX]/(44.0e-2/2)) ** 2)
 
         return reward
 
@@ -78,8 +106,8 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         terminated = bool(
             state[POSITION_IDX] < -self.x_threshold
             or state[POSITION_IDX] > self.x_threshold
-            or state[ANGLE_IDX] < -self.theta_threshold_radians
-            or state[ANGLE_IDX] > self.theta_threshold_radians
+            # or state[ANGLE_IDX] < -self.theta_threshold_radians
+            # or state[ANGLE_IDX] > self.theta_threshold_radians
         )
 
         return terminated
