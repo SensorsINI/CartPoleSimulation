@@ -39,13 +39,13 @@ def args_fun():
 
 formatted_index = args_fun()
 if formatted_index is not None:
-    get_files_from = f'GRU_recordings/previous/Experiment-{formatted_index}.csv'
+    get_files_from = f'Experiment_Recordings/Trial_4/raw_recordings/previous/Experiment-{formatted_index}.csv'
 else:
-    get_files_from = 'GRU_recordings/previous/'
+    get_files_from = 'Experiment_Recordings/Trial_4/raw_recordings/previous/'
     # get_files_from = 'Test'
 
 
-save_files_to = 'GRU_recordings_processed/previous/'
+save_files_to = 'Experiment_Recordings/Trial_4/previous/'
 # save_files_to = 'Test_new'
 
 controller = {
@@ -58,6 +58,7 @@ controller = {
         "target_position": "target_position",
         "target_equilibrium": "target_equilibrium",
         "L": "L",
+        "Q_ccrc": "Q_applied_-1",
     },
 }
 

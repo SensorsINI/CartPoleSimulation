@@ -14,5 +14,5 @@ conda activate CPS39
 i=$SLURM_ARRAY_TASK_ID
 
 # Run the Python script with the specific index
-python ./SI_Toolkit_ASF/Run/PreprocessData_Add_Control_Along_Trajectories_previous.py -i $i
-python ./SI_Toolkit_ASF/Run/PreprocessData_Add_Control_Along_Trajectories_smooth.py -i $i
+python ./SI_Toolkit_ASF/Run/PreprocessData_Add_Control_Along_Trajectories.py -i $i
+

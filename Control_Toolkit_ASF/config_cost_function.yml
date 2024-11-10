@@ -12,7 +12,7 @@ CartPole:
   quadratic_boundary_grad:
     dd_quadratic_weight_up: 100.0
     dd_linear_weight_up: 120.0
-    ep_weight_up: 100.0
+    ep_weight_up: 2400.0
     target_angular_speed_sqr_max_correction_up: 0.0
     ekp_weight_up: 300.0  # Notice the role of this variable is different than for down (offset)
     db_weight_up: 10000
@@ -38,9 +38,9 @@ CartPole:
   quadratic_boundary_grad_minimal:
     dd_quadratic_weight_up: 10.0
     ep_weight_up: 40.0
-    ekp_weight_up: 1.0
+    ekp_weight_up: 0.5
     db_weight_up: 10000
-    cc_weight_up: 5.0
+    cc_weight_up: 2.0
     R: 1.0
 
     permissible_track_fraction: 0.85
