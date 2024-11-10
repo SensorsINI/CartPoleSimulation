@@ -29,8 +29,6 @@ class CartPoleDrawer:
         # DIMENSIONS OF THE DRAWING ONLY!!!
         # NOTHING TO DO WITH THE SIMULATION AND NOT INTENDED TO BE MANIPULATED BY USER !!!
 
-        self.show_hanging_pole = False
-
         self.physical_to_graphics = None
         self.graphics_to_physical = None
 
@@ -166,7 +164,7 @@ class CartPoleDrawer:
         ## Upper chart with Cart Picture
         # Set x and y limits
         AxCart.set_xlim((-self.TrackHalfLengthGraphics * 1.1, self.TrackHalfLengthGraphics * 1.1))
-        AxCart.set_ylim((-1.0, 15.0))
+
         # Remove ticks on the y-axes
         AxCart.yaxis.set_major_locator(plt.NullLocator())  # NullLocator is used to disable ticks on the Figures
 
@@ -192,14 +190,15 @@ class CartPoleDrawer:
 
         AxCart.add_patch(InvisiblePointUp)
 
-        if self.show_hanging_pole:
-            InvisiblePointDown = Rectangle((0, -self.mast_height_maximal_drawing_units - 2.0),
-                                           self.MastThickness,
-                                           0.0001,
-                                           fc='w',
-                                           ec='w')
+        point_y_coordinate = -self.mast_height_maximal_drawing_units - 1.0
 
-            AxCart.add_patch(InvisiblePointDown)
+        InvisiblePointDown = Rectangle((0, point_y_coordinate),
+                                       self.MastThickness,
+                                       0.0001,
+                                       fc='w',
+                                       ec='w')
+
+        AxCart.add_patch(InvisiblePointDown)
 
         # Apply scaling
         AxCart.axis('scaled')

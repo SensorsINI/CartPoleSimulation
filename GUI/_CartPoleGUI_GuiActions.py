@@ -53,7 +53,6 @@ class CartPole_GuiActions:
         slider_on_click_init = config['gui_settings']['slider_on_click_init']
         simulator_mode_init = config['gui_settings']['simulator_mode_init']
         speedup_init = config['gui_settings']['speedup_init']
-        show_hanging_pole_init = config['gui_settings']['show_hanging_pole_init']
 
         self.track_relative_complexity_init = config['random_trace_generation']['track_relative_complexity_init']
         self.length_of_experiment_init = config['random_trace_generation']['length_of_experiment_init']
@@ -101,7 +100,6 @@ class CartPole_GuiActions:
         self.simulator_mode = simulator_mode_init
         self.slider_on_click = slider_on_click_init  # Update slider on click/update slider while hoovering over it
         self.speedup = speedup_init  # Default simulation speed-up
-        self.CartPoleInstance.show_hanging_pole = show_hanging_pole_init
 
         # endregion
 
@@ -180,6 +178,8 @@ class CartPole_GuiActions:
         worker_labels = Worker(self.set_labels_thread)
         self.threadpool.start(worker_labels)
         # endregion
+
+        self.RadioButtons_simulator_mode()
 
         # region Start animation repeatedly redrawing changing elements of matplotlib figures (CartPole drawing and slider)
         # This animation runs ALWAYS when the GUI is open
@@ -348,23 +348,25 @@ class CartPole_GuiActions:
         except:
             pass
 
-        while not self.PhysicalCartPoleDriverInstance.terminate_experiment and not self.terminate_experiment_or_replay_thread:
+        with self.PhysicalCartPoleDriverInstance.mlm.terminal_manager():
 
-            self.PhysicalCartPoleDriverInstance.experiment_sequence()
+            while not self.PhysicalCartPoleDriverInstance.terminate_experiment and not self.terminate_experiment_or_replay_thread:
 
-            if self.CartPoleInstance.controller_name == 'manual-stabilization':
-                self.target_slider.value = self.CartPoleInstance.Q
-            else:
-                self.target_slider.value = self.CartPoleInstance.target_position / TrackHalfLength
+                self.PhysicalCartPoleDriverInstance.experiment_sequence()
 
-        self.PhysicalCartPoleDriverInstance.terminate_experiment = True
-        self.terminate_experiment_or_replay_thread = True
+                if self.CartPoleInstance.controller_name == 'manual-stabilization':
+                    self.target_slider.value = self.CartPoleInstance.Q
+                else:
+                    self.target_slider.value = self.CartPoleInstance.target_position / TrackHalfLength
 
-        self.PhysicalCartPoleDriverInstance.quit_experiment()
+            self.PhysicalCartPoleDriverInstance.terminate_experiment = True
+            self.terminate_experiment_or_replay_thread = True
 
-        self.PhysicalCartPoleDriverInstance = None
+            self.PhysicalCartPoleDriverInstance.quit_experiment()
 
-        self.experiment_or_replay_thread_terminated = True
+            self.PhysicalCartPoleDriverInstance = None
+
+            self.experiment_or_replay_thread_terminated = True
 
     # endregion
 
@@ -624,7 +626,9 @@ class CartPole_GuiActions:
     # and updates the slider
     def on_mouse_movement(self, event):
         condition = self.simulator_mode == 'Slider-Controlled Experiment' or (
-                self.simulator_mode == 'Physical CP' and not self.PhysicalCartPoleDriverInstance.dancer.danceEnabled
+                self.simulator_mode == 'Physical CP'
+                and self.PhysicalCartPoleDriverInstance is not None
+                and not self.PhysicalCartPoleDriverInstance.dancer.danceEnabled
         )
         if condition:
             if event.xdata == None or event.ydata == None:
@@ -709,7 +713,8 @@ class CartPole_GuiActions:
             print("\n\nSetting up physical cartpole driver...")
             from DriverFunctions.PhysicalCartPoleDriver import PhysicalCartPoleDriver
             self.PhysicalCartPoleDriverInstance = PhysicalCartPoleDriver(self.CartPoleInstance)
-            self.PhysicalCartPoleDriverInstance.setup()
+            with self.PhysicalCartPoleDriverInstance.mlm.terminal_manager():
+                self.PhysicalCartPoleDriverInstance.setup()
             worker = Worker(self.physical_experiment_thread)
             worker.signals.finished.connect(self.finish_thread)
             # Execute
@@ -833,17 +838,6 @@ class CartPole_GuiActions:
         else:
             self.slider_on_click = False
 
-    # Action toggling between showing the ground level and above
-    # and showing above and below ground level the length of the pole
-    # Second option is good for visualizing swing-up
-    def cb_show_hanging_pole_f(self, state):
-        if state:
-            self.CartPoleInstance.show_hanging_pole = True
-        else:
-            self.CartPoleInstance.show_hanging_pole = False
-        self.cp_drawer.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
-        self.canvas.draw()
-
     # endregion
 
     # region - Additional GUI Popups
@@ -938,10 +932,6 @@ class CartPole_GuiActions:
     @property
     def interpolation_type(self):
         return self.CartPoleInstance.interpolation_type
-
-    @property
-    def show_hanging_pole(self):
-        return self.CartPoleInstance.show_hanging_pole
 
     @property
     def stop_at_90(self):

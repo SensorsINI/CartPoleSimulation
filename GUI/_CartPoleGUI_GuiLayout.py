@@ -338,15 +338,6 @@ class CartPole_GuiLayout:
 
         # endregion
 
-        # region -- Checkbox: Decide how the cartpole should be displayed
-        self.cb_show_hanging_pole = QCheckBox('Show hanging pole', main_window)
-        if self.GuiActions.show_hanging_pole:
-            self.cb_show_hanging_pole.toggle()
-        self.cb_show_hanging_pole.toggled.connect(self.GuiActions.cb_show_hanging_pole_f)
-        l_cb.addWidget(self.cb_show_hanging_pole)
-
-        # endregion
-
         # endregion
 
         # region - Radio buttons selecting simulator mode: user defined experiment, random experiment, replay
