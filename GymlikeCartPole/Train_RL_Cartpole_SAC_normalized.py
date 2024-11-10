@@ -40,30 +40,53 @@ def linear_schedule(initial_value: float) -> Callable[[float], float]:
 env = CartPoleEnv(render_mode=None)
 env = DummyVecEnv([lambda: env])
 
-# ### Custom Actor Model Size:
-policy_kwargs = dict(net_arch=[32, 32])
-model = SAC('MlpPolicy', env, policy_kwargs=policy_kwargs,
+'''
+TEST NORMALIZATION
+'''
+norm_env = VecNormalize(env, norm_obs=True, norm_reward=True)
+policy_kwargs = dict(net_arch=[64, 64])
+model = SAC('MlpPolicy', norm_env, policy_kwargs=policy_kwargs,
              batch_size=1024, verbose=1)
+model.learn(total_timesteps=75000, progress_bar=True)
+# log_dir = "first_norm_test/"
+# model.save(log_dir + "sac_cartpole_timescale_normalized_batch1024_withoutTerminal_0711")
+# stats_path = os.path.join(log_dir, "vec_normalized.pkl")
+# norm_env.save(stats_path)
 
-# model = SAC('MlpPolicy', env, verbose=1)
-# model = SAC('MlpPolicy', env, verbose=1)
+model.save("sac_cartpole_timescale_normalized_batch1024_withoutTerminal_0711")
+# stats_path = os.path.join(log_dir, "vec_normalized.pkl")
+norm_env.save("sac_cartpole_timescale_normalized_batch1024_withoutTerminal_0711.pkl")
 
-print(model.policy)
-model.learn(total_timesteps=150000, progress_bar=True)
-# model.learn(total_timesteps=30000, progress_bar=True)
-
-model.save('sac_cartpole_32size')
-
-
-# env = gym.make(env_name, render_mode="human")
-env = CartPoleEnv(render_mode="human")
-env = DummyVecEnv([lambda: env])
-evaluate_policy(model, env, n_eval_episodes=2, render=True)
-env.close()
+'''
+END TEST NORMALIZATION
+'''
 
 
-env = CartPoleEnv(render_mode=None)
-env = DummyVecEnv([lambda: env])
+
+# ### Custom Actor Model Size:
+# policy_kwargs = dict(net_arch=[64, 64])
+# model = SAC('MlpPolicy', env, policy_kwargs=policy_kwargs,
+#              batch_size=1024, verbose=1)
+#
+# # model = SAC('MlpPolicy', env, verbose=1)
+# # model = SAC('MlpPolicy', env, verbose=1)
+#
+# print(model.policy)
+# model.learn(total_timesteps=150000, progress_bar=True)
+# # model.learn(total_timesteps=30000, progress_bar=True)
+#
+# model.save('sac_cartpole_timescale_batch1024_withoutTerminal_0711')
+#
+#
+# # env = gym.make(env_name, render_mode="human")
+# env = CartPoleEnv(render_mode="human")
+# env = DummyVecEnv([lambda: env])
+# evaluate_policy(model, env, n_eval_episodes=2, render=True)
+# env.close()
+#
+#
+# env = CartPoleEnv(render_mode=None)
+# env = DummyVecEnv([lambda: env])
 
 for episode in range(1, 3):
     score = 0

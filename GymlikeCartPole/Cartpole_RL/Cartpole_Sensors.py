@@ -57,7 +57,7 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         new_state = np.squeeze(self.cpe.cartpole_fine_integration(state, u=u, t_step=self.simulation_time_step, intermediate_steps=self.number_of_intermediate_integration_steps))
         return new_state
 
-    def reward_assignment(self, state, action, terminated):
+    def reward_assignment(self, state, action, terminated, steps):
         if not terminated:
             reward = 1.0
         elif self.steps_beyond_terminated is None:
@@ -74,20 +74,64 @@ class Cartpole_Sensors(CartPoleRLTemplate):
             reward = 0.0
             # reward = -1.0
 
-        ###OLD REWARD
+        # print(action)
+        angle = abs(state[ANGLE_IDX]/math.pi)
+        pos = (abs(state[POSITION_IDX])/(44.0e-2/2))
+        angle_scale = (state[ANGLE_COS_IDX]+1)/2
+        time_scale = steps/500
+        # print(time_scale)
+        # ###OLD REWARD
         #penalize deviation from upright position:
-        reward -= (abs(state[ANGLE_IDX]/math.pi))
-
+        reward -= angle
+        # print("upright reward: " + str(abs(state[ANGLE_IDX]/math.pi)))
         #penalize high pole velocity near upright position:
-        reward -= 0.1 * ((state[ANGLE_COS_IDX]+1)/2) * abs(state[ANGLED_IDX])
-
+        # reward -= 0.1 * (((state[ANGLE_COS_IDX]+1)/2)**2) * abs(state[ANGLED_IDX])
+        # reward -= 0.1 * ((state[ANGLE_COS_IDX] + 1) / 2) * abs(state[ANGLED_IDX])
         #penalty for being not in origin when near upright:
+        reward -= 2.5 * time_scale * (angle_scale * pos)
+
+        reward -= 0.1 * abs(action)
         #Track length -> 44.0e-2
+        # reward -= 0.1 * ( (state[ANGLE_COS_IDX]+1)/2 ) * max(1, 50*abs(state[POSITION_IDX]))
         # reward -= 0.1 * (((state[ANGLE_COS_IDX] + 1) / 2) *
         #                  (math.sqrt(abs(state[POSITION_IDX]) / (44.0e-2 / 2)) + abs(state[POSITION_IDX])/(44.0e-2/2)))
-        #
-        reward -= 0.5 * ((state[ANGLE_COS_IDX]+1)/2) * (abs(state[POSITION_IDX])/(44.0e-2/2))
+        # reward -= 0.5 * (((state[ANGLE_COS_IDX]+1)/2)**2) * (abs(state[POSITION_IDX])/(44.0e-2/2))
+        # reward -= 0.5 * ((state[ANGLE_COS_IDX]+1)/2) * (abs(state[POSITION_IDX])/(44.0e-2/2))
+        # reward -= 0.5 * ((state[ANGLE_COS_IDX] + 1) / 2) * (1-(1/(1 + ((abs(state[POSITION_IDX])/(44.0e-2/2))/0.1)**2)))
+        # xtol =
 
+        # atol = 0.001 #3e-4
+        # xtol = 0.001
+        # # # goal = abs(state[POSITION_IDX]) < xtol and abs(state[ANGLE_IDX]) < atol
+        # # # print(goal)
+        # # # print(abs(state[ANGLE_IDX]))
+        # if abs(state[POSITION_IDX]) < xtol and abs(state[ANGLE_IDX]) < atol:
+        #     print("I DID IT")
+        # #     # print(0.5 * (abs(state[ANGLE_IDX]) / atol + abs(state[POSITION_IDX]) / xtol))
+        # #     reward -= 0.5 * abs(action)
+        #     reward += 10 * (1 - 0.25 * (abs(state[ANGLE_IDX])/atol + abs(state[POSITION_IDX])/xtol))
+            # if abs(state[ANGLE_IDX]) < 1e-4:
+            #     print("BETTER I DID IT")
+            #     reward += 0.5
+        # ### OLD REWARD
+
+        # angle = state[ANGLE_IDX]**2
+        # pos = (((state[ANGLE_COS_IDX]+1)/2) * state[POSITION_IDX])**2
+        # reward += -0.1 * (5*angle + pos)
+        # print(abs(state[ANGLE_IDX]))
+        # print("pos: " + str(abs(state[POSITION_IDX])))
+        # reward -= 0.1 * abs(state[POSITION_IDX]/(44.0e-2 / 2))
+        # print(abs(state[POSITION_IDX]))
+        # print(1 - abs(state[ANGLE_IDX])/atol)
+        # print("reward: " + str(reward))
+        # print("norm: " + str(abs(state[POSITI
+        # ON_IDX]/(44.0e-2 / 2))))
+        # print("swing: " + str((state[ANGLE_COS_IDX]+1)/2))
+        # print(0.1 * ( (state[ANGLE_COS_IDX]+1)/2 ) * max(1, 10*abs(state[POSITION_IDX])))
+        # print("pos reward: " + str(0.5 * ((state[ANGLE_COS_IDX]+1)/2) * (abs(state[POSITION_IDX])/(44.0e-2/2))))
+        # print("original pos: " + str(abs(state[POSITION_IDX])/(44.0e-2/2)))
+
+        # print("Lorenzian test: " + str(1-(1/(1 + ((abs(state[POSITION_IDX])/(44.0e-2/2))/0.1)**2))))
         ###debug prints:
         # print('Pos Term: ' + str(abs(state[POSITION_IDX])/(44.0e-2/2)))
         # print('Scaled Pos Term: ' + str(0.5 * ((state[ANGLE_COS_IDX]+1)/2) * (abs(state[POSITION_IDX])/(44.0e-2/2))))
@@ -96,7 +140,6 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         # print('Velocity term: ' + str(0.1 * ((state[ANGLE_COS_IDX]+1)/2) * abs(state[ANGLED_IDX])))
 
         #TODO: could try to add a reward which takes the proportion of uprightness to
-        ###OLD REWARD
 
         # reward -= abs((state[ANGLE_IDX]/math.pi)) + 0.1 * (state[ANGLED_IDX] ** 2) + 0.001*((state[POSITION_IDX]/(44.0e-2/2)) ** 2)
 

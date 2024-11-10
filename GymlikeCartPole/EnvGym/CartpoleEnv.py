@@ -63,7 +63,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         truncated = self.steps >= self.max_episode_steps
 
-        reward = self.cartpole_rl.reward_assignment(self.state, action, terminated)
+        reward = self.cartpole_rl.reward_assignment(self.state, action, terminated, self.steps)
         # print(reward)
         # print(self.state[POSITION_IDX])
         # print(self.state[ANGLE_IDX])
@@ -97,8 +97,9 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         # custom states for reset:
         self.state = self.np_random.uniform(low=low, high=high, size=(6,))
         self.state[ANGLE_IDX] = self.np_random.uniform(low=-3.14, high=3.14, size=(1, ))
-        self.state[ANGLE_IDX] = 3.14
+        # self.state[ANGLE_IDX] = 3.14
         # self.state[ANGLE_IDX] = -3.14
+        # self.state[POSITION_IDX] = 44.0e-2/2
         self.state[ANGLE_COS_IDX] = np.cos(self.state[ANGLE_IDX])
         self.state[ANGLE_SIN_IDX] = np.sin(self.state[ANGLE_IDX])
         self.steps = 0

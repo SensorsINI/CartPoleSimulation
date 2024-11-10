@@ -3,6 +3,7 @@ import numpy as np
 from time import sleep
 
 from stable_baselines3 import SAC, PPO
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 from others.globals_and_utils import load_config, my_logger
 from Control_Toolkit.others.globals_and_utils import import_controller_by_name
@@ -31,8 +32,8 @@ logger = my_logger(__name__)
 # model_path = 'GymlikeCartPole/ppo model swing up'
 # model = PPO.load(model_path)
 
-# model_path = 'GymlikeCartPole/sac_cartpole_swing_up_origin'
-# model = SAC.load(model_path)
+model_path = 'GymlikeCartPole/sac_cartpole_32size'
+
 
 # model_path = 'GymlikeCartPole/sac_cartpole_origin_good_swingup'
 # model = SAC.load(model_path)
@@ -40,34 +41,34 @@ logger = my_logger(__name__)
 # model_path = 'GymlikeCartPole/sac_cartpole_swing_up_origin_laptop'
 # model = SAC.load(model_path)
 
-# model_path = 'GymlikeCartPole/sac_cartpole_swing_up_origin_laptop_65_strict'
+# model_path = 'GymlikeCartPole/sac_cartpole_small_network_10terminal_bigangle_actionpen'
 # model = SAC.load(model_path)
 
-# model_path = 'GymlikeCartPole/sac_cartpole_swing_up_origin_laptop_100_strict'
+# model_path = 'GymlikeCartPole/sac_cartpole_scaled_terminal_angle_and_pos_noLRS'
 # model = SAC.load(model_path)
-
-# model_path = 'GymlikeCartPole/ppo_cartpole_swing_up_origin'
+#
+# model_path = 'GymlikeCartPole/ppo_cartpole_terminal_test'
 # model = PPO.load(model_path)
 
 # model_path = 'GymlikeCartPole/ppo_cartpole_swing_up_origin_laptop_stricter'
 # model = PPO.load(model_path)
 
-# model_path = 'GymlikeCartPole/ppo_cartpole_swing_up_origin_5'
+# model_path = 'GymlikeCartPole/ppo_cartpole_swing_up_origin_laptop'
 # model = PPO.load(model_path)
 
 # model_path = 'GymlikeCartPole/ppo_cartpole_test'
 # model = PPO.load(model_path)
 
-model_path = 'GymlikeCartPole/ppo_cartpole_angle_dependent_reward'
-model = PPO.load(model_path)
+# model_path = 'GymlikeCartPole/ppo_cartpole_square_angle_reward'
+# model = PPO.load(model_path)
 
 # model_path = 'GymlikeCartPole/ppo_cartpole_newest'
 # model = PPO.load(model_path)
 
-# model_path = 'GymlikeCartPole/sac_cartpole_angle_dependent_reward'
+# model_path = 'GymlikeCartPole/sac_cartpole_no_vel'
 # model = SAC.load(model_path)
 
-# model_path = 'GymlikeCartPole/sac_cartpole_linear_square_scheduler'
+# model_path = 'GymlikeCartPole/sac_cartpole_terminal_sparse'
 # model = SAC.load(model_path)
 
 # model_path = 'GymlikeCartPole/sac_cartpole_origin_linear'
@@ -75,8 +76,23 @@ model = PPO.load(model_path)
 
 model_name = model_path.split('/')[-1]
 print(model_name)
+# print(model.policy)
+model = SAC.load(model_path)
 
 env = CartPoleEnv(render_mode="human")
+
+'''
+TESTING UNNORMALIZATION
+'''
+# env = DummyVecEnv([lambda: env])
+# env = VecNormalize.load("GymlikeCartPole/sac_cartpole_timescale_normalized_batch1024_withoutTerminal_0711.pkl", env)
+# env.training = False
+# env.norm_reward = False
+# model = SAC.load(model_path)
+# print(type(env.__getstate__()))
+# state = env.__getstate__()
+# print(type(state['observation_space']))
+# obs = state['observation_space']
 
 done = False
 env.reset()

@@ -42,10 +42,10 @@ model = PPO('MlpPolicy', env, learning_rate=linear_schedule(0.001), verbose=1)
 
 #150'000 -> 5min
 # model.learn(total_timesteps=1000000, progress_bar=True)
-model.learn(total_timesteps=500000, progress_bar=True)
+model.learn(total_timesteps=300000, progress_bar=True)
 # model.learn(total_timesteps=3000000, progress_bar=True)
 
-model.save('ppo_cartpole_no_survive_reward')
+model.save('ppo_cartpole_terminal_test')
 
 
 # env = gym.make(env_name, render_mode="human")
