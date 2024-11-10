@@ -26,8 +26,8 @@ cartpole:
     sigma_positionD: 0.005
   zero_angle_shift:
     init: 0.0  # deg
-    zero_angle_shift_every: # If left empty angle shift changed at each simulation step, otherwise time in seconds
+    zero_angle_shift_every: 1.0 # If left empty angle shift changed at each simulation step, otherwise time in seconds
     mode: 'constant'  # 'constant', 'random_walk', 'increase', 'random'
     increment: 0.02
-    zero_angle_shift_reset_after: 18  # seconds
+    zero_angle_shift_reset_after: 4.0  # seconds
   num_control_inputs: 1
