@@ -1,5 +1,5 @@
 controller: mpc
-ML_Pipeline_mode: False  # If True a directory structure required by SI_Toolkit will be created, location taken from config_training, not from here.
+ML_Pipeline_mode: True  # If True a directory structure required by SI_Toolkit will be created, location taken from config_training, not from here.
 split: [0.8, 0.1]  # Train/Val/(Test) split - only matters if you run it in ML Pipeline mode
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default, can be overwritten in config_training if ML_Pipeline_mode is True
 seed:   # If not assign random seed based on datetime is used

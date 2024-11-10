@@ -15,7 +15,7 @@ time_scales:  # Cannot be changed after starting the program
 
 gui_settings: # Can be changed in GUI
   controller_init_cpp: 'mpc'  # Load as default if loaded as part of physical-cartpole.
-  controller_init_cps: 'mpc'  # Load as default if loaded as cartpole simulator stand alone.
+  controller_init_cps: 'neural-imitator'  # Load as default if loaded as cartpole simulator stand alone.
 
 #  Possible choices for CartPole controller include:
 #

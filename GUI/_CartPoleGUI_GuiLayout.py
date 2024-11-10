@@ -5,8 +5,10 @@ import os
 # Import functions from PyQt6 module (creating GUI)
 from PyQt6.QtWidgets import QRadioButton, QSlider, QVBoxLayout, \
     QHBoxLayout, QLabel, QPushButton, QCheckBox, \
-    QLineEdit, QMessageBox, QComboBox, QButtonGroup
+    QLineEdit, QMessageBox, QComboBox, QButtonGroup, \
+    QSpacerItem, QSizePolicy
 from PyQt6.QtCore import QThreadPool, QTimer, Qt
+from PyQt6.QtGui import QFontMetrics
 # The main drawing functionalities are implemented in CartPole Class
 # Some more functions needed for interaction of matplotlib with PyQt6
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -183,6 +185,12 @@ class CartPole_GuiLayout:
 
         # region - Sliders setting initial state and buttons for kicking the pole
 
+        # Replace addStretch with a spacer item that has a specific size
+        font_metrics = QFontMetrics(main_window.font())
+        character_width = font_metrics.horizontalAdvance('W')  # Using 'W' as it's typically the widest
+        spacer_with = 4 * character_width
+        spacer = QSpacerItem(spacer_with, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+
         # Sliders setting initial position and angle
         ip = QHBoxLayout()  # Layout for initial position sliders
         self.initial_position_slider = QSlider(orientation=Qt.Orientation.Horizontal)
@@ -199,7 +207,7 @@ class CartPole_GuiLayout:
         ip.addWidget(self.initial_position_slider)
         ip.addWidget(QLabel("Initial angle:"))
         ip.addWidget(self.initial_angle_slider)
-        ip.addStretch(0)
+        ip.addSpacerItem(spacer)
 
         # Slider setting latency
         self.LATENCY_SLIDER_RANGE_INT = 1000
@@ -233,20 +241,26 @@ class CartPole_GuiLayout:
 
         self.rbs_noise[1].setChecked(True)
 
-        ip.addStretch(0)
+        ip.addSpacerItem(spacer)
         ip.addLayout(lr_n)
-        ip.addStretch(0)
+        ip.addSpacerItem(spacer)
+
+        self.textbox_zero_angle_shift, l_zero_angle_shift = zero_angle_layout()
+        self.GuiActions.zero_angle_shift_handler.connect_textbox(self.textbox_zero_angle_shift)
+        ip.addLayout(l_zero_angle_shift)
+
+        ip.addSpacerItem(spacer)
 
         # Buttons giving kick to the pole
         kick_label = QLabel("Kick pole:")
         kick_left_button = QPushButton()
         kick_left_button.setText("Left")
         kick_left_button.adjustSize()
-        kick_left_button.clicked.connect(self.GuiActions.kick_pole)
+        kick_left_button.clicked.connect(lambda: self.GuiActions.kick_pole("Left"))
         kick_right_button = QPushButton()
         kick_right_button.setText("Right")
         kick_right_button.adjustSize()
-        kick_right_button.clicked.connect(self.GuiActions.kick_pole)
+        kick_right_button.clicked.connect(lambda: self.GuiActions.kick_pole("Right"))
         ip.addWidget(kick_label)
         ip.addWidget(kick_left_button)
         ip.addWidget(kick_right_button)
@@ -382,3 +396,20 @@ class CartPole_GuiLayout:
 
     def get_csv_name_from_gui(self):
         self.textbox.text()
+
+
+def zero_angle_layout():
+    # Add the zero_angle_shift textbox with labels
+    l_zero_angle_shift = QHBoxLayout()
+    l_zero_angle_shift.addWidget(QLabel('0-angle: '))
+    textbox_zero_angle_shift = QLineEdit()
+
+    # Set the size based on the font metrics to fit 4 characters
+    font_metrics = QFontMetrics(textbox_zero_angle_shift.font())
+    character_width = font_metrics.horizontalAdvance('0')  # Width of one '0' character
+    textbox_zero_angle_shift.setFixedWidth(character_width * 4 + 10)  # 4 characters + padding
+
+    l_zero_angle_shift.addWidget(textbox_zero_angle_shift)
+    l_zero_angle_shift.addWidget(QLabel('deg'))
+
+    return textbox_zero_angle_shift, l_zero_angle_shift

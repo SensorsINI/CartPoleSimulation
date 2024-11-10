@@ -137,9 +137,10 @@ class CartPole(EnvironmentBatched):
         self.zero_angle_shift_mode = self.config['zero_angle_shift']['mode']
         self.zero_angle_shift_increment = np.deg2rad(self.config['zero_angle_shift']['increment'])
 
-        self.zero_angle_shift_every = 4.0  # seconds
-        self.zero_angle_shift_length = 1.0  # seconds
+        self.zero_angle_shift_every = self.config['zero_angle_shift']['zero_angle_shift_every']  # seconds
+        self.zero_angle_shift_reset_after = self.config['zero_angle_shift']['zero_angle_shift_reset_after']  # seconds
         self.time_of_last_zero_angle_shift = 0.0
+        self.time_of_last_zero_angle_reset = 0.0
 
 
         # region Time scales for simulation step, controller update and saving data
@@ -243,6 +244,10 @@ class CartPole(EnvironmentBatched):
 
                 'L': lambda: float(L),
 
+                'angle_offset': lambda: float(self.zero_angle_shift),
+                'angle_offset_cos': lambda: float(np.cos(self.zero_angle_shift)),
+                'angle_offset_sin': lambda: float(np.sin(self.zero_angle_shift)),
+
                 'Q_update_time': lambda: self.Q_update_time,
 
             }
@@ -336,26 +341,29 @@ class CartPole(EnvironmentBatched):
         self.u = self.cpe.Q2u(self.Q)
 
     def update_zero_angle_shift(self, s):
-        if self.zero_angle_shift_mode == 'constant':
-            da = 0.0
-        elif self.zero_angle_shift_mode == 'random walk':
-            da  = (1.0 if random() < 0.5 else -1.0)*self.zero_angle_shift_increment
-        elif self.zero_angle_shift_mode == 'increase':
-            self.zero_angle_shift_increment *= 1.000
-            da = self.zero_angle_shift_increment
-        elif self.zero_angle_shift_mode == 'random':
-            if self.time-self.time_of_last_zero_angle_shift > self.zero_angle_shift_every:
-                if self.time-self.time_of_last_zero_angle_shift > self.zero_angle_shift_every+self.zero_angle_shift_length:
-                    self.time_of_last_zero_angle_shift = self.time
-                    self.zero_angle_shift = 0.0
-                else:
-                    if self.zero_angle_shift == 0.0:
-                        self.zero_angle_shift = np.random.uniform(-np.pi, np.pi)
+        if self.zero_angle_shift_every and self.time-self.time_of_last_zero_angle_shift<self.zero_angle_shift_every:
+            pass
+        elif self.zero_angle_shift_reset_after and self.zero_angle_shift_mode != 'constant' and self.time-self.time_of_last_zero_angle_reset >= self.zero_angle_shift_reset_after:
+            self.time_of_last_zero_angle_reset = self.time
+            self.zero_angle_shift = 0.0
         else:
-            raise ValueError('zero_angle_shift_mode with value {} not valid'.format(self.zero_angle_shift_mode))
+            self.time_of_last_zero_angle_shift = self.time
 
-        if not self.zero_angle_shift_mode == 'random':
-            self.zero_angle_shift += da
+
+            if self.zero_angle_shift_mode == 'constant':
+                da = 0.0
+            elif self.zero_angle_shift_mode == 'random walk':
+                da  = (1.0 if random() < 0.5 else -1.0)*self.zero_angle_shift_increment
+            elif self.zero_angle_shift_mode == 'increase':
+                self.zero_angle_shift_increment *= 1.000
+                da = self.zero_angle_shift_increment
+            elif self.zero_angle_shift_mode == 'random':
+                 self.zero_angle_shift = np.random.uniform(-np.pi, np.pi)
+            else:
+                raise ValueError('zero_angle_shift_mode with value {} not valid'.format(self.zero_angle_shift_mode))
+
+            if not self.zero_angle_shift_mode == 'random':
+                self.zero_angle_shift += da
 
         s[ANGLE_IDX] = wrap_angle_rad(s[ANGLE_IDX]+self.zero_angle_shift)
         s[ANGLE_COS_IDX] = np.cos(s[ANGLE_IDX])
@@ -378,7 +386,10 @@ class CartPole(EnvironmentBatched):
                 if self.slider:
                     self.slider.value = self.target_position/TrackHalfLength  # Assign target position to slider to display it
             else:
-                self.target_position = self.slider.value * TrackHalfLength  # Get target position from slider
+                if self.slider:
+                    self.target_position = self.slider.value * TrackHalfLength  # Get target position from slider
+                else:
+                    self.target_position = 0.0
 
     def update_target_equilibrium(self):
         if self.time_last_target_equilibrium_change is None:
@@ -485,7 +496,10 @@ class CartPole(EnvironmentBatched):
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                self.Q_calculated = self.slider.value
+                if self.slider:
+                    self.Q_calculated = self.slider.value
+                else:
+                    raise AttributeError("Manual stabilization mode activated and no slider object created.")
                 self.Q_update_time = 0.0
             else:  # in this case slider gives a target position, lqr regulator
                 # self.Q_ccrc = add_control_noise(self.Q_calculated, rng,
@@ -830,7 +844,9 @@ class CartPole(EnvironmentBatched):
             self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
             self.target_position = 0.0
-            self.slider.value = 0.0
+
+            if self.slider:
+                self.slider.value = 0.0
 
         elif reset_mode == 1:  # You may change this but be careful with other user. Better use 3
             # You can change here with which initial parameters you wish to start the simulation
@@ -843,7 +859,9 @@ class CartPole(EnvironmentBatched):
             self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
             self.target_position = 0.0
-            self.slider.value = 0.0
+
+            if self.slider:
+                self.slider.value = 0.0
 
         elif reset_mode == 2:  # Don't change it
             if (s is not None) and (target_position is not None):
@@ -852,7 +870,7 @@ class CartPole(EnvironmentBatched):
                 self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
                 self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
-                if self.slider is not None:
+                if self.slider:
                     self.slider.value = self.target_position = target_position
 
             else:
@@ -860,7 +878,7 @@ class CartPole(EnvironmentBatched):
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                if self.slider is not None:
+                if self.slider:
                     self.Q_calculated = self.slider.value
                 else:
                     self.Q_calculated = 0.0
