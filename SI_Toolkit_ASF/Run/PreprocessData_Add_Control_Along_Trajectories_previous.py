@@ -30,8 +30,8 @@ def args_fun():
 
     digits = 3
     if args.secondary_experiment_index is not None:
-        # formatted_index = f"{args.secondary_experiment_index:0{digits}d}"
-        formatted_index = f"{args.secondary_experiment_index}"
+        formatted_index = f"{args.secondary_experiment_index:0{digits}d}"
+        # formatted_index = f"{args.secondary_experiment_index}"
     else:
         formatted_index = None
 
