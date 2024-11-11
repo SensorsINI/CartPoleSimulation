@@ -61,6 +61,8 @@ from CartPole.csv_logger import create_csv_file_name, create_csv_title, create_c
 
 from SI_Toolkit.Functions.FunctionalDict import FunctionalDict, HistoryClass
 
+from CartPole.parameter_updater import ParameterUpdater
+
 
 # endregion
 
@@ -132,16 +134,10 @@ class CartPole(EnvironmentBatched):
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
         self.NoiseAdderInstance = NoiseAdder()
         self.s_with_noise_and_latency = np.copy(self.s)
-        self.zero_angle_shift_init = np.deg2rad(self.config['zero_angle_shift']['init'])
-        self.zero_angle_shift = self.zero_angle_shift_init
-        self.zero_angle_shift_mode = self.config['zero_angle_shift']['mode']
-        self.zero_angle_shift_increment = np.deg2rad(self.config['zero_angle_shift']['increment'])
 
-        self.zero_angle_shift_every = self.config['zero_angle_shift']['zero_angle_shift_every']  # seconds
-        self.zero_angle_shift_reset_after = self.config['zero_angle_shift']['zero_angle_shift_reset_after']  # seconds
-        self.time_of_last_zero_angle_shift = 0.0
-        self.time_of_last_zero_angle_reset = 0.0
-
+        self.vertical_angle_offset_updater = ParameterUpdater(self.config['vertical_angle_offset'])
+        self.vertical_angle_offset_init = np.deg2rad(self.config['vertical_angle_offset']['init'])
+        self.vertical_angle_offset = self.vertical_angle_offset_init
 
         # region Time scales for simulation step, controller update and saving data
         # See last paragraph of "Time scales" section for explanations
@@ -244,9 +240,9 @@ class CartPole(EnvironmentBatched):
 
                 'L': lambda: float(L),
 
-                'angle_offset': lambda: float(self.zero_angle_shift),
-                'angle_offset_cos': lambda: float(np.cos(self.zero_angle_shift)),
-                'angle_offset_sin': lambda: float(np.sin(self.zero_angle_shift)),
+                'vertical_angle_offset': lambda: float(self.vertical_angle_offset),
+                'vertical_angle_offset_cos': lambda: float(np.cos(self.vertical_angle_offset)),
+                'vertical_angle_offset_sin': lambda: float(np.sin(self.vertical_angle_offset)),
 
                 'Q_update_time': lambda: self.Q_update_time,
 
@@ -332,7 +328,7 @@ class CartPole(EnvironmentBatched):
         self.LatencyAdderInstance.add_current_state_to_latency_buffer(self.s)
         s_delayed = self.LatencyAdderInstance.get_interpolated_delayed_state()
         self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
-        self.s_with_noise_and_latency = self.update_zero_angle_shift(self.s_with_noise_and_latency)
+        self.s_with_noise_and_latency = self.update_vertical_angle_offset(self.s_with_noise_and_latency)
 
     def cartpole_ode(self):
         self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L))
@@ -340,32 +336,13 @@ class CartPole(EnvironmentBatched):
     def Q2u(self):
         self.u = self.cpe.Q2u(self.Q)
 
-    def update_zero_angle_shift(self, s):
-        if self.zero_angle_shift_every and self.time-self.time_of_last_zero_angle_shift<self.zero_angle_shift_every:
-            pass
-        elif self.zero_angle_shift_reset_after and self.zero_angle_shift_mode != 'constant' and self.time-self.time_of_last_zero_angle_reset >= self.zero_angle_shift_reset_after:
-            self.time_of_last_zero_angle_reset = self.time
-            self.zero_angle_shift = 0.0
-        else:
-            self.time_of_last_zero_angle_shift = self.time
+    def update_vertical_angle_offset(self, s):
+        self.vertical_angle_offset = self.vertical_angle_offset_updater.update_parameter(
+            self.vertical_angle_offset,
+            self.time,
+        )
 
-
-            if self.zero_angle_shift_mode == 'constant':
-                da = 0.0
-            elif self.zero_angle_shift_mode == 'random walk':
-                da  = (1.0 if random() < 0.5 else -1.0)*self.zero_angle_shift_increment
-            elif self.zero_angle_shift_mode == 'increase':
-                self.zero_angle_shift_increment *= 1.000
-                da = self.zero_angle_shift_increment
-            elif self.zero_angle_shift_mode == 'random':
-                 self.zero_angle_shift = np.random.uniform(-np.pi, np.pi)
-            else:
-                raise ValueError('zero_angle_shift_mode with value {} not valid'.format(self.zero_angle_shift_mode))
-
-            if not self.zero_angle_shift_mode == 'random':
-                self.zero_angle_shift += da
-
-        s[ANGLE_IDX] = wrap_angle_rad(s[ANGLE_IDX]+self.zero_angle_shift)
+        s[ANGLE_IDX] = wrap_angle_rad(s[ANGLE_IDX]+self.vertical_angle_offset)
         s[ANGLE_COS_IDX] = np.cos(s[ANGLE_IDX])
         s[ANGLE_SIN_IDX] = np.sin(s[ANGLE_IDX])
 

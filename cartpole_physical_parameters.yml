@@ -24,10 +24,10 @@ cartpole:
     sigma_position: 0.0005
     sigma_angleD: 0.075 # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
     sigma_positionD: 0.005
-  zero_angle_shift:
+  vertical_angle_offset:
     init: 0.0  # deg
-    zero_angle_shift_every: # If left empty angle shift changed at each simulation step, otherwise time in seconds
-    mode: 'constant'  # 'constant', 'random_walk', 'increase', 'random'
+    change_every_x_seconds: # If left empty angle shift changed at each simulation step, otherwise time in seconds
+    mode: 'increase'  # 'constant', 'random_walk', 'increase', 'random'
     increment: 0.02
-    zero_angle_shift_reset_after: 18  # seconds
+    reset_every_x_seconds: 18  # seconds
   num_control_inputs: 1

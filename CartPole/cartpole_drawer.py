@@ -248,9 +248,9 @@ class CartPoleDrawer:
 
         t21 = transforms.Affine2D().translate(-zero_tick_position, 0.0)
         if ANGLE_CONVENTION == 'CLOCK-NEG':
-            t22 = transforms.Affine2D().rotate(-self.cp.zero_angle_shift)
+            t22 = transforms.Affine2D().rotate(-self.cp.vertical_angle_offset)
         elif ANGLE_CONVENTION == 'CLOCK-POS':
-            t22 = transforms.Affine2D().rotate(self.cp.zero_angle_shift)
+            t22 = transforms.Affine2D().rotate(self.cp.vertical_angle_offset)
         else:
             raise ValueError('Unknown angle convention')
         t23 = transforms.Affine2D().translate(zero_tick_position, 0.0)
