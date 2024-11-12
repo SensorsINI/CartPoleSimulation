@@ -55,7 +55,7 @@ class CartPole_GuiActions:
         speedup_init = config['gui_settings']['speedup_init']
 
         self.track_relative_complexity_init = config['random_trace_generation']['track_relative_complexity_init']
-        self.length_of_experiment_init = config['random_trace_generation']['length_of_experiment_init']
+        self.length_of_experiment_init = float(config['random_trace_generation']['length_of_experiment_init'])
         self.interpolation_type_init = config['random_trace_generation']['interpolation_type_init']
         self.turning_points_period_init = config['random_trace_generation']['turning_points_period_init']
         self.start_random_target_position_at_init = config['random_trace_generation']['start_random_target_position_at_init']
