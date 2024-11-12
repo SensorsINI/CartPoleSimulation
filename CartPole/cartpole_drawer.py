@@ -67,7 +67,7 @@ class CartPoleDrawer:
 
         self.slider = target_slider
 
-        self.init_graphical_elements(self.cp.L_initial, self.cp.L_range)  # Assign proper object to the above variables
+        self.init_graphical_elements(self.cp.L_updater.init_value, self.cp.L_updater.range_random)  # Assign proper object to the above variables
         # endregion
 
 
@@ -90,7 +90,7 @@ class CartPoleDrawer:
         self.y_plane = 0.0
         self.y_wheel = self.y_plane + self.WheelRadius
 
-        self.mast_height_maximal_drawing_units = 5.0
+        self.mast_height_maximal_drawing_units = 10.0
         self.max_height_maximal_physical_units = np.max([L_initial, *L_range])
         self.mast_height_current_drawing_units = self.mast_height_maximal_drawing_units * (
                     float(L) / self.max_height_maximal_physical_units)

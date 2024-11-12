@@ -116,19 +116,14 @@ class CartPole(EnvironmentBatched):
         state_high = [-v for v in state_low]
         self.observation_space = MockSpace(state_low, state_high, (6,), np.float32)
 
-        self.L_initial = float(L)
+        self.L_updater = ParameterUpdater(self.config['L'])
+        L[...] =  float(self.L_updater.init_value)
 
-        self.change_L_every_x_second = np.inf
-        self.time_last_L_change = None
-        self.L_discount_factor = 1.0
-        self.L_range = [0.03, 0.2]
         self.L_informed_controller = True
         if self.L_informed_controller:
             self.L_for_controller = L
         else:
-            self.L_for_controller = float(self.L_initial)
-        self.L_change_mode = 'step'
-        self.L_step = 0.02
+            self.L_for_controller = float(self.L_updater.init_value)
 
         self.latency = self.config["latency"]
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
@@ -136,7 +131,7 @@ class CartPole(EnvironmentBatched):
         self.s_with_noise_and_latency = np.copy(self.s)
 
         self.vertical_angle_offset_updater = ParameterUpdater(self.config['vertical_angle_offset'])
-        self.vertical_angle_offset_init = np.deg2rad(self.config['vertical_angle_offset']['init'])
+        self.vertical_angle_offset_init = np.deg2rad(self.config['vertical_angle_offset']['init_value'])
         self.vertical_angle_offset = self.vertical_angle_offset_init
 
         # region Time scales for simulation step, controller update and saving data
@@ -502,22 +497,10 @@ class CartPole(EnvironmentBatched):
             self.dt_controller_steps_counter = 0
 
     def update_parameters(self):
+
         global L
-        if self.time_last_L_change is None:
-            self.time_last_L_change = self.time
-        else:
-            if (self.time-self.time_last_L_change) > self.change_L_every_x_second:
-                self.time_last_L_change = self.time
-                if self.L_change_mode == 'uniform':
-                    L[...] = np.random.uniform(*self.L_range)
-                elif self.L_change_mode == 'step':
-                    if L + self.L_step > self.L_range[1] or L + self.L_step < self.L_range[0]:
-                        self.L_step *= -1.0
-                    L[...] = L + self.L_step
-
-            else:
-                L[...] = L * self.L_discount_factor
-
+        new_L = self.L_updater.update_parameter(L, self.time)
+        L[...] = new_L
 
 
     # endregion
@@ -578,14 +561,7 @@ class CartPole(EnvironmentBatched):
                                          target_equilibrium=None,
                                          keep_target_equilibrium_x_seconds_up=np.inf,
                                          keep_target_equilibrium_x_seconds_down=np.inf,
-
-                                         L_initial=None,
-                                         change_L_every_x_seconds=None,
-                                         L_discount_factor=None,
-                                         L_range=None,
                                          L_informed_controller=None,
-                                         L_change_mode=None,
-                                         L_step=None,
 
                                          ):
 
@@ -612,20 +588,14 @@ class CartPole(EnvironmentBatched):
         if target_equilibrium is not None: self.target_equilibrium = target_equilibrium
         if keep_target_equilibrium_x_seconds_up is not None: self.keep_target_equilibrium_x_seconds_up = keep_target_equilibrium_x_seconds_up
         if keep_target_equilibrium_x_seconds_down is not None: self.keep_target_equilibrium_x_seconds_down = keep_target_equilibrium_x_seconds_down
-        if L_initial is not None: self.L_initial = L_initial
-        if change_L_every_x_seconds is not None: self.change_L_every_x_second = change_L_every_x_seconds
-        if L_discount_factor is not None: self.L_discount_factor = L_discount_factor
-        if L_range is not None: self.L_range = L_range
         if L_informed_controller is not None: self.L_informed_controller = L_informed_controller
-        if L_change_mode is not None: self.L_change_mode = L_change_mode
-        if L_step is not None: self.L_step = self.L_step
 
         global L
 
         if self.L_informed_controller:
             self.L_for_controller = L
         else:
-            self.L_for_controller = float(self.L_initial)
+            self.L_for_controller = float(self.L_updater.init_value)
 
         self.random_track_f = Generate_Random_Trace_Function(
 
@@ -654,7 +624,7 @@ class CartPole(EnvironmentBatched):
         # Reset variables
         self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, target_position=self.target_position)
 
-        L[...] = float(self.L_initial)
+        L[...] = float(self.L_updater.init_value)
 
     # Runs a random experiment with parameters set with setup_cartpole_random_experiment
     # And saves the experiment recording to csv file

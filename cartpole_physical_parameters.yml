@@ -5,7 +5,6 @@ cartpole:
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m_pole: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   m_cart: 0.230  # mass of cart, kg # Checked by Antonio
-  L: "0.395"  # length of pend, m
   u_max: 1.77  # max force produced by the motor, N # Checked by Marcin
   M_fric: 3.22  # cart friction on track, N/m/s # Checked by Marcin
   J_fric: 5.0e-5  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
@@ -25,9 +24,19 @@ cartpole:
     sigma_angleD: 0.075 # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
     sigma_positionD: 0.005
   vertical_angle_offset:
-    init: 0.0  # deg
-    change_every_x_seconds: # If left empty angle shift changed at each simulation step, otherwise time in seconds
-    mode: 'increase'  # 'constant', 'random_walk', 'increase', 'random'
+    init_value: 0.0  # deg, number or 'random'
+    change_every_x_seconds: # If left empty angle shift changed at each simulation step, otherwise time in seconds, or 'inf' for no change
+    mode: 'constant'  # 'constant', 'random_walk', 'increase', 'random'
+    range_random: [-3.141592, 3.141592]  # Range from which to uniformly sample, in radians
+    range_clip:   # range at which to clip, leave empty for no clipping
     increment: 0.02
-    reset_every_x_seconds: 18  # seconds
+    reset_every_x_seconds: 18  # seconds, or 'inf' for no change
+  L:
+    init_value: 0.395  # length of pend, m
+    change_every_x_seconds: # If left empty angle shift changed at each simulation step, otherwise time in seconds, or 'inf' for no change
+    mode: 'increase'  # 'constant', 'random_walk', 'increase', 'random'
+    range_random: [0.03, 0.4]  # Range from which to uniformly sample or at which to clip, leave empty for no clipping
+    range_clip: [0.03, 0.4]  # range at which to clip, leave empty for no clipping
+    increment: 0.002
+    reset_every_x_seconds: 18  # seconds, or 'inf' for no change
   num_control_inputs: 1

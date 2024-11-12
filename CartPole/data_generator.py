@@ -140,16 +140,7 @@ class random_experiment_setter:
 
         self.initial_target_equilibrium = config['initial_target_equilibrium']
 
-        self.L_initial_mode = config['L']['L_initial']
-        self.L_initial = None
-        self.change_L_every_x_second = config['L']['change_L_every_x_second']
-        if isinstance(self.change_L_every_x_second, str) and self.change_L_every_x_second == 'inf':
-            self.change_L_every_x_second = np.inf
-        self.L_discount_factor = config['L']['L_discount_factor']
-        self.L_range = config['L']['L_range']
-        self.L_informed_controller = config['L']['informed_controller']
-        self.L_change_mode = config['L']['L_change_mode']
-        self.L_step = config['L']['L_step']
+        self.L_informed_controller = config['L_informed_controller']
 
         self.rng = create_rng(self.__class__.__name__, config["seed"])
 
@@ -190,13 +181,6 @@ class random_experiment_setter:
         else:
             Exception('{} is not a valid specification for target equilibrium'.format(self.initial_target_equilibrium))
 
-        global L
-        if self.L_initial_mode == 'uniform':
-            self.L_initial = np.random.uniform(*self.L_range)
-        elif self.L_initial_mode == 'default':
-            self.L_initial = L[...]
-        else:
-            self.L_initial = self.L_initial_mode
 
         CartPoleInstance.setup_cartpole_random_experiment(
             # Initial state
@@ -224,13 +208,7 @@ class random_experiment_setter:
             keep_target_equilibrium_x_seconds_up=self.keep_target_equilibrium_x_seconds_up,
             keep_target_equilibrium_x_seconds_down=self.keep_target_equilibrium_x_seconds_down,
 
-            L_initial=self.L_initial,
-            change_L_every_x_seconds=self.change_L_every_x_second,
-            L_discount_factor=self.L_discount_factor,
-            L_range=self.L_range,
             L_informed_controller=self.L_informed_controller,
-            L_change_mode=self.L_change_mode,
-            L_step=self.L_step,
 
         )
 

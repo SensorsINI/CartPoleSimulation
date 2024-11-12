@@ -13,7 +13,9 @@ class CartPoleParameters:
         parameters = load_config(get_parameters_from)['cartpole']
 
         for key, value in parameters.items():
-            if key == 'k':
+            if key == 'L':
+                value = float(value['init_value'])
+            elif key == 'k':
                 value = float(value.split("/")[0])/float(value.split("/")[1])
             elif key == 'controlDisturbance_mode':
                 value = value
