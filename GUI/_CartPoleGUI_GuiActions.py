@@ -212,7 +212,7 @@ class CartPole_GuiActions:
                 if (
                         self.CartPoleInstance.use_pregenerated_target_position
                         and
-                        (self.CartPoleInstance.time >= self.CartPoleInstance.t_max_pre)
+                        (self.CartPoleInstance.time >= self.CartPoleInstance.length_of_experiment)
                 ):
                     self.terminate_experiment_or_replay_thread = True
 
