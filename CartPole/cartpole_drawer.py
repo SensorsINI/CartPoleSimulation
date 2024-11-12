@@ -90,7 +90,7 @@ class CartPoleDrawer:
         self.y_plane = 0.0
         self.y_wheel = self.y_plane + self.WheelRadius
 
-        self.mast_height_maximal_drawing_units = 10.0
+        self.mast_height_maximal_drawing_units = 5.0
         self.max_height_maximal_physical_units = np.max([L_initial, *L_range])
         self.mast_height_current_drawing_units = self.mast_height_maximal_drawing_units * (
                     float(L) / self.max_height_maximal_physical_units)

@@ -5,7 +5,7 @@ cartpole:
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m_pole: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   m_cart: 0.230  # mass of cart, kg # Checked by Antonio
-  L: "0.395/2.0"  # HALF (!!!) length of pend, m # Checked by Antonio & Tobi
+  L: "0.395"  # length of pend, m
   u_max: 1.77  # max force produced by the motor, N # Checked by Marcin
   M_fric: 3.22  # cart friction on track, N/m/s # Checked by Marcin
   J_fric: 5.0e-5  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
@@ -16,7 +16,7 @@ cartpole:
   controlDisturbance: 0.5  # disturbance, as factor of u_max # I used 0.2-0.5 for data collection
   controlBias: 0.0  # bias of control input
   g: 9.81  # absolute value of gravity acceleration, m/s^2
-  k: "1.0/3.0"  # Dimensionless factor of moment of inertia of the pole with length 2L: I: (1/3)*m*(2L)^2 = (4/3)*m*(L)^2
+  k: "1.0/3.0"  # Dimensionless factor of moment of inertia of the pole with length 2L: I: (1/3)*m*(L)^2 = (4/3)*m*(L/2)^2
   latency: 0.0 # s
   noise:
     noise_mode: 'OFF'
