@@ -22,7 +22,6 @@ target_position_end: ~  # value OR not assigned - random value is taken
 initial_target_equilibrium: 'up'  # possible 'up', 'down', 'random' = 50/50
 keep_target_equilibrium_x_seconds_up: 10
 keep_target_equilibrium_x_seconds_down: 2.5
-L_informed_controller: true  # If false controller assumes always L_initial
 dt:
   simulation: 0.002  # simulation timestep, s
   control: 0.02  # control rate, s

@@ -39,4 +39,9 @@ cartpole:
     range_clip: [0.2, 0.6]  # range at which to clip, leave empty for no clipping
     increment: 0.002
     reset_every_x_seconds: 18  # seconds, or 'inf' for no change
+
+  inform_controller_about_parameters_change:
+    mode: 'switching_regular'  # 'OFF', 'ON', 'switching_random', 'switching_regular'
+    change_to_on_after_x_seconds_off: 5  # seconds, if mode switching_random this is the upper bound
+    change_to_off_after_x_seconds_on: 4  # seconds, if mode switching_random this is the upper bound
   num_control_inputs: 1

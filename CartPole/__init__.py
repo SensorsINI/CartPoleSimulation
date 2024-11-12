@@ -42,6 +42,7 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 from CartPole.state_utilities import create_cartpole_state
 from CartPole.summary_plots import summary_plots
+from CartPole.controller_informer import ControllerInformer
 
 s0 = create_cartpole_state()
 
@@ -119,11 +120,10 @@ class CartPole(EnvironmentBatched):
         self.L_updater = ParameterUpdater(self.config['L'])
         L[...] =  float(self.L_updater.init_value)
 
-        self.L_informed_controller = True
-        if self.L_informed_controller:
-            self.L_for_controller = L
-        else:
-            self.L_for_controller = float(self.L_updater.init_value)
+        self.controller_informer = ControllerInformer(self.config['inform_controller_about_parameters_change'])
+        self.L_for_controller = float(self.controller_informer.get_parameters(
+            L, float(self.L_updater.init_value), self.time
+        ))
 
         self.latency = self.config["latency"]
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
@@ -234,6 +234,7 @@ class CartPole(EnvironmentBatched):
                 'target_equilibrium': lambda: self.target_equilibrium,
 
                 'L': lambda: float(L),
+                'L_for_controller': lambda: self.controller_informer.value_to_return,
 
                 'vertical_angle_offset': lambda: float(self.vertical_angle_offset),
                 'vertical_angle_offset_cos': lambda: float(np.cos(self.vertical_angle_offset)),
@@ -478,13 +479,16 @@ class CartPole(EnvironmentBatched):
                 #                                 controlDisturbance_mode, controlDisturbance, controlBias)
                 self.Q_ccrc = self.Q_applied
                 update_start = timeit.default_timer()
+                self.L_for_controller = float(self.controller_informer.get_parameters(
+                    L, float(self.L_updater.init_value), self.time
+                ))
                 self.Q_calculated = float(self.controller.step(
                     self.s_with_noise_and_latency,
                     self.time,
                     {
                         "target_position": self.target_position,
                         "target_equilibrium": self.target_equilibrium,
-                        'L': float(self.L_for_controller),
+                        'L': self.L_for_controller,
                         "Q_ccrc": self.Q_ccrc,
                     }
                 ))
@@ -561,8 +565,6 @@ class CartPole(EnvironmentBatched):
                                          target_equilibrium=None,
                                          keep_target_equilibrium_x_seconds_up=np.inf,
                                          keep_target_equilibrium_x_seconds_down=np.inf,
-                                         L_informed_controller=None,
-
                                          ):
 
         # Set time scales:
@@ -588,14 +590,6 @@ class CartPole(EnvironmentBatched):
         if target_equilibrium is not None: self.target_equilibrium = target_equilibrium
         if keep_target_equilibrium_x_seconds_up is not None: self.keep_target_equilibrium_x_seconds_up = keep_target_equilibrium_x_seconds_up
         if keep_target_equilibrium_x_seconds_down is not None: self.keep_target_equilibrium_x_seconds_down = keep_target_equilibrium_x_seconds_down
-        if L_informed_controller is not None: self.L_informed_controller = L_informed_controller
-
-        global L
-
-        if self.L_informed_controller:
-            self.L_for_controller = L
-        else:
-            self.L_for_controller = float(self.L_updater.init_value)
 
         self.random_track_f = Generate_Random_Trace_Function(
 
@@ -726,12 +720,15 @@ class CartPole(EnvironmentBatched):
         
         if self.controller_name != 'manual-stabilization':
             Controller: "type[template_controller]" = import_controller_by_name(self.controller_name)
+            self.L_for_controller = float(self.controller_informer.get_parameters(
+                L, float(self.L_updater.init_value), self.time
+            ))
             self.controller = Controller(
                 environment_name="CartPole",
                 initial_environment_attributes={
                     "target_position": self.target_position,
                     "target_equilibrium": self.target_equilibrium,
-                    "L": float(self.L_for_controller),
+                    "L": self.L_for_controller,
                     "Q_ccrc": self.Q_ccrc,
                 },
                 control_limits=(self.action_space.low, self.action_space.high),
@@ -831,13 +828,16 @@ class CartPole(EnvironmentBatched):
                     self.Q_calculated = 0.0
             else:  # in this case slider gives a target position, lqr regulator
                 self.Q_ccrc = 0.0
+                self.L_for_controller = float(self.controller_informer.get_parameters(
+                    L, float(self.L_updater.init_value), self.time
+                ))
                 self.Q_calculated = float(self.controller.step(
                     self.s,
                     self.time,
                     {
                         "target_position": self.target_position,
                         "target_equilibrium": self.target_equilibrium,
-                        "L": float(self.L_for_controller),
+                        "L": self.L_for_controller,
                         "Q_ccrc": self.Q_ccrc,
                     }
                 ))
