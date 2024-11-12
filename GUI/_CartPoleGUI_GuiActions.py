@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from CartPole import CartPole
 from CartPole.cartpole_drawer import CartPoleDrawer
 from CartPole.cartpole_target_slider import TargetSlider
-from CartPole.cartpole_parameters import TrackHalfLength
+from CartPole.cartpole_parameters import TrackHalfLength, L
 from CartPole.state_utilities import ANGLED_IDX, ANGLE_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
 
 from GUI.loop_timer import loop_timer
@@ -55,7 +55,7 @@ class CartPole_GuiActions:
         speedup_init = config['gui_settings']['speedup_init']
 
         self.track_relative_complexity_init = config['random_trace_generation']['track_relative_complexity_init']
-        self.length_of_experiment_init = config['random_trace_generation']['length_of_experiment_init']
+        self.length_of_experiment_init = float(config['random_trace_generation']['length_of_experiment_init'])
         self.interpolation_type_init = config['random_trace_generation']['interpolation_type_init']
         self.turning_points_period_init = config['random_trace_generation']['turning_points_period_init']
         self.start_random_target_position_at_init = config['random_trace_generation']['start_random_target_position_at_init']
@@ -212,7 +212,7 @@ class CartPole_GuiActions:
                 if (
                         self.CartPoleInstance.use_pregenerated_target_position
                         and
-                        (self.CartPoleInstance.time >= self.CartPoleInstance.t_max_pre)
+                        (self.CartPoleInstance.time >= self.CartPoleInstance.length_of_experiment)
                 ):
                     self.terminate_experiment_or_replay_thread = True
 
