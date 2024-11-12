@@ -201,7 +201,7 @@ class CartPoleDrawer:
         AxCart.add_patch(InvisiblePointDown)
 
         # Apply scaling
-        AxCart.axis('scaled')
+        AxCart.axis('auto')
 
         ## Lower Chart with Slider
         self.slider.draw_constant_elements(AxSlider, self.cp.controller_name)
