@@ -14,7 +14,7 @@ class CartPoleParameters:
 
         for key, value in parameters.items():
             if key == 'L':
-                value = float(value.split("/")[0])/float(value.split("/")[1])
+                value = float(value['init_value'])
             elif key == 'k':
                 value = float(value.split("/")[0])/float(value.split("/")[1])
             elif key == 'controlDisturbance_mode':

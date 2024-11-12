@@ -46,13 +46,13 @@ class next_state_predictor_ODE:
     def _step(self, s, Q):
 
         if self.variable_parameters is not None and hasattr(self.variable_parameters, 'L'):
-            pole_half_length = self.lib.to_tensor(self.variable_parameters.L, dtype=self.lib.float32)
+            pole_length = self.lib.to_tensor(self.variable_parameters.L, dtype=self.lib.float32)
         else:
-            pole_half_length = self.lib.to_tensor(self.cpe.params.L, dtype=self.lib.float32)
+            pole_length = self.lib.to_tensor(self.cpe.params.L, dtype=self.lib.float32)
 
         Q = Q[..., 0]  # Removes features dimension, specific for cartpole as it has only one control input
         u = self.cpe.Q2u(Q)
-        s_next = self.cpe.cartpole_fine_integration(s, u=u, t_step=self.t_step, intermediate_steps=self.intermediate_steps, L=pole_half_length)
+        s_next = self.cpe.cartpole_fine_integration(s, u=u, t_step=self.t_step, intermediate_steps=self.intermediate_steps, L=pole_length)
 
         return s_next
 

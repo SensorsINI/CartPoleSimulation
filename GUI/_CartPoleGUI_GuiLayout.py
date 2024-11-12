@@ -245,9 +245,9 @@ class CartPole_GuiLayout:
         ip.addLayout(lr_n)
         ip.addSpacerItem(spacer)
 
-        self.textbox_zero_angle_shift, l_zero_angle_shift = zero_angle_layout()
-        self.GuiActions.zero_angle_shift_handler.connect_textbox(self.textbox_zero_angle_shift)
-        ip.addLayout(l_zero_angle_shift)
+        self.textbox_vertical_angle_offset, l_vertical_angle_offset = zero_angle_layout()
+        self.GuiActions.vertical_angle_offset_handler.connect_textbox(self.textbox_vertical_angle_offset)
+        ip.addLayout(l_vertical_angle_offset)
 
         ip.addSpacerItem(spacer)
 
@@ -399,17 +399,17 @@ class CartPole_GuiLayout:
 
 
 def zero_angle_layout():
-    # Add the zero_angle_shift textbox with labels
-    l_zero_angle_shift = QHBoxLayout()
-    l_zero_angle_shift.addWidget(QLabel('0-angle: '))
-    textbox_zero_angle_shift = QLineEdit()
+    # Add the vertical_angle_offset textbox with labels
+    l_vertical_angle_offset = QHBoxLayout()
+    l_vertical_angle_offset.addWidget(QLabel('0-angle: '))
+    textbox_vertical_angle_offset = QLineEdit()
 
     # Set the size based on the font metrics to fit 4 characters
-    font_metrics = QFontMetrics(textbox_zero_angle_shift.font())
+    font_metrics = QFontMetrics(textbox_vertical_angle_offset.font())
     character_width = font_metrics.horizontalAdvance('0')  # Width of one '0' character
-    textbox_zero_angle_shift.setFixedWidth(character_width * 4 + 10)  # 4 characters + padding
+    textbox_vertical_angle_offset.setFixedWidth(character_width * 4 + 10)  # 4 characters + padding
 
-    l_zero_angle_shift.addWidget(textbox_zero_angle_shift)
-    l_zero_angle_shift.addWidget(QLabel('deg'))
+    l_vertical_angle_offset.addWidget(textbox_vertical_angle_offset)
+    l_vertical_angle_offset.addWidget(QLabel('deg'))
 
-    return textbox_zero_angle_shift, l_zero_angle_shift
+    return textbox_vertical_angle_offset, l_vertical_angle_offset
