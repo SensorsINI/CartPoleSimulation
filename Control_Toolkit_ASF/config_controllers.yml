@@ -121,3 +121,7 @@ fpga:
   controller_logging: True
   SERIAL_PORT: 3
   SERIAL_BAUD: 230400
+rl:
+  PATH_TO_MODELS: './CartPoleSimulation/GymlikeCartPole/'
+  net_name: 'sac_cartpole_64size_10kbatch_timescale_1011'
+  controller_logging: False
