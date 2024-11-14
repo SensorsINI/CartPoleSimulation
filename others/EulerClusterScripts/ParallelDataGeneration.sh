@@ -5,7 +5,7 @@
 #SBATCH --output=./others/EulerClusterScripts/EulerTerminalOutput/slurm-%A_%a.out   # Output file
 
 # Create output and error directories if they do not exist
-mkdir -p ./others/EulerClusterScripts
+mkdir -p ./others/EulerClusterScripts/EulerTerminalOutput
 
 source $HOME/miniconda3/bin/activate
 conda activate CPS39
