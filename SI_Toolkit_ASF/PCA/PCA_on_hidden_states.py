@@ -8,6 +8,7 @@ from sklearn.preprocessing import StandardScaler
 from SI_Toolkit.data_preprocessing import transform_dataset
 
 from visualization_pca import visualize_pca, visualize_pca_with_feature
+from SI_Toolkit.load_and_normalize import load_data
 
 save_files_to = None
 
@@ -17,13 +18,14 @@ save_files_to = None
 
 get_files_from = './Experiment/'
 save_pca_path = None
-load_pca_path = './PrecomputedPCA/pca_model.joblib'
-# load_pca_path = None
+# load_pca_path = './PrecomputedPCA/pca_model.joblib'
+load_pca_path = None
 
 feature_to_visualize = 'target_position'
 additional_feature = 'angle_offset'
 # additional_feature = None
-
+data_features_to_filter_out = './AntiReference/antiref.csv'
+# data_features_to_filter_out = None
 
 def PCA_on_hidden_states(df, save_pca_path=None, load_pca_path=None):
     """
@@ -43,6 +45,11 @@ def PCA_on_hidden_states(df, save_pca_path=None, load_pca_path=None):
 
     # Filter columns matching GRU_H
     gru_h_columns = df.filter(regex=r'^GRU_H')
+
+    if data_features_to_filter_out:
+        data_with_features_to_filter_out = load_data(list_of_paths_to_datafiles=[data_features_to_filter_out], verbose=False)[0]
+        gru_h_columns_antireference = data_with_features_to_filter_out.filter(regex=r'^GRU_H')
+        gru_h_columns = get_cleaned_data(gru_h_columns_antireference, gru_h_columns)
 
     # Load or initialize scaler
     if load_pca_path:
@@ -75,6 +82,34 @@ def PCA_on_hidden_states(df, save_pca_path=None, load_pca_path=None):
     visualize_pca_with_feature(df, feature_to_visualize, step=10, additional_feature=additional_feature)
 
     return df
+
+
+def get_cleaned_data(data_with_features_to_filter_out, target_data_to_clean):
+
+    # Step 1: Fit PCA on dynamic-only data
+    pca_dynamic = PCA()
+    pca_dynamic.fit(data_with_features_to_filter_out)
+
+    # Step 2: Determine the number of components to retain (k) using variance threshold
+    cumulative_variance = np.cumsum(pca_dynamic.explained_variance_ratio_)
+    k = np.searchsorted(cumulative_variance, 0.99999972) + 1  # Retain components explaining 95% variance
+    # 0.99995
+    print(f"Number of components retained: {k}")
+
+    # Step 3: Project combined data onto the retained motion components
+    pca_dynamic_k = PCA(n_components=k)
+    pca_dynamic_k.fit(data_with_features_to_filter_out)
+
+    # Project combined data into motion PCA space
+    motion_projection = pca_dynamic_k.transform(target_data_to_clean)
+
+    # Reconstruct motion-related dynamics
+    reconstructed_motion = pca_dynamic_k.inverse_transform(motion_projection)
+
+    # Step 4: Subtract motion components to isolate residuals
+    residual_data = target_data_to_clean - reconstructed_motion
+
+    return residual_data
 
 transform_dataset(get_files_from, save_files_to,
                   transformation=PCA_on_hidden_states,
