@@ -31,6 +31,8 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         self.theta_threshold_radians = 12 * 2 * math.pi / 360
         self.x_threshold = self.cpe.params.TrackHalfLength
 
+        # self.x_threshold = 0.17
+
         # Angle limit set to 2 * theta_threshold_radians so failing observation
         # is still within bounds.
         high = np.array(
@@ -146,9 +148,15 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         return reward
 
     def termination_condition(self, state):
+        # terminated = bool(
+        #     state[POSITION_IDX] < -self.x_threshold
+        #     or state[POSITION_IDX] > self.x_threshold
+        #     # or state[ANGLE_IDX] < -self.theta_threshold_radians
+        #     # or state[ANGLE_IDX] > self.theta_threshold_radians
+        # )K
         terminated = bool(
-            state[POSITION_IDX] < -self.x_threshold
-            or state[POSITION_IDX] > self.x_threshold
+            state[POSITION_IDX] < -0.17
+            or state[POSITION_IDX] > 0.17
             # or state[ANGLE_IDX] < -self.theta_threshold_radians
             # or state[ANGLE_IDX] > self.theta_threshold_radians
         )

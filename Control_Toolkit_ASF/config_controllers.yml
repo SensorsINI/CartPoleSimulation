@@ -125,3 +125,5 @@ rl:
   PATH_TO_MODELS: './CartPoleSimulation/GymlikeCartPole/'
   net_name: 'sac_cartpole_64size_10kbatch_timescale_1011'
   controller_logging: False
+rl-train:
+  controller_logging: False
