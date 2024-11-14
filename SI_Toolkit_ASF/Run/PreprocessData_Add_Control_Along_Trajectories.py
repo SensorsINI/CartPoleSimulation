@@ -38,11 +38,11 @@ def args_fun():
 
 formatted_index = args_fun()
 if formatted_index is not None:
-    get_files_from = f'SI_Toolkit_ASF/Experiments/Trial_4_nt/test/Experiment-{formatted_index}.csv'
+    get_files_from = f'SI_Toolkit_ASF/Experiments/Varying_Pole_12_11_2024/Recordings/Test/Experiment-{formatted_index}.csv'
 else:
-    get_files_from = 'SI_Toolkit_ASF/Experiments/Trial_4_nt/test/'
+    get_files_from = 'SI_Toolkit_ASF/Experiments/Varying_Pole_12_11_2024/Recordings/Test/'
 
-save_files_to = 'SI_Toolkit_ASF/Experiments/Trial_4_nt/test_done/'
+save_files_to = 'SI_Toolkit_ASF/Experiments/Varying_Pole_12_11_2024/Recordings/Test_done/'
 
 controller = {
     "controller_name": "mpc",
@@ -53,12 +53,17 @@ controller = {
     "environment_attributes_dict": {  # keys are names used by controller, values the csv column names
         "target_position": "target_position",
         "target_equilibrium": "target_equilibrium",
-        "L": "L",
+        "L": "L_integrate_",
         "Q_ccrc": "Q_applied_-1",
     },
 }
 
 controller_output_variable_name = 'Q_calculated_offline'
 
-transform_dataset(get_files_from, save_files_to, transformation='add_control_along_trajectories',
-                  controller=controller, controller_output_variable_name=controller_output_variable_name)
+if __name__ == '__main__':
+    transform_dataset(get_files_from, save_files_to, transformation='add_control_along_trajectories',
+                      controller_config=controller, controller_output_variable_name=controller_output_variable_name,
+                      num_samples=None,  # How many times to calculate the result for each time step to get standard deviation
+                      parallel=True,
+                      intergration_num_evals=64,
+                      )
