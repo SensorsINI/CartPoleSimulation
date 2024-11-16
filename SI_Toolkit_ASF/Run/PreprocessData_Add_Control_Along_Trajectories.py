@@ -38,11 +38,11 @@ def args_fun():
 
 formatted_index = args_fun()
 if formatted_index is not None:
-    get_files_from = f'SI_Toolkit_ASF/Experiments/Varying_Pole_12_11_2024/Recordings/test_short/Experiment-{formatted_index}.csv'
+    get_files_from = f'Experiment_Recordings/Experiment_16_11_2024_pole_L_and_m/Experiment-{formatted_index}.csv'
 else:
-    get_files_from = 'SI_Toolkit_ASF/Experiments/Varying_Pole_12_11_2024/Recordings/test_short/'
+    get_files_from = 'Experiment_Recordings/Experiment_16_11_2024_pole_L_and_m'
 
-save_files_to = 'SI_Toolkit_ASF/Experiments/Varying_Pole_12_11_2024/Recordings/Test_done/'
+save_files_to = 'Experiment_Recordings/Experiment_16_11_2024_pole_L_and_m_random/'
 
 controller = {
     "controller_name": "mpc",
@@ -53,7 +53,8 @@ controller = {
     "environment_attributes_dict": {  # keys are names used by controller, values the csv column names
         "target_position": "target_position",
         "target_equilibrium": "target_equilibrium",
-        "L": "L_integrate_0.25_0.55_",
+        "L": "L_random_uniform_0.05_0.8_",
+        "m_pole": "m_pole_random_uniform_0.015_0.15_",
         "Q_ccrc": "Q_applied_-1",
     },
 }
@@ -64,5 +65,5 @@ if __name__ == '__main__':
     transform_dataset(get_files_from, save_files_to, transformation='add_control_along_trajectories',
                       controller_config=controller, controller_output_variable_name=controller_output_variable_name,
                       integration_num_evals=64,
-                      save_output_only=True,
+                      save_output_only=False,
                       )
