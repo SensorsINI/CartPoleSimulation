@@ -120,9 +120,15 @@ class CartPole(EnvironmentBatched):
         self.L_updater = ParameterUpdater(self.config['L'])
         L[...] =  float(self.L_updater.init_value)
 
+        self.m_pole_updater = ParameterUpdater(self.config['m_pole'])
+        m_pole[...] = float(self.m_pole_updater.init_value)
+
         self.controller_informer = ControllerInformer(self.config['inform_controller_about_parameters_change'])
         self.L_for_controller = float(self.controller_informer.get_parameters(
             L, float(self.L_updater.init_value), self.time
+        ))
+        self.m_pole_for_controller = float(self.controller_informer.get_parameters(
+            m_pole, float(self.m_pole_updater.init_value), self.time
         ))
 
         self.latency = self.config["latency"]
@@ -236,6 +242,11 @@ class CartPole(EnvironmentBatched):
                 'L': lambda: float(L),
                 'L_for_controller': lambda: self.controller_informer.value_to_return,
 
+                'm_pole': lambda: float(m_pole),
+                'm_pole_for_controller': lambda: self.controller_informer.value_to_return,
+
+
+
                 'vertical_angle_offset': lambda: float(self.vertical_angle_offset),
                 'vertical_angle_offset_cos': lambda: float(np.cos(self.vertical_angle_offset)),
                 'vertical_angle_offset_sin': lambda: float(np.sin(self.vertical_angle_offset)),
@@ -327,7 +338,7 @@ class CartPole(EnvironmentBatched):
         self.s_with_noise_and_latency = self.update_vertical_angle_offset(self.s_with_noise_and_latency)
 
     def cartpole_ode(self):
-        self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L))
+        self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L), m_pole=float(m_pole))
 
     def Q2u(self):
         self.u = self.cpe.Q2u(self.Q)
@@ -482,6 +493,9 @@ class CartPole(EnvironmentBatched):
                 self.L_for_controller = float(self.controller_informer.get_parameters(
                     L, float(self.L_updater.init_value), self.time
                 ))
+                self.m_pole_for_controller = float(self.controller_informer.get_parameters(
+                    m_pole, float(self.m_pole_updater.init_value), self.time
+                ))
                 self.Q_calculated = float(self.controller.step(
                     self.s_with_noise_and_latency,
                     self.time,
@@ -489,6 +503,7 @@ class CartPole(EnvironmentBatched):
                         "target_position": self.target_position,
                         "target_equilibrium": self.target_equilibrium,
                         'L': self.L_for_controller,
+                        'm_pole': self.m_pole_for_controller,
                         "Q_ccrc": self.Q_ccrc,
                     }
                 ))
@@ -505,6 +520,10 @@ class CartPole(EnvironmentBatched):
         global L
         new_L = self.L_updater.update_parameter(L, self.time)
         L[...] = new_L
+
+        global m_pole
+        new_m_pole = self.m_pole_updater.update_parameter(m_pole, self.time)
+        m_pole[...] = new_m_pole
 
 
     # endregion
@@ -728,6 +747,7 @@ class CartPole(EnvironmentBatched):
                 initial_environment_attributes={
                     "target_position": self.target_position,
                     "target_equilibrium": self.target_equilibrium,
+                    "m_pole": self.m_pole_for_controller,
                     "L": self.L_for_controller,
                     "Q_ccrc": self.Q_ccrc,
                 },

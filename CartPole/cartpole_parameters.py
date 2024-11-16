@@ -14,7 +14,7 @@ class CartPoleParameters:
         parameters = load_config(get_parameters_from)['cartpole']
 
         for key, value in parameters.items():
-            if key == 'L':
+            if key == 'L' or key == 'm_pole':
                 if value['init_value'] == 'random':
                     gen = self.lib.create_rng(random.randint(0, 2**32 - 1))
                     value = self.lib.uniform(gen, (1,), *value['range_random'], dtype=self.lib.float32)

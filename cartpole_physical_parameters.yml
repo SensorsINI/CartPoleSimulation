@@ -3,7 +3,6 @@ cartpole:
   mode: stabilization
   seed:  # This is a seed for rng for CartPole instance class only. If null random seed based on datetime is used
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
-  m_pole: 0.087  # mass of pole, kg # Checked by Antonio & Tobi
   m_cart: 0.230  # mass of cart, kg # Checked by Antonio
   u_max: 1.77  # max force produced by the motor, N # Checked by Marcin
   M_fric: 3.22  # cart friction on track, N/m/s # Checked by Marcin
@@ -37,6 +36,14 @@ cartpole:
     mode: 'random'  # 'constant', 'random_walk', 'increase', 'random'
     range_random: [0.25, 0.55]  # Range from which to uniformly sample or at which to clip, leave empty for no clipping
     range_clip: [0.25, 0.55]  # range at which to clip, leave empty for no clipping
+    increment: 0.002
+    reset_every_x_seconds: 'inf'  # seconds, or 'inf' for no change
+  m_pole:
+    init_value: 0.087      # length of pend, m
+    change_every_x_seconds: 2 # If left empty angle shift changed at each simulation step, otherwise time in seconds, or 'inf' for no change
+    mode: 'random'  # 'constant', 'random_walk', 'increase', 'random'
+    range_random: [ 0.015, 0.15]  # Range from which to uniformly sample or at which to clip, leave empty for no clipping
+    range_clip: [ 0.015, 0.15 ]  # range at which to clip, leave empty for no clipping
     increment: 0.002
     reset_every_x_seconds: 'inf'  # seconds, or 'inf' for no change
 
