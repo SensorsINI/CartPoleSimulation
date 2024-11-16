@@ -42,7 +42,7 @@ if formatted_index is not None:
 else:
     get_files_from = 'Experiment_Recordings/Experiment_16_11_2024_pole_L_and_m'
 
-save_files_to = 'Experiment_Recordings/Experiment_16_11_2024_pole_L_and_m_random/'
+save_files_to = 'Experiment_Recordings/Experiment_16_11_2024_pole_L_and_m_informed/'
 
 controller = {
     "controller_name": "mpc",
@@ -53,13 +53,13 @@ controller = {
     "environment_attributes_dict": {  # keys are names used by controller, values the csv column names
         "target_position": "target_position",
         "target_equilibrium": "target_equilibrium",
-        "L": "L_random_uniform_0.05_0.8_",
-        "m_pole": "m_pole_random_uniform_0.015_0.15_",
-        "Q_ccrc": "Q_applied_-1",
+        "L": "L",
+        "m_pole": "m_pole",
+        # "Q_ccrc": "Q_applied_-1",
     },
 }
 
-controller_output_variable_name = 'Q_calculated_offline'
+controller_output_variable_name = 'Q_calculated_informed'
 
 if __name__ == '__main__':
     transform_dataset(get_files_from, save_files_to, transformation='add_control_along_trajectories',

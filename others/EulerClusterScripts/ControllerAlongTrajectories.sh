@@ -3,10 +3,10 @@
 #SBATCH --cpus-per-task=1        # Assign the required number of CPUs per task
 #SBATCH --mem-per-cpu=1G         
 #SBATCH --time=8:00:00           # Set the maximum job time
-#SBATCH --output=./others/EulerClusterScripts/EulerTerminalOutput/Experiment_16_11_2024_pole_L_and_m_random/slurm-%A_%a.out   # Output file
+#SBATCH --output=./others/EulerClusterScripts/EulerTerminalOutput/Experiment_16_11_2024_pole_L_and_m_informed/slurm-%A_%a.out   # Output file
 
 # Create output and error directories if they do not exist
-mkdir -p ./others/EulerClusterScripts/EulerTerminalOutput/Experiment_16_11_2024_pole_L_and_m_random
+mkdir -p ./others/EulerClusterScripts/EulerTerminalOutput/Experiment_16_11_2024_pole_L_and_m_informed
 
 source $HOME/miniconda3/bin/activate
 conda activate CPS39
