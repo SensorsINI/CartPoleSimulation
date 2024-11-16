@@ -19,7 +19,7 @@ random_initial_state:
 start_at_target: True  # initial target position should be equal to initial state
 track_fraction_usable_for_target_position: 1.0  # Set the max for smoothly interpolated random target position to avoid bumping into track ends.
 target_position_end: ~  # value OR not assigned - random value is taken
-initial_target_equilibrium: 'up'  # possible 'up', 'down', 'random' = 50/50
+initial_target_equilibrium: 'random'  # possible 'up', 'down', 'random' = 50/50
 keep_target_equilibrium_x_seconds_up: 12
 keep_target_equilibrium_x_seconds_down: 2.5
 dt:
@@ -28,11 +28,11 @@ dt:
   saving: 0.02  # save datapoints in csv in this interval, s
 turning_points:
   track_relative_complexity: 1  # Randomly placed target points/s
-  interpolation_type: '0-derivative-smooth'  # How to interpolate between turning points of random trace, Possible options: '0-derivative-smooth', 'linear', 'previous'
+  interpolation_type: 'previous'  # How to interpolate between turning points of random trace, Possible options: '0-derivative-smooth', 'linear', 'previous'
   turning_points: # List of target positions, can be None to simulate with random targets, Example: turning_points_DataGen = [0.0, 0.1, -0.1, 0.0]
   turning_points_period: 'regular' # How turning points should be distributed, Possible options: 'regular', 'random'; never used, leave it as it is
 save_mode: 'online'  # It was intended to save memory usage, but it doesn't seems to help, setit to "offline" only if you want to show summary plots
 # Show popup window in the end with summary of experiment?
 show_summary_plots: False
 show_controller_report: False
-number_of_experiments: 1  # How many experiments will be generated
+number_of_experiments: 4  # How many experiments will be generated
