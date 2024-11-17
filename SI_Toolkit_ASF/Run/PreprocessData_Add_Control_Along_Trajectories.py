@@ -55,7 +55,7 @@ controller = {
         "target_equilibrium": "target_equilibrium",
         "L": "L_random_uniform_0.05_0.8_",
         "m_pole": "m_pole_random_uniform_0.015_0.15_",
-        "Q_ccrc": "Q_applied_-1",
+        # "Q_ccrc": "Q_applied_-1",
     },
 }
 
