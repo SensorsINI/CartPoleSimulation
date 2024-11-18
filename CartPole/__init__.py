@@ -62,7 +62,7 @@ from CartPole.csv_logger import create_csv_file_name, create_csv_title, create_c
 
 from SI_Toolkit.Functions.FunctionalDict import FunctionalDict, HistoryClass
 
-from CartPole.parameter_updater import ParameterUpdater
+from CartPole.parameter_updater import ParameterUpdater, ParameterJointUpdater
 
 
 # endregion
@@ -122,6 +122,8 @@ class CartPole(EnvironmentBatched):
 
         self.m_pole_updater = ParameterUpdater(self.config['m_pole'])
         m_pole[...] = float(self.m_pole_updater.init_value)
+
+        self.joint_updater = ParameterJointUpdater(self.config['L'], self.config['m_pole'], mode=2)
 
         self.controller_informer = ControllerInformer(self.config['inform_controller_about_parameters_change'])
         self.L_for_controller = float(self.controller_informer.get_parameters(
@@ -525,7 +527,10 @@ class CartPole(EnvironmentBatched):
         new_m_pole = self.m_pole_updater.update_parameter(m_pole, self.time)
         m_pole[...] = new_m_pole
 
-
+        # global L, m_pole
+        # new_L, new_m_pole = self.joint_updater.update_parameter(self.time)
+        # L[...] = new_L
+        # m_pole[...] = new_m_pole
     # endregion
 
     # region 2. Methods related to experiment history as a whole: saving, loading, plotting, resetting
