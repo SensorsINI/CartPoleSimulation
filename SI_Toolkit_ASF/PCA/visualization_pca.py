@@ -202,3 +202,7 @@ def get_label(feature_name):
         return 'Target Position [m]'
     elif feature_name == 'angle_offset':
         return 'Pole Angle Offset [deg]'
+    elif feature_name == 'm_pole':
+        return 'Pole Mass [kg]'
+    elif feature_name == 'L':
+        return 'Pole Length [m]'
