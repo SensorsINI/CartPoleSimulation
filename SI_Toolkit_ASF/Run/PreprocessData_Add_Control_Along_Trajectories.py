@@ -42,7 +42,7 @@ if formatted_index is not None:
 else:
     get_files_from = 'Experiment_Recordings/Experiment_16_11_2024_pole_L_and_m_informed'
 
-save_files_to = 'Experiment_Recordings/Experiment_16_11_2024_pole_L_and_m_random/'
+save_files_to = 'Experiment_Recordings/Experiment_16_11_2024_pole_L_0_05_and_m_0_015/'
 
 controller = {
     "controller_name": "mpc",
@@ -53,8 +53,8 @@ controller = {
     "environment_attributes_dict": {  # keys are names used by controller, values the csv column names
         "target_position": "target_position",
         "target_equilibrium": "target_equilibrium",
-        "L": "L_random_uniform_0.05_0.8_",
-        "m_pole": "m_pole_random_uniform_0.015_0.15_",
+        "L": "L_random_uniform_0.05_0.05_",
+        "m_pole": "m_pole_random_uniform_0.015_0.015_",
         # "Q_ccrc": "Q_applied_-1",
     },
 }
