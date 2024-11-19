@@ -28,7 +28,7 @@ class next_state_predictor_ODE_v0:
                  variable_parameters=None,
                  **kwargs):
 
-        self.lib  = NumpyLibrary
+        self.lib  = NumpyLibrary()
         self.cpe = CartPoleEquations()
 
         self.s = create_cartpole_state()

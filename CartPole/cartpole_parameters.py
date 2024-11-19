@@ -6,7 +6,7 @@ from others.globals_and_utils import load_config
 
 
 class CartPoleParameters:
-    def __init__(self, lib=NumpyLibrary, get_parameters_from=None):
+    def __init__(self, lib=NumpyLibrary(), get_parameters_from=None):
         self.lib = lib
         if get_parameters_from is None:
             get_parameters_from = "cartpole_physical_parameters.yml"

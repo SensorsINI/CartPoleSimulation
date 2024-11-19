@@ -136,9 +136,9 @@ def euler_step(state, stateD, t_step):
 #  The function for edge bounce is separate, it is used by simulator but not by predictors
 ###
 class CartPoleEquations:
-    supported_computation_libraries: set = {NumpyLibrary, TensorFlowLibrary, PyTorchLibrary}
+    supported_computation_libraries = (NumpyLibrary, TensorFlowLibrary, PyTorchLibrary)
 
-    def __init__(self, lib=NumpyLibrary, get_parameters_from=None, numba_compiled=False):
+    def __init__(self, lib=NumpyLibrary(), get_parameters_from=None, numba_compiled=False):
         self.lib = lib
         self.params = CartPoleParameters(lib, get_parameters_from)
         self.euler_step = CompileAdaptive(self.lib)(euler_step)  # This is a nested function, still it was compiled separately before for TF. TODO: Check if it is needed to compile it separately
@@ -150,7 +150,7 @@ class CartPoleEquations:
         else:
             self._cartpole_ode = _cartpole_ode
             self.edge_bounce = edge_bounce
-            # if lib == NumpyLibrary:
+            # if isinstance(lib, NumpyLibrary):
             #     self.cartpole_integration = self._cartpole_integration_scipy
             # else:
             self.cartpole_integration = self._cartpole_integration_euler_cromer

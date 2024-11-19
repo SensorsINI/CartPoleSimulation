@@ -24,7 +24,7 @@ actuator_noise = config["cartpole"]["actuator_noise"]
 
 
 class controller_lqr(template_controller):
-    _computation_library = NumpyLibrary
+    _computation_library = NumpyLibrary()
     
     def configure(self):
         # From https://github.com/markwmuller/controlpy/blob/master/controlpy/synthesis.py#L8

@@ -59,7 +59,7 @@ def cartpole_integration(s, dt):
 
 
 class controller_do_mpc_discrete(template_controller):
-    _computation_library = NumpyLibrary
+    _computation_library = NumpyLibrary()
     
     def configure(self):
         """

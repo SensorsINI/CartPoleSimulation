@@ -67,7 +67,7 @@ class next_state_predictor_ODE:
 
 
 class predictor_output_augmentation:
-    def __init__(self, net_info, lib=NumpyLibrary, disable_individual_compilation=False, differential_network=False):
+    def __init__(self, net_info, lib=NumpyLibrary(), disable_individual_compilation=False, differential_network=False):
 
         self.lib = lib
 
