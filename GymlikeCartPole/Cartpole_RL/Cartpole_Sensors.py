@@ -16,7 +16,7 @@ class Cartpole_Sensors(CartPoleRLTemplate):
 
     def __init__(self, **kwargs):
 
-        self.cpe = CartPoleEquations(lib=NumpyLibrary)
+        self.cpe = CartPoleEquations(lib=NumpyLibrary())
 
         self.RES = random_experiment_setter()
 

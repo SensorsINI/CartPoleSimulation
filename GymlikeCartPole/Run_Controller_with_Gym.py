@@ -27,7 +27,7 @@ initial_environment_attributes = {'target_position': 0.0, 'target_equilibrium': 
 controller = Controller('CartPole', (-1, 1), initial_environment_attributes)
 controller.configure()
 
-lib = NumpyLibrary
+lib = NumpyLibrary()
 mpc_cost = MPC_CostFunction(lib, initial_environment_attributes)
 
 done = False
