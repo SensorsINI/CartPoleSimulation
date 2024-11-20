@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from CartPole import CartPole
 from CartPole.cartpole_drawer import CartPoleDrawer
 from CartPole.cartpole_target_slider import TargetSlider
-from CartPole.cartpole_parameters import TrackHalfLength, L
+from CartPole.cartpole_parameters import TrackHalfLength
 from CartPole.state_utilities import ANGLED_IDX, ANGLE_IDX, POSITION_IDX, POSITIOND_IDX, create_cartpole_state
 
 from GUI.loop_timer import loop_timer
