@@ -140,8 +140,6 @@ class random_experiment_setter:
 
         self.initial_target_equilibrium = config['initial_target_equilibrium']
 
-        self.L_informed_controller = config['L_informed_controller']
-
         self.rng = create_rng(self.__class__.__name__, config["seed"])
 
     def set(self, CartPoleInstance: CartPole):
@@ -207,8 +205,6 @@ class random_experiment_setter:
             target_equilibrium=target_equilibrium,
             keep_target_equilibrium_x_seconds_up=self.keep_target_equilibrium_x_seconds_up,
             keep_target_equilibrium_x_seconds_down=self.keep_target_equilibrium_x_seconds_down,
-
-            L_informed_controller=self.L_informed_controller,
 
         )
 
