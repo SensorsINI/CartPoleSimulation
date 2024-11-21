@@ -10,15 +10,41 @@ CartPole:
     ccrc_weight: 1.0
     R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in optimizer config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
   quadratic_boundary_grad:
-    dd_weight: 300.0
-    ep_weight: 800.0
-    ekp_weight: 2.0
-    db_weight: 10000
+    dd_quadratic_weight_up: 100.0
+    dd_linear_weight_up: 120.0
+    ep_weight_up: 2400.0
+    target_angular_speed_sqr_max_correction_up: 0.0
+    ekp_weight_up: 300.0  # Notice the role of this variable is different than for down (offset)
+    db_weight_up: 10000
+    cc_weight_up: 30.0
+    ccrc_weight_up: 100.0
+
+    dd_quadratic_weight_down: 1000.0
+    dd_linear_weight_down: 1000.0
+    ep_weight_down: 0.0
+    target_angular_speed_sqr_max_correction_down: 100.0 # Notice the role of this variable is different than for up
+    ekp_weight_down: 50.0 # Notice the role of this variable is different than for up (no offset)
+    db_weight_down: 10000
+    cc_weight_down: 50.0
+    ccrc_weight_down: 200.0
+
+
     permissible_track_fraction: 0.85
-    cc_weight: 15.0
-    ccrc_weight: 0.0
+    admissible_target_distance: 0.12  # As fraction of total track length
+    cc_discount: 1.0
     admissible_angle: 0.0
     R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in optimizer config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
+
+  quadratic_boundary_grad_minimal:
+    dd_quadratic_weight_up: 10.0
+    ep_weight_up: 40.0
+    ekp_weight_up: 0.5
+    db_weight_up: 10000
+    cc_weight_up: 2.0
+    R: 1.0
+
+    permissible_track_fraction: 0.85
+
   quadratic_boundary_nonconvex:
     dd_weight: 600.0
     ep_weight: 20000.0
