@@ -40,14 +40,13 @@ def _cartpole_ode (ca, sa, angleD, positionD, u,
     A = (k + 1) * (m_cart + m_pole) - m_pole * (ca ** 2)
     F_fric = - M_fric * positionD  # Force resulting from cart friction, notice that the mass of the cart is not explicitly there
     T_fric = - J_fric * angleD  # Torque resulting from pole friction
-    L_half = L/2.0
 
     positionDD = (
             (
                     + m_pole * g * sa * ca  # Movement of the cart due to gravity
-                    + ((T_fric * ca) / L_half)  # Movement of the cart due to pend' s friction in the joint
+                    + ((T_fric * ca) / L)  # Movement of the cart due to pend' s friction in the joint
                     + (k + 1) * (
-                            - (m_pole * L_half * (
+                            - (m_pole * L * (
                                         angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
                             + F_fric  # Braking of the cart due its friction
                             + u  # Effect of force applied to cart

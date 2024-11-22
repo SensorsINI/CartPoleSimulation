@@ -1,12 +1,11 @@
 from SI_Toolkit.computation_library import NumpyLibrary
 from ruamel.yaml import YAML
-import random
 
 from others.globals_and_utils import load_config
 
 
 class CartPoleParameters:
-    def __init__(self, lib=NumpyLibrary(), get_parameters_from=None):
+    def __init__(self, lib=NumpyLibrary, get_parameters_from=None):
         self.lib = lib
         if get_parameters_from is None:
             get_parameters_from = "cartpole_physical_parameters.yml"
@@ -14,12 +13,8 @@ class CartPoleParameters:
         parameters = load_config(get_parameters_from)['cartpole']
 
         for key, value in parameters.items():
-            if key == 'L' or key == 'm_pole':
-                if value['init_value'] == 'random':
-                    gen = self.lib.create_rng(random.randint(0, 2**32 - 1))
-                    value = self.lib.uniform(gen, (1,), *value['range_random'], dtype=self.lib.float32)
-                else:
-                    value = float(value['init_value'])
+            if key == 'L':
+                value = float(value.split("/")[0])/float(value.split("/")[1])
             elif key == 'k':
                 value = float(value.split("/")[0])/float(value.split("/")[1])
             elif key == 'controlDisturbance_mode':

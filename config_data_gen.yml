@@ -1,5 +1,5 @@
 controller: mpc
-ML_Pipeline_mode: True  # If True a directory structure required by SI_Toolkit will be created, location taken from config_training, not from here.
+ML_Pipeline_mode: False  # If True a directory structure required by SI_Toolkit will be created, location taken from config_training, not from here.
 split: [0.8, 0.1]  # Train/Val/(Test) split - only matters if you run it in ML Pipeline mode
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default, can be overwritten in config_training if ML_Pipeline_mode is True
 seed:   # If not assign random seed based on datetime is used
@@ -8,7 +8,7 @@ random_initial_state:
   # Unassigned variables will be randomly initialized (see below)
   position:
   positionD:
-  angle:  #Seems to be in radian
+  angle:
   angleD:
   target_position:
   init_limits: # The initial state is randomly chosen from below range if above is not assigned
@@ -22,6 +22,14 @@ target_position_end: ~  # value OR not assigned - random value is taken
 initial_target_equilibrium: 'up'  # possible 'up', 'down', 'random' = 50/50
 keep_target_equilibrium_x_seconds_up: 10
 keep_target_equilibrium_x_seconds_down: 2.5
+L:  # Pole half-length
+  L_initial: default
+  change_L_every_x_second: inf
+  L_discount_factor: 1.0 #0.9999; Change of L at EACH SIMULATOR TIMESTEP
+  L_range: [0.01, 0.6]  # Range from which to uniformly sample L
+  informed_controller: true  # If false controller assumes always L_initial
+  L_change_mode: step  # 'uniform' to sample uniformly from L_range, 'step' to change by constant step within the L_range
+  L_step: 0.02  # Only for L_change_mode 'step'
 dt:
   simulation: 0.002  # simulation timestep, s
   control: 0.02  # control rate, s

@@ -20,4 +20,4 @@ eggs/
 /Modeling/SI_Toolkit/TF/NNI/NNI_Results
 
 /SI_Toolkit_ASF/Experiments/*
-others/EulerClusterScripts/EulerTerminalOutput/*
+others/EulerClusterScripts/slurm-*.out

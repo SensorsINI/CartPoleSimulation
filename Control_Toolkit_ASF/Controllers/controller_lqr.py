@@ -16,15 +16,15 @@ from CartPole.state_utilities import create_cartpole_state
 from CartPole.state_utilities import (ANGLE_IDX, ANGLED_IDX, POSITION_IDX,
                                       POSITIOND_IDX)
 from Control_Toolkit.Controllers import template_controller
-from others.globals_and_utils import create_rng, load_config
+from others.globals_and_utils import create_rng
 
 s0 = create_cartpole_state()
-config = load_config("cartpole_physical_parameters.yml")
+config = yaml.load(open("cartpole_physical_parameters.yml", "r"), Loader=yaml.FullLoader)
 actuator_noise = config["cartpole"]["actuator_noise"]
 
 
 class controller_lqr(template_controller):
-    _computation_library = NumpyLibrary()
+    _computation_library = NumpyLibrary
     
     def configure(self):
         # From https://github.com/markwmuller/controlpy/blob/master/controlpy/synthesis.py#L8

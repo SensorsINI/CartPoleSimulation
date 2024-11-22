@@ -19,7 +19,7 @@ Python implementation of the theory for Sparse Envent-Based Closed Loop Control 
 https://www.frontiersin.org/articles/10.3389/fnins.2019.00827/full
 """
 class controller_secloc(template_controller):
-    _computation_library = NumpyLibrary()
+    _computation_library = NumpyLibrary
     
     def configure(self):
         log_base = self.config_controller["log_base"]

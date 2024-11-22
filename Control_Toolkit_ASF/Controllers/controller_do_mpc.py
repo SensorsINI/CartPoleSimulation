@@ -21,7 +21,7 @@ def cartpole_ode_namespace(s: SimpleNamespace, u: float):
     return angleDD, positionDD
 
 class controller_do_mpc(template_controller):
-    _computation_library = NumpyLibrary()
+    _computation_library = NumpyLibrary
     
     def configure(self):
         """

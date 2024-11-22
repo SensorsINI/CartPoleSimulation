@@ -11,7 +11,7 @@ from CartPole.state_utilities import create_cartpole_state
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 from others.globals_and_utils import create_rng, load_config
-from CartPole.cartpole_parameters import TrackHalfLength
+from CartPole.cartpole_parameters import TrackHalfLength, L
 
 import argparse
 
@@ -30,14 +30,13 @@ def args_fun():
     return args
 
 
-def get_record_path(secondary_experiment_index=None, digits=None):
+def get_record_path(secondary_experiment_index=None):
     config_SI = load_config(os.path.join("SI_Toolkit_ASF", "config_training.yml"))
     experiment_index = 1
     while True:
         experiment_basename = "Experiment-"
         if secondary_experiment_index is not None:
-            formatted_index = f"{secondary_experiment_index:0{digits}d}"
-            experiment_basename += formatted_index + "-"
+            experiment_basename += str(secondary_experiment_index) + "-"
         path_to_experiment_recordings = experiment_basename + str(experiment_index)
         if os.path.exists(config_SI['paths']['PATH_TO_EXPERIMENT_FOLDERS'] + path_to_experiment_recordings):
             experiment_index += 1
@@ -140,6 +139,17 @@ class random_experiment_setter:
 
         self.initial_target_equilibrium = config['initial_target_equilibrium']
 
+        self.L_initial_mode = config['L']['L_initial']
+        self.L_initial = None
+        self.change_L_every_x_second = config['L']['change_L_every_x_second']
+        if isinstance(self.change_L_every_x_second, str) and self.change_L_every_x_second == 'inf':
+            self.change_L_every_x_second = np.inf
+        self.L_discount_factor = config['L']['L_discount_factor']
+        self.L_range = config['L']['L_range']
+        self.L_informed_controller = config['L']['informed_controller']
+        self.L_change_mode = config['L']['L_change_mode']
+        self.L_step = config['L']['L_step']
+
         self.rng = create_rng(self.__class__.__name__, config["seed"])
 
     def set(self, CartPoleInstance: CartPole):
@@ -179,6 +189,13 @@ class random_experiment_setter:
         else:
             Exception('{} is not a valid specification for target equilibrium'.format(self.initial_target_equilibrium))
 
+        global L
+        if self.L_initial_mode == 'uniform':
+            self.L_initial = np.random.uniform(*self.L_range)
+        elif self.L_initial_mode == 'default':
+            self.L_initial = L[...]
+        else:
+            self.L_initial = self.L_initial_mode
 
         CartPoleInstance.setup_cartpole_random_experiment(
             # Initial state
@@ -205,6 +222,14 @@ class random_experiment_setter:
             target_equilibrium=target_equilibrium,
             keep_target_equilibrium_x_seconds_up=self.keep_target_equilibrium_x_seconds_up,
             keep_target_equilibrium_x_seconds_down=self.keep_target_equilibrium_x_seconds_down,
+
+            L_initial=self.L_initial,
+            change_L_every_x_seconds=self.change_L_every_x_second,
+            L_discount_factor=self.L_discount_factor,
+            L_range=self.L_range,
+            L_informed_controller=self.L_informed_controller,
+            L_change_mode=self.L_change_mode,
+            L_step=self.L_step,
 
         )
 
@@ -254,11 +279,9 @@ def run_data_generator(path_to_experiment_recordings=None):
 
     secondary_experiment_index = args_fun().secondary_experiment_index
 
-    digits = 3  # How many digits should have secondary index - leading zeros appended if necessary
-
     if config["ML_Pipeline_mode"]:
         run_for_ML_Pipeline = True
-        path_to_experiment_recordings = get_record_path(secondary_experiment_index, digits=digits)
+        path_to_experiment_recordings = get_record_path(secondary_experiment_index)
 
         # Save copy of configs in experiment folder
         if not os.path.exists(path_to_experiment_recordings):
@@ -307,8 +330,7 @@ def run_data_generator(path_to_experiment_recordings=None):
             csv = os.path.join(csv, csvfile_basename)
         else:
             if secondary_experiment_index is not None:
-                formatted_index = f"{secondary_experiment_index:0{digits}d}"
-                csv = csvfile_basename + "-" + formatted_index
+                csv = csvfile_basename + "-" + str(secondary_experiment_index)
             else:
                 csv = csvfile_basename
 
