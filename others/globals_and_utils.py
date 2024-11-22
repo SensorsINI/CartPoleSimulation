@@ -198,7 +198,15 @@ log=my_logger(__name__)
 def create_rng(id: str, seed: str, use_tf: bool=False):
     if seed == None:
         log.info(f"{id}: No random seed specified. Seeding with datetime.")
-        seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000.0)  # Fully random
+
+        # Get the current time in nanoseconds for higher precision
+        current_time_ns = time.time_ns()
+
+        # Get the process ID (unique for each parallel process)
+        process_id = os.getpid()
+
+        # Combine the current time and the process ID to generate a more unique seed
+        seed = current_time_ns ^ process_id
     
     if use_tf:
         return tf.random.Generator.from_seed(seed=seed)

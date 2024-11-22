@@ -15,24 +15,54 @@ import numpy as np
 from CartPole.state_utilities import STATE_VARIABLES
 from others.globals_and_utils import MockSpace
 
-get_files_from = 'SI_Toolkit_ASF/Experiments/Experiment-29-30-quant-10-shiftD-1/Recordings/Train'
-save_files_to = 'SI_Toolkit_ASF/Experiments/Experiment-29-30-quant-10-shiftD-1/Recordings/Train-neural'
+import argparse
+
+def args_fun():
+    parser = argparse.ArgumentParser(description='Generate CartPole data.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-i', '--secondary_experiment_index', default=-1, type=int,
+                        help='Additional index to the experiment folder (ML Pipeline mode) or file (otherwise) name. -1 to skip.')
+
+
+    args = parser.parse_args()
+
+    if args.secondary_experiment_index == -1:
+        args.secondary_experiment_index = None
+
+    digits = 3
+    if args.secondary_experiment_index is not None:
+        formatted_index = f"{args.secondary_experiment_index:0{digits}d}"
+    else:
+        formatted_index = None
+
+    return formatted_index
+
+formatted_index = args_fun()
+if formatted_index is not None:
+    get_files_from = f'SI_Toolkit_ASF/Experiments/Varying_Pole_12_11_2024/Recordings/test_short/Experiment-{formatted_index}.csv'
+else:
+    get_files_from = 'SI_Toolkit_ASF/Experiments/Varying_Pole_12_11_2024/Recordings/test_short/'
+
+save_files_to = 'SI_Toolkit_ASF/Experiments/Varying_Pole_12_11_2024/Recordings/Test_done/'
 
 controller = {
-    "controller_name": "neural-imitator",
-    "optimizer_name": None,
-    "dt_controller": 0.02,
+    "controller_name": "mpc",
+    "optimizer_name": 'rpgd-tf',
     "environment_name": "CartPole",
     "action_space": MockSpace(-1.0, 1.0, (1,), np.float32),
     "state_components": STATE_VARIABLES,
-    "environment_attributes_list": {  # keys are names used by controller, values the csv column names
+    "environment_attributes_dict": {  # keys are names used by controller, values the csv column names
         "target_position": "target_position",
         "target_equilibrium": "target_equilibrium",
-        "L": "L",
+        "L": "L_integrate_0.25_0.55_",
+        "Q_ccrc": "Q_applied_-1",
     },
 }
 
-controller_output_variable_name = 'Q_calculated_neural'
+controller_output_variable_name = 'Q_calculated_offline'
 
-transform_dataset(get_files_from, save_files_to, transformation='add_control_along_trajectories',
-                  controller=controller, controller_output_variable_name=controller_output_variable_name)
+if __name__ == '__main__':
+    transform_dataset(get_files_from, save_files_to, transformation='add_control_along_trajectories',
+                      controller_config=controller, controller_output_variable_name=controller_output_variable_name,
+                      integration_num_evals=64,
+                      save_output_only=True,
+                      )

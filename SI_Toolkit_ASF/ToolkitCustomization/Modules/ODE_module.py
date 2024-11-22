@@ -21,7 +21,7 @@ class ODEModel(tf.keras.Model):
     def __init__(self, horizon, batch_size, net_info, name=None, **kwargs):
         super().__init__(**kwargs)
 
-        self.lib = TensorFlowLibrary
+        self.lib = TensorFlowLibrary()
 
         self.batch_size = batch_size
         self.horizon = horizon
@@ -36,7 +36,8 @@ class ODEModel(tf.keras.Model):
                 trainable = True
             else:
                 trainable = name in trainable_params
-            self.cartpole_params_tf[name] = tf.Variable(param, name=name, trainable=trainable, dtype=tf.float32)
+            if name in ['J_fric', 'L', 'm_cart', 'M_fric', 'TrackHalfLength', 'g', 'k', 'm_pole', 'u_max']:
+                self.cartpole_params_tf[name] = tf.Variable(param, name=name, trainable=trainable, dtype=tf.float32)
         for name, var in self.cartpole_params_tf.items():
             setattr(self.predictor.predictor.params, name, var)
 
@@ -53,12 +54,13 @@ class ODEModel(tf.keras.Model):
         path = filepath[:-len('.keras')]
         params_dict = {}
         for name, var in self.predictor.predictor.params.__dict__.items():
-            # For a single scalar value, convert to Python float
-            if var.numpy().size == 1:
-                params_dict[name] = var.numpy().item()
-            # For arrays, convert to list
-            else:
-                params_dict[name] = var.numpy().tolist()
+            if name in ['J_fric', 'L', 'm_cart', 'M_fric', 'TrackHalfLength', 'g', 'k', 'm_pole', 'u_max']:
+                # For a single scalar value, convert to Python float
+                if var.numpy().size == 1:
+                    params_dict[name] = var.numpy().item()
+                # For arrays, convert to list
+                else:
+                    params_dict[name] = var.numpy().tolist()
 
 
         yaml = YAML()
