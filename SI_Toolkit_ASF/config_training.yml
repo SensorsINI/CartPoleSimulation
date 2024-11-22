@@ -1,6 +1,7 @@
-library: 'Pytorch'  # TF or Pytorch
+library: 'TF'  # TF or Pytorch
 modeling:
   NET_NAME: 'Dense-32H1-32H2'
+#  NET_NAME: 'Custom-ODE_module-ODEModel'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
   path_to_experiment: 'CPS-17-02-2023-UpDown'
@@ -21,7 +22,7 @@ training_default:
   control_inputs: []
   state_inputs: ['position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_equilibrium', 'target_position']
   outputs:  ['Q_calculated']
-  EPOCHS: 60
+  EPOCHS: 30
   BATCH_SIZE: 64
   SEED: 1873
   LR:
@@ -40,7 +41,11 @@ training_default:
   CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch; 'with cells' or 'with modules'
   VALIDATE_ALSO_ON_TRAINING_SET: false
   PLOT_WEIGHTS_DISTRIBUTION: true # CalculTFate histograms of weights and biases and activations, take long time
-  AUGMENT_DATA: True  # If true transforms training data with function specified in SI_Toolkit_ASF/data_augmentation.py at the beginning of the training and at the end of each epoch.
+
+CONFIG_SERIES_MODIFICATION:
+  MODE: None #'train_for_random_vertical_angle_shift'
+  NOISE_LEVEL:
+    FEATURES: 0.0
 
 REGULARIZATION:   # Implemented only for TF, no regularization for Pytorch
   ACTIVATED: false
@@ -100,9 +105,9 @@ FILTERS:
 #    absolute: true
 # Translates to a condition df = df[abs(df['angleD']) < 20.0]
 # Allowed are <, <=, >, >=, ==, !=
-  - column: angleD
-    condition: "< 20.0"
-    absolute: true
-  - column: positionD
-    condition: "< 1.0"
-    absolute: true
+#  - column: angleD
+#    condition: "< 20.0"
+#    absolute: true
+#  - column: positionD
+#    condition: "< 1.0"
+#    absolute: true

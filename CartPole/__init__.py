@@ -2,14 +2,13 @@
 """
 CartPole Class:
 The file holds the main class of our simulator - it corresponds to a physical cartpole.
-You can find here methods with performing experiment, saving data, displaying CartPole graphically
+You can find here methods with performing experiment, saving data,
 and many more. To run it needs some "environment": we provide you with GUI and data_generator
 @author: Marcin
 """
 # Import module to save history of the simulation as csv file
 
 # Import module to interact with OS
-import os
 import traceback
 # Import module to get a current time and date used to name the files containing the history of simulations
 import timeit
@@ -17,17 +16,18 @@ import timeit
 
 import numpy as np
 import pandas as pd
+
 from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.others.environment import EnvironmentBatched
 from Control_Toolkit.others.globals_and_utils import (
     get_available_controller_names, get_available_optimizer_names, get_controller_name, get_optimizer_name, import_controller_by_name)
 from others.globals_and_utils import MockSpace, create_rng, load_config
 from CartPole.cartpole_parameters import (J_fric, L, m_cart, M_fric, TrackHalfLength,
-                                          controlBias, controlDisturbance, CP_PARAMETERS_DEFAULT,
-                                          g, k, m_pole, u_max, v_max, controlDisturbance_mode)
+                                          CP_PARAMETERS_DEFAULT,
+                                          g, k, m_pole, u_max, v_max,
+                                          controlBias, controlDisturbance, controlDisturbance_mode
+                                          )
 # Interpolate function to create smooth random track
-from scipy.interpolate import BPoly, interp1d
-from scipy.stats import truncnorm
 # Run range() automatically adding progress bar in terminal
 from tqdm import trange
 
@@ -36,9 +36,13 @@ from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
 from CartPole.latency_adder import LatencyAdder
 from CartPole.load import get_full_paths_to_csvs, load_csv_recording
 from CartPole.noise_adder import NoiseAdder
+from CartPole.noise_control_signal import add_control_noise
+from CartPole.random_target_generator import Generate_Random_Trace_Function
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 from CartPole.state_utilities import create_cartpole_state
+from CartPole.summary_plots import summary_plots
+from CartPole.controller_informer import ControllerInformer
 
 s0 = create_cartpole_state()
 
@@ -47,26 +51,20 @@ s0 = create_cartpole_state()
 # check memory usage of chosen methods. Commented by default
 # from memory_profiler import profile
 
-# region Graphics imports
-import matplotlib.pyplot as plt
-# rc sets global parameters for matplotlib; transforms is used to rotate the Mast
-from matplotlib import animation, rc, transforms
-# Shapes used to draw a Cart and the slider
-from matplotlib.patches import (Circle, FancyArrowPatch, FancyBboxPatch,
-                                Rectangle)
+
 
 from random import random
 
 # Angle convention to rotate the mast in right direction - depends on used Equation
-from CartPole.cartpole_equations import ANGLE_CONVENTION, CartPoleEquations
+from CartPole.cartpole_equations import CartPoleEquations
 
 from CartPole.csv_logger import create_csv_file_name, create_csv_title, create_csv_header, create_csv_file, save_data_to_csv_file
 
 from SI_Toolkit.Functions.FunctionalDict import FunctionalDict, HistoryClass
 
-# Set the font parameters for matplotlib figures
-font = {'size': 22}
-rc('font', **font)
+from CartPole.parameter_updater import ParameterUpdater, ParameterJointUpdater
+
+
 # endregion
 
 # endregion
@@ -81,9 +79,12 @@ class CartPole(EnvironmentBatched):
     num_states = 6
     num_acions = 1
 
-    def __init__(self, initial_state=s0, path_to_experiment_recordings=None):
+    def __init__(self, initial_state=s0, path_to_experiment_recordings=None, target_slider=None):
+
         self.config = config["cartpole"]
         self.rng_CartPole = create_rng(self.__class__.__name__, self.config["seed"])
+
+        self.slider = target_slider
 
         self.time_L_last_change = None
         self.start_changing_L = False
@@ -105,6 +106,7 @@ class CartPole(EnvironmentBatched):
         # Variables for control input and target position.
         self.u = 0.0  # Physical force acting on the cart
         self.Q_applied = 0.0
+        self.Q_ccrc = 0.0
         self.Q_calculated = 0.0
         self.Q = 0.0  # Dimensionless motor power in the range [-1,1] from which force is calculated with Q2u() method
 
@@ -115,28 +117,30 @@ class CartPole(EnvironmentBatched):
         state_high = [-v for v in state_low]
         self.observation_space = MockSpace(state_low, state_high, (6,), np.float32)
 
-        self.L_initial = float(L)
+        self.L_updater = ParameterUpdater(self.config['L'])
+        L[...] =  float(self.L_updater.init_value)
 
-        self.change_L_every_x_second = np.inf
-        self.time_last_L_change = None
-        self.L_discount_factor = 1.0
-        self.L_range = [0.03, 0.2]
-        self.L_informed_controller = True
-        if self.L_informed_controller:
-            self.L_for_controller = L
-        else:
-            self.L_for_controller = float(self.L_initial)
-        self.L_change_mode = 'step'
-        self.L_step = 0.02
+        self.m_pole_updater = ParameterUpdater(self.config['m_pole'])
+        m_pole[...] = float(self.m_pole_updater.init_value)
+
+        self.joint_updater = ParameterJointUpdater(self.config['L'], self.config['m_pole'], mode=2)
+
+        self.controller_informer = ControllerInformer(self.config['inform_controller_about_parameters_change'])
+        self.L_for_controller = float(self.controller_informer.get_parameters(
+            L, float(self.L_updater.init_value), self.time
+        ))
+        self.m_pole_for_controller = float(self.controller_informer.get_parameters(
+            m_pole, float(self.m_pole_updater.init_value), self.time
+        ))
 
         self.latency = self.config["latency"]
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
         self.NoiseAdderInstance = NoiseAdder()
         self.s_with_noise_and_latency = np.copy(self.s)
-        self.zero_angle_shift_init = np.deg2rad(self.config['zero_angle_shift']['init'])
-        self.zero_angle_shift = self.zero_angle_shift_init
-        self.zero_angle_shift_mode = self.config['zero_angle_shift']['mode']
-        self.zero_angle_shift_increment = np.deg2rad(self.config['zero_angle_shift']['increment'])
+
+        self.vertical_angle_offset_updater = ParameterUpdater(self.config['vertical_angle_offset'])
+        self.vertical_angle_offset_init = np.deg2rad(self.config['vertical_angle_offset']['init_value'])
+        self.vertical_angle_offset = self.vertical_angle_offset_init
 
         # region Time scales for simulation step, controller update and saving data
         # See last paragraph of "Time scales" section for explanations
@@ -229,6 +233,7 @@ class CartPole(EnvironmentBatched):
 
                 'Q_calculated': lambda: self.Q_calculated,
                 'Q_applied': lambda: self.Q_applied,
+                'Q_ccrc': lambda: self.Q_ccrc,
                 'u': lambda: self.u,
 
                 # The target_position is not always meaningful
@@ -237,6 +242,16 @@ class CartPole(EnvironmentBatched):
                 'target_equilibrium': lambda: self.target_equilibrium,
 
                 'L': lambda: float(L),
+                'L_for_controller': lambda: self.controller_informer.value_to_return,
+
+                'm_pole': lambda: float(m_pole),
+                'm_pole_for_controller': lambda: self.controller_informer.value_to_return,
+
+
+
+                'vertical_angle_offset': lambda: float(self.vertical_angle_offset),
+                'vertical_angle_offset_cos': lambda: float(np.cos(self.vertical_angle_offset)),
+                'vertical_angle_offset_sin': lambda: float(np.sin(self.vertical_angle_offset)),
 
                 'Q_update_time': lambda: self.Q_update_time,
 
@@ -245,58 +260,6 @@ class CartPole(EnvironmentBatched):
 
         self.dict_history = HistoryClass()  # Class holding the history of the simulation
         self.dict_history.add_keys(keys=self.variables_to_log.keys())
-
-        # region Variables initialization for drawing/animating a CartPole
-        # DIMENSIONS OF THE DRAWING ONLY!!!
-        # NOTHING TO DO WITH THE SIMULATION AND NOT INTENDED TO BE MANIPULATED BY USER !!!
-
-        # Variable relevant for interactive use of slider
-        self.slider_max = 1.0
-        self.slider_value = 0.0
-
-        self.show_hanging_pole = False
-
-        self.physical_to_graphics = None
-        self.graphics_to_physical = None
-
-        # Parameters needed to display CartPole in GUI
-        # They are assigned with values in self.init_elements()
-        self.CartLength = None
-        self.WheelRadius = None
-        self.WheelToMiddle = None
-        self.y_plane = None
-        self.y_wheel = None
-        self.mast_height_maximal_drawing_units = None  # For drawing only. For calculation see L
-        self.max_height_maximal_physical_units = None
-        self.mast_height_current_drawing_units = None
-        self.zero_angle_tick_height_current_drawing_units = None
-        self.MastThickness = None
-        self.ZeroAngleTickThickness = None
-        self.TrackHalfLengthGraphics = None  # Length of the track
-
-        # Elements of the drawing
-        self.Mast = None
-        self.Chassis = None
-        self.WheelLeft = None
-        self.WheelRight = None
-
-        self.ZeroAngleTick = None
-
-        # Arrow indicating acceleration (=motor power)
-        self.Acceleration_Arrow = None
-
-        self.y_acceleration_arrow = None
-        self.scaling_dx_acceleration_arrow = None
-        self.x_acceleration_arrow = None
-
-        # Depending on mode, slider may be displayed either as bar or as an arrow
-        self.Slider_Bar = None
-        self.Slider_Arrow = None
-        self.t2 = None  # An abstract container for the transform rotating the mast
-        self.t_zero_angle = None  # An abstract container for the transform rotating the zero angle tick
-
-        self.init_graphical_elements()  # Assign proper object to the above variables
-        # endregion
         
         self.target_position = 0.0
         self.target_equilibrium = 1.0
@@ -374,46 +337,45 @@ class CartPole(EnvironmentBatched):
         self.LatencyAdderInstance.add_current_state_to_latency_buffer(self.s)
         s_delayed = self.LatencyAdderInstance.get_interpolated_delayed_state()
         self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
-        self.s_with_noise_and_latency = self.update_zero_angle_shift(self.s_with_noise_and_latency)
+        self.s_with_noise_and_latency = self.update_vertical_angle_offset(self.s_with_noise_and_latency)
 
     def cartpole_ode(self):
-        self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L))
+        self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L), m_pole=float(m_pole))
 
     def Q2u(self):
         self.u = self.cpe.Q2u(self.Q)
 
-    def update_zero_angle_shift(self, s):
-        if self.zero_angle_shift_mode == 'constant':
-            da = 0.0
-        elif self.zero_angle_shift_mode == 'random walk':
-            da  = (1.0 if random() < 0.5 else -1.0)*self.zero_angle_shift_increment
-        elif self.zero_angle_shift_mode == 'increase':
-            self.zero_angle_shift_increment *= 1.000
-            da = self.zero_angle_shift_increment
-        else:
-            raise ValueError('zero_angle_shift_mode with value {} not valid'.format(self.zero_angle_shift_mode))
-        self.zero_angle_shift += da
-        s[ANGLE_IDX] = wrap_angle_rad(s[ANGLE_IDX]+self.zero_angle_shift)
+    def update_vertical_angle_offset(self, s):
+        self.vertical_angle_offset = self.vertical_angle_offset_updater.update_parameter(
+            self.vertical_angle_offset,
+            self.time,
+        )
+
+        s[ANGLE_IDX] = wrap_angle_rad(s[ANGLE_IDX]+self.vertical_angle_offset)
         s[ANGLE_COS_IDX] = np.cos(s[ANGLE_IDX])
         s[ANGLE_SIN_IDX] = np.sin(s[ANGLE_IDX])
 
         return s
 
     def update_target_position(self):
-        if self.use_pregenerated_target_position:
-
-            # If time exceeds the max time for which target position was defined
-            if self.time >= self.length_of_experiment:
-                return
-
-            self.target_position = self.random_track_f(self.time)
-            self.slider_value = self.target_position/TrackHalfLength  # Assign target position to slider to display it
+        if self.controller_name == 'manual-stabilization':
+            self.target_position = 0.0  # In this case target position is not used.
+            # This just fill the corresponding column in history with zeros
         else:
-            if self.controller_name == 'manual-stabilization':
-                self.target_position = 0.0  # In this case target position is not used.
-                # This just fill the corresponding column in history with zeros
+            if self.use_pregenerated_target_position:
+
+                # If time exceeds the max time for which target position was defined
+                if self.time >= self.length_of_experiment:
+                    return
+
+                self.target_position = self.random_track_f(self.time)
+                if self.slider:
+                    self.slider.value = self.target_position/TrackHalfLength  # Assign target position to slider to display it
             else:
-                self.target_position = self.slider_value * TrackHalfLength  # Get target position from slider
+                if self.slider:
+                    self.target_position = self.slider.value * TrackHalfLength  # Get target position from slider
+                else:
+                    self.target_position = 0.0
 
     def update_target_equilibrium(self):
         if self.time_last_target_equilibrium_change is None:
@@ -487,7 +449,12 @@ class CartPole(EnvironmentBatched):
         """
 
         self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.s[POSITION_IDX], self.s[POSITIOND_IDX] = \
-            self.cpe.cartpole_integration(self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD, self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.positionDD, self.dt_simulation, u=self.u)
+            self.cpe.cartpole_integration(
+                self.s[ANGLE_IDX], self.s[ANGLED_IDX], self.angleDD,
+                self.s[POSITION_IDX], self.s[POSITIOND_IDX], self.positionDD,
+                self.dt_simulation, u=self.u,
+                k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric, L=L
+            )
 
 
     def edge_bounce(self):
@@ -515,39 +482,55 @@ class CartPole(EnvironmentBatched):
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                self.Q_applied = self.slider_value
+                if self.slider:
+                    self.Q_calculated = self.slider.value
+                else:
+                    raise AttributeError("Manual stabilization mode activated and no slider object created.")
+                self.Q_update_time = 0.0
             else:  # in this case slider gives a target position, lqr regulator
+                # self.Q_ccrc = add_control_noise(self.Q_calculated, rng,
+                #                                 controlDisturbance_mode, controlDisturbance, controlBias)
+                self.Q_ccrc = self.Q_applied
                 update_start = timeit.default_timer()
+                self.L_for_controller = float(self.controller_informer.get_parameters(
+                    L, float(self.L_updater.init_value), self.time
+                ))
+                self.m_pole_for_controller = float(self.controller_informer.get_parameters(
+                    m_pole, float(self.m_pole_updater.init_value), self.time
+                ))
                 self.Q_calculated = float(self.controller.step(
                     self.s_with_noise_and_latency,
                     self.time,
-                    {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium, 'L': float(self.L_for_controller)}
+                    {
+                        "target_position": self.target_position,
+                        "target_equilibrium": self.target_equilibrium,
+                        'L': self.L_for_controller,
+                        'm_pole': self.m_pole_for_controller,
+                        "Q_ccrc": self.Q_ccrc,
+                    }
                 ))
                 self.Q_update_time = timeit.default_timer()-update_start
-                self.Q_applied = add_control_noise(self.Q_calculated)
+
+                self.Q_applied = add_control_noise(self.Q_calculated, rng,
+                                                   controlDisturbance_mode, controlDisturbance, controlBias)
 
             self.Q = self.Q_applied
             self.dt_controller_steps_counter = 0
 
     def update_parameters(self):
+
         global L
-        if self.time_last_L_change is None:
-            self.time_last_L_change = self.time
-        else:
-            if (self.time-self.time_last_L_change) > self.change_L_every_x_second:
-                self.time_last_L_change = self.time
-                if self.L_change_mode == 'uniform':
-                    L[...] = np.random.uniform(*self.L_range)
-                elif self.L_change_mode == 'step':
-                    if L + self.L_step > self.L_range[1] or L + self.L_step < self.L_range[0]:
-                        self.L_step *= -1.0
-                    L[...] = L + self.L_step
+        new_L = self.L_updater.update_parameter(L, self.time)
+        L[...] = new_L
 
-            else:
-                L[...] = L * self.L_discount_factor
+        global m_pole
+        new_m_pole = self.m_pole_updater.update_parameter(m_pole, self.time)
+        m_pole[...] = new_m_pole
 
-
-
+        # global L, m_pole
+        # new_L, new_m_pole = self.joint_updater.update_parameter(self.time)
+        # L[...] = new_L
+        # m_pole[...] = new_m_pole
     # endregion
 
     # region 2. Methods related to experiment history as a whole: saving, loading, plotting, resetting
@@ -580,69 +563,6 @@ class CartPole(EnvironmentBatched):
         data = load_csv_recording(file_paths[0])
         return data, file_paths[0]
 
-    # Method plotting the dynamic evolution over time of the CartPole
-    # It should be called after an experiment and only if experiment data was saved
-    def summary_plots(self, adaptive_mode=False, title=''):
-
-        if adaptive_mode:
-            number_of_subplots = 5
-            fontsize_labels = 10
-            fontsize_ticks = 10
-        else:
-            number_of_subplots = 4
-            fontsize_labels = 14
-            fontsize_ticks = 12
-
-        fig, axs = plt.subplots(number_of_subplots, 1, figsize=(16, 9), sharex=True)  # share x axis so zoom zooms all plots
-        fig.suptitle(title, fontsize=16)
-
-        # Plot angle error
-        axs[0].set_ylabel("Angle (deg)", fontsize=fontsize_labels)
-        axs[0].plot(np.array(self.dict_history['time']), np.array(self.dict_history['angle']) * 180.0 / np.pi,
-                    'b', markersize=12, label='Ground Truth')
-        axs[0].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
-
-        # Plot position
-        axs[1].set_ylabel("position (m)", fontsize=fontsize_labels)
-        axs[1].plot(self.dict_history['time'], self.dict_history['position'], 'g', markersize=12,
-                    label='Ground Truth')
-        axs[1].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
-
-        # Plot motor input command
-        try:
-            axs[2].set_ylabel("motor (N)", fontsize=fontsize_labels)
-            axs[2].plot(self.dict_history['time'], self.dict_history['u'], 'r', markersize=12,
-                        label='motor')
-            axs[2].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
-            axs[2].set_ylim(bottom=-1.05*u_max, top=1.05*u_max)
-        except KeyError:
-            axs[2].set_ylabel("motor normalized (-)", fontsize=fontsize_labels)
-            axs[2].plot(self.dict_history['time'], self.dict_history['Q'], 'r', markersize=12,
-                        label='motor')
-            axs[2].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
-            axs[2].set_ylim(bottom=-1.05, top=1.05)
-
-        # Plot target position
-        axs[3].set_ylabel("position target (m)", fontsize=fontsize_labels)
-        axs[3].plot(self.dict_history['time'], self.dict_history['target_position'], 'k')
-        axs[3].tick_params(axis='both', which='major', labelsize=fontsize_ticks)
-
-
-
-        if adaptive_mode:
-            ...
-            axs[4].set_xlabel('Time (s)', fontsize=fontsize_labels)
-        else:
-            axs[3].set_xlabel('Time (s)', fontsize=fontsize_labels)
-
-        fig.align_ylabels()
-
-        plt.show()
-
-        return fig, axs
-
-    # endregion
-
     # region 3. Methods for generating random target position for generation of random experiment
 
     # Prepare CartPole Instance to perform an experiment with random target position trace
@@ -669,15 +589,6 @@ class CartPole(EnvironmentBatched):
                                          target_equilibrium=None,
                                          keep_target_equilibrium_x_seconds_up=np.inf,
                                          keep_target_equilibrium_x_seconds_down=np.inf,
-
-                                         L_initial=None,
-                                         change_L_every_x_seconds=None,
-                                         L_discount_factor=None,
-                                         L_range=None,
-                                         L_informed_controller=None,
-                                         L_change_mode=None,
-                                         L_step=None,
-
                                          ):
 
         # Set time scales:
@@ -703,20 +614,6 @@ class CartPole(EnvironmentBatched):
         if target_equilibrium is not None: self.target_equilibrium = target_equilibrium
         if keep_target_equilibrium_x_seconds_up is not None: self.keep_target_equilibrium_x_seconds_up = keep_target_equilibrium_x_seconds_up
         if keep_target_equilibrium_x_seconds_down is not None: self.keep_target_equilibrium_x_seconds_down = keep_target_equilibrium_x_seconds_down
-        if L_initial is not None: self.L_initial = L_initial
-        if change_L_every_x_seconds is not None: self.change_L_every_x_second = change_L_every_x_seconds
-        if L_discount_factor is not None: self.L_discount_factor = L_discount_factor
-        if L_range is not None: self.L_range = L_range
-        if L_informed_controller is not None: self.L_informed_controller = L_informed_controller
-        if L_change_mode is not None: self.L_change_mode = L_change_mode
-        if L_step is not None: self.L_step = self.L_step
-
-        global L
-
-        if self.L_informed_controller:
-            self.L_for_controller = L
-        else:
-            self.L_for_controller = float(self.L_initial)
 
         self.random_track_f = Generate_Random_Trace_Function(
 
@@ -745,7 +642,7 @@ class CartPole(EnvironmentBatched):
         # Reset variables
         self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, target_position=self.target_position)
 
-        L[...] = float(self.L_initial)
+        L[...] = float(self.L_updater.init_value)
 
     # Runs a random experiment with parameters set with setup_cartpole_random_experiment
     # And saves the experiment recording to csv file
@@ -816,7 +713,7 @@ class CartPole(EnvironmentBatched):
         if save_mode == 'offline':
             self.save_history_csv(csv_name=csv, mode='save offline')
         
-        if show_summary_plots: self.summary_plots()
+        if show_summary_plots: summary_plots(self.dict_history)
 
         mean_abs_dist = np.mean([np.abs(self.dict_history["position"][i] - self.dict_history["target_position"][i]) for i in range(len(self.dict_history["target_position"]))])
         mean_abs_angle = np.mean(np.abs(self.dict_history["angle"])) * 180.0 / np.pi
@@ -847,12 +744,17 @@ class CartPole(EnvironmentBatched):
         
         if self.controller_name != 'manual-stabilization':
             Controller: "type[template_controller]" = import_controller_by_name(self.controller_name)
+            self.L_for_controller = float(self.controller_informer.get_parameters(
+                L, float(self.L_updater.init_value), self.time
+            ))
             self.controller = Controller(
                 environment_name="CartPole",
                 initial_environment_attributes={
                     "target_position": self.target_position,
                     "target_equilibrium": self.target_equilibrium,
-                    "L": float(self.L_for_controller)
+                    "m_pole": self.m_pole_for_controller,
+                    "L": self.L_for_controller,
+                    "Q_ccrc": self.Q_ccrc,
                 },
                 control_limits=(self.action_space.low, self.action_space.high),
             )
@@ -868,10 +770,11 @@ class CartPole(EnvironmentBatched):
             
                 
         # Set the maximal allowed value of the slider - relevant only for GUI
-        if self.controller_name == 'manual-stabilization':
-            self.Slider_Arrow.set_positions((0, 0), (0, 0))
-        else:
-            self.Slider_Bar.set_width(0.0)
+        if self.slider is not None:
+            if self.controller_name == 'manual-stabilization':
+                self.slider.Slider_Arrow.set_positions((0, 0), (0, 0))
+            else:
+                self.slider.Slider_Bar.set_width(0.0)
 
         # TODO: optimally reset_dict_history would be False and the controller could be switched during experiment
         #   The False option is not implemented yet. So it is possible to switch controller only when the experiment is not running.
@@ -910,7 +813,9 @@ class CartPole(EnvironmentBatched):
             self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
             self.target_position = 0.0
-            self.slider_value = 0.0
+
+            if self.slider:
+                self.slider.value = 0.0
 
         elif reset_mode == 1:  # You may change this but be careful with other user. Better use 3
             # You can change here with which initial parameters you wish to start the simulation
@@ -923,7 +828,9 @@ class CartPole(EnvironmentBatched):
             self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
             self.target_position = 0.0
-            self.slider_value = 0.0
+
+            if self.slider:
+                self.slider.value = 0.0
 
         elif reset_mode == 2:  # Don't change it
             if (s is not None) and (target_position is not None):
@@ -932,22 +839,36 @@ class CartPole(EnvironmentBatched):
                 self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
                 self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
-                self.slider = self.target_position = target_position
+                if self.slider:
+                    self.slider.value = self.target_position = target_position
 
             else:
                 raise ValueError('s, Q or target position not provided for initial state')
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                self.Q_applied = self.slider_value
+                if self.slider:
+                    self.Q_calculated = self.slider.value
+                else:
+                    self.Q_calculated = 0.0
             else:  # in this case slider gives a target position, lqr regulator
+                self.Q_ccrc = 0.0
+                self.L_for_controller = float(self.controller_informer.get_parameters(
+                    L, float(self.L_updater.init_value), self.time
+                ))
                 self.Q_calculated = float(self.controller.step(
                     self.s,
                     self.time,
-                    {"target_position": self.target_position, "target_equilibrium": self.target_equilibrium, "L": float(self.L_for_controller)}
+                    {
+                        "target_position": self.target_position,
+                        "target_equilibrium": self.target_equilibrium,
+                        "L": self.L_for_controller,
+                        "Q_ccrc": self.Q_ccrc,
+                    }
                 ))
-                self.Q_applied = add_control_noise(self.Q_calculated)
 
+            self.Q_applied = add_control_noise(self.Q_calculated, rng,
+                                               controlDisturbance_mode, controlDisturbance, controlBias)
 
             self.Q = self.Q_applied
             self.u = self.cpe.Q2u(self.Q)  # Calculate CURRENT control input
@@ -1032,354 +953,9 @@ class CartPole(EnvironmentBatched):
 
     # endregion
 
-    # region 5. Methods needed to display CartPole in GUI
-    """
-    This section contains methods related to displaying CartPole in GUI of the simulator.
-    One could think of moving these function outside of CartPole class and connecting them rather more tightly
-    with GUI of the simulator.
-    We leave them however as a part of CartPole class as they rely on variables of the CartPole.
-    """
-
-    # This method initializes CartPole elements to be plotted in CartPole GUI
-    def init_graphical_elements(self):
-
-        self.CartLength = 10.0
-        self.WheelRadius = 0.5
-        self.WheelToMiddle = 4.0
-        self.y_plane = 0.0
-        self.y_wheel = self.y_plane + self.WheelRadius
-
-        self.mast_height_maximal_drawing_units = 10.0
-        self.max_height_maximal_physical_units = np.max([self.L_initial, *self.L_range])
-        self.mast_height_current_drawing_units = self.mast_height_maximal_drawing_units * (float(L) / self.max_height_maximal_physical_units)
-
-        self.zero_angle_tick_height_current_drawing_units = 1.0
-
-        self.MastThickness = 0.05
-        self.ZeroAngleTickThickness = 0.01
-        self.TrackHalfLengthGraphics = 50.0  # Full Length of the track
-
-        self.physical_to_graphics = (self.TrackHalfLengthGraphics-self.WheelToMiddle)/TrackHalfLength  # TrackHalfLength is the effective length of track
-        self.graphics_to_physical = 1.0/self.physical_to_graphics
-
-        self.y_acceleration_arrow = 1.5 * self.WheelRadius
-        self.scaling_dx_acceleration_arrow = 20.0
-        self.x_acceleration_arrow = (
-                                   self.s[POSITION_IDX]*self.physical_to_graphics +
-                                   # np.sign(self.Q) * (self.CartLength / 2.0) +
-                                   self.scaling_dx_acceleration_arrow * self.Q
-        )
-
-        # Initialize elements of the drawing
-        self.Mast = FancyBboxPatch(xy=(self.s[POSITION_IDX]*self.physical_to_graphics - (self.MastThickness / 2.0), 1.25 * self.WheelRadius),
-                                   width=self.MastThickness,
-                                   height=self.mast_height_current_drawing_units,
-                                   fc='g')
-
-        self.ZeroAngleTick = FancyBboxPatch(xy=(self.s[POSITION_IDX]*self.physical_to_graphics - (self.ZeroAngleTickThickness / 2.0), 1.2 * self.mast_height_current_drawing_units),
-                                   width=self.ZeroAngleTickThickness,
-                                   height=self.zero_angle_tick_height_current_drawing_units,
-                                   fc='yellow')
-
-        self.Chassis = FancyBboxPatch((self.s[POSITION_IDX]*self.physical_to_graphics - (self.CartLength / 2.0), self.WheelRadius),
-                                      self.CartLength,
-                                      1 * self.WheelRadius,
-                                      fc='r')
-
-        self.WheelLeft = Circle((self.s[POSITION_IDX]*self.physical_to_graphics - self.WheelToMiddle, self.y_wheel),
-                                radius=self.WheelRadius,
-                                fc='y',
-                                ec='k',
-                                lw=5)
-
-        self.WheelRight = Circle((self.s[POSITION_IDX]*self.physical_to_graphics + self.WheelToMiddle, self.y_wheel),
-                                 radius=self.WheelRadius,
-                                 fc='y',
-                                 ec='k',
-                                 lw=5)
-
-        self.Acceleration_Arrow = FancyArrowPatch((self.s[POSITION_IDX]*self.physical_to_graphics, self.y_acceleration_arrow),
-                                                  (self.x_acceleration_arrow, self.y_acceleration_arrow),
-                                                  arrowstyle='simple', mutation_scale=10,
-                                                  facecolor='gold', edgecolor='orange')
-
-        self.Slider_Arrow = FancyArrowPatch((self.slider_value, 0), (self.slider_value, 0),
-                                            arrowstyle='fancy', mutation_scale=50)
-        self.Slider_Bar = Rectangle((0.0, 0.0), self.slider_value, 1.0)
-        self.t2 = transforms.Affine2D().rotate(0.0)  # An abstract container for the transform rotating the mast
-        self.t_zero_angle = transforms.Affine2D().rotate(0.0)  # An abstract container for the transform rotating the mast
-
-    # This method accepts the mouse position and updated the slider value accordingly
-    # The mouse position has to be captured by a function not included in this class
-    def update_slider(self, mouse_position):
-        # The if statement formulates a saturation condition
-
-        if mouse_position > self.slider_max:
-            self.slider_value = self.slider_max
-        elif mouse_position < -self.slider_max:
-            self.slider_value = -self.slider_max
-        else:
-            self.slider_value = mouse_position
-
-    # This method draws elements and set properties of the CartPole figure
-    # which do not change at every frame of the animation
-    def draw_constant_elements(self, fig, AxCart, AxSlider):
-
-        ## Upper chart with Cart Picture
-        # Set x and y limits
-        AxCart.set_xlim((-self.TrackHalfLengthGraphics * 1.1, self.TrackHalfLengthGraphics * 1.1))
-        AxCart.set_ylim((-1.0, 15.0))
-        # Remove ticks on the y-axes
-        AxCart.yaxis.set_major_locator(plt.NullLocator())  # NullLocator is used to disable ticks on the Figures
-
-        locs = [-50.0, -25.0, - 0.0, 25.0, 50.0]
-        labels = [str(np.around(np.array(x*self.graphics_to_physical), 3)) for x in locs]
-        AxCart.xaxis.set_major_locator(plt.FixedLocator(locs))
-        AxCart.xaxis.set_major_formatter(plt.FixedFormatter(labels))
-
-        # Draw track
-        Floor = Rectangle((-self.TrackHalfLengthGraphics, -1.0),
-                          2 * self.TrackHalfLengthGraphics,
-                          1.0,
-                          fc='brown')
-        AxCart.add_patch(Floor)
-
-        # Draw an invisible point at constant position
-        # Thanks to it the axes is drawn high enough for the mast
-        InvisiblePointUp = Rectangle((0, self.mast_height_maximal_drawing_units + 2.0),
-                                     self.MastThickness,
-                                     0.0001,
-                                     fc='w',
-                                     ec='w')
-
-        AxCart.add_patch(InvisiblePointUp)
-
-        if self.show_hanging_pole:
-            InvisiblePointDown = Rectangle((0, -self.mast_height_maximal_drawing_units - 2.0),
-                                         self.MastThickness,
-                                         0.0001,
-                                         fc='w',
-                                         ec='w')
-
-            AxCart.add_patch(InvisiblePointDown)
-
-        # Apply scaling
-        AxCart.axis('scaled')
-
-        ## Lower Chart with Slider
-        # Set y limits
-        AxSlider.set(xlim=(-1.1 * self.slider_max, self.slider_max * 1.1))
-        # Remove ticks on the y-axes
-        AxSlider.yaxis.set_major_locator(plt.NullLocator())  # NullLocator is used to disable ticks on the Figures
-
-        if self.controller_name == 'manual-stabilization':
-            pass
-        else:
-            locs = np.array([-50.0, -37.5, -25.0, -12.5, - 0.0, 12.5, 25.0, 37.5, 50.0])/50.0
-            labels = [str(np.around(np.array(x * TrackHalfLength), 3)) for x in locs]
-            AxSlider.xaxis.set_major_locator(plt.FixedLocator(locs))
-            AxSlider.xaxis.set_major_formatter(plt.FixedFormatter(labels))
-
-        # Apply scaling
-        AxSlider.set_aspect("auto")
-
-        return fig, AxCart, AxSlider
-
-    # This method updates the elements of the Cart Figure which change at every frame.
-    # Not that these elements are not ploted directly by this method
-    # but rather returned as objects which can be used by another function
-    # e.g. animation function from matplotlib package
-    def update_drawing(self):
-
-        self.x_acceleration_arrow = (
-                                   self.s[POSITION_IDX]*self.physical_to_graphics +
-                                   # np.sign(self.Q) * (self.CartLength / 2.0) +
-                                   self.scaling_dx_acceleration_arrow * self.Q
-        )
-
-        self.Acceleration_Arrow.set_positions((self.s[POSITION_IDX]*self.physical_to_graphics, self.y_acceleration_arrow),
-                                             (self.x_acceleration_arrow, self.y_acceleration_arrow))
-
-        # Draw mast
-        mast_position = (self.s[POSITION_IDX]*self.physical_to_graphics - (self.MastThickness / 2.0))
-        self.Mast.set_x(mast_position)
-        self.Mast.set_height(self.mast_height_maximal_drawing_units * (float(L) / self.max_height_maximal_physical_units))
-
-        zero_tick_position = (self.s[POSITION_IDX]*self.physical_to_graphics - (self.ZeroAngleTickThickness / 2.0))
-        self.ZeroAngleTick.set_x(zero_tick_position)
-
-        # Draw rotated mast
-        t21 = transforms.Affine2D().translate(-mast_position, -1.25 * self.WheelRadius)
-        if ANGLE_CONVENTION == 'CLOCK-NEG':
-            t22 = transforms.Affine2D().rotate(self.s[ANGLE_IDX])
-        elif ANGLE_CONVENTION == 'CLOCK-POS':
-            t22 = transforms.Affine2D().rotate(-self.s[ANGLE_IDX])
-        else:
-            raise ValueError('Unknown angle convention')
-        t23 = transforms.Affine2D().translate(mast_position, 1.25 * self.WheelRadius)
-        self.t2 = t21 + t22 + t23
-
-        t21 = transforms.Affine2D().translate(-zero_tick_position, 0.0)
-        if ANGLE_CONVENTION == 'CLOCK-NEG':
-            t22 = transforms.Affine2D().rotate(-self.zero_angle_shift)
-        elif ANGLE_CONVENTION == 'CLOCK-POS':
-            t22 = transforms.Affine2D().rotate(self.zero_angle_shift)
-        else:
-            raise ValueError('Unknown angle convention')
-        t23 = transforms.Affine2D().translate(zero_tick_position, 0.0)
-        self.t_zero_angle = t21 + t22 + t23
-
-        # Draw Chassis
-        self.Chassis.set_x(self.s[POSITION_IDX]*self.physical_to_graphics - (self.CartLength / 2.0))
-        # Draw Wheels
-        self.WheelLeft.center = (self.s[POSITION_IDX]*self.physical_to_graphics - self.WheelToMiddle, self.y_wheel)
-        self.WheelRight.center = (self.s[POSITION_IDX]*self.physical_to_graphics + self.WheelToMiddle, self.y_wheel)
-        # Draw SLider
-        if self.controller_name == 'manual-stabilization':
-            self.Slider_Bar.set_width(self.slider_value)
-        else:
-            self.Slider_Arrow.set_positions((self.slider_value, 0), (self.slider_value, 1.0))
-
-        return self.Mast, self.t2, self.Chassis, self.WheelRight, self.WheelLeft,\
-               self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow, self.ZeroAngleTick, self.t_zero_angle
-
-    # A function redrawing the changing elements of the Figure
-    def run_animation(self, fig):
-        def init():
-            # Adding variable elements to the Figure
-            fig.AxCart.add_patch(self.Mast)
-            fig.AxCart.add_patch(self.Chassis)
-            fig.AxCart.add_patch(self.WheelLeft)
-            fig.AxCart.add_patch(self.WheelRight)
-            fig.AxCart.add_patch(self.Acceleration_Arrow)
-            fig.AxCart.add_patch(self.ZeroAngleTick)
-            fig.AxSlider.add_patch(self.Slider_Bar)
-            fig.AxSlider.add_patch(self.Slider_Arrow)
-            return self.Mast, self.Chassis, self.WheelLeft, self.WheelRight,\
-                   self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow, self.ZeroAngleTick
-
-        def animationManage(i):
-            # Updating variable elements
-            self.update_drawing()
-            # Special care has to be taken of the mast rotation
-            self.t2 = self.t2 + fig.AxCart.transData
-            self.t_zero_angle = self.t_zero_angle + fig.AxCart.transData
-            self.Mast.set_transform(self.t2)
-            self.ZeroAngleTick.set_transform(self.t_zero_angle)
-            return self.Mast, self.Chassis, self.WheelLeft, self.WheelRight,\
-                   self.Slider_Bar, self.Slider_Arrow, self.Acceleration_Arrow, self.ZeroAngleTick
-
-        # Initialize animation object
-        anim = animation.FuncAnimation(fig, animationManage,
-                                       init_func=init,
-                                       frames=300,
-                                       # fargs=(CartPoleInstance,), # It was used when this function was a part of GUI class. Now left as an example how to add arguments to FuncAnimation
-                                       interval=10,
-                                       blit=True,
-                                       repeat=True)
-        return anim
-
-    # endregion
+    @staticmethod
+    def current_L():
+        return L
 
 
-# Generates a random target position
-# in a form of a function interpolating between turning points
-def Generate_Random_Trace_Function(
 
-        length_of_experiment,
-        rtf_rng,
-
-        track_relative_complexity,
-        interpolation_type,
-        turning_points,
-        turning_points_period,
-
-        start_random_target_position_at,
-        end_random_target_position_at,
-
-        used_track_fraction,
-):
-    if (turning_points is None) or (turning_points == []):
-
-        number_of_turning_points = int(np.floor(length_of_experiment * track_relative_complexity))
-
-        y = rtf_rng.uniform(-1.0, 1.0, number_of_turning_points)
-        y = y * used_track_fraction * TrackHalfLength
-
-        if number_of_turning_points == 0:
-            y = np.append(y, 0.0)
-            y = np.append(y, 0.0)
-        elif number_of_turning_points == 1:
-            if start_random_target_position_at is not None:
-                y[0] = start_random_target_position_at
-            elif end_random_target_position_at is not None:
-                y[0] = end_random_target_position_at
-            else:
-                pass
-            y = np.append(y, y[0])
-        else:
-            if start_random_target_position_at is not None:
-                y[0] = start_random_target_position_at
-            if end_random_target_position_at is not None:
-                y[-1] = end_random_target_position_at
-
-    else:
-        number_of_turning_points = len(turning_points)
-        if number_of_turning_points == 0:
-            raise ValueError('You should not be here!')
-        elif number_of_turning_points == 1:
-            y = np.array([turning_points[0], turning_points[0]])
-        else:
-            y = np.array(turning_points)
-
-    random_samples = number_of_turning_points - 2 if number_of_turning_points - 2 >= 0 else 0
-
-    if turning_points_period == 'random':
-        t_init = np.sort(rtf_rng.uniform(0.0, 1.0, random_samples))
-        t_init = np.insert(t_init, 0, 0.0)
-        t_init = np.append(t_init, 1.0)
-    elif turning_points_period == 'regular':
-        t_init = np.linspace(0, 1.0, num=random_samples + 2, endpoint=True)
-    else:
-        raise NotImplementedError('There is no mode corresponding to this value of turning_points_period variable')
-
-    t_init = t_init * length_of_experiment
-
-    # Try algorithm setting derivative to 0 a each point
-    if interpolation_type == '0-derivative-smooth':
-        yder = [[y[i], 0] for i in range(len(y))]
-        random_track_f = BPoly.from_derivatives(t_init, yder, extrapolate='periodic')
-    elif interpolation_type == 'linear':
-        random_track_f = interp1d(t_init, y, kind='linear', fill_value='extrapolate')
-    elif interpolation_type == 'previous':
-        random_track_f = interp1d(t_init, y, kind='previous', fill_value='extrapolate')
-    else:
-        raise ValueError('Unknown interpolation type.')
-
-    # Truncate the target position to be not grater than 80% of track length
-    def random_track_f_truncated(time):
-
-        target_position = random_track_f(time)
-        target_position = np.clip(target_position, -used_track_fraction * TrackHalfLength, used_track_fraction * TrackHalfLength)
-
-        return target_position
-
-    return random_track_f_truncated
-
-def add_control_noise(Q_calculated):
-
-    if controlDisturbance_mode == 'OFF':
-        Q_applied = Q_calculated
-    elif controlDisturbance_mode == 'additive':
-        Q_applied = Q_calculated + controlDisturbance * rng.standard_normal(
-            size=np.shape(Q_calculated), dtype=np.float32) + controlBias
-    elif controlDisturbance_mode == 'truncnorm':
-        scale = controlDisturbance
-        loc = Q_calculated + controlBias
-        Q_applied = truncnorm.rvs((-1.0 - loc) / scale, (1.0 - loc) / scale, loc=loc,
-                                  scale=scale, random_state=rng)
-        Q_applied = np.cast[np.float32](Q_applied)
-    else:
-        raise ValueError('controlDisturbance_mode with value {} not valid'.format(controlDisturbance_mode))
-
-    return Q_applied
