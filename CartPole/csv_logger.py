@@ -147,6 +147,7 @@ def create_csv_header(cps, length_of_experiment):
         parameter = getattr(cps.cpe.params, param_name)
         if isinstance(parameter, dict):
             dict_string = ' '.join(f"{key}: {value}; " for key, value in parameter.items())
+            dict_string = dict_string.replace(',', ';')
             header.append(param_name + ': ' + str(dict_string))
         else:
             if param_name != 'lib':

@@ -55,7 +55,7 @@ class CartPole_GuiActions:
         speedup_init = config['gui_settings']['speedup_init']
 
         self.track_relative_complexity_init = config['random_trace_generation']['track_relative_complexity_init']
-        self.length_of_experiment_init = config['random_trace_generation']['length_of_experiment_init']
+        self.length_of_experiment_init = float(config['random_trace_generation']['length_of_experiment_init'])
         self.interpolation_type_init = config['random_trace_generation']['interpolation_type_init']
         self.turning_points_period_init = config['random_trace_generation']['turning_points_period_init']
         self.start_random_target_position_at_init = config['random_trace_generation']['start_random_target_position_at_init']
@@ -138,7 +138,7 @@ class CartPole_GuiActions:
         self.noise = 'OFF'
         self.CartPoleInstance.NoiseAdderInstance.noise_mode = self.noise
 
-        self.zero_angle_shift_handler = ZeroAngleShiftHandler(self.CartPoleInstance)
+        self.vertical_angle_offset_handler = ZeroAngleShiftHandler(self.CartPoleInstance)
 
         # region - Matplotlib figures (CartPole drawing and Slider)
         # Draw Figure
@@ -212,7 +212,7 @@ class CartPole_GuiActions:
                 if (
                         self.CartPoleInstance.use_pregenerated_target_position
                         and
-                        (self.CartPoleInstance.time >= self.CartPoleInstance.t_max_pre)
+                        (self.CartPoleInstance.time >= self.CartPoleInstance.length_of_experiment)
                 ):
                     self.terminate_experiment_or_replay_thread = True
 
@@ -962,9 +962,9 @@ class ZeroAngleShiftHandler:
 
     def on_user_input_finished(self):
         # Now process the input and update the internal value
-        self.update_zero_angle_shift()
+        self.update_vertical_angle_offset()
 
-    def update_zero_angle_shift(self):
+    def update_vertical_angle_offset(self):
         # Get the value from the textbox
         try:
             value = np.deg2rad(float(self.textbox.text()))
@@ -972,5 +972,5 @@ class ZeroAngleShiftHandler:
             # Handle invalid input (non-float) by ignoring it or resetting the value
             return
 
-        # Update the CartPoleInstance's zero_angle_shift
-        self.cart_pole_instance.zero_angle_shift = value
+        # Update the CartPoleInstance's vertical_angle_offset
+        self.cart_pole_instance.vertical_angle_offset = value

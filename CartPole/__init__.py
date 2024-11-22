@@ -42,6 +42,7 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 from CartPole.state_utilities import create_cartpole_state
 from CartPole.summary_plots import summary_plots
+from CartPole.controller_informer import ControllerInformer
 
 s0 = create_cartpole_state()
 
@@ -60,6 +61,8 @@ from CartPole.cartpole_equations import CartPoleEquations
 from CartPole.csv_logger import create_csv_file_name, create_csv_title, create_csv_header, create_csv_file, save_data_to_csv_file
 
 from SI_Toolkit.Functions.FunctionalDict import FunctionalDict, HistoryClass
+
+from CartPole.parameter_updater import ParameterUpdater, ParameterJointUpdater
 
 
 # endregion
@@ -114,33 +117,30 @@ class CartPole(EnvironmentBatched):
         state_high = [-v for v in state_low]
         self.observation_space = MockSpace(state_low, state_high, (6,), np.float32)
 
-        self.L_initial = float(L)
+        self.L_updater = ParameterUpdater(self.config['L'])
+        L[...] =  float(self.L_updater.init_value)
 
-        self.change_L_every_x_second = np.inf
-        self.time_last_L_change = None
-        self.L_discount_factor = 1.0
-        self.L_range = [0.03, 0.2]
-        self.L_informed_controller = True
-        if self.L_informed_controller:
-            self.L_for_controller = L
-        else:
-            self.L_for_controller = float(self.L_initial)
-        self.L_change_mode = 'step'
-        self.L_step = 0.02
+        self.m_pole_updater = ParameterUpdater(self.config['m_pole'])
+        m_pole[...] = float(self.m_pole_updater.init_value)
+
+        self.joint_updater = ParameterJointUpdater(self.config['L'], self.config['m_pole'], mode=2)
+
+        self.controller_informer = ControllerInformer(self.config['inform_controller_about_parameters_change'])
+        self.L_for_controller = float(self.controller_informer.get_parameters(
+            L, float(self.L_updater.init_value), self.time
+        ))
+        self.m_pole_for_controller = float(self.controller_informer.get_parameters(
+            m_pole, float(self.m_pole_updater.init_value), self.time
+        ))
 
         self.latency = self.config["latency"]
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
         self.NoiseAdderInstance = NoiseAdder()
         self.s_with_noise_and_latency = np.copy(self.s)
-        self.zero_angle_shift_init = np.deg2rad(self.config['zero_angle_shift']['init'])
-        self.zero_angle_shift = self.zero_angle_shift_init
-        self.zero_angle_shift_mode = self.config['zero_angle_shift']['mode']
-        self.zero_angle_shift_increment = np.deg2rad(self.config['zero_angle_shift']['increment'])
 
-        self.zero_angle_shift_every = 4.0  # seconds
-        self.zero_angle_shift_length = 1.0  # seconds
-        self.time_of_last_zero_angle_shift = 0.0
-
+        self.vertical_angle_offset_updater = ParameterUpdater(self.config['vertical_angle_offset'])
+        self.vertical_angle_offset_init = np.deg2rad(self.config['vertical_angle_offset']['init_value'])
+        self.vertical_angle_offset = self.vertical_angle_offset_init
 
         # region Time scales for simulation step, controller update and saving data
         # See last paragraph of "Time scales" section for explanations
@@ -242,6 +242,16 @@ class CartPole(EnvironmentBatched):
                 'target_equilibrium': lambda: self.target_equilibrium,
 
                 'L': lambda: float(L),
+                'L_for_controller': lambda: self.controller_informer.value_to_return,
+
+                'm_pole': lambda: float(m_pole),
+                'm_pole_for_controller': lambda: self.controller_informer.value_to_return,
+
+
+
+                'vertical_angle_offset': lambda: float(self.vertical_angle_offset),
+                'vertical_angle_offset_cos': lambda: float(np.cos(self.vertical_angle_offset)),
+                'vertical_angle_offset_sin': lambda: float(np.sin(self.vertical_angle_offset)),
 
                 'Q_update_time': lambda: self.Q_update_time,
 
@@ -327,37 +337,21 @@ class CartPole(EnvironmentBatched):
         self.LatencyAdderInstance.add_current_state_to_latency_buffer(self.s)
         s_delayed = self.LatencyAdderInstance.get_interpolated_delayed_state()
         self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
-        self.s_with_noise_and_latency = self.update_zero_angle_shift(self.s_with_noise_and_latency)
+        self.s_with_noise_and_latency = self.update_vertical_angle_offset(self.s_with_noise_and_latency)
 
     def cartpole_ode(self):
-        self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L))
+        self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L), m_pole=float(m_pole))
 
     def Q2u(self):
         self.u = self.cpe.Q2u(self.Q)
 
-    def update_zero_angle_shift(self, s):
-        if self.zero_angle_shift_mode == 'constant':
-            da = 0.0
-        elif self.zero_angle_shift_mode == 'random walk':
-            da  = (1.0 if random() < 0.5 else -1.0)*self.zero_angle_shift_increment
-        elif self.zero_angle_shift_mode == 'increase':
-            self.zero_angle_shift_increment *= 1.000
-            da = self.zero_angle_shift_increment
-        elif self.zero_angle_shift_mode == 'random':
-            if self.time-self.time_of_last_zero_angle_shift > self.zero_angle_shift_every:
-                if self.time-self.time_of_last_zero_angle_shift > self.zero_angle_shift_every+self.zero_angle_shift_length:
-                    self.time_of_last_zero_angle_shift = self.time
-                    self.zero_angle_shift = 0.0
-                else:
-                    if self.zero_angle_shift == 0.0:
-                        self.zero_angle_shift = np.random.uniform(-np.pi, np.pi)
-        else:
-            raise ValueError('zero_angle_shift_mode with value {} not valid'.format(self.zero_angle_shift_mode))
+    def update_vertical_angle_offset(self, s):
+        self.vertical_angle_offset = self.vertical_angle_offset_updater.update_parameter(
+            self.vertical_angle_offset,
+            self.time,
+        )
 
-        if not self.zero_angle_shift_mode == 'random':
-            self.zero_angle_shift += da
-
-        s[ANGLE_IDX] = wrap_angle_rad(s[ANGLE_IDX]+self.zero_angle_shift)
+        s[ANGLE_IDX] = wrap_angle_rad(s[ANGLE_IDX]+self.vertical_angle_offset)
         s[ANGLE_COS_IDX] = np.cos(s[ANGLE_IDX])
         s[ANGLE_SIN_IDX] = np.sin(s[ANGLE_IDX])
 
@@ -378,7 +372,10 @@ class CartPole(EnvironmentBatched):
                 if self.slider:
                     self.slider.value = self.target_position/TrackHalfLength  # Assign target position to slider to display it
             else:
-                self.target_position = self.slider.value * TrackHalfLength  # Get target position from slider
+                if self.slider:
+                    self.target_position = self.slider.value * TrackHalfLength  # Get target position from slider
+                else:
+                    self.target_position = 0.0
 
     def update_target_equilibrium(self):
         if self.time_last_target_equilibrium_change is None:
@@ -485,20 +482,30 @@ class CartPole(EnvironmentBatched):
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                self.Q_calculated = self.slider.value
+                if self.slider:
+                    self.Q_calculated = self.slider.value
+                else:
+                    raise AttributeError("Manual stabilization mode activated and no slider object created.")
                 self.Q_update_time = 0.0
             else:  # in this case slider gives a target position, lqr regulator
                 # self.Q_ccrc = add_control_noise(self.Q_calculated, rng,
                 #                                 controlDisturbance_mode, controlDisturbance, controlBias)
                 self.Q_ccrc = self.Q_applied
                 update_start = timeit.default_timer()
+                self.L_for_controller = float(self.controller_informer.get_parameters(
+                    L, float(self.L_updater.init_value), self.time
+                ))
+                self.m_pole_for_controller = float(self.controller_informer.get_parameters(
+                    m_pole, float(self.m_pole_updater.init_value), self.time
+                ))
                 self.Q_calculated = float(self.controller.step(
                     self.s_with_noise_and_latency,
                     self.time,
                     {
                         "target_position": self.target_position,
                         "target_equilibrium": self.target_equilibrium,
-                        'L': float(self.L_for_controller),
+                        'L': self.L_for_controller,
+                        'm_pole': self.m_pole_for_controller,
                         "Q_ccrc": self.Q_ccrc,
                     }
                 ))
@@ -511,24 +518,19 @@ class CartPole(EnvironmentBatched):
             self.dt_controller_steps_counter = 0
 
     def update_parameters(self):
+
         global L
-        if self.time_last_L_change is None:
-            self.time_last_L_change = self.time
-        else:
-            if (self.time-self.time_last_L_change) > self.change_L_every_x_second:
-                self.time_last_L_change = self.time
-                if self.L_change_mode == 'uniform':
-                    L[...] = np.random.uniform(*self.L_range)
-                elif self.L_change_mode == 'step':
-                    if L + self.L_step > self.L_range[1] or L + self.L_step < self.L_range[0]:
-                        self.L_step *= -1.0
-                    L[...] = L + self.L_step
+        new_L = self.L_updater.update_parameter(L, self.time)
+        L[...] = new_L
 
-            else:
-                L[...] = L * self.L_discount_factor
+        global m_pole
+        new_m_pole = self.m_pole_updater.update_parameter(m_pole, self.time)
+        m_pole[...] = new_m_pole
 
-
-
+        # global L, m_pole
+        # new_L, new_m_pole = self.joint_updater.update_parameter(self.time)
+        # L[...] = new_L
+        # m_pole[...] = new_m_pole
     # endregion
 
     # region 2. Methods related to experiment history as a whole: saving, loading, plotting, resetting
@@ -587,15 +589,6 @@ class CartPole(EnvironmentBatched):
                                          target_equilibrium=None,
                                          keep_target_equilibrium_x_seconds_up=np.inf,
                                          keep_target_equilibrium_x_seconds_down=np.inf,
-
-                                         L_initial=None,
-                                         change_L_every_x_seconds=None,
-                                         L_discount_factor=None,
-                                         L_range=None,
-                                         L_informed_controller=None,
-                                         L_change_mode=None,
-                                         L_step=None,
-
                                          ):
 
         # Set time scales:
@@ -621,20 +614,6 @@ class CartPole(EnvironmentBatched):
         if target_equilibrium is not None: self.target_equilibrium = target_equilibrium
         if keep_target_equilibrium_x_seconds_up is not None: self.keep_target_equilibrium_x_seconds_up = keep_target_equilibrium_x_seconds_up
         if keep_target_equilibrium_x_seconds_down is not None: self.keep_target_equilibrium_x_seconds_down = keep_target_equilibrium_x_seconds_down
-        if L_initial is not None: self.L_initial = L_initial
-        if change_L_every_x_seconds is not None: self.change_L_every_x_second = change_L_every_x_seconds
-        if L_discount_factor is not None: self.L_discount_factor = L_discount_factor
-        if L_range is not None: self.L_range = L_range
-        if L_informed_controller is not None: self.L_informed_controller = L_informed_controller
-        if L_change_mode is not None: self.L_change_mode = L_change_mode
-        if L_step is not None: self.L_step = self.L_step
-
-        global L
-
-        if self.L_informed_controller:
-            self.L_for_controller = L
-        else:
-            self.L_for_controller = float(self.L_initial)
 
         self.random_track_f = Generate_Random_Trace_Function(
 
@@ -663,7 +642,7 @@ class CartPole(EnvironmentBatched):
         # Reset variables
         self.set_cartpole_state_at_t0(reset_mode=2, s=self.s, target_position=self.target_position)
 
-        L[...] = float(self.L_initial)
+        L[...] = float(self.L_updater.init_value)
 
     # Runs a random experiment with parameters set with setup_cartpole_random_experiment
     # And saves the experiment recording to csv file
@@ -765,12 +744,16 @@ class CartPole(EnvironmentBatched):
         
         if self.controller_name != 'manual-stabilization':
             Controller: "type[template_controller]" = import_controller_by_name(self.controller_name)
+            self.L_for_controller = float(self.controller_informer.get_parameters(
+                L, float(self.L_updater.init_value), self.time
+            ))
             self.controller = Controller(
                 environment_name="CartPole",
                 initial_environment_attributes={
                     "target_position": self.target_position,
                     "target_equilibrium": self.target_equilibrium,
-                    "L": float(self.L_for_controller),
+                    "m_pole": self.m_pole_for_controller,
+                    "L": self.L_for_controller,
                     "Q_ccrc": self.Q_ccrc,
                 },
                 control_limits=(self.action_space.low, self.action_space.high),
@@ -830,7 +813,9 @@ class CartPole(EnvironmentBatched):
             self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
             self.target_position = 0.0
-            self.slider.value = 0.0
+
+            if self.slider:
+                self.slider.value = 0.0
 
         elif reset_mode == 1:  # You may change this but be careful with other user. Better use 3
             # You can change here with which initial parameters you wish to start the simulation
@@ -843,7 +828,9 @@ class CartPole(EnvironmentBatched):
             self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
             self.target_position = 0.0
-            self.slider.value = 0.0
+
+            if self.slider:
+                self.slider.value = 0.0
 
         elif reset_mode == 2:  # Don't change it
             if (s is not None) and (target_position is not None):
@@ -852,7 +839,7 @@ class CartPole(EnvironmentBatched):
                 self.s[ANGLE_COS_IDX] = np.cos(self.s[ANGLE_IDX])
                 self.s[ANGLE_SIN_IDX] = np.sin(self.s[ANGLE_IDX])
 
-                if self.slider is not None:
+                if self.slider:
                     self.slider.value = self.target_position = target_position
 
             else:
@@ -860,19 +847,22 @@ class CartPole(EnvironmentBatched):
 
             if self.controller_name == 'manual-stabilization':
                 # in this case slider corresponds already to the power of the motor
-                if self.slider is not None:
+                if self.slider:
                     self.Q_calculated = self.slider.value
                 else:
                     self.Q_calculated = 0.0
             else:  # in this case slider gives a target position, lqr regulator
                 self.Q_ccrc = 0.0
+                self.L_for_controller = float(self.controller_informer.get_parameters(
+                    L, float(self.L_updater.init_value), self.time
+                ))
                 self.Q_calculated = float(self.controller.step(
                     self.s,
                     self.time,
                     {
                         "target_position": self.target_position,
                         "target_equilibrium": self.target_equilibrium,
-                        "L": float(self.L_for_controller),
+                        "L": self.L_for_controller,
                         "Q_ccrc": self.Q_ccrc,
                     }
                 ))

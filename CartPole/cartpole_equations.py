@@ -56,7 +56,7 @@ def _cartpole_ode(ca, sa, angleD, positionD, u,
     :param g: gravity in m/s^2
     :param J_fric and M_fric: friction coefficients in Nm per rad/s of pole  TODO check correct
     :param  M_fric: friction coefficient of cart in N per m/s TODO check correct
-    :param L: half-length of pole in meters.
+    :param L: length of pole in meters.
 
     :param u: Force applied on cart in unnormalized range TODO what does this mean?
 
@@ -71,13 +71,14 @@ def _cartpole_ode(ca, sa, angleD, positionD, u,
     A = (k + 1) * (m_cart + m_pole) - m_pole * (ca ** 2)
     F_fric = - M_fric * positionD  # Force resulting from cart friction, notice that the mass of the cart is not explicitly there
     T_fric = - J_fric * angleD  # Torque resulting from pole friction
+    L_half = L/2.0
 
     positionDD = (
             (
                     m_pole * g * sa * ca  # Movement of the cart due to gravity
-                    + ((T_fric * ca) / L)  # Movement of the cart due to pend' s friction in the joint
+                    + ((T_fric * ca) / L_half)  # Movement of the cart due to pend' s friction in the joint
                     + (k + 1) * (
-                            - (m_pole * L * (
+                            - (m_pole * L_half * (
                                         angleD ** 2) * sa)  # Keeps the Cart-Pole center of mass fixed when pole rotates
                             + F_fric  # Braking of the cart due its friction
                             + u  # Effect of force applied to cart
@@ -93,22 +94,23 @@ def _cartpole_ode(ca, sa, angleD, positionD, u,
     # From experiment b = 20, a = 28
     angleDD = (
             (
-                    g * sa + positionDD * ca + T_fric / (m_pole * L)
-            ) / ((k + 1) * L)
+                    g * sa + positionDD * ca + T_fric / (m_pole * L_half)
+            ) / ((k + 1) * L_half)
     )
 
-    # making M go to infinity makes angleDD = (g/k*L)sin(angle) - angleD*J_fric/(k*m*L^2)
+    # making M go to infinity makes angleDD = (g/k*L_half)sin(angle) - angleD*J_fric/(k*m*L_half^2)
     # This is the same as equation derived directly for a pendulum.
-    # k is 1/3! It is the factor for pendulum with length 2L: I = k*m*L^2
+    # k is 1/3! It is the factor for pendulum with length 2L: I = k*m*L_half^2
 
     return angleDD, positionDD
 
 def cartpole_energy(ca, angleD, positionD,
                   m_cart, m_pole, g, L):
+    L_half = L/2.0
     T_cart = m_cart * positionD ** 2 / 2
-    T_pole_trans = m_pole * (positionD ** 2 - 2 * L * angleD * positionD * ca) / 2
-    T_pole_rot = 2/3 * m_pole * L ** 2 * angleD ** 2
-    V_pole = m_pole * g * L * ca
+    T_pole_trans = m_pole * (positionD ** 2 - 2 * L_half * angleD * positionD * ca) / 2
+    T_pole_rot = 2/3 * m_pole * L_half ** 2 * angleD ** 2
+    V_pole = m_pole * g * L_half * ca
 
     E_total = T_cart + T_pole_trans + T_pole_rot + V_pole
 
@@ -134,9 +136,9 @@ def euler_step(state, stateD, t_step):
 #  The function for edge bounce is separate, it is used by simulator but not by predictors
 ###
 class CartPoleEquations:
-    supported_computation_libraries: set = {NumpyLibrary, TensorFlowLibrary, PyTorchLibrary}
+    supported_computation_libraries = (NumpyLibrary, TensorFlowLibrary, PyTorchLibrary)
 
-    def __init__(self, lib=NumpyLibrary, get_parameters_from=None, numba_compiled=False):
+    def __init__(self, lib=NumpyLibrary(), get_parameters_from=None, numba_compiled=False):
         self.lib = lib
         self.params = CartPoleParameters(lib, get_parameters_from)
         self.euler_step = CompileAdaptive(self.lib)(euler_step)  # This is a nested function, still it was compiled separately before for TF. TODO: Check if it is needed to compile it separately
@@ -148,7 +150,7 @@ class CartPoleEquations:
         else:
             self._cartpole_ode = _cartpole_ode
             self.edge_bounce = edge_bounce
-            # if lib == NumpyLibrary:
+            # if isinstance(lib, NumpyLibrary):
             #     self.cartpole_integration = self._cartpole_integration_scipy
             # else:
             self.cartpole_integration = self._cartpole_integration_euler_cromer
@@ -327,7 +329,7 @@ class CartPoleEquations:
 #   This may lead to unwanted behaviours.
 def edge_bounce(angle, angle_cos, angleD, position, positionD, t_step, L):
     if position >= TrackHalfLength or -position >= TrackHalfLength:  # Without abs to compile with tensorflow
-        angleD -= 2 * (positionD * angle_cos) / L
+        angleD -= 2 * (positionD * angle_cos) / (0.5*L)
         angle += angleD * t_step
         positionD = -positionD
         position += positionD * t_step
