@@ -24,6 +24,8 @@ class ParameterUpdater:
         self.time_of_the_last_change = 0.0
         self.time_of_the_last_reset = 0.0
 
+        self.bounce_direction = 1
+
     def update_parameter(
             self,
             current_value,
@@ -47,6 +49,10 @@ class ParameterUpdater:
             elif self.mode == 'random':
                 new_parameter_value = np.random.uniform(*self.range_random)
                 return new_parameter_value
+            elif self.mode == 'bounce':
+                increment = self.bounce_direction * self.increment
+                if current_value + increment >= self.range_clip[1] or current_value + increment <= self.range_clip[0]:
+                    self.bounce_direction = -self.bounce_direction
             else:
                 raise ValueError('mode with value {} not valid'.format(self.mode))
 
