@@ -507,6 +507,7 @@ class CartPole(EnvironmentBatched):
                         'L': self.L_for_controller,
                         'm_pole': self.m_pole_for_controller,
                         "Q_ccrc": self.Q_ccrc,
+                        "Q_applied_-1": self.Q_ccrc,
                     }
                 ))
                 self.Q_update_time = timeit.default_timer()-update_start
@@ -755,6 +756,7 @@ class CartPole(EnvironmentBatched):
                     "m_pole": self.m_pole_for_controller,
                     "L": self.L_for_controller,
                     "Q_ccrc": self.Q_ccrc,
+                    "Q_applied_-1": self.Q_ccrc,
                 },
                 control_limits=(self.action_space.low, self.action_space.high),
             )
@@ -864,6 +866,7 @@ class CartPole(EnvironmentBatched):
                         "target_equilibrium": self.target_equilibrium,
                         "L": self.L_for_controller,
                         "Q_ccrc": self.Q_ccrc,
+                        "Q_applied_-1": self.Q_ccrc,
                     }
                 ))
 
