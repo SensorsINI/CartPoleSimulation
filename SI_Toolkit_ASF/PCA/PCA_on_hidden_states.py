@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler
 from SI_Toolkit.data_preprocessing import transform_dataset
 
 from visualization_pca import visualize_pca, visualize_pca_with_feature
-from SI_Toolkit.load_and_normalize import load_data
+from SI_Toolkit.load_and_normalize import load_data, get_paths_to_datafiles
 
 save_files_to = None
 
@@ -47,8 +47,10 @@ def PCA_on_hidden_states(df, save_pca_path=None, load_pca_path=None):
     gru_h_columns = df.filter(regex=r'^GRU_H')
 
     if data_features_to_filter_out:
-        data_with_features_to_filter_out = load_data(list_of_paths_to_datafiles=[data_features_to_filter_out], verbose=False)[0]
-        gru_h_columns_antireference = data_with_features_to_filter_out.filter(regex=r'^GRU_H')
+        list_of_paths_to_datafiles = get_paths_to_datafiles([data_features_to_filter_out])
+        data_with_features_to_filter_out = load_data(list_of_paths_to_datafiles=list_of_paths_to_datafiles, verbose=False)
+        data_with_features_to_filter_out = pd.concat(data_with_features_to_filter_out, ignore_index=True)
+        gru_h_columns_antireference = data_with_features_to_filter_out.filter(regex=columns_to_filter)
         gru_h_columns = get_cleaned_data(gru_h_columns_antireference, gru_h_columns)
 
     # Load or initialize scaler
@@ -77,6 +79,8 @@ def PCA_on_hidden_states(df, save_pca_path=None, load_pca_path=None):
     # Add PCA components back to the DataFrame
     df['PCA1'] = pca_components[:, 0]
     df['PCA2'] = pca_components[:, 1]
+
+    df.to_csv('PCA_components.csv')
 
     # visualize_pca(df)
     visualize_pca_with_feature(df, feature_to_visualize, step=10, additional_feature=additional_feature)
