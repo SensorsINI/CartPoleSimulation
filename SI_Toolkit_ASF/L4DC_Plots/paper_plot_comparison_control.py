@@ -35,12 +35,40 @@ Q_integrated_all = np.clip(Q_integrated_all, -1, 1)
 Q_integrated_mean = Q_integrated_all.mean(axis=0)
 Q_integrated_std = Q_integrated_all.std(axis=0)
 
-# 3. Define custom labels for plotting
-line_labels = {
-    'Q_calculated': 'Baseline MPC, pole: 5cm',
-    'Q_calculated_gru_memoryless': 'GRU - Ablated Memory',
-    'Q_calculated_gru_adaptive_fixed_Q': 'GRU - Adaptive',
-    'Q_calculated_integrated_mean': 'Average MPC, pole: 5-80cm',
+# 3. Define custom labels, colors, and plotting order for features
+plotting_configs = {
+    'Q_calculated': {
+        'label': 'Baseline MPC, pole: 5cm',
+        'color': 'blue',
+        'order': 1,
+        'feature': 'Q_calculated',
+        'on_subplots': [1, 2],
+        'SSD': False,
+    },
+    'Q_calculated_gru_memoryless': {
+        'label': 'GRU - Ablated Memory\n  ',
+        'color': 'red',
+        'order': 2,
+        'feature': 'Q_calculated_gru_memoryless',
+        'on_subplots': [1, 2],
+        'SSD': True,
+    },
+    'Q_calculated_gru_adaptive_fixed_Q': {
+        'label': 'GRU - Adaptive\n',
+        'color': 'green',
+        'order': 3,
+        'feature': 'Q_calculated_gru_adaptive_fixed_Q',
+        'on_subplots': [1],
+        'SSD': True,
+    },
+    'Q_calculated_integrated_mean': {
+        'label': 'Average MPC \npole: 5-80cm\n',
+        'color': 'orange',
+        'order': 4,
+        'feature': 'interp_Q_calculated_integrated_mean',
+        'on_subplots': [2],
+        'SSD': True,
+    },
 }
 
 # 4. Set time range up to 6 seconds
@@ -61,45 +89,100 @@ time_integrated_filtered = time_integrated[mask_integrated]
 plt.rcParams.update({'font.size': 14})
 
 # 6. Create the plots with adjusted subplot heights
-fig = plt.figure(figsize=(12, 8))
+fig = plt.figure(figsize=(16, 10.3))
 gs = GridSpec(4, 1, height_ratios=[2, 2, 1, 1], hspace=0.5)
+
+# Collect features for first subplot
+first_subplot_features = [config for config in plotting_configs.values() if 1 in config['on_subplots']]
+first_subplot_features.sort(key=lambda x: x['order'])
+
+# Collect features for second subplot
+second_subplot_features = [config for config in plotting_configs.values() if 2 in config['on_subplots']]
+second_subplot_features.sort(key=lambda x: x['order'])
 
 # First plot
 ax0 = fig.add_subplot(gs[0])
 x = df_main_filtered['time']
 y_Q_calculated = df_main_filtered['Q_calculated']
 
-ax0.plot(x, y_Q_calculated, label=line_labels['Q_calculated'])
+# For legends
+legend_handles_upper_right = []
+legend_labels_upper_right = []
+legend_handles_lower_right = []
+legend_labels_lower_right = []
 
-for feature in ['Q_calculated_gru_memoryless', 'Q_calculated_gru_adaptive_fixed_Q']:
-    y_feature = df_main_filtered[feature]
-    # Compute SSD with respect to Q_calculated
-    SSD = np.sum((y_feature - y_Q_calculated) ** 2)
-    # Display SSD in legend with custom label
-    label = f"{line_labels.get(feature, feature)} (SSD={SSD:.2f})"
-    ax0.plot(x, y_feature, label=label)
+# Plot features on first subplot
+for config in first_subplot_features:
+    feature_name = config['feature']
+    if feature_name == 'interp_Q_calculated_integrated_mean':
+        continue  # Should not be plotted on the first subplot
+    y_feature = df_main_filtered[feature_name]
+    if "Adaptive" in plotting_configs[feature_name]['label']:
+        linewidth = 2.5
+    else:
+        linewidth = None
+    line, = ax0.plot(x, y_feature, color=config['color'], linewidth=linewidth)
+
+    # Manage legends
+    # Compute SSD and add to lower right legend with SSD
+    if config['SSD']:
+        SSD = np.sum((y_feature - y_Q_calculated) ** 2)
+        label_with_SSD = f"{config['label']} (SSD={SSD:.2f})"
+    else:
+        label_with_SSD = config['label']
+    if config['on_subplots'] == [1, 2]:
+        # Add to upper right legend without SSD
+        legend_handles_upper_right.append(line)
+        legend_labels_upper_right.append(label_with_SSD)
+    elif config['on_subplots'] == [1]:
+        legend_handles_lower_right.append(line)
+        legend_labels_lower_right.append(label_with_SSD)
 
 ax0.set_ylabel('Control Signal')
-ax0.legend(loc='upper right', fontsize=11)
+
+# Add legends to first subplot
+legend_upper = ax0.legend(legend_handles_upper_right, legend_labels_upper_right, loc='upper right', fontsize=12)
+ax0.add_artist(legend_upper)
+if legend_handles_lower_right:
+    legend_lower = ax0.legend(legend_handles_lower_right, legend_labels_lower_right, loc='lower right', fontsize=12)
 
 # Second plot
 ax1 = fig.add_subplot(gs[1], sharex=ax0)
-# Interpolate Q_calculated_integrated_mean onto x
-interp_Q_calculated_integrated_mean = np.interp(x, time_integrated_filtered, Q_integrated_mean_filtered)
 
-y_Q_calculated_gru_memoryless = df_main_filtered['Q_calculated_gru_memoryless']
-SSD_gru_memoryless = np.sum((y_Q_calculated_gru_memoryless - y_Q_calculated) ** 2)
-label_gru_memoryless = f"{line_labels.get('Q_calculated_gru_memoryless', 'Q_calculated_gru_memoryless')} (SSD={SSD_gru_memoryless:.2f})"
+# For legends
+legend_handles_second_lower_right = []
+legend_labels_second_lower_right = []
 
-SSD_integrated_mean = np.sum((interp_Q_calculated_integrated_mean - y_Q_calculated) ** 2)
-label_integrated_mean = f"{line_labels.get('Q_calculated_integrated_mean', 'Q_calculated_integrated_mean')} (SSD={SSD_integrated_mean:.2f})"
+# Plot features on second subplot
+for config in second_subplot_features:
+    feature_name = config['feature']
+    if feature_name == 'interp_Q_calculated_integrated_mean':
+        # Interpolate Q_calculated_integrated_mean onto x
+        y_feature = np.interp(x, time_integrated_filtered, Q_integrated_mean_filtered)
+    else:
+        y_feature = df_main_filtered[feature_name]
+    line, = ax1.plot(x, y_feature, color=config['color'])
 
-ax1.plot(x, y_Q_calculated, label=line_labels['Q_calculated'])
-ax1.plot(x, y_Q_calculated_gru_memoryless, label=label_gru_memoryless)
-ax1.plot(x, interp_Q_calculated_integrated_mean, label=label_integrated_mean)
+    # Manage legends
+    if config['on_subplots'] == [1, 2]:
+        # Do not add legend here; it's already added in the first subplot
+        pass
+    elif config['on_subplots'] == [2]:
+        # Compute SSD and add to lower right legend with SSD
+        if config['SSD']:
+            SSD = np.sum((y_feature - y_Q_calculated) ** 2)
+            label_with_SSD = f"{config['label']} (SSD={SSD:.2f})"
+        else:
+            label_with_SSD = config['label']
+        legend_handles_second_lower_right.append(line)
+        legend_labels_second_lower_right.append(label_with_SSD)
 
 ax1.set_ylabel('Control Signal')
-ax1.legend(loc='upper right', fontsize=11)
+
+# Add legend to second subplot
+if legend_handles_second_lower_right:
+    legend_second_lower = ax1.legend(legend_handles_second_lower_right, legend_labels_second_lower_right,
+                                     loc='lower right', fontsize=12)
 
 # Third plot: 'target_position' and 'target_equilibrium' with secondary y-axis
 ax2 = fig.add_subplot(gs[2], sharex=ax0)
@@ -128,4 +211,7 @@ ax3.set_ylabel('Angle \n(degrees)')
 ax3.set_xlabel('Time (s)')
 
 plt.tight_layout()
+
+plt.savefig('ComparisonsControllers.pdf', format='pdf', bbox_inches='tight')
+
 plt.show()
