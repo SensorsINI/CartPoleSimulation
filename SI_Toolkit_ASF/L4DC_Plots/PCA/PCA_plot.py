@@ -14,6 +14,7 @@ L = df['L']*100
 PCA1 = df['PCA1']
 PCA2 = df['PCA2']
 time = df['time']
+time = time - time.min()
 
 fig = plt.figure(figsize=(16, 8))
 
