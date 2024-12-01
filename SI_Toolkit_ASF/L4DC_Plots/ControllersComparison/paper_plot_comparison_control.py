@@ -225,18 +225,60 @@ if legend_handles_second_lower_right:
     legend_second_lower.get_frame().set_alpha(0)        # Make frame transparent
 
 # Third plot: 'target_position' and 'target_equilibrium' with secondary y-axis
-ax2 = fig.add_subplot(gs[2], sharex=ax0)
+ax2 = fig.add_subplot(gs[2])
 ax2a = ax2.twinx()
 
-y_target_position = df_main_filtered['target_position'] * 100  # Convert meters to centimeters
-y_target_equilibrium = df_main_filtered['target_equilibrium']
+# Update ax2 limits dynamically when ax0 limits change
+width_factor = 0.93  # Adjust this value between 0 and 1 to control the width
+# Flag to avoid recursion
+updating = False
 
-ax2.plot(x, y_target_position, color='blue')
-ax2.set_ylabel('Target \nPosition (cm)', color='blue')
+# Callback for updating ax2 when ax0 changes
+def update_ax2_limits(event):
+    global updating
+    if not updating:
+        updating = True
+        limits_a0 = ax0.get_xlim()
+        new_x_lim = (limits_a0[0], limits_a0[0] + width_factor * (limits_a0[1] - limits_a0[0]))
+        ax2.set_xlim(new_x_lim)
+        updating = False
+
+# Callback for updating ax0 when ax2 changes
+def update_ax0_limits(event):
+    global updating
+    if not updating:
+        updating = True
+        ax0.set_xlim(ax2.get_xlim())
+        updating = False
+
+# Connect callbacks
+ax0.callbacks.connect('xlim_changed', update_ax2_limits)
+ax2.callbacks.connect('xlim_changed', update_ax0_limits)
+
+update_ax2_limits(None)
+
+# # Adjust the width of ax
+pos = ax2.get_position()
+new_width = pos.width * width_factor
+new_pos = [pos.x0, pos.y0, new_width, pos.height]
+ax2.set_position(new_pos)
+ax2a.set_position(new_pos)  # Ensure the twin axis matches ax2
+
+subset_length = int(width_factor * len(x))
+y_target_position = df_main_filtered['target_position'].to_numpy() * 100  # Convert meters to centimeters
+y_target_equilibrium = df_main_filtered['target_equilibrium'].to_numpy()
+
+y_target_position = y_target_position[:subset_length]
+y_target_equilibrium = y_target_equilibrium[:subset_length]
+x_target = x[:subset_length]
+
+
+ax2.plot(x_target, y_target_position, color='blue')
+ax2.set_ylabel('Target \nPosition (cm)', color='blue', labelpad=20)
 ax2.tick_params(axis='y', labelcolor='blue')
 
 # Adjust target equilibrium to prevent overlap
-ax2a.plot(x, y_target_equilibrium, color='red')
+ax2a.plot(x_target, y_target_equilibrium, color='red')
 ax2a.set_ylabel('Target \nEquilibrium', color='red')
 ax2a.tick_params(axis='y', labelcolor='red')
 ax2a.set_yticks([-1, 1])
