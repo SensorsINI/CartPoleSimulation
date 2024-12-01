@@ -46,14 +46,16 @@ df_network_output = network_evaluator()
 plt.rcParams.update({'font.size': 14})
 
 # 2. Define time range for plotting
-time_start = 5  # Start time in seconds
-time_end = 35  # End time in seconds
+time_start = 7  # Start time in seconds
+time_end = 37  # End time in seconds
 
 # Optionally, you can also limit to time_end:
 time_range_mask = (df['time'] >= time_start) & (df['time'] <= time_end)
 
 # Filter data based on the time range
 time = df['time'][time_range_mask]
+time = time - time.iloc[0]
+
 predicted_L = 100.0 * df_network_output['L'][time_range_mask]
 true_L = 100.0 * df['L'][time_range_mask]
 angle_degrees = np.degrees(df['angle'][time_range_mask])
@@ -72,33 +74,81 @@ ax0 = fig.add_subplot(gs[0])
 ax0.plot(time, true_L, label='True Values', color='orange', linewidth=3, zorder=1)
 ax0.scatter(time, predicted_L, label='Predicted Values', color='green', s=10.0, zorder=2)
 
-ax0.set_ylabel('Pole Length (cm)')
+ax0.set_ylabel('Pole Length (cm)', labelpad=15)
 ax0.legend()
 
 # **Hide x-axis ticks and labels for ax0**
 ax0.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
 
 # 5. Second subplot: Target Position and Equilibrium
-ax1 = fig.add_subplot(gs[1], sharex=ax0)
+ax1 = fig.add_subplot(gs[1])
 ax1a = ax1.twinx()
 
+
+
+# Update ax2 limits dynamically when ax0 limits change
+width_factor = 0.95  # Adjust this value between 0 and 1 to control the width
+# Flag to avoid recursion
+updating = False
+
+
+# Callback for updating ax2 when ax0 changes
+def update_ax1_limits(event):
+    global updating
+    if not updating:
+        updating = True
+        limits_a0 = ax0.get_xlim()
+        new_x_lim = (limits_a0[0], limits_a0[0] + width_factor * (limits_a0[1] - limits_a0[0]))
+        ax1.set_xlim(new_x_lim)
+        updating = False
+
+
+# Callback for updating ax0 when ax2 changes
+def update_ax0_limits(event):
+    global updating
+    if not updating:
+        updating = True
+        ax0.set_xlim(ax1.get_xlim())
+        updating = False
+
+
+# Connect callbacks
+ax0.callbacks.connect('xlim_changed', update_ax1_limits)
+ax1.callbacks.connect('xlim_changed', update_ax0_limits)
+
+# # Adjust the width of ax
+pos = ax1.get_position()
+new_width = pos.width * width_factor
+new_pos = [pos.x0, pos.y0, new_width, pos.height]
+ax1.set_position(new_pos)
+ax1a.set_position(new_pos)  # Ensure the twin axis matches ax1
+
+subset_length = int(width_factor * len(time))
+
+
+y_target_position = y_target_position[:subset_length]
+y_position = y_position[:subset_length]
+y_target_equilibrium = y_target_equilibrium[:subset_length]
+
+time_target = time[:subset_length]
+
 position_color = 'deepskyblue'
-ax1.plot(time, y_target_position, color='blue', label='Target Position')
-ax1.plot(time, y_position, color=position_color, label='Target Position')
-ax1.text(-0.065, 0.5, 'Target Position', color='blue', fontsize=14,
+ax1.plot(time_target, y_target_position, color='blue', label='Target Position')
+ax1.plot(time_target, y_position, color=position_color, label='Target Position')
+ax1.text(-0.070, 0.5, 'Target Position', color='blue', fontsize=14,
          transform=ax1.transAxes, rotation=90, va='center', ha='right')
 # Add blue "Position (cm)" text
-ax1.text(-0.06, 0.075, '&', color='black', fontsize=14,
+ax1.text(-0.065, 0.075, '&', color='black', fontsize=14,
          transform=ax1.transAxes, rotation=90, va='center', ha='left')
-ax1.text(-0.06, 0.41, 'Position', color=position_color, fontsize=14,
+ax1.text(-0.065, 0.41, 'Position', color=position_color, fontsize=14,
          transform=ax1.transAxes, rotation=90, va='center', ha='left')
-ax1.text(-0.06, 0.85, '(cm)', color='black', fontsize=14,
+ax1.text(-0.065, 0.85, '(cm)', color='black', fontsize=14,
          transform=ax1.transAxes, rotation=90, va='center', ha='left')
 
 ax1.tick_params(axis='y', labelcolor='blue')
 
-ax1a.plot(time, y_target_equilibrium, color='red', label='Target Equilibrium')
-ax1a.set_ylabel('Target \nEquilibrium', color='red')
+ax1a.plot(time_target, y_target_equilibrium, color='red', label='Target Equilibrium')
+ax1a.set_ylabel('Target \nEquilibrium', color='red', labelpad=-15)
 ax1a.tick_params(axis='y', labelcolor='red')
 ax1a.set_yticks([-1, 1])
 ax1a.set_ylim(-1.3, 1.3)
