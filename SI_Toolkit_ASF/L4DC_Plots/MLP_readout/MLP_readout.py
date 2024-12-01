@@ -8,6 +8,8 @@ from matplotlib.gridspec import GridSpec
 from SI_Toolkit.load_and_normalize import load_data
 from SI_Toolkit.Predictors.neural_network_evaluator import neural_network_evaluator
 
+from SI_Toolkit_ASF.L4DC_Plots.plots_helpers import label_target_position_and_position
+
 testfile = './MLP_readout_v1.csv'
 net_name = 'Dense-128IN-128H1-128H2-2OUT-0'
 path_to_models = './'
@@ -132,20 +134,17 @@ y_target_equilibrium = y_target_equilibrium[:subset_length]
 
 time_target = time[:subset_length]
 
-position_color = 'deepskyblue'
-ax1.plot(time_target, y_target_position, color='blue', label='Target Position')
-ax1.plot(time_target, y_position, color=position_color, label='Target Position')
-ax1.text(-0.070, 0.5, 'Target Position', color='blue', fontsize=14,
-         transform=ax1.transAxes, rotation=90, va='center', ha='right')
-# Add blue "Position (cm)" text
-ax1.text(-0.065, 0.075, '&', color='black', fontsize=14,
-         transform=ax1.transAxes, rotation=90, va='center', ha='left')
-ax1.text(-0.065, 0.41, 'Position', color=position_color, fontsize=14,
-         transform=ax1.transAxes, rotation=90, va='center', ha='left')
-ax1.text(-0.065, 0.85, '(cm)', color='black', fontsize=14,
-         transform=ax1.transAxes, rotation=90, va='center', ha='left')
+fontsize = 14
 
-ax1.tick_params(axis='y', labelcolor='blue')
+
+position_color = 'deepskyblue'
+target_position_color = 'blue'
+
+ax1.plot(time_target, y_target_position, color=target_position_color, label='Target Position')
+ax1.plot(time_target, y_position, color=position_color, label='Target Position')
+
+label_target_position_and_position(ax1, position_color, target_position_color)
+ax1.tick_params(axis='y', labelcolor=target_position_color)
 
 ax1a.plot(time_target, y_target_equilibrium, color='red', label='Target Equilibrium')
 ax1a.set_ylabel('Target \nEquilibrium', color='red', labelpad=-15)
