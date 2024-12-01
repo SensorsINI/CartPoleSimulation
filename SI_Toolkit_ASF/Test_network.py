@@ -25,9 +25,9 @@ network_inputs = ['GRU_H1_00', 'GRU_H1_01', 'GRU_H1_02', 'GRU_H1_03', 'GRU_H1_04
 network_outputs = ['L', 'm_pole']
 
 # Extract test features and targets
-time = dfs[0].loc[:, 'time'].to_numpy()
-x_tst = dfs[0].loc[:, network_inputs].to_numpy()
-y_tst = dfs[0].loc[:, network_outputs].to_numpy()
+time = df.loc[:, 'time'].to_numpy()
+x_tst = df.loc[:, network_inputs].to_numpy()
+y_tst = df.loc[:, network_outputs].to_numpy()
 
 y_predicted = []
 for i in trange(0, len(y_tst)):
