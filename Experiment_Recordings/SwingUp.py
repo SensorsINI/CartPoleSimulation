@@ -89,6 +89,11 @@ legend = ax0.legend(lines_0, labels_0, loc='upper right', ncol=3, fontsize=legen
 legend.get_frame().set_edgecolor('white')  # Remove border edge color
 legend.get_frame().set_alpha(0)  # Make frame transparent
 
+# **1. Make "Adaptive NC" label bold in the legend**
+for text in legend.get_texts():
+    if text.get_text() == label_informed:
+        text.set_fontweight('bold')
+
 # Differentiate the two y-axes
 ax0.set_ylabel('Pole Angle\nFull Range (deg)', color='black')
 ax0a.set_ylabel('Pole Angle\nZoomed (deg)', color='black')
@@ -114,13 +119,19 @@ target_position_informed = 100.0 * informed_df['target_position'][time_range_mas
 target_position_uninformed = 100.0 * uninformed_df['target_position'][time_range_mask]
 target_position_mpc = 100.0 * mpc_df['target_position'][time_range_mask]
 
-ax1.plot(time, target_position_mpc,color='black', linestyle='--', label='Target')
+# **2. Plot lines in the same order as the first subplot with increased linewidth**
+# Plot Target first (assuming it's a reference line)
+ax1.plot(time, target_position_mpc, color='black', linestyle='--', label='Target', linewidth=3.0)
 
-ax1.plot(time, position_mpc, color='blue')
-ax1.plot(time, position_informed, color='green')
-ax1.plot(time, position_uninformed, color='red',)
+# Plot mpc, informed, and uninformed in the specified order
+ax1.plot(time, position_mpc, color='blue', linewidth=2.0, zorder=3)
+ax1.plot(time, position_informed, color='green', linewidth=3.5, zorder=2)
+ax1.plot(time, position_uninformed, color='red', linewidth=2.0, zorder=1)
 
-legend1 = ax1.legend(fontsize=legend_fontsize)
+# Create legend including 'Target'
+legend1 = ax1.legend(fontsize=legend_fontsize, loc='upper right')
+legend1.get_frame().set_edgecolor('white')  # Optional: Remove border edge color
+legend1.get_frame().set_alpha(0)  # Optional: Make frame transparent
 
 ax1.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
 
@@ -131,9 +142,10 @@ control_mpc = mpc_df['Q_calculated'][time_range_mask]
 control_informed = informed_df['Q_calculated'][time_range_mask]
 control_uninformed = uninformed_df['Q_calculated'][time_range_mask]
 
-ax2.plot(time, control_mpc, color='blue', label=label_mpc)
-ax2.plot(time, control_informed, color='green', label=label_informed)
-ax2.plot(time, control_uninformed, color='red', label=label_uninformed)
+# **3. Plot lines in the same order as the first subplot with increased linewidth**
+ax2.plot(time, control_mpc, color='blue', label=label_mpc, linewidth=2.0, zorder=3)
+ax2.plot(time, control_informed, color='green', label=label_informed, linewidth=3.0, zorder=2)
+ax2.plot(time, control_uninformed, color='red', label=label_uninformed, linewidth=2.0, zorder=1)
 
 ax2.set_ylabel('Control Signal', labelpad=15)
 ax2.set_xlabel('Time (s)')
