@@ -11,10 +11,7 @@ df_main = pd.read_csv('./cardinal_test_1.csv', comment='#')
 # List of features from 'cardinal_test_1.csv' to plot
 main_features = [
     'Q_calculated',
-    'Q_calculated_large_parameters',
-    'Q_calculated_gru_adaptive_2',
     'Q_calculated_gru_adaptive_fixed_Q',
-    'Q_calculated_dense',
     'Q_calculated_gru_memoryless'
 ]
 
@@ -42,31 +39,31 @@ plotting_configs = {
     'Q_calculated': {
         'label': 'Baseline MPC, pole: 5cm',
         'color': 'blue',
-        'order': 1,
+        'order': 2,
         'feature': 'Q_calculated',
         'on_subplots': [1, 2],
         'SSD': False,
     },
-    'Q_calculated_gru_memoryless': {
-        'label': 'Experience-Deprived GRU\n      ',
-        'color': 'red',
-        'order': 2,
-        'feature': 'Q_calculated_gru_memoryless',
-        'on_subplots': [1, 2],
-        'SSD': True,
-    },
     'Q_calculated_gru_adaptive_fixed_Q': {
-        'label': 'Adaptive GRU\n',
+        'label': 'Adaptive GRU',
         'color': 'green',
         'order': 3,
         'feature': 'Q_calculated_gru_adaptive_fixed_Q',
         'on_subplots': [1],
         'SSD': True,
     },
+    'Q_calculated_gru_memoryless': {
+        'label': 'Experience Deprived GRU',
+        'color': 'red',
+        'order': 1,
+        'feature': 'Q_calculated_gru_memoryless',
+        'on_subplots': [1, 2],
+        'SSD': True,
+    },
     'Q_calculated_integrated_mean': {
-        'label': 'Average MPC\npole: 5-80cm\n',
+        'label': 'Average MPC: pole: 5-80cm',
         'color': 'orange',
-        'order': 4,
+        'order': 3,
         'feature': 'interp_Q_calculated_integrated_mean',
         'on_subplots': [2],
         'SSD': True,
@@ -102,16 +99,18 @@ first_subplot_features.sort(key=lambda x: x['order'])
 second_subplot_features = [config for config in plotting_configs.values() if 2 in config['on_subplots']]
 second_subplot_features.sort(key=lambda x: x['order'])
 
+# For legends, collect handles and labels in the specified order
+legend_order = ['Q_calculated', 'Q_calculated_gru_adaptive_fixed_Q', 'Q_calculated_gru_memoryless', 'Q_calculated_integrated_mean']
+legend_handles = []
+legend_labels = []
+
+legend_handles_dict = {}
+legend_labels_dict = {}
+
 # First plot
 ax0 = fig.add_subplot(gs[0])
 x = df_main_filtered['time']
 y_Q_calculated = df_main_filtered['Q_calculated']
-
-# For legends
-legend_handles_upper_right = []
-legend_labels_upper_right = []
-legend_handles_lower_right = []
-legend_labels_lower_right = []
 
 # Plot features on first subplot
 for config in first_subplot_features:
@@ -119,75 +118,29 @@ for config in first_subplot_features:
     if feature_name == 'interp_Q_calculated_integrated_mean':
         continue  # Should not be plotted on the first subplot
     y_feature = df_main_filtered[feature_name]
-    if "Adaptive" in plotting_configs[feature_name]['label']:
+    if config['feature'] == 'Q_calculated_gru_adaptive_fixed_Q':
         linewidth = 2.5
+    elif config['feature'] == 'Q_calculated_gru_memoryless':
+        linewidth = 2.0
     else:
-        linewidth = None
+        linewidth = 1.5  # Default line width
     line, = ax0.plot(x, y_feature, color=config['color'], linewidth=linewidth)
 
-    # Manage legends
-    # Compute SSD and add to lower right legend with SSD
+    # Compute SSD if needed
     if config['SSD']:
         SSD = np.sum((y_feature - y_Q_calculated) ** 2)
-        label_with_SSD = f"{config['label']}(SSD={SSD:.2f})"
+        label_with_SSD = f"{config['label']} (SSD={SSD:.2f})"
     else:
         label_with_SSD = config['label']
-    if config['on_subplots'] == [1, 2]:
-        # Add to upper right legend without SSD
-        legend_handles_upper_right.append(line)
-        legend_labels_upper_right.append(label_with_SSD)
-    elif config['on_subplots'] == [1]:
-        legend_handles_lower_right.append(line)
-        legend_labels_lower_right.append(label_with_SSD)
+
+    legend_handles_dict[config['feature']] = line
+    legend_labels_dict[config['feature']] = label_with_SSD
 
 ax0.set_ylabel('Control Signal')
-
-class CustomLegendHandler(HandlerBase):
-    def create_artists(self, legend, orig_handle,
-                       x0, y0, width, height, fontsize, trans):
-        if isinstance(orig_handle, Line2D):
-            # Create a line with the same properties
-            line = Line2D([x0, x0 + width], [y0 + 1.5*height, y0 + 1.5*height],
-                          color=orig_handle.get_color(),
-                          linewidth=orig_handle.get_linewidth(),
-                          linestyle=orig_handle.get_linestyle(),
-                          label=orig_handle.get_label())
-            line.set_transform(trans)
-            return [line]
-        else:
-            return super().create_artists(legend, orig_handle, x0, y0, width, height, fontsize, trans)
-
-# Create a handler_map where only the second handle uses CustomLegendHandler
-handler_map = {
-    legend_handles_upper_right[1]: CustomLegendHandler()
-}
-
-# Add legends to first subplot
-legend_upper = ax0.legend(
-    legend_handles_upper_right,
-    legend_labels_upper_right,
-    loc='upper right',
-    fontsize=12,
-    handler_map=handler_map
-)
-
-legend_upper.get_frame().set_edgecolor('white')  # Remove border edge color
-legend_upper.get_frame().set_alpha(0)        # Make frame transparent
-ax0.add_artist(legend_upper)
-
-if legend_handles_lower_right:
-    legend_lower = ax0.legend(legend_handles_lower_right, legend_labels_lower_right, loc='lower right', fontsize=12)
-    legend_lower.get_frame().set_edgecolor('white')  # Remove border edge color
-    legend_lower.get_frame().set_alpha(0)  # Make frame transparent
-
 ax0.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
 
 # Second plot
 ax1 = fig.add_subplot(gs[1], sharex=ax0)
-
-# For legends
-legend_handles_second_lower_right = []
-legend_labels_second_lower_right = []
 
 # Plot features on second subplot
 for config in second_subplot_features:
@@ -197,92 +150,41 @@ for config in second_subplot_features:
         y_feature = np.interp(x, time_integrated_filtered, Q_integrated_mean_filtered)
     else:
         y_feature = df_main_filtered[feature_name]
-    line, = ax1.plot(x, y_feature, color=config['color'])
+    if config['feature'] == 'Q_calculated_gru_memoryless':
+        linewidth = 2.0
+    else:
+        linewidth = 1.5  # Default line width
+    line, = ax1.plot(x, y_feature, color=config['color'], linewidth=linewidth)
 
-    # Manage legends
-    if config['on_subplots'] == [1, 2]:
-        # Do not add legend here; it's already added in the first subplot
-        pass
-    elif config['on_subplots'] == [2]:
-        # Compute SSD and add to lower right legend with SSD
-        if config['SSD']:
-            SSD = np.sum((y_feature - y_Q_calculated) ** 2)
-            label_with_SSD = f"{config['label']}(SSD={SSD:.2f})"
-        else:
-            label_with_SSD = config['label']
-        legend_handles_second_lower_right.append(line)
-        legend_labels_second_lower_right.append(label_with_SSD)
+    # Compute SSD if needed
+    if config['SSD']:
+        SSD = np.sum((y_feature - y_Q_calculated) ** 2)
+        label_with_SSD = f"{config['label']} (SSD={SSD:.2f})"
+    else:
+        label_with_SSD = config['label']
+
+    legend_handles_dict[config['feature']] = line
+    legend_labels_dict[config['feature']] = label_with_SSD
 
 ax1.set_ylabel('Control Signal')
 ax1.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
 
+# Collect legend handles and labels in specified order
+legend_handles = [legend_handles_dict[feature] for feature in legend_order if feature in legend_handles_dict]
+legend_labels = [legend_labels_dict[feature] for feature in legend_order if feature in legend_labels_dict]
 
-# Add legend to second subplot
-if legend_handles_second_lower_right:
-    legend_second_lower = ax1.legend(legend_handles_second_lower_right, legend_labels_second_lower_right,
-                                     loc='lower right', fontsize=12)
-    legend_second_lower.get_frame().set_edgecolor('white')  # Remove border edge color
-    legend_second_lower.get_frame().set_alpha(0)        # Make frame transparent
+# Create legend at the top of the figure
+fig.legend(legend_handles, legend_labels, loc='upper center', ncol=4, fontsize=12)
 
-# Third plot: 'target_position' and 'target_equilibrium' with secondary y-axis
-ax2 = fig.add_subplot(gs[2])
-ax2a = ax2.twinx()
+# Third plot: 'target_position'
+ax2 = fig.add_subplot(gs[2], sharex=ax0)
 
-# Update ax2 limits dynamically when ax0 limits change
-width_factor = 0.93  # Adjust this value between 0 and 1 to control the width
-# Flag to avoid recursion
-updating = False
-
-# Callback for updating ax2 when ax0 changes
-def update_ax2_limits(event):
-    global updating
-    if not updating:
-        updating = True
-        limits_a0 = ax0.get_xlim()
-        new_x_lim = (limits_a0[0], limits_a0[0] + width_factor * (limits_a0[1] - limits_a0[0]))
-        ax2.set_xlim(new_x_lim)
-        updating = False
-
-# Callback for updating ax0 when ax2 changes
-def update_ax0_limits(event):
-    global updating
-    if not updating:
-        updating = True
-        ax0.set_xlim(ax2.get_xlim())
-        updating = False
-
-# Connect callbacks
-ax0.callbacks.connect('xlim_changed', update_ax2_limits)
-ax2.callbacks.connect('xlim_changed', update_ax0_limits)
-
-update_ax2_limits(None)
-
-# # Adjust the width of ax
-pos = ax2.get_position()
-new_width = pos.width * width_factor
-new_pos = [pos.x0, pos.y0, new_width, pos.height]
-ax2.set_position(new_pos)
-ax2a.set_position(new_pos)  # Ensure the twin axis matches ax2
-
-subset_length = int(width_factor * len(x))
 y_target_position = df_main_filtered['target_position'].to_numpy() * 100  # Convert meters to centimeters
-y_target_equilibrium = df_main_filtered['target_equilibrium'].to_numpy()
-
-y_target_position = y_target_position[:subset_length]
-y_target_equilibrium = y_target_equilibrium[:subset_length]
-x_target = x[:subset_length]
-
+x_target = x
 
 ax2.plot(x_target, y_target_position, color='blue')
 ax2.set_ylabel('Target \nPosition (cm)', color='blue', labelpad=20)
 ax2.tick_params(axis='y', labelcolor='blue')
-
-# Adjust target equilibrium to prevent overlap
-ax2a.plot(x_target, y_target_equilibrium, color='red')
-ax2a.set_ylabel('Target \nEquilibrium', color='red')
-ax2a.tick_params(axis='y', labelcolor='red')
-ax2a.set_yticks([-1, 1])
-ax2a.set_ylim(-1.3, 1.3)  # Slightly expand y-limits
 ax2.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
 
 # Fourth plot: 'angle' in degrees
