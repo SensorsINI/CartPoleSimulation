@@ -5,6 +5,11 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
 from SI_Toolkit_ASF.L4DC_Plots.plots_helpers import break_line_on_jump
 
+
+# 1. Set font sizes (same as the first plot)
+plt.rcParams.update({'font.size': 14})
+legend_fontsize = 14
+
 # 1. Load 'cardinal_test_1.csv' and extract features
 df_main = pd.read_csv('./cardinal_test_1.csv', comment='#')
 
@@ -37,7 +42,7 @@ Q_integrated_std = Q_integrated_all.std(axis=0)
 # 3. Define custom labels, colors, and plotting order for features
 plotting_configs = {
     'Q_calculated': {
-        'label': 'Baseline MPC, pole: 5cm',
+        'label': 'Informed MPC, pole: 5cm',
         'color': 'blue',
         'order': 2,
         'feature': 'Q_calculated',
@@ -45,7 +50,7 @@ plotting_configs = {
         'SSD': False,
     },
     'Q_calculated_gru_adaptive_fixed_Q': {
-        'label': 'Adaptive GRU',
+        'label': 'Adaptive NC',
         'color': 'green',
         'order': 3,
         'feature': 'Q_calculated_gru_adaptive_fixed_Q',
@@ -53,7 +58,7 @@ plotting_configs = {
         'SSD': True,
     },
     'Q_calculated_gru_memoryless': {
-        'label': 'Experience Deprived GRU',
+        'label': 'Experience Deprived NC',
         'color': 'red',
         'order': 1,
         'feature': 'Q_calculated_gru_memoryless',
@@ -83,9 +88,6 @@ Q_integrated_all_filtered = Q_integrated_all[:, mask_integrated]
 Q_integrated_mean_filtered = Q_integrated_mean[mask_integrated]
 Q_integrated_std_filtered = Q_integrated_std[mask_integrated]
 time_integrated_filtered = time_integrated[mask_integrated]
-
-# 5. Set font sizes
-plt.rcParams.update({'font.size': 14})
 
 # 6. Create the plots with adjusted subplot heights
 fig = plt.figure(figsize=(16, 9))
@@ -181,7 +183,7 @@ legend = fig.legend(
     loc='upper center',
     bbox_to_anchor=(0.5, 0.97),  # Adjust the second value to move the legend up or down
     ncol=2,
-    fontsize=14
+    fontsize=legend_fontsize
 )
 legend.get_frame().set_edgecolor('white')  # Remove border edge color
 legend.get_frame().set_alpha(0)  # Make frame transparent
@@ -196,12 +198,12 @@ time_target = x
 position_color = 'blue'
 target_position_color = 'black'
 
-ax2.plot(time_target, y_target_position, color=target_position_color, label='Target')
-ax2.plot(time_target, y_position, color=position_color, label='Actual')
+ax2.plot(time_target, y_target_position, color=target_position_color, label='Target', linestyle='--')
+ax2.plot(time_target, y_position, color=position_color, label='Actual', linewidth=2.5)
 
 ax2.set_ylabel('Cart Position\n(cm)', labelpad=25)
 
-legend2 = ax2.legend(fontsize=14)
+legend2 = ax2.legend(fontsize=legend_fontsize)
 legend2.get_frame().set_edgecolor('white')  # Remove border edge color
 legend2.get_frame().set_alpha(0)  # Make frame transparent
 
@@ -212,11 +214,22 @@ ax3 = fig.add_subplot(gs[3], sharex=ax0)
 angle_degrees = np.degrees(df_main_filtered['angle'].to_numpy())
 
 # Break the line on jumps in the angle
-x_modified, angle_degrees_modified = break_line_on_jump(x.to_numpy(), angle_degrees, threshold=90.0)
+time_modified, angle_degrees_modified = break_line_on_jump(x.to_numpy(), angle_degrees, threshold=90.0)
 
-ax3.plot(x_modified, angle_degrees_modified, color='green')
+y_target_equilibrium = df_main_filtered['target_equilibrium'].to_numpy()
+target_angle_up = np.where(y_target_equilibrium == 1, 0, 180)
+target_angle_down = np.where(y_target_equilibrium == 1, 0, -180)
+
+
+ax3.plot(x, target_angle_up, color='black', linestyle='--', label='Target')
+ax3.plot(x, target_angle_down, color='black', linestyle='--')
+ax3.plot(time_modified, angle_degrees_modified, color='blue', label='Actual', linewidth=2.5)
 ax3.set_ylabel('Pole Angle \n(degrees)')
 ax3.set_xlabel('Time (s)')
+
+legend3 = ax3.legend(fontsize=legend_fontsize)
+legend3.get_frame().set_edgecolor('white')  # Remove border edge color
+legend3.get_frame().set_alpha(0)  # Make frame transparent
 
 plt.tight_layout()
 
