@@ -145,7 +145,13 @@ control_uninformed = uninformed_df['Q_calculated'][time_range_mask]
 # **3. Plot lines in the same order as the first subplot with increased linewidth**
 ax2.plot(time, control_mpc, color='blue', label=label_mpc, linewidth=2.0, zorder=3)
 ax2.plot(time, control_informed, color='green', label=label_informed, linewidth=3.0, zorder=2)
-ax2.plot(time, control_uninformed, color='red', label=label_uninformed, linewidth=2.0, zorder=1)
+
+time_swing_up, control_uninformed_swing_up = time[mask_before], control_uninformed[mask_before]
+ax2.axvline(x=t_threshold, color='gray', linestyle='--', linewidth=3)
+
+
+# time_swing_up, control_uninformed_swing_up = time, control_uninformed
+ax2.plot(time_swing_up, control_uninformed_swing_up, color='red', label=label_uninformed, linewidth=2.0, zorder=1)
 
 ax2.set_ylabel('Control Signal', labelpad=15)
 ax2.set_xlabel('Time (s)')
