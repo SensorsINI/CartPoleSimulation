@@ -147,7 +147,6 @@ class CustomLegendHandler(HandlerBase):
                        x0, y0, width, height, fontsize, trans):
         if isinstance(orig_handle, Line2D):
             # Create a line with the same properties
-            print(f"height: {height}, y0: {y0}")
             line = Line2D([x0, x0 + width], [y0 + 1.5*height, y0 + 1.5*height],
                           color=orig_handle.get_color(),
                           linewidth=orig_handle.get_linewidth(),
@@ -162,9 +161,6 @@ class CustomLegendHandler(HandlerBase):
 handler_map = {
     legend_handles_upper_right[1]: CustomLegendHandler()
 }
-# Example: Printing the type of each handle
-for idx, handle in enumerate(legend_handles_upper_right):
-    print(f"Handle {idx}: {type(handle)}")
 
 # Add legends to first subplot
 legend_upper = ax0.legend(
