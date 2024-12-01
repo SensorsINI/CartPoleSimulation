@@ -109,7 +109,7 @@ rpgd-tf:
   rtol: 1.0e-3
   num_rollouts: 16
   opt_keep_k_ratio: 0.75
-  outer_its: 16
+  outer_its: 64
   resamp_per: 10
   sample_stdev: 0.5
   sample_mean: 0.0
@@ -117,7 +117,7 @@ rpgd-tf:
   uniform_dist_max: 0.8 # only applies if SAMPLING_DISTRIBUTION: uniform AND sample_whole_control_space: false
   uniform_dist_min: -0.8 # only applies if SAMPLING_DISTRIBUTION: uniform AND sample_whole_control_space: false
   shift_previous: 1  # How much to shift solution from previous timestep, to serve as the guess for current timestep
-  warmup: false
+  warmup: true
   warmup_iterations: 250
 rpgd-me-tf:
   seed: null                            # If null, random seed based on datetime is used
@@ -132,9 +132,9 @@ rpgd-me-tf:
   maximum_entropy_alpha: 0.1
   gradmax_clip: 10
   rtol: 1.0e-3
-  num_rollouts: 32
+  num_rollouts: 16
   opt_keep_k_ratio: 0.25
-  outer_its: 5
+  outer_its: 64
   resamp_per: 1
   sample_stdev: 0.5
   warmup: false

@@ -21,10 +21,10 @@ save_pca_path = None
 # load_pca_path = './PrecomputedPCA/pca_model.joblib'
 load_pca_path = None
 
-feature_to_visualize = 'target_position'
-additional_feature = 'angle_offset'
+feature_to_visualize = 'L'
+additional_feature = 'L'
 # additional_feature = None
-data_features_to_filter_out = './AntiReference/antiref.csv'
+data_features_to_filter_out = './AntiReference/uninformed_pca_antiref.csv'
 # data_features_to_filter_out = None
 
 def PCA_on_hidden_states(df, save_pca_path=None, load_pca_path=None):
@@ -41,10 +41,11 @@ def PCA_on_hidden_states(df, save_pca_path=None, load_pca_path=None):
     """
     # Exclude the first 600 rows and explicitly create a copy
     df = df.iloc[600:].copy()
-    df['angle_offset'] = np.rad2deg(np.arctan2(df['angle_offset_sin'], df['angle_offset_cos']))
+    # df['angle_offset'] = np.rad2deg(np.arctan2(df['angle_offset_sin'], df['angle_offset_cos']))
 
     # Filter columns matching GRU_H
-    gru_h_columns = df.filter(regex=r'^GRU_H')
+    columns_to_filter = r'^GRU_H'
+    gru_h_columns = df.filter(regex=columns_to_filter)
 
     if data_features_to_filter_out:
         list_of_paths_to_datafiles = get_paths_to_datafiles([data_features_to_filter_out])
@@ -97,6 +98,7 @@ def get_cleaned_data(data_with_features_to_filter_out, target_data_to_clean):
     # Step 2: Determine the number of components to retain (k) using variance threshold
     cumulative_variance = np.cumsum(pca_dynamic.explained_variance_ratio_)
     k = np.searchsorted(cumulative_variance, 0.99999972) + 1  # Retain components explaining 95% variance
+    k = 125
     # 0.99995
     print(f"Number of components retained: {k}")
 

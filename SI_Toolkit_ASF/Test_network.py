@@ -9,10 +9,10 @@ from tqdm import trange
 get_files_from = ['./PCA/Experiment/']
 paths_to_recordings = get_paths_to_datafiles(get_files_from)
 dfs = load_data(list_of_paths_to_datafiles=paths_to_recordings, verbose=False)
+df = dfs[0]
 
 net_name = 'Dense-128IN-128H1-128H2-2OUT-0'
 path_to_models = './Experiments/AGRU_L_m_pole_up/Models'
-
 
 net_evaluator = neural_network_evaluator(
     net_name=net_name,
