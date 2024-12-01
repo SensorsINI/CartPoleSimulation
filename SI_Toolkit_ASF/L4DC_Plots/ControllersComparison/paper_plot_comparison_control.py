@@ -241,6 +241,7 @@ ax2a.set_ylabel('Target \nEquilibrium', color='red')
 ax2a.tick_params(axis='y', labelcolor='red')
 ax2a.set_yticks([-1, 1])
 ax2a.set_ylim(-1.3, 1.3)  # Slightly expand y-limits
+ax2.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
 
 # Fourth plot: 'angle' in degrees
 ax3 = fig.add_subplot(gs[3], sharex=ax0)
