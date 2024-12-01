@@ -77,7 +77,9 @@ ax0.plot(time, true_L, label='True Values', color='orange', linewidth=3, zorder=
 ax0.scatter(time, predicted_L, label='Predicted Values', color='green', s=10.0, zorder=2)
 
 ax0.set_ylabel('Pole Length (cm)', labelpad=15)
-ax0.legend()
+legend = ax0.legend(fontsize=14)
+legend.get_frame().set_edgecolor('white')  # Remove border edge color
+legend.get_frame().set_alpha(0)  # Make frame transparent
 
 # **Hide x-axis ticks and labels for ax0**
 ax0.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
@@ -143,7 +145,7 @@ target_position_color = 'blue'
 ax1.plot(time_target, y_target_position, color=target_position_color, label='Target Position')
 ax1.plot(time_target, y_position, color=position_color, label='Target Position')
 
-label_target_position_and_position(ax1, position_color, target_position_color)
+label_target_position_and_position(ax1, position_color, target_position_color, fontsize=14)
 ax1.tick_params(axis='y', labelcolor=target_position_color)
 
 ax1a.plot(time_target, y_target_equilibrium, color='red', label='Target Equilibrium')

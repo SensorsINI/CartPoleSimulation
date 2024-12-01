@@ -7,8 +7,8 @@ from matplotlib.gridspec import GridSpec
 from SI_Toolkit_ASF.L4DC_Plots.plots_helpers import label_target_position_and_position, break_line_on_jump
 
 label_mpc = 'Baseline MPC, pole: 15cm'
-label_informed = 'GRU - Adaptive'
-label_uninformed = 'GRU - Memoryless'
+label_informed = 'Adaptive GRU'
+label_uninformed = 'Experience-Deprived GRU'
 
 informed_df = pd.read_csv('./informed.csv', comment='#')
 uninformed_df = pd.read_csv('./uninformed.csv', comment='#')
@@ -85,7 +85,7 @@ ax0.set_xlim(time_angle.min(), time_angle.max())
 lines_0, labels_0 = ax0.get_legend_handles_labels()
 lines_0a, labels_0a = ax0a.get_legend_handles_labels()
 # Since the labels are the same, avoid duplication by only taking from ax0
-legend = ax0.legend(lines_0, labels_0, loc='upper right', ncol=3)
+legend = ax0.legend(lines_0, labels_0, loc='upper right', ncol=3, fontsize=14)
 legend.get_frame().set_edgecolor('white')  # Remove border edge color
 legend.get_frame().set_alpha(0)  # Make frame transparent
 

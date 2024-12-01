@@ -48,7 +48,7 @@ plotting_configs = {
         'SSD': False,
     },
     'Q_calculated_gru_memoryless': {
-        'label': 'GRU - Memoryless\n    ',
+        'label': 'Experience-Deprived GRU\n      ',
         'color': 'red',
         'order': 2,
         'feature': 'Q_calculated_gru_memoryless',
@@ -56,7 +56,7 @@ plotting_configs = {
         'SSD': True,
     },
     'Q_calculated_gru_adaptive_fixed_Q': {
-        'label': 'GRU - Adaptive\n',
+        'label': 'Adaptive GRU\n',
         'color': 'green',
         'order': 3,
         'feature': 'Q_calculated_gru_adaptive_fixed_Q',
@@ -64,7 +64,7 @@ plotting_configs = {
         'SSD': True,
     },
     'Q_calculated_integrated_mean': {
-        'label': 'Average MPC \npole: 5-80cm\n',
+        'label': 'Average MPC\npole: 5-80cm\n',
         'color': 'orange',
         'order': 4,
         'feature': 'interp_Q_calculated_integrated_mean',
@@ -129,7 +129,7 @@ for config in first_subplot_features:
     # Compute SSD and add to lower right legend with SSD
     if config['SSD']:
         SSD = np.sum((y_feature - y_Q_calculated) ** 2)
-        label_with_SSD = f"{config['label']} (SSD={SSD:.2f})"
+        label_with_SSD = f"{config['label']}(SSD={SSD:.2f})"
     else:
         label_with_SSD = config['label']
     if config['on_subplots'] == [1, 2]:
@@ -207,7 +207,7 @@ for config in second_subplot_features:
         # Compute SSD and add to lower right legend with SSD
         if config['SSD']:
             SSD = np.sum((y_feature - y_Q_calculated) ** 2)
-            label_with_SSD = f"{config['label']} (SSD={SSD:.2f})"
+            label_with_SSD = f"{config['label']}(SSD={SSD:.2f})"
         else:
             label_with_SSD = config['label']
         legend_handles_second_lower_right.append(line)
