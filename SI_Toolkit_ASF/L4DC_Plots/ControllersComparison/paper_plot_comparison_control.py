@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
+from matplotlib.legend_handler import HandlerBase
+from matplotlib.lines import Line2D
 
 # 1. Load 'cardinal_test_1.csv' and extract features
 df_main = pd.read_csv('./cardinal_test_1.csv', comment='#')
@@ -46,7 +48,7 @@ plotting_configs = {
         'SSD': False,
     },
     'Q_calculated_gru_memoryless': {
-        'label': 'GRU - Ablated Memory\n  ',
+        'label': 'GRU - Memoryless\n    ',
         'color': 'red',
         'order': 2,
         'feature': 'Q_calculated_gru_memoryless',
@@ -89,8 +91,8 @@ time_integrated_filtered = time_integrated[mask_integrated]
 plt.rcParams.update({'font.size': 14})
 
 # 6. Create the plots with adjusted subplot heights
-fig = plt.figure(figsize=(16, 10.3))
-gs = GridSpec(4, 1, height_ratios=[2, 2, 1, 1], hspace=0.5)
+fig = plt.figure(figsize=(16, 9))
+gs = GridSpec(4, 1, height_ratios=[2, 2, 1, 1], hspace=0.1)
 
 # Collect features for first subplot
 first_subplot_features = [config for config in plotting_configs.values() if 1 in config['on_subplots']]
@@ -140,11 +142,49 @@ for config in first_subplot_features:
 
 ax0.set_ylabel('Control Signal')
 
+class CustomLegendHandler(HandlerBase):
+    def create_artists(self, legend, orig_handle,
+                       x0, y0, width, height, fontsize, trans):
+        if isinstance(orig_handle, Line2D):
+            # Create a line with the same properties
+            print(f"height: {height}, y0: {y0}")
+            line = Line2D([x0, x0 + width], [y0 + 1.5*height, y0 + 1.5*height],
+                          color=orig_handle.get_color(),
+                          linewidth=orig_handle.get_linewidth(),
+                          linestyle=orig_handle.get_linestyle(),
+                          label=orig_handle.get_label())
+            line.set_transform(trans)
+            return [line]
+        else:
+            return super().create_artists(legend, orig_handle, x0, y0, width, height, fontsize, trans)
+
+# Create a handler_map where only the second handle uses CustomLegendHandler
+handler_map = {
+    legend_handles_upper_right[1]: CustomLegendHandler()
+}
+# Example: Printing the type of each handle
+for idx, handle in enumerate(legend_handles_upper_right):
+    print(f"Handle {idx}: {type(handle)}")
+
 # Add legends to first subplot
-legend_upper = ax0.legend(legend_handles_upper_right, legend_labels_upper_right, loc='upper right', fontsize=12)
+legend_upper = ax0.legend(
+    legend_handles_upper_right,
+    legend_labels_upper_right,
+    loc='upper right',
+    fontsize=12,
+    handler_map=handler_map
+)
+
+legend_upper.get_frame().set_edgecolor('white')  # Remove border edge color
+legend_upper.get_frame().set_alpha(0)        # Make frame transparent
 ax0.add_artist(legend_upper)
+
 if legend_handles_lower_right:
     legend_lower = ax0.legend(legend_handles_lower_right, legend_labels_lower_right, loc='lower right', fontsize=12)
+    legend_lower.get_frame().set_edgecolor('white')  # Remove border edge color
+    legend_lower.get_frame().set_alpha(0)  # Make frame transparent
+
+ax0.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
 
 # Second plot
 ax1 = fig.add_subplot(gs[1], sharex=ax0)
@@ -178,11 +218,15 @@ for config in second_subplot_features:
         legend_labels_second_lower_right.append(label_with_SSD)
 
 ax1.set_ylabel('Control Signal')
+ax1.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+
 
 # Add legend to second subplot
 if legend_handles_second_lower_right:
     legend_second_lower = ax1.legend(legend_handles_second_lower_right, legend_labels_second_lower_right,
                                      loc='lower right', fontsize=12)
+    legend_second_lower.get_frame().set_edgecolor('white')  # Remove border edge color
+    legend_second_lower.get_frame().set_alpha(0)        # Make frame transparent
 
 # Third plot: 'target_position' and 'target_equilibrium' with secondary y-axis
 ax2 = fig.add_subplot(gs[2], sharex=ax0)
