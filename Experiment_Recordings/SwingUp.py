@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from matplotlib.gridspec import GridSpec
 
-from SI_Toolkit_ASF.L4DC_Plots.plots_helpers import label_target_position_and_position
+from SI_Toolkit_ASF.L4DC_Plots.plots_helpers import label_target_position_and_position, break_line_on_jump
 
 label_mpc = 'Baseline MPC, pole: 15cm'
 label_informed = 'GRU - Adaptive'
@@ -38,73 +38,8 @@ angle_uninformed = np.degrees(uninformed_df['angle'])[time_range_mask].to_numpy(
 angle_mpc = np.degrees(mpc_df['angle'])[time_range_mask].to_numpy()
 
 
-def insert_nan_on_jumps(time, angle_informed, angle_uninformed, angle_mpc, threshold=20):
-    """
-    Inserts NaN into angle vectors and duplicates time entries where jumps exceed the threshold.
 
-    Parameters:
-    - time (np.ndarray): 1D array of time values.
-    - angle_informed (np.ndarray): 1D array of informed angles.
-    - angle_uninformed (np.ndarray): 1D array of uninformed angles.
-    - angle_mpc (np.ndarray): 1D array of MPC angles.
-    - threshold (float): The jump threshold to trigger insertion.
-
-    Returns:
-    - Tuple of np.ndarrays: (new_time, new_angle_informed, new_angle_uninformed, new_angle_mpc)
-    """
-    # Ensure all input arrays are numpy arrays
-    time = np.asarray(time)
-    angle_informed = np.asarray(angle_informed)
-    angle_uninformed = np.asarray(angle_uninformed)
-    angle_mpc = np.asarray(angle_mpc)
-
-    # Check that all arrays have the same length
-    if not (len(time) == len(angle_informed) == len(angle_uninformed) == len(angle_mpc)):
-        raise ValueError("All input arrays must have the same length.")
-
-    # Compute absolute differences
-    diff_informed = np.abs(np.diff(angle_informed))
-    diff_uninformed = np.abs(np.diff(angle_uninformed))
-    diff_mpc = np.abs(np.diff(angle_mpc))
-
-    # Identify where any angle jump exceeds the threshold
-    jump_indices = np.where(
-        (diff_informed > threshold) |
-        (diff_uninformed > threshold) |
-        (diff_mpc > threshold)
-    )[0] + 1  # +1 to get the index after the jump
-
-    if len(jump_indices) == 0:
-        # No jumps detected; return original arrays
-        return time, angle_informed, angle_uninformed, angle_mpc
-
-    # Convert arrays to lists for insertion
-    new_time = time.tolist()
-    new_angle_informed = angle_informed.tolist()
-    new_angle_uninformed = angle_uninformed.tolist()
-    new_angle_mpc = angle_mpc.tolist()
-
-    # To handle multiple insertions correctly, iterate in reverse order
-    for idx in sorted(jump_indices, reverse=True):
-        # Insert NaN into angle vectors
-        new_angle_informed.insert(idx, np.nan)
-        new_angle_uninformed.insert(idx, np.nan)
-        new_angle_mpc.insert(idx, np.nan)
-        # Duplicate the time entry
-        new_time.insert(idx, time[idx])
-
-    # Convert back to numpy arrays
-    return (
-        np.array(new_time),
-        np.array(new_angle_informed),
-        np.array(new_angle_uninformed),
-        np.array(new_angle_mpc)
-    )
-
-
-time_angle, angle_informed, angle_uninformed, angle_mpc = insert_nan_on_jumps(
-    time, angle_informed, angle_uninformed, angle_mpc, threshold=20
-)
+time_angle = time
 
 t_threshold = 2.0
 smale_angle_regime = 15.0
@@ -115,15 +50,14 @@ ax0 = fig.add_subplot(gs[0])
 # Mask for data before t_threshold
 mask_before = time_angle < t_threshold
 
-# Plot data up to t_threshold on ax0
-ax0.plot(time_angle[mask_before], angle_mpc[mask_before], label=label_mpc, color='orange', zorder=1)
-ax0.plot(time_angle[mask_before], angle_informed[mask_before], label=label_informed, color='green', zorder=1)
-ax0.plot(time_angle[mask_before], angle_uninformed[mask_before], label=label_uninformed, color='red', zorder=1)
+time_before_mpc, angle_before_mpc = break_line_on_jump(time_angle[mask_before], angle_mpc[mask_before])
+time_before_informed, angle_before_informed = break_line_on_jump(time_angle[mask_before], angle_informed[mask_before])
+time_before_uninformed, angle_before_uninformed = break_line_on_jump(time_angle[mask_before], angle_uninformed[mask_before])
 
-# Set the limits for the primary axis
-ax0.set_xlim(time_angle.min(), time_angle.max())
-ax0.set_ylim(min(angle_mpc[mask_before].min(), angle_informed[mask_before].min(), angle_uninformed[mask_before].min()),
-            max(angle_mpc[mask_before].max(), angle_informed[mask_before].max(), angle_uninformed[mask_before].max()))
+# Plot data up to t_threshold on ax0
+ax0.plot(time_before_mpc, angle_before_mpc, label=label_mpc, color='orange', zorder=1)
+ax0.plot(time_before_informed, angle_before_informed, label=label_informed, color='green', zorder=1)
+ax0.plot(time_before_uninformed, angle_before_uninformed, label=label_uninformed, color='red', zorder=1)
 
 # Create a secondary y-axis
 ax0a = ax0.twinx()
@@ -132,9 +66,13 @@ ax0a = ax0.twinx()
 mask_after = time_angle >= t_threshold
 
 # Plot data from t_threshold onwards on ax0a
-ax0a.plot(time_angle[mask_after], angle_mpc[mask_after], color='orange', zorder=2)
-ax0a.plot(time_angle[mask_after], angle_informed[mask_after], color='green', zorder=2)
-ax0a.plot(time_angle[mask_after], angle_uninformed[mask_after], color='red', zorder=2)
+time_after_mpc, angle_after_mpc = break_line_on_jump(time_angle[mask_after], angle_mpc[mask_after])
+time_after_informed, angle_after_informed = break_line_on_jump(time_angle[mask_after], angle_informed[mask_after])
+time_after_uninformed, angle_after_uninformed = break_line_on_jump(time_angle[mask_after], angle_uninformed[mask_after])
+
+ax0a.plot(time_after_mpc, angle_after_mpc, color='orange', zorder=2)
+ax0a.plot(time_after_informed, angle_after_informed, color='green', zorder=2)
+ax0a.plot(time_after_uninformed, angle_after_uninformed, color='red', zorder=2)
 
 # Set the limits for the secondary axis (zoomed-in range)
 ax0a.set_ylim(-smale_angle_regime, smale_angle_regime)
@@ -147,21 +85,21 @@ ax0.set_xlim(time_angle.min(), time_angle.max())
 lines_0, labels_0 = ax0.get_legend_handles_labels()
 lines_0a, labels_0a = ax0a.get_legend_handles_labels()
 # Since the labels are the same, avoid duplication by only taking from ax0
-legend = ax0.legend(lines_0, labels_0, loc='center', bbox_to_anchor=(0.8, 1.15), ncol=3)
+legend = ax0.legend(lines_0, labels_0, loc='upper right', ncol=3)
 legend.get_frame().set_edgecolor('white')  # Remove border edge color
 legend.get_frame().set_alpha(0)  # Make frame transparent
 
 # Differentiate the two y-axes
-ax0.set_ylabel('Angle (Full Range)', color='black')
-ax0a.set_ylabel('Angle (Zoomed)', color='black')
+ax0.set_ylabel('Angle - Full Range (deg)', color='black')
+ax0a.set_ylabel('Angle - Zoomed (deg)', color='black')
 
 # Optional: Add vertical line at t_threshold to indicate the change
-ax0.axvline(x=t_threshold, color='gray', linestyle='--', linewidth=1)
+ax0.axvline(x=t_threshold, color='gray', linestyle='--', linewidth=3)
 
 # Optional: Add horizontal lines to indicate zoom limits on ax0a
 ax0a.axhline(y=smale_angle_regime, color='gray', linestyle=':', linewidth=0.5)
 ax0a.axhline(y=-smale_angle_regime, color='gray', linestyle=':', linewidth=0.5)
-
+ax0.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
 
 # 5. Second subplot: Position
 ax1 = fig.add_subplot(gs[1], sharex=ax0)
@@ -196,5 +134,8 @@ ax2.plot(time, control_uninformed, color='red', label=label_uninformed)
 
 ax2.set_ylabel('Control Signal', labelpad=15)
 ax2.set_xlabel('Time (s)')
+
+plt.savefig('SwingUp.pdf', format='pdf', bbox_inches='tight')
+
 
 plt.show()
