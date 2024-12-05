@@ -73,8 +73,8 @@ class Cartpole_Sensors(CartPoleRLTemplate):
                     "You should always call 'reset()' once you receive 'terminated = True' -- any further steps are undefined behavior."
                 )
             self.steps_beyond_terminated += 1
-            reward = 0.0
-            # reward = -1.0
+            # reward = 0.0
+            reward = -1.0
 
         # print(action)
         angle = abs(state[ANGLE_IDX]/math.pi)
@@ -88,9 +88,10 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         # print("upright reward: " + str(abs(state[ANGLE_IDX]/math.pi)))
         #penalize high pole velocity near upright position:
         # reward -= 0.1 * (((state[ANGLE_COS_IDX]+1)/2)**2) * abs(state[ANGLED_IDX])
-        # reward -= 0.1 * ((state[ANGLE_COS_IDX] + 1) / 2) * abs(state[ANGLED_IDX])
+        reward -= 2.5 * time_scale * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX])
+
         #penalty for being not in origin when near upright:
-        reward -= 2.5 * time_scale * (angle_scale * pos)
+        reward -=  2.5 * time_scale * (angle_scale * pos)
 
         reward -= 0.1 * abs(action)
         #Track length -> 44.0e-2
@@ -154,14 +155,21 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         #     # or state[ANGLE_IDX] < -self.theta_threshold_radians
         #     # or state[ANGLE_IDX] > self.theta_threshold_radians
         # )K
+        # print("x: " + str(state[POSITION_IDX]))
         terminated = bool(
-            state[POSITION_IDX] < -0.17
-            or state[POSITION_IDX] > 0.17
+            state[POSITION_IDX] < -0.165
+            or state[POSITION_IDX] > 0.165
             # or state[ANGLE_IDX] < -self.theta_threshold_radians
             # or state[ANGLE_IDX] > self.theta_threshold_radians
         )
 
         return terminated
+
+    def get_angular_velocity(self, state):
+        return state[ANGLED_IDX]
+
+    def get_angle(self, state):
+        return state[ANGLE_IDX]
 
     def reset(self):
         self.steps_beyond_terminated = 0

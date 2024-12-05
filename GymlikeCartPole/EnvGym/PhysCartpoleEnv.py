@@ -71,6 +71,10 @@ class PhysCartpoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         # self.connection_thread.daemon = True  # Allow thread to exit when main program exits
         self.connection_thread.start()
 
+    def close_connection(self):
+        self.connection_thread.stop()
+        self.connection_thread.join()
+
     def run_physical_cartpole(self):
         for i in range(100):
             print("getting state:" + str(self.cartpole_instance.s[0]))
@@ -89,10 +93,14 @@ class PhysCartpoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.cartpole_instance.controller.action = action
         self.cartpole_instance.controller.set_action_ready()
         # print(self.cartpole_instance.controlEnabled)
+        # print(self.cartpole_instance.s)
         # terminated = False
         # if not self.cartpole_instance.controlEnabled:
         #     terminated = True
-        terminated = self.cartpole_rl.termination_condition(self.cartpole_instance.s)
+        terminated = self.cartpole_rl.termination_condition(self.cartpole_instance.s) or self.cartpole_instance.safety_switch_counter > 10
+        # if terminated:
+        #     print("debug")
+        # print('terminated: ' + str(terminated))
         # print('threshold: ' + str(self.cartpole_rl.x_threshold))
         # print("real x:" +  str(self.cartpole_instance.s[4]))
         # print(terminated)
@@ -100,6 +108,7 @@ class PhysCartpoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         # print(self.cartpole_instance.controller.action_ready)
         truncated = self.steps >= self.max_episode_steps
         # truncated = self.steps >= self.max_episode_steps
+        # print(self.cartpole_rl.get_angular_velocity(self.cartpole_instance.s))
 
         # print("getting state:" + str(self.cartpole_instance.s[0]))
         #TODO: set the action for next 0.02 seconds
@@ -117,13 +126,44 @@ class PhysCartpoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             options: Optional[dict] = None,
     ):
         #TODO: if we are sending actions directly, maybe this will be enough?
-        print("reset start PRESS K")
-        if self.steps >= 10:
-            self.cartpole_instance.calibrate()  #AttributeError: 'NoneType' object has no attribute 'write'
-        # self.cartpole_instance.calibrate()
-        time.sleep(10)
-        print("reset end")
+        print("RESET START")
+        # if self.steps >= 10:
+        # File "/home/marcin/PycharmProjects/physical-cartpole/Driver/DriverFunctions/interface.py", line 120, in calibrate
+        #     self.device.write(bytearray(msg))
+        # AttributeError: 'NoneType' object has no attribute 'write'
+        # if self.steps >= 5:
+
+        self.cartpole_instance.controller.action = 0.0
+        self.cartpole_instance.controller.set_action_ready()
+
+        self.cartpole_instance.recalibrate = True
+
+        # spinning = self.cartpole_rl.get_angular_velocity(self.cartpole_instance.s) > 0.01
+        while self.cartpole_instance.recalibrate:
+            # spinning = self.cartpole_rl.get_angular_velocity(self.cartpole_instance.s) > 0.01
+            # if spinning:
+            #     print(self.cartpole_rl.get_angular_velocity(self.cartpole_instance.s))
+            pass
+
+        spinning = True
+
+        #
+        while spinning:
+            # print(self.cartpole_rl.get_angular_velocity(self.cartpole_instance.s))
+            time.sleep(0.02)
+            # print("vel: ", self.cartpole_rl.get_angular_velocity(self.cartpole_instance.s), " angle: ", self.cartpole_rl.get_angle(self.cartpole_instance.s))
+            if abs(self.cartpole_rl.get_angular_velocity(self.cartpole_instance.s)) < 7 and abs(self.cartpole_rl.get_angle(self.cartpole_instance.s)) > 2.3:
+                spinning = False
+
+        # for i in range(50):
+        #     print(self.cartpole_instance.s)
+        #     time.sleep(0.1)
+        time.sleep(1)
+        print("RESET END")
+
+        self.cartpole_instance.controlEnabled = True
         self.steps = 0
+
         return np.array(self.cartpole_instance.s, dtype=np.float32), {}
 
     def render(self, mode='human'):

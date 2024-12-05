@@ -58,7 +58,7 @@ env = PhysCartpoleEnv(phys, PhysicalCartPoleDriverInstance)
 '''load model'''
 from SI_Toolkit.computation_library import TensorType, NumpyLibrary
 from CartPole.cartpole_equations import CartPoleEquations
-cpe = CartPoleEquations(lib=NumpyLibrary)
+cpe = CartPoleEquations(lib=NumpyLibrary())
 theta_threshold_radians = 12 * 2 * math.pi / 360
 x_threshold = cpe.params.TrackHalfLength
 high = np.array(
@@ -80,6 +80,8 @@ model = SAC.load('/home/marcin/PycharmProjects/physical-cartpole/Driver/CartPole
 # model = PPO.load('/home/marcin/PycharmProjects/physical-cartpole/Driver/CartPoleSimulation/GymlikeCartPole/ppo_cartpole_angle_dependent_reward.zip',
 #                  env = env, custom_objects={"action_space": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
 #                                 "observation_space": spaces.Box(-high, high, dtype=np.float32)})
+
+# model =
 '''load model'''
 
 env.open_connection()
@@ -90,8 +92,11 @@ print(model.policy)
 # learn_thread = threading.Thread(target=model.learn, kwargs={'total_timesteps': 1000, 'progress_bar': True})
 # learn_thread.start()
 
-model.learn(total_timesteps=1000, progress_bar=True)
-model.save("test")
+model.learn(total_timesteps=7000, progress_bar=True)
+model.save("sac_irl_from_64size_10kbatch_timescale_1011_vel_penalty")
+
+# print("JOINING")
+# env.close_connection()
 # other = threading.Thread(target=env.step)
 # # other = threading.Thread(target=env.run_physical_cartpole)
 # env.open_connection()
