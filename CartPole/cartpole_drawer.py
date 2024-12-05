@@ -67,7 +67,7 @@ class CartPoleDrawer:
 
         self.slider = target_slider
 
-        self.init_graphical_elements(self.cp.L_initial, self.cp.L_range)  # Assign proper object to the above variables
+        self.init_graphical_elements(self.cp.L_updater.init_value, self.cp.L_updater.range_random)  # Assign proper object to the above variables
         # endregion
 
 
@@ -201,7 +201,7 @@ class CartPoleDrawer:
         AxCart.add_patch(InvisiblePointDown)
 
         # Apply scaling
-        AxCart.axis('scaled')
+        AxCart.axis('auto')
 
         ## Lower Chart with Slider
         self.slider.draw_constant_elements(AxSlider, self.cp.controller_name)
@@ -248,9 +248,9 @@ class CartPoleDrawer:
 
         t21 = transforms.Affine2D().translate(-zero_tick_position, 0.0)
         if ANGLE_CONVENTION == 'CLOCK-NEG':
-            t22 = transforms.Affine2D().rotate(-self.cp.zero_angle_shift)
+            t22 = transforms.Affine2D().rotate(-self.cp.vertical_angle_offset)
         elif ANGLE_CONVENTION == 'CLOCK-POS':
-            t22 = transforms.Affine2D().rotate(self.cp.zero_angle_shift)
+            t22 = transforms.Affine2D().rotate(self.cp.vertical_angle_offset)
         else:
             raise ValueError('Unknown angle convention')
         t23 = transforms.Affine2D().translate(zero_tick_position, 0.0)

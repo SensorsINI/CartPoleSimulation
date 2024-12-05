@@ -21,7 +21,7 @@ class ODEModel(tf.keras.Model):
     def __init__(self, horizon, batch_size, net_info, name=None, **kwargs):
         super().__init__(**kwargs)
 
-        self.lib = TensorFlowLibrary
+        self.lib = TensorFlowLibrary()
 
         self.batch_size = batch_size
         self.horizon = horizon

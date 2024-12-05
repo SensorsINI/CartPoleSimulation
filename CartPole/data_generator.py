@@ -11,7 +11,7 @@ from CartPole.state_utilities import create_cartpole_state
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 from others.globals_and_utils import create_rng, load_config
-from CartPole.cartpole_parameters import TrackHalfLength, L
+from CartPole.cartpole_parameters import TrackHalfLength
 
 import argparse
 
@@ -140,16 +140,7 @@ class random_experiment_setter:
 
         self.initial_target_equilibrium = config['initial_target_equilibrium']
 
-        self.L_initial_mode = config['L']['L_initial']
-        self.L_initial = None
-        self.change_L_every_x_second = config['L']['change_L_every_x_second']
-        if isinstance(self.change_L_every_x_second, str) and self.change_L_every_x_second == 'inf':
-            self.change_L_every_x_second = np.inf
-        self.L_discount_factor = config['L']['L_discount_factor']
-        self.L_range = config['L']['L_range']
-        self.L_informed_controller = config['L']['informed_controller']
-        self.L_change_mode = config['L']['L_change_mode']
-        self.L_step = config['L']['L_step']
+        self.interpolation_type_idx = 0
 
         self.rng = create_rng(self.__class__.__name__, config["seed"])
 
@@ -190,13 +181,11 @@ class random_experiment_setter:
         else:
             Exception('{} is not a valid specification for target equilibrium'.format(self.initial_target_equilibrium))
 
-        global L
-        if self.L_initial_mode == 'uniform':
-            self.L_initial = np.random.uniform(*self.L_range)
-        elif self.L_initial_mode == 'default':
-            self.L_initial = L[...]
+        if isinstance(self.interpolation_type, list):
+            interpolation_type = self.interpolation_type[self.interpolation_type_idx]
+            self.interpolation_type_idx = (self.interpolation_type_idx + 1) % (len(self.interpolation_type))
         else:
-            self.L_initial = self.L_initial_mode
+            interpolation_type = self.interpolation_type
 
         CartPoleInstance.setup_cartpole_random_experiment(
             # Initial state
@@ -213,7 +202,7 @@ class random_experiment_setter:
             # Settings related to random trace generation
             track_relative_complexity=self.track_relative_complexity,
             length_of_experiment=self.length_of_experiment,
-            interpolation_type=self.interpolation_type,
+            interpolation_type=interpolation_type,
             turning_points_period=self.turning_points_period,
             start_random_target_position_at=start_random_target_position_at,
             end_random_target_position_at=end_random_target_position_at,
@@ -223,14 +212,6 @@ class random_experiment_setter:
             target_equilibrium=target_equilibrium,
             keep_target_equilibrium_x_seconds_up=self.keep_target_equilibrium_x_seconds_up,
             keep_target_equilibrium_x_seconds_down=self.keep_target_equilibrium_x_seconds_down,
-
-            L_initial=self.L_initial,
-            change_L_every_x_seconds=self.change_L_every_x_second,
-            L_discount_factor=self.L_discount_factor,
-            L_range=self.L_range,
-            L_informed_controller=self.L_informed_controller,
-            L_change_mode=self.L_change_mode,
-            L_step=self.L_step,
 
         )
 

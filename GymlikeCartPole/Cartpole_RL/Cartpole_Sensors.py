@@ -17,14 +17,14 @@ class Cartpole_Sensors(CartPoleRLTemplate):
 
     def __init__(self, **kwargs):
 
-        self.cpe = CartPoleEquations(lib=NumpyLibrary)
+        self.cpe = CartPoleEquations(lib=NumpyLibrary())
 
         self.RES = random_experiment_setter()
 
         self.simulation_time_step = self.RES.dt_simulation
         self.number_of_intermediate_integration_steps = int(self.RES.dt_controller_update/self.RES.dt_simulation)
 
-        self.pole_length_rendering = 0.5 * self.cpe.params.L  # Heuristic, for rendering only, proportional to physical pole length
+        self.pole_length_rendering = self.cpe.params.L  # Heuristic, for rendering only, proportional to physical pole length
         self.angle_rotation_direction_rendering = 1  # Heuristic, for rendering only, 1 or -1
 
         # Angle at which to fail the episode

@@ -28,7 +28,7 @@ class next_state_predictor_ODE_v0:
                  variable_parameters=None,
                  **kwargs):
 
-        self.lib  = NumpyLibrary
+        self.lib  = NumpyLibrary()
         self.cpe = CartPoleEquations()
 
         self.s = create_cartpole_state()
@@ -45,11 +45,11 @@ class next_state_predictor_ODE_v0:
         assert s.ndim == 2
 
         if self.variable_parameters is not None and hasattr(self.variable_parameters, 'L'):
-            pole_half_length = self.variable_parameters.L
+            pole_length = self.variable_parameters.L
         else:
-            pole_half_length = self.cpe.params.L
+            pole_length = self.cpe.params.L
 
         Q = np.squeeze(Q, axis=1)  # Removes features dimension, specific for cartpole as it has only one control input
         u = self.cpe.Q2u(Q)
-        s_next = cartpole_fine_integration_numba_interface(s, u, self.t_step, self.intermediate_steps, self.cpe.params, L=pole_half_length)
+        s_next = cartpole_fine_integration_numba_interface(s, u, self.t_step, self.intermediate_steps, self.cpe.params, L=pole_length)
         return s_next

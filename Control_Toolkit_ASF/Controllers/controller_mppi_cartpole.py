@@ -341,7 +341,7 @@ class controller_mppi_cartpole(template_controller):
     :param template_controller: Superclass describing the basic controller interface
     :type template_controller: abc.ABC
     """
-    _computation_library = NumpyLibrary
+    _computation_library = NumpyLibrary()
     
     def configure(self):
         """Random number generator"""
