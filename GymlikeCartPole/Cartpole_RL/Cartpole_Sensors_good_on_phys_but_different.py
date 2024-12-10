@@ -35,7 +35,6 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         self.steps = 0
         # self.x_threshold = 0.17
 
-
         # Angle limit set to 2 * theta_threshold_radians so failing observation
         # is still within bounds.
         high = np.array(
@@ -98,25 +97,25 @@ class Cartpole_Sensors(CartPoleRLTemplate):
             # print('gfhg')
             reward += 5
             reward -= 2 * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX])
-            print("upright reward: ", 5 - 2 * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX]))
+            # print("upright reward: ", 5 - 2 * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX]))
 
         if terminated and steps < 25:
             reward -= 10 * (25 - steps)
             # print("early termination!")
-        #weighted towards end of epidose
+        # #weighted towards end of epidose
         # reward -= 2.5 * time_scale * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX])
-
-        # #any time
-        reward -= 0.5 * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX])
         #
-        # #penalty for being not in origin when near upright:
+        # #any time
+        # reward -= 0.5 * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX])
+
+        #penalty for being not in origin when near upright:
         reward -=  2.5 * time_scale * (angle_scale * pos)
 
-        # reward -= time_scale * 5 * angle
-        #
-        # reward -= pos
+        reward -= time_scale * 5 * angle
 
-        reward -= 0.1 * abs(action)
+        reward -= pos
+
+        reward -= 0.05 * abs(action)
         #Track length -> 44.0e-2
         # print("reward: " + str(reward))
 

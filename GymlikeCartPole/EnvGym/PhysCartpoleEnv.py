@@ -127,11 +127,12 @@ class PhysCartpoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     ):
         #TODO: if we are sending actions directly, maybe this will be enough?
         print("RESET START")
-        # if self.steps >= 10:
-        # File "/home/marcin/PycharmProjects/physical-cartpole/Driver/DriverFunctions/interface.py", line 120, in calibrate
-        #     self.device.write(bytearray(msg))
-        # AttributeError: 'NoneType' object has no attribute 'write'
-        # if self.steps >= 5:
+
+        print("episode length: " + str(self.steps))
+        print("episode reward: " + str(self.cartpole_rl.episode_reward))
+        print("reward per step: " + str(self.cartpole_rl.episode_reward / max(self.steps, 1)))
+
+        self.cartpole_rl.episode_reward = 0
 
         self.cartpole_instance.controller.action = 0.0
         self.cartpole_instance.controller.set_action_ready()
@@ -140,9 +141,6 @@ class PhysCartpoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         # spinning = self.cartpole_rl.get_angular_velocity(self.cartpole_instance.s) > 0.01
         while self.cartpole_instance.recalibrate:
-            # spinning = self.cartpole_rl.get_angular_velocity(self.cartpole_instance.s) > 0.01
-            # if spinning:
-            #     print(self.cartpole_rl.get_angular_velocity(self.cartpole_instance.s))
             pass
 
         spinning = True
@@ -155,9 +153,6 @@ class PhysCartpoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             if abs(self.cartpole_rl.get_angular_velocity(self.cartpole_instance.s)) < 7 and abs(self.cartpole_rl.get_angle(self.cartpole_instance.s)) > 2.3:
                 spinning = False
 
-        # for i in range(50):
-        #     print(self.cartpole_instance.s)
-        #     time.sleep(0.1)
         time.sleep(1)
         print("RESET END")
 

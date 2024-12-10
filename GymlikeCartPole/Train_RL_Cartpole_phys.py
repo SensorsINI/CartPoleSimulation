@@ -3,6 +3,7 @@ import os
 from stable_baselines3 import SAC, PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.type_aliases import TrainFreq
 
 from GymlikeCartPole.EnvGym.PhysCartpoleEnv import PhysCartpoleEnv
 
@@ -71,28 +72,51 @@ high = np.array(
                 np.inf,
             ],dtype=np.float32,)
 
-#SAC only updates action about once every 3 controller step calls
+# SAC only updates action about once every 3 controller step calls
 model = SAC.load('/home/marcin/PycharmProjects/physical-cartpole/Driver/CartPoleSimulation/GymlikeCartPole/sac_cartpole_64size_10kbatch_timescale_1011.zip',
-                 env = env, custom_objects={"action_space": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
-                                "observation_space": spaces.Box(-high, high, dtype=np.float32)})
+                 env = env,custom_objects={"train_freq": (10, 'step')}, bcustom_objects={"action_space": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
+                                "observation_space": spaces.Box(-high, high, dtype=np.float32)}, force_reset=True)
 
-#PPO updates pretty much every controller step call
+# print(model.train_freq)
+
+# model.batch_size = 256
+# model.replay_buffer = model.replay_buffer_class(
+#     model.replay_buffer.buffer_size,
+#     model.observation_space,
+#     model.action_space,
+#     device=model.device,
+#     n_envs=model.n_envs,
+#     optimize_memory_usage=model.optimize_memory_usage,
+# )
+# model.train_freq = TrainFreq(n=5, unit='step')
+
+# model.ent_coef = 0.001
+# model.optimize_memory_usage = True
+# model.device = "cuda"
+# PPO updates pretty much every controller step call
 # model = PPO.load('/home/marcin/PycharmProjects/physical-cartpole/Driver/CartPoleSimulation/GymlikeCartPole/ppo_cartpole_angle_dependent_reward.zip',
 #                  env = env, custom_objects={"action_space": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
 #                                 "observation_space": spaces.Box(-high, high, dtype=np.float32)})
 
+# policy_kwargs = dict(net_arch=[32, 32])
+# model = SAC('MlpPolicy', env, policy_kwargs=policy_kwargs,
+#              batch_size=1024, verbose=1, train_freq=(5, 'step'))
+
+# policy_kwargs = dict(net_arch=[32, 32])
+# model = SAC('MlpPolicy', env, policy_kwargs=policy_kwargs,
+#              batch_size=1024, verbose=1)
 # model =
 '''load model'''
 
 env.open_connection()
-print(model.policy)
+# print(model.relpay_buffer)
 # model.learn(total_timesteps=150000, progress_bar=True)
 
 
 # learn_thread = threading.Thread(target=model.learn, kwargs={'total_timesteps': 1000, 'progress_bar': True})
 # learn_thread.start()
 
-model.learn(total_timesteps=7000, progress_bar=True)
+model.learn(total_timesteps=30000, progress_bar=True)
 model.save("sac_irl_from_64size_10kbatch_timescale_1011_vel_penalty")
 
 # print("JOINING")
