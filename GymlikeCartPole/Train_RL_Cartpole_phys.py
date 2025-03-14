@@ -48,13 +48,8 @@ def other():
 
 phys = threading.Thread(target=PhysicalCartPoleDriverInstance.run)
 env = PhysCartpoleEnv(phys, PhysicalCartPoleDriverInstance)
-# # ### Custom Actor Model Size:
-# policy_kwargs = dict(net_arch=[32, 32])
-# model = SAC('MlpPolicy', env, policy_kwargs=policy_kwargs,
-#              batch_size=1024, verbose=1)
 
-# path = "Driver/CartPoleSimulation/GymlikeCartPole/"
-# model = SAC.load(path + "sac_cartpole_64size_10kbatch_timescale_1011")
+
 
 '''load model'''
 from SI_Toolkit.computation_library import TensorType, NumpyLibrary
@@ -72,9 +67,17 @@ high = np.array(
                 np.inf,
             ],dtype=np.float32,)
 
+# # ### Custom Actor Model Size:
+# policy_kwargs = dict(net_arch=[16, 16])
+# model = SAC('MlpPolicy', env, policy_kwargs=policy_kwargs,
+#             train_freq=(10, 'step'), batch_size=10000, verbose=1)
+
+# path = "Driver/CartPoleSimulation/GymlikeCartPole/"
+# model = SAC.load(path + "sac_cartpole_64size_10kbatch_timescale_1011")
+
 # SAC only updates action about once every 3 controller step calls
-model = SAC.load('/home/marcin/PycharmProjects/physical-cartpole/Driver/CartPoleSimulation/GymlikeCartPole/sac_cartpole_64size_10kbatch_timescale_1011.zip',
-                 env = env,custom_objects={"train_freq": (10, 'step')}, bcustom_objects={"action_space": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
+model = SAC.load('/home/marcin/PycharmProjects/physical-cartpole/Driver/CartPoleSimulation/GymlikeCartPole/sac_cartpole_32size.zip',
+                 env = env,custom_objects={"train_freq": (7, 'step')}, bcustom_objects={"action_space": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
                                 "observation_space": spaces.Box(-high, high, dtype=np.float32)}, force_reset=True)
 
 # print(model.train_freq)
@@ -116,8 +119,9 @@ env.open_connection()
 # learn_thread = threading.Thread(target=model.learn, kwargs={'total_timesteps': 1000, 'progress_bar': True})
 # learn_thread.start()
 
-model.learn(total_timesteps=30000, progress_bar=True)
-model.save("sac_irl_from_64size_10kbatch_timescale_1011_vel_penalty")
+# timesteps: 30000
+model.learn(total_timesteps=50000, progress_bar=True)
+model.save("sac_from_sac_cartpole_32size")
 
 # print("JOINING")
 # env.close_connection()

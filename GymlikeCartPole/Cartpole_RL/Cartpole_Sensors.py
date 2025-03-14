@@ -78,7 +78,7 @@ class Cartpole_Sensors(CartPoleRLTemplate):
             self.steps_beyond_terminated += 1
             # print("were giving -1.0")
             # reward = 0.0
-            reward = -1.0
+            reward = -10.0
 
         # print(action)
         self.steps = steps
@@ -87,40 +87,58 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         angle_scale = (state[ANGLE_COS_IDX]+1)/2
         time_scale = steps/500
         # print(time_scale)
-        # ###OLD REWARD
-        #penalize deviation from upright position:
-        reward -= 5*angle
-        # print("upright reward: " + str(abs(state[ANGLE_IDX]/math.pi)))
-        #penalize high pole velocity near upright position:
-        # reward -= 0.1 * (((state[ANGLE_COS_IDX]+1)/2)**2) * abs(state[ANGLED_IDX])
 
-        if abs(state[ANGLE_IDX]) < 0.3:
-            # print('gfhg')
-            reward += 5
-            reward -= 2 * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX])
-            print("upright reward: ", 5 - 2 * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX]))
 
-        if terminated and steps < 25:
-            reward -= 10 * (25 - steps)
-            # print("early termination!")
-        #weighted towards end of epidose
-        # reward -= 2.5 * time_scale * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX])
+        '''IRL REWARD IDEAS'''
 
-        # #any time
-        reward -= 0.5 * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX])
+        # #penalize deviation from upright position:
+        # reward -= 5*angle
+        # # print("upright reward: " + str(abs(state[ANGLE_IDX]/math.pi)))
+        # #penalize high pole velocity near upright position:
+        # # reward -= 0.1 * (((state[ANGLE_COS_IDX]+1)/2)**2) * abs(state[ANGLED_IDX])
         #
-        # #penalty for being not in origin when near upright:
-        reward -=  2.5 * time_scale * (angle_scale * pos)
-
-        # reward -= time_scale * 5 * angle
+        # if abs(state[ANGLE_IDX]) < 0.3:
+        #     # print('gfhg')
+        #     reward += 5
+        #     reward -= 2 * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX])
+        #     print("upright reward: ", 5 - 2 * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX]))
         #
-        # reward -= pos
+        # if terminated and steps < 25:
+        #     reward -= 10 * (25 - steps)
+        #     # print("early termination!")
+        # #weighted towards end of epidose
+        # # reward -= 2.5 * time_scale * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX])
+        #
+        # # #any time
+        # reward -= 0.5 * (((state[ANGLE_COS_IDX] + 1) / 2)**2) * abs(state[ANGLED_IDX])
+        # #
+        # # #penalty for being not in origin when near upright:
+        # reward -=  2.5 * time_scale * (angle_scale * pos)
+        #
+        # # reward -= time_scale * 5 * angle
+        # #
+        # # reward -= pos
+        #
+        # reward -= 0.1 * abs(action)
+        # #Track length -> 44.0e-2
+        # # print("reward: " + str(reward))
+        #
+        # self.episode_reward += reward
+        ''' End of IRL reward ideas'''
 
+
+        ''' original reward of sac_cartpole_64size_10kbatch_timescale_1011.zip: '''
+        reward -= angle
+        # reward -= 2.5 * time_scale * (angle_scale * pos)
+        reward -= angle_scale * pos
         reward -= 0.1 * abs(action)
-        #Track length -> 44.0e-2
-        # print("reward: " + str(reward))
+
+        #new part of reward for velocity
+        # reward -= 0.1 * (((state[ANGLE_COS_IDX] + 1) / 2)) * abs(state[ANGLED_IDX])
 
         self.episode_reward += reward
+        ''' End of original reward of sac_cartpole_64size_10kbatch_timescale_1011.zip: '''
+
         return reward
 
     def termination_condition(self, state):

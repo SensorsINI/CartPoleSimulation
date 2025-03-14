@@ -145,6 +145,13 @@ class PhysCartpoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         spinning = True
 
+        # #test changing controller
+        # old_controller = self.cartpole_instance.controller
+        # self.cartpole_instance.controller = controller_pid('CartPole', ([-1.], [1.]),
+        #                                                    {'L': 0.1975, 'Q_ccrc': 0.0, 'target_equilibrium': -1.0,
+        #                                                     'target_position': 0.0})
+        # self.cartpole_instance.controlEnabled = True
+
         #
         while spinning:
             # print(self.cartpole_rl.get_angular_velocity(self.cartpole_instance.s))
@@ -156,6 +163,7 @@ class PhysCartpoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         time.sleep(1)
         print("RESET END")
 
+        # self.cartpole_instance.controller = old_controller
         self.cartpole_instance.controlEnabled = True
         self.steps = 0
 
