@@ -76,8 +76,8 @@ high = np.array(
 # model = SAC.load(path + "sac_cartpole_64size_10kbatch_timescale_1011")
 
 # SAC only updates action about once every 3 controller step calls
-model = SAC.load('/home/marcin/PycharmProjects/physical-cartpole/Driver/CartPoleSimulation/GymlikeCartPole/sac_cartpole_32size.zip',
-                 env = env,custom_objects={"train_freq": (7, 'step')}, bcustom_objects={"action_space": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
+model = SAC.load('/home/marcin/PycharmProjects/physical-cartpole/Driver/CartPoleSimulation/GymlikeCartPole/sac_cartpole_32size_completely_different_reward.zip',
+                 env = env,custom_objects={"train_freq": (5, 'step')}, bcustom_objects={"action_space": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
                                 "observation_space": spaces.Box(-high, high, dtype=np.float32)}, force_reset=True)
 
 # print(model.train_freq)
@@ -121,7 +121,7 @@ env.open_connection()
 
 # timesteps: 30000
 model.learn(total_timesteps=50000, progress_bar=True)
-model.save("sac_from_sac_cartpole_32size")
+model.save("sac_from_sac_cartpole_32size_completely_different_reward_vel_pen_5ms_leaving_upright_termination")
 
 # print("JOINING")
 # env.close_connection()

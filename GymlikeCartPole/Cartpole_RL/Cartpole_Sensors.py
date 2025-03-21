@@ -34,6 +34,8 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         self.episode_reward = 0
         self.steps = 0
         # self.x_threshold = 0.17
+        self.achieved_upright = False
+        self.left_upright = False
 
 
         # Angle limit set to 2 * theta_threshold_radians so failing observation
@@ -78,7 +80,8 @@ class Cartpole_Sensors(CartPoleRLTemplate):
             self.steps_beyond_terminated += 1
             # print("were giving -1.0")
             # reward = 0.0
-            reward = -10.0
+            reward = -1.0
+            return reward
 
         # print(action)
         self.steps = steps
@@ -88,6 +91,23 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         time_scale = steps/500
         # print(time_scale)
 
+        # vel_pen = 0.05 * angle_scale * abs(state[ANGLED_IDX])
+        vel_pen = 0
+
+        if angle < 0.05:
+            self.achieved_upright = True
+            # print("upright achieved")
+
+        if self.achieved_upright and angle > 0.05:
+            self.left_upright = True
+            self.achieved_upright = False
+            # print("left upright")
+
+
+        #new reward structure
+        reward = 0.8 * (1-angle) + 0.2 * (1-pos) - 0.001 * abs(action) - vel_pen + int(self.achieved_upright)
+        self.episode_reward += reward
+        return reward
 
         '''IRL REWARD IDEAS'''
 
@@ -152,9 +172,14 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         terminated = bool(
             state[POSITION_IDX] < -0.18
             or state[POSITION_IDX] > 0.18
+            or self.left_upright
             # or state[ANGLE_IDX] < -self.theta_threshold_radians
             # or state[ANGLE_IDX] > self.theta_threshold_radians
         )
+
+        if terminated:
+            self.achieved_upright = False
+            self.left_upright = False
 
         return terminated
 
@@ -166,6 +191,8 @@ class Cartpole_Sensors(CartPoleRLTemplate):
 
     def reset(self):
         self.steps_beyond_terminated = 0
+        # self.achieved_upright = False
+        # self.left_upright = False
         # print(self.steps)
         # print("WE ARE RESETTING", self.steps)
         # print("episode length: " + str(self.steps))

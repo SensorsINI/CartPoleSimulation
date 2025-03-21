@@ -123,9 +123,9 @@ fpga:
   SERIAL_BAUD: 230400
 rl:
   PATH_TO_MODELS: './CartPoleSimulation/GymlikeCartPole/IRL_trained_models/'
-  net_name: 'sac_irl_from_64size_10kbatch_timescale_1011_vel_penalty.zip'
+  net_name: 'sac_from_sac_cartpole_32size_completely_different_reward_vel_pen.zip'
 #  PATH_TO_MODELS: './CartPoleSimulation/GymlikeCartPole/'
-#  net_name: 'sac_cartpole_32size'
+#  net_name: 'sac_cartpole_64size_10kbatch_timescale_1011.zip'
   controller_logging: False
   computation_library: tensorflow
 rl-train:
