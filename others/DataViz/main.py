@@ -4,7 +4,7 @@ import tkinter as tk
 from config import Config
 from data_loader import DataLoader
 from data_processor import DataProcessor
-from main_app import MainApplication
+from gui import MainApplication
 
 
 def main():
