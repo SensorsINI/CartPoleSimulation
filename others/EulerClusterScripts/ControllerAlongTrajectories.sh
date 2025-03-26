@@ -5,7 +5,7 @@
 #SBATCH --output=./others/EulerClusterScripts/slurm-%A_%a.out   # Output file
 
 # Create output and error directories if they do not exist
-mkdir -p ./others/EulerClusterScripts/EulerTerminalOutput/VaryingPoleLength13112024_CAT
+mkdir -p ./others/EulerClusterScripts
 
 source $HOME/miniconda3/bin/activate
 conda activate CPS39
