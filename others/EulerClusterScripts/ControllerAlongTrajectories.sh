@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --array=1-120             # Create an array job with task IDs from 1 to 12
+#SBATCH --array=1-48             # Create an array job with task IDs from 1 to 12
 #SBATCH --cpus-per-task=1        # Assign the required number of CPUs per task
-#SBATCH --time=8:00:00           # Set the maximum job time
-#SBATCH --output=./others/EulerClusterScripts/slurm-%A_%a.out   # Output file
+#SBATCH --time=2:00:00           # Set the maximum job time
+#SBATCH --output=./others/EulerClusterScripts/EulerTerminalOutput/slurm-%A_%a.out   # Output file
 
 # Create output and error directories if they do not exist
-mkdir -p ./others/EulerClusterScripts
+mkdir -p ./others/EulerClusterScripts/EulerTerminalOutput/
 
 source $HOME/miniconda3/bin/activate
 conda activate CPS39

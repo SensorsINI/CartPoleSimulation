@@ -35,7 +35,7 @@ def rename_files_preserve_order(directory):
 # Example usage
 if __name__ == "__main__":
     # Provide the absolute or relative path to your directory
-    target_directory = "./Experiment_16_11_2024_pole_L_and_m"
+    target_directory = "./Experiment_Recordings/"
     
     # Verify the directory exists
     if not os.path.isdir(target_directory):
