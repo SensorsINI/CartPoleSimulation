@@ -29,7 +29,8 @@ class next_state_predictor_ODE:
                  lib,
                  batch_size=1,
                  variable_parameters=None,
-                 disable_individual_compilation=False):
+                 disable_individual_compilation=False,
+                 **kwargs):
         self.lib = lib
         self.intermediate_steps = self.lib.to_tensor(intermediate_steps, dtype=self.lib.int32)
         self.t_step = self.lib.to_tensor(dt / float(self.intermediate_steps), dtype=self.lib.float32)
