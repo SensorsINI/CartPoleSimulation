@@ -20,6 +20,7 @@ class ParameterUpdater:
         self.increment = parameter_update_config['increment']
         self.range_random = parameter_update_config['range_random']
         self.range_clip = parameter_update_config['range_clip']
+        self.random_gaussian_std = parameter_update_config['increment']
 
         self.time_of_the_last_change = 0.0
         self.time_of_the_last_reset = 0.0
@@ -48,6 +49,9 @@ class ParameterUpdater:
                 increment = self.increment
             elif self.mode == 'random':
                 new_parameter_value = np.random.uniform(*self.range_random)
+                return new_parameter_value
+            elif self.mode == 'random_gaussian':
+                new_parameter_value = np.random.normal(self.init_value, self.random_gaussian_std)
                 return new_parameter_value
             elif self.mode == 'bounce':
                 increment = self.bounce_direction * self.increment
