@@ -22,16 +22,11 @@ from gui_elements.frames_filter import (
     ControlFilterFrame, FeatureFilterFrame, DensitySettingsFrame,
     StepsRemovalFrame, ErrorSettingsFrame
 )
-from gui_elements.frames_weight import WeightingFrame
+from gui_elements.frames_weight import WeightingFrame, on_export_weights, on_coverage_changed, on_alpha_changed
 from gui_elements.sampling import SamplingFrame
 
 # Import the separate modules with big logic
 from gui_elements.plot_logic import update_plot, apply_normalization, force_teacher_student_xy
-from gui_elements.weighting_logic import (
-    on_coverage_changed,
-    on_alpha_changed,
-    on_export_weights
-)
 
 matplotlib.use("TkAgg")
 
@@ -262,3 +257,6 @@ class MainApplication(tk.Tk):
     def update_plot(self):
         """Re-draw the entire plot (delegated to plot_logic.update_plot)."""
         update_plot(self)  # calls the big function from plot_logic.py
+
+
+

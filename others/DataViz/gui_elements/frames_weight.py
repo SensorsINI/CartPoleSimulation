@@ -2,6 +2,7 @@
 
 import tkinter as tk
 from tkinter import ttk
+from tkinter import filedialog, messagebox
 
 
 class WeightingFrame(tk.LabelFrame):
@@ -86,13 +87,16 @@ class WeightingFrame(tk.LabelFrame):
         y_col = main_app.y_var.get()
 
         main_app.weight_manager.main_cluster_coverage = float(main_app.coverage_var.get()) / 100.0
-        main_app.weight_manager.alpha_shape_alpha = float(main_app.alpha_var.get())
+        # Switch from alpha_shape_alpha to alpha in the manager
+        main_app.weight_manager.alpha = float(main_app.alpha_var.get())
 
         def on_done():
             main_app.after(0, self._clusters_done)
 
         # Start BFS + alpha-shape in background
-        main_app.weight_manager.recalc_clusters_async(main_app.df, x_col, y_col, on_done=on_done)
+        # Assume we have up to 8D from config or at least x_col,y_col
+        feature_cols = getattr(main_app.config, "cluster_features", [x_col, y_col])
+        main_app.weight_manager.recalc_clusters_async(main_app.df, feature_cols, x_col, y_col, on_done=on_done)
 
     def _clusters_done(self):
         main_app = self.main_app
@@ -132,3 +136,23 @@ class WeightingFrame(tk.LabelFrame):
 
     def _weights_done(self):
         self.main_app.update_plot()
+
+
+def on_coverage_changed(main_app, val):
+    """Called when coverage slider changes."""
+    main_app.weight_manager.main_cluster_coverage = float(val) / 100.0
+
+def on_alpha_changed(main_app, val):
+    """Called when alpha slider changes."""
+    main_app.weight_manager.alpha = float(val)
+
+def on_export_weights(main_app):
+    """Called when user exports the weighted CSV."""
+    fname = filedialog.asksaveasfilename(
+        defaultextension=".csv",
+        initialfile="weighted_data.csv",
+        title="Save Weighted CSV"
+    )
+    if fname:
+        main_app.df.to_csv(fname, index=False)
+        messagebox.showinfo("Saved", f"Weights saved to {fname}")
