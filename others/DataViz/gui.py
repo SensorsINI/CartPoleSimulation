@@ -89,6 +89,10 @@ class MainApplication(tk.Tk):
         self.show_main_clusters_var = tk.BooleanVar(value=False)
         self.color_by_weight_var = tk.BooleanVar(value=False)
 
+        # Eps variable & color-by-cluster
+        self.eps_var = tk.DoubleVar(value=0.5)
+        self.color_by_cluster_var = tk.BooleanVar(value=False)
+
         # --------------------------------------------------------------------------------
         # Build layout & figure
         # --------------------------------------------------------------------------------
@@ -200,6 +204,9 @@ class MainApplication(tk.Tk):
         # Steps
         self.n_steps_var.trace_add("write", lambda *args: self.apply_n_step_removal())
 
+        # (New) color_by_cluster trigger
+        self.color_by_cluster_var.trace_add("write", lambda *args: self.update_plot())
+
     # ----------------------------------------------------------------------------------
     # Basic Setup & Filtering Methods
     # ----------------------------------------------------------------------------------
@@ -257,6 +264,4 @@ class MainApplication(tk.Tk):
     def update_plot(self):
         """Re-draw the entire plot (delegated to plot_logic.update_plot)."""
         update_plot(self)  # calls the big function from plot_logic.py
-
-
 
