@@ -265,3 +265,8 @@ class MainApplication(tk.Tk):
         """Re-draw the entire plot (delegated to plot_logic.update_plot)."""
         update_plot(self)  # calls the big function from plot_logic.py
 
+    def _parse_bins(self, bins_str):
+        try:
+            return int(bins_str)
+        except ValueError:
+            return 50

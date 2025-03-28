@@ -33,9 +33,6 @@ class WeightManager:
         # Thread references
         self._cluster_thread = None
         self._weight_thread = None
-        # (Optional) separate reference if you want to keep them distinct
-        # but for simplicity, we can reuse _cluster_thread
-        # self._boundary_thread = None
 
         # Outputs stored after clustering
         self.labels = None
@@ -69,7 +66,6 @@ class WeightManager:
             if on_done is not None:
                 on_done()
 
-        # We can reuse _cluster_thread or introduce a new one
         self._cluster_thread = threading.Thread(target=worker)
         self._cluster_thread.start()
 
@@ -88,7 +84,7 @@ class WeightManager:
 
     def _recalc_clusters_internal(self, df, feature_cols, x_col, y_col):
         """
-        Main logic for clustering + boundary building. Runs in a thread.
+        Main logic for clustering. Runs in a thread.
         """
         # 1) Perform DBSCAN on the specified feature columns
         self.labels = self._cluster(df, feature_cols)
@@ -96,10 +92,6 @@ class WeightManager:
         # 2) Identify main clusters
         self.main_clusters = self.find_main_clusters(df, self.labels)
 
-        # 3) Compute alpha-shape boundaries for each main cluster
-        self.boundaries = self.compute_cluster_boundaries(
-            df, self.labels, self.main_clusters, x_col, y_col
-        )
 
     def _recalc_boundaries_internal(self, df, x_col, y_col):
         """
@@ -109,9 +101,6 @@ class WeightManager:
         if self.labels is None:
             print("No existing cluster labels. Boundaries can't be recalculated.")
             return
-
-        # Recompute main clusters (to allow coverage changes)
-        self.main_clusters = self.find_main_clusters(df, self.labels)
 
         # Recompute alpha-shape boundaries
         self.boundaries = self.compute_cluster_boundaries(

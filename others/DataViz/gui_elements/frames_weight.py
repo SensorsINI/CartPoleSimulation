@@ -132,6 +132,9 @@ class WeightingFrame(tk.LabelFrame):
         main_app.last_labels = main_app.weight_manager.labels
         main_app.main_clusters = main_app.weight_manager.main_clusters
         main_app.boundaries = main_app.weight_manager.boundaries
+
+        main_app.df["cluster_label"] = main_app.last_labels
+
         main_app.update_plot()
 
     def _on_recalc_boundaries(self):
