@@ -1,5 +1,5 @@
 # gui.py
-
+import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
@@ -133,6 +133,17 @@ class MainApplication(tk.Tk):
         def _on_frame_configure(event):
             self.control_canvas.configure(scrollregion=self.control_canvas.bbox("all"))
         self.control_frame.bind("<Configure>", _on_frame_configure)
+
+        def _on_mousewheel(event):
+            if sys.platform == 'darwin':  # macOS
+                # Sur macOS, event.delta donne déjà un incrément adapté
+                self.control_canvas.yview_scroll(-1 * int(event.delta), "units")
+            else:
+                # Sous Windows, on divise par 120 pour obtenir le bon pas
+                self.control_canvas.yview_scroll(-1 * int(event.delta / 120), "units")
+
+        self.control_canvas.bind("<Enter>", lambda event: self.control_canvas.bind_all("<MouseWheel>", _on_mousewheel))
+        self.control_canvas.bind("<Leave>", lambda event: self.control_canvas.unbind_all("<MouseWheel>"))
 
         self.plot_frame = tk.Frame(self)
         self.plot_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
