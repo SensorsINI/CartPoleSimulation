@@ -1,15 +1,11 @@
 # gui.py
 import sys
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-import threading
+from tkinter import ttk, messagebox
 
-import numpy as np
-import pandas as pd
 import matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
-from sklearn.cross_decomposition import PLSRegression  # still used in BFS logic or weighting, if needed
 
 from data_processor import DataProcessor
 from sampler import Sampler
@@ -25,8 +21,7 @@ from gui_elements.frames_filter import (
 from gui_elements.frames_weight import WeightingFrame, on_export_weights, on_coverage_changed, on_alpha_changed
 from gui_elements.sampling import SamplingFrame
 
-# Import the separate modules with big logic
-from gui_elements.plot_logic import update_plot, apply_normalization, force_teacher_student_xy
+from gui_elements.plot_logic import update_plot
 
 matplotlib.use("TkAgg")
 
