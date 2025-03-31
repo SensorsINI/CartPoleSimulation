@@ -1,11 +1,9 @@
 import numpy as np
-import pandas as pd
 import threading
 
 from sklearn.cluster import DBSCAN
-from shapely.geometry import Point
 from alphashape import alphashape
-from tqdm import tqdm
+
 
 class WeightManager:
     """
