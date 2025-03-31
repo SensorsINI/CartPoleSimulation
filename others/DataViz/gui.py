@@ -46,7 +46,7 @@ class MainApplication(tk.Tk):
         self.last_labels = None
         self.last_main_labels = None
         self.main_clusters = None
-        self.boundaries = {}
+        self.boundaries = None
 
         self.title("Robot State Data Analysis")
         self.geometry("1600x1200")

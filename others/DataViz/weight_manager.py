@@ -163,7 +163,7 @@ class WeightManager:
 
         return main_clusters, new_labels
 
-    def compute_cluster_boundaries(self, df, labels, main_clusters, x_col, y_col):
+    def compute_cluster_boundaries(self, df, labels, x_col, y_col):
         """
         Build alpha-shape polygons (2D) for each main cluster in columns (x_col, y_col).
           - Extract points in (x_col,y_col) for each cluster.
@@ -173,33 +173,24 @@ class WeightManager:
         """
         from shapely.geometry import MultiPolygon
 
-        if not main_clusters:
-            return {}
-
-        boundaries = {}
-        main_clusters_list = sorted(list(main_clusters))
+        boundaries = None
         print("Computing alpha-shape boundaries for main clusters...")
 
-        for i, c_lbl in enumerate(main_clusters_list):
-            print(f"Boundary for cluster {c_lbl} ({i+1}/{len(main_clusters_list)})...")
+        cluster_points = df.loc[labels == 1, [x_col, y_col]].values
+        if len(cluster_points) < 3:
+            return None
 
-            cluster_points = df.loc[labels == c_lbl, [x_col, y_col]].values
-            if len(cluster_points) < 3:
-                boundaries[c_lbl] = None
-                continue
+        shape = alphashape(cluster_points, alpha=self.alpha)
+        if shape is None:
+            return None
 
-            shape = alphashape(cluster_points, alpha=self.alpha)
-            if shape is None:
-                boundaries[c_lbl] = None
-                continue
+        # If we get a MultiPolygon, unify it
+        if isinstance(shape, MultiPolygon):
+            shape = shape.buffer(0)
 
-            # If we get a MultiPolygon, unify it
-            if isinstance(shape, MultiPolygon):
-                shape = shape.buffer(0)
-
-            # Expand by margin
-            polygon_with_margin = shape.buffer(self.cluster_boundary_margin)
-            boundaries[c_lbl] = polygon_with_margin
+        # Expand by margin
+        polygon_with_margin = shape.buffer(self.cluster_boundary_margin)
+        boundaries = polygon_with_margin
 
         print("Alpha-shape boundary computation complete.")
         return boundaries

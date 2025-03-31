@@ -133,11 +133,10 @@ def update_plot(main_app):
 
     # Possibly draw cluster boundaries
     if main_app.show_main_clusters_var.get() and main_app.boundaries:
-        for lbl, poly in main_app.boundaries.items():
-            exterior = getattr(poly, "exterior", None)
-            if exterior:
-                xp, yp = exterior.xy
-                main_app.ax.plot(xp, yp, color="red", linewidth=1.5)
+        exterior = getattr(main_app.boundaries, "exterior", None)
+        if exterior:
+            xp, yp = exterior.xy
+            main_app.ax.plot(xp, yp, color="red", linewidth=1.5)
 
     main_app.canvas.draw_idle()
 
