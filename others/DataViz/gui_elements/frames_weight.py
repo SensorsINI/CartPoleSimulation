@@ -43,16 +43,14 @@ class WeightingFrame(tk.LabelFrame):
         )
         alpha_scale.grid(row=2, column=1, padx=2, pady=2)
 
-        # Scheme dropdown
-        tk.Label(self, text="Scheme:").grid(row=3, column=0, padx=2, pady=2, sticky="w")
-        scheme_combo = ttk.Combobox(
+        tk.Label(self, text="Error-Density Ratio:").grid(row=3, column=0, padx=2, pady=2, sticky="w")
+        ratio_scale = tk.Scale(
             self,
-            textvariable=main_app.weighting_scheme_var,
-            values=["Error-based", "Density-based", "Mixed"],
-            state="readonly",
-            width=12
+            from_=0.0, to=1.0, resolution=0.01,
+            orient=tk.HORIZONTAL,
+            variable=main_app.error_density_ratio_var
         )
-        scheme_combo.grid(row=3, column=1, padx=2, pady=2)
+        ratio_scale.grid(row=3, column=1, padx=2, pady=2)
 
         # Show Main Clusters
         self.show_clusters_chk = tk.Checkbutton(
@@ -161,30 +159,27 @@ class WeightingFrame(tk.LabelFrame):
 
     def _on_compute_weights(self):
         main_app = self.main_app
-        scheme = main_app.weighting_scheme_var.get()
-        error_col = None
-        density_col = None
 
-        if scheme in ["Error-based", "Mixed"]:
-            s_col = main_app.student_col_var.get()
-            error_col = f"{s_col}_abs_err"
+        x_col = main_app.x_var.get()
+        y_col = main_app.y_var.get()
+        bins = main_app._parse_bins(main_app.density_bins_var.get())
+        main_app.df["__density_for_weight"] = main_app.weight_manager.compute_density(
+            main_app.df, x_col, y_col, bins=bins
+        )
+        density_col = "__density_for_weight"
 
-        if scheme in ["Density-based", "Mixed"]:
-            x_col = main_app.x_var.get()
-            y_col = main_app.y_var.get()
-            bins = main_app._parse_bins(main_app.density_bins_var.get())
-            main_app.df["__density_for_weight"] = main_app.weight_manager.compute_density(
-                main_app.df, x_col, y_col, bins=bins
-            )
-            density_col = "__density_for_weight"
+        s_col = main_app.student_col_var.get()
+        error_col = f"{s_col}_abs_err"
 
         def on_done():
             main_app.after(0, self._weights_done)
 
+        ratio_value = main_app.error_density_ratio_var.get()
         main_app.weight_manager.compute_weights_async(
             main_app.df,
-            density_col,
-            error_col,
+            density_col=density_col,
+            error_col=error_col,
+            ratio=ratio_value,
             on_done=on_done
         )
 

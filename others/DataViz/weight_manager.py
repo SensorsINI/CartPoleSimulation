@@ -68,13 +68,13 @@ class WeightManager:
         self._cluster_thread = threading.Thread(target=worker)
         self._cluster_thread.start()
 
-    def compute_weights_async(self, df, density_col=None, error_col=None, on_done=None):
+    def compute_weights_async(self, df, density_col=None, error_col=None, ratio=0.5, on_done=None):
         """
         Starts a thread to compute weights.
         on_done: optional callback run after finishing (in the worker thread).
         """
         def worker():
-            self._compute_weights_internal(df, density_col, error_col)
+            self._compute_weights_internal(df, density_col, error_col, ratio)
             if on_done is not None:
                 on_done()
 
@@ -193,10 +193,11 @@ class WeightManager:
         print("Alpha-shape boundary computation complete.")
         return boundaries
 
-    def _compute_weights_internal(self, df, density_col=None, error_col=None):
+    def _compute_weights_internal(self, df, density_col=None, error_col=None, ratio=0.5):
         """
         Actually compute weights on the current df, using
-        self.labels & self.main_clusters from the last cluster calc.
+        self.labels & self.main_clusters from the last cluster calc,
+        and blending density/error with 'ratio'.
         """
         if self.main_labels is None or self.main_clusters is None:
             print("No clusters => setting all weights=1")
@@ -209,17 +210,15 @@ class WeightManager:
             df["weights"] = 1.0
             return
 
-        self.compute_weights(df, self.main_labels, density_col, error_col)
+        self.compute_weights(df, self.main_labels, density_col, error_col, ratio)
 
-    def compute_weights(self, df, main_labels, density_col=None, error_col=None):
+    def compute_weights(self, df, main_labels, density_col=None, error_col=None, ratio=0.5):
         """
-        Combine density-based weighting and error-based weighting for points in main clusters.
-        For noise/out-of-cluster points, set weight = max(in-cluster weight).
+        Combine density-based weighting and error-based weighting for points in main clusters,
+        then blend them according to 'ratio':
+          final_weight = (1-ratio)*density_weight + ratio*error_weight
 
-        Example:
-          w_density = 1/(1 + density)
-          w_error   = 1 + error
-          w_final   = w_density * w_error
+        For points outside main clusters => clip at max in-cluster weight.
         """
         print("Computing weights...")
 
@@ -242,7 +241,7 @@ class WeightManager:
         else:
             w_error = np.ones(n, dtype=float)
 
-        w_combined = w_density * w_error
+        w_combined = (1.0 - ratio) * w_density + ratio * w_error
 
         in_cluster_mask = np.array(
             [lbl != 0 for lbl in main_labels]
