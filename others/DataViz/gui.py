@@ -204,9 +204,6 @@ class MainApplication(tk.Tk):
         # Steps
         self.n_steps_var.trace_add("write", lambda *args: self.apply_n_step_removal())
 
-        # (New) color_by_cluster trigger
-        self.color_by_cluster_var.trace_add("write", lambda *args: self.update_plot())
-
     # ----------------------------------------------------------------------------------
     # Basic Setup & Filtering Methods
     # ----------------------------------------------------------------------------------

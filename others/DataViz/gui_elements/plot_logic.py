@@ -77,8 +77,8 @@ def update_plot(main_app):
         c_data = _get_cdata_for_plot_option(main_app, plot_option, df_filtered)
 
     if main_app.color_by_cluster_var.get():
-        if "cluster_label" in df_filtered.columns:
-            c_data = df_filtered["cluster_label"].values
+        if "cluster_label" in main_app.df.columns:
+            c_data = main_app.df["cluster_label"].values
         else:
             print("Warning: color_by_cluster is True but no 'cluster_label' in df_filtered.")
 
