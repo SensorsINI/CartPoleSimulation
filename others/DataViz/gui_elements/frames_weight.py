@@ -130,10 +130,12 @@ class WeightingFrame(tk.LabelFrame):
     def _clusters_done(self):
         main_app = self.main_app
         main_app.last_labels = main_app.weight_manager.labels
+        main_app.last_main_labels = main_app.weight_manager.main_labels
         main_app.main_clusters = main_app.weight_manager.main_clusters
         main_app.boundaries = main_app.weight_manager.boundaries
 
         main_app.df["cluster_label"] = main_app.last_labels
+        main_app.df["cluster_main_label"] = main_app.last_main_labels
 
         main_app.update_plot()
 

@@ -36,6 +36,7 @@ class WeightManager:
 
         # Outputs stored after clustering
         self.labels = None
+        self.main_labels = None
         self.main_clusters = None
         self.boundaries = None
 
@@ -90,7 +91,7 @@ class WeightManager:
         self.labels = self._cluster(df, feature_cols)
 
         # 2) Identify main clusters
-        self.main_clusters = self.find_main_clusters(df, self.labels)
+        self.main_clusters, self.main_labels = self.find_main_clusters(df, self.labels)
 
 
     def _recalc_boundaries_internal(self, df, x_col, y_col):
@@ -98,13 +99,13 @@ class WeightManager:
         Re-run main_clusters coverage logic + alpha-shapes,
         but do NOT re-run DBSCAN. Assumes self.labels is already set.
         """
-        if self.labels is None:
+        if self.main_labels is None:
             print("No existing cluster labels. Boundaries can't be recalculated.")
             return
 
         # Recompute alpha-shape boundaries
         self.boundaries = self.compute_cluster_boundaries(
-            df, self.labels, self.main_clusters, x_col, y_col
+            df, self.main_labels, self.main_clusters, x_col, y_col
         )
 
     def _cluster(self, df, feature_cols):
@@ -157,7 +158,10 @@ class WeightManager:
             f"(goal was {100 * self.main_cluster_coverage}%)."
         )
         print(f"Main clusters identified: {main_clusters}")
-        return main_clusters
+
+        new_labels = np.where(np.isin(labels, list(main_clusters)), 1, 0)
+
+        return main_clusters, new_labels
 
     def compute_cluster_boundaries(self, df, labels, main_clusters, x_col, y_col):
         """
@@ -205,7 +209,7 @@ class WeightManager:
         Actually compute weights on the current df, using
         self.labels & self.main_clusters from the last cluster calc.
         """
-        if self.labels is None or self.main_clusters is None:
+        if self.main_labels is None or self.main_clusters is None:
             print("No clusters => setting all weights=1")
             w = np.ones(len(df), dtype=float)
             df["weights"] = w
@@ -216,9 +220,9 @@ class WeightManager:
             df["weights"] = 1.0
             return
 
-        self.compute_weights(df, self.labels, self.main_clusters, density_col, error_col)
+        self.compute_weights(df, self.main_labels, density_col, error_col)
 
-    def compute_weights(self, df, labels, main_clusters, density_col=None, error_col=None):
+    def compute_weights(self, df, main_labels, density_col=None, error_col=None):
         """
         Combine density-based weighting and error-based weighting for points in main clusters.
         For noise/out-of-cluster points, set weight = max(in-cluster weight).
@@ -252,18 +256,18 @@ class WeightManager:
         w_combined = w_density * w_error
 
         in_cluster_mask = np.array(
-            [(lbl != -1) and (lbl in main_clusters) for lbl in labels]
+            [lbl != 0 for lbl in main_labels]
         )
         if not np.any(in_cluster_mask):
             print("No points in main clusters => all weight=1.")
             df["weights"] = 1.0
             return
 
-        w[in_cluster_mask] = w_combined[in_cluster_mask]
+        w = w_combined
         max_in_cluster_weight = np.max(w[in_cluster_mask])
 
         out_cluster_mask = ~in_cluster_mask
-        w[out_cluster_mask] = max_in_cluster_weight
+        w[out_cluster_mask] = np.minimum(w[out_cluster_mask], max_in_cluster_weight)
 
         df["weights"] = w
         print(f"Weight computation done. Max in-cluster weight = {max_in_cluster_weight:.4f}")

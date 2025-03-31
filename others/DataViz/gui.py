@@ -44,6 +44,7 @@ class MainApplication(tk.Tk):
         # WeightManager and cluster-related data
         self.weight_manager = WeightManager()
         self.last_labels = None
+        self.last_main_labels = None
         self.main_clusters = None
         self.boundaries = {}
 
