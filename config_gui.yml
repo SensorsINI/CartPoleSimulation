@@ -30,15 +30,15 @@ gui_settings: # Can be changed in GUI
 #
 #  'neural-imitator' -> neural network trained to mimic classical controller
 
-  save_history_init: false  # Save experiment history as CSV (after experiment finished, online saving for Data Generator only).
-  show_experiment_summary_init: false  # If true a window plotting the experiment history will be displayed after experiment ended.
+  save_history_init: true  # Save experiment history as CSV (after experiment finished, online saving for Data Generator only).
+  show_experiment_summary_init: true  # If true a window plotting the experiment history will be displayed after experiment ended.
   stop_at_90_init: false  # Block the pole if it reaches +/-90 deg (horizontal position).
   slider_on_click_init: true  # True: update slider only on click, False: update slider while hoovering over it.
   simulator_mode_init: 'Slider-Controlled Experiment'  # Effects Start/Stop button. Options are 'Slider-Controlled Experiment', 'Random Experiment', 'Replay'.
   # 'Slider-Controlled Experiment': Run experiment controlled by user (through slider)
   # 'Random Experiment': Run experiment with random target position
   # 'Replay': load and replay a recording; False: start new experiment TODO: probably something different when running with physical cartpole
-  speedup_init: 1.0  # Multiplicative factor by which the simulation seen by the user differs from real time.
+  speedup_init: 10.0  # Multiplicative factor by which the simulation seen by the user differs from real time.
   # E.g. 2.0 means that you watch simulation double speed
   # WARNING: This is the target value, max speedup is limited by speed of performing CartPole simulation
   # True instantaneous speedup is displayed in CartPole GUI as "Speed-up(measured)"

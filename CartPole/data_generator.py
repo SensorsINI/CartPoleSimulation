@@ -140,6 +140,8 @@ class random_experiment_setter:
 
         self.initial_target_equilibrium = config['initial_target_equilibrium']
 
+        self.interpolation_type_idx = 0
+
         self.rng = create_rng(self.__class__.__name__, config["seed"])
 
     def set(self, CartPoleInstance: CartPole):
@@ -179,6 +181,11 @@ class random_experiment_setter:
         else:
             Exception('{} is not a valid specification for target equilibrium'.format(self.initial_target_equilibrium))
 
+        if isinstance(self.interpolation_type, list):
+            interpolation_type = self.interpolation_type[self.interpolation_type_idx]
+            self.interpolation_type_idx = (self.interpolation_type_idx + 1) % (len(self.interpolation_type))
+        else:
+            interpolation_type = self.interpolation_type
 
         CartPoleInstance.setup_cartpole_random_experiment(
             # Initial state
@@ -195,7 +202,7 @@ class random_experiment_setter:
             # Settings related to random trace generation
             track_relative_complexity=self.track_relative_complexity,
             length_of_experiment=self.length_of_experiment,
-            interpolation_type=self.interpolation_type,
+            interpolation_type=interpolation_type,
             turning_points_period=self.turning_points_period,
             start_random_target_position_at=start_random_target_position_at,
             end_random_target_position_at=end_random_target_position_at,

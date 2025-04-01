@@ -498,8 +498,16 @@ class CartPole(EnvironmentBatched):
                 self.m_pole_for_controller = float(self.controller_informer.get_parameters(
                     m_pole, float(self.m_pole_updater.init_value), self.time
                 ))
+                if self.controller_informer.value_to_return == 'true':
+                    s_for_controller = np.copy(self.s_with_noise_and_latency)
+                    s_for_controller[ANGLE_IDX] = wrap_angle_rad(s_for_controller[ANGLE_IDX] - self.vertical_angle_offset)
+                    s_for_controller[ANGLE_COS_IDX] = np.cos(s_for_controller[ANGLE_IDX])
+                    s_for_controller[ANGLE_SIN_IDX] = np.sin(s_for_controller[ANGLE_IDX])
+                else:
+                    s_for_controller = self.s_with_noise_and_latency
+
                 self.Q_calculated = float(self.controller.step(
-                    self.s_with_noise_and_latency,
+                    s_for_controller,
                     self.time,
                     {
                         "target_position": self.target_position,
@@ -507,6 +515,7 @@ class CartPole(EnvironmentBatched):
                         'L': self.L_for_controller,
                         'm_pole': self.m_pole_for_controller,
                         "Q_ccrc": self.Q_ccrc,
+                        "Q_applied_-1": self.Q_ccrc,
                     }
                 ))
                 self.Q_update_time = timeit.default_timer()-update_start
@@ -755,6 +764,7 @@ class CartPole(EnvironmentBatched):
                     "m_pole": self.m_pole_for_controller,
                     "L": self.L_for_controller,
                     "Q_ccrc": self.Q_ccrc,
+                    "Q_applied_-1": self.Q_ccrc,
                 },
                 control_limits=(self.action_space.low, self.action_space.high),
             )
@@ -864,6 +874,7 @@ class CartPole(EnvironmentBatched):
                         "target_equilibrium": self.target_equilibrium,
                         "L": self.L_for_controller,
                         "Q_ccrc": self.Q_ccrc,
+                        "Q_applied_-1": self.Q_ccrc,
                     }
                 ))
 
