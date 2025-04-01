@@ -86,10 +86,10 @@ class MainApplication(tk.Tk):
         self.color_by_weight_var = tk.BooleanVar(value=False)
 
         # Eps variable & color-by-cluster
-        self.eps_var = tk.DoubleVar(value=0.5)
+        self.eps_var = tk.DoubleVar(value=0.1)
         self.color_by_cluster_var = tk.BooleanVar(value=False)
 
-        self.error_density_ratio_var = tk.DoubleVar(value=0.5)
+        self.error_density_ratio_var = tk.DoubleVar(value=0.1)
 
         # --------------------------------------------------------------------------------
         # Build layout & figure

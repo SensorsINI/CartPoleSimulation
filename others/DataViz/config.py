@@ -4,6 +4,7 @@ class Config:
     """User-defined configuration."""
     def __init__(self) -> None:
         self.data_folder = r"../../SI_Toolkit_ASF/Experiments/Train_NN_what_new/"
+        self.data_folder_with_weights = r"../../SI_Toolkit_ASF/Experiments/Train_NN_what_new_with_weights/"
         self.state_columns = [
             "angle", "angleD", "angle_cos", "angle_sin",
             "position", "positionD", "target_position", "target_equilibrium"

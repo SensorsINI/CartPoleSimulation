@@ -1,9 +1,8 @@
 # gui_elements/frames_weight.py
 
+import os
 import tkinter as tk
-from tkinter import ttk
 from tkinter import filedialog, messagebox
-
 
 class WeightingFrame(tk.LabelFrame):
     """Frame for BFS-based clustering and weighting controls."""
@@ -195,13 +194,37 @@ def on_alpha_changed(main_app, val):
     """Called when alpha slider changes."""
     main_app.weight_manager.alpha = float(val)
 
+
 def on_export_weights(main_app):
     """Called when user exports the weighted CSV."""
-    fname = filedialog.asksaveasfilename(
-        defaultextension=".csv",
-        initialfile="weighted_data.csv",
-        title="Save Weighted CSV"
-    )
-    if fname:
-        main_app.df.to_csv(fname, index=False)
-        messagebox.showinfo("Saved", f"Weights saved to {fname}")
+    os.makedirs(main_app.config.data_folder_with_weights, exist_ok=True)
+    for source_file, group in main_app.original_df.groupby("__source_file"):
+        group = group.copy()
+
+        appended_group = main_app.df[main_app.df["__source_file"] == source_file]
+
+        if "weight" in appended_group.columns:
+            group["weight"] = appended_group["weight"].values
+
+        try:
+            with open(source_file, 'r', encoding='utf-8') as f:
+                original_lines = f.readlines()
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not read original file {source_file}: {e}")
+            continue
+
+        comments = [line for line in original_lines if line.strip().startswith("#")]
+
+        csv_data = group.to_csv(index=False)
+
+        new_file_content = "".join(comments) + csv_data
+
+        out_path = os.path.join(main_app.config.data_folder_with_weights,
+                                f"{os.path.splitext(source_file)[0]}_with_weight.csv")
+
+        with open(out_path, 'w', encoding='utf-8') as f:
+            f.write(new_file_content)
+
+    messagebox.showinfo("Saved", f"Weights saved to {main_app.config.data_folder_with_weights}")
+
+

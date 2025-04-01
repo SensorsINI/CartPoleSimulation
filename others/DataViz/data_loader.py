@@ -21,6 +21,7 @@ class DataLoader:
         for i, file in enumerate(tqdm(csv_files, desc="Loading CSV files")):
             df_temp = pd.read_csv(file, comment="#")
             df_temp["experiment_id"] = i
+            df_temp["__source_file"] = os.path.basename(file)
             df_list.append(df_temp)
 
         return pd.concat(df_list, ignore_index=True)
