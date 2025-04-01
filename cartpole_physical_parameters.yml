@@ -24,12 +24,12 @@ cartpole:
     sigma_positionD: 0.005
   vertical_angle_offset:
     init_value: 0.0  # deg, number or 'random'
-    change_every_x_seconds: # If left empty angle shift changed at each simulation step, otherwise time in seconds, or 'inf' for no change
-    mode: 'constant'  # 'constant', 'random_walk', 'increase', 'random'
+    change_every_x_seconds: 3.0 # If left empty angle shift changed at each simulation step, otherwise time in seconds, or 'inf' for no change
+    mode: 'random_gaussian'  # 'constant', 'random_walk', 'increase', 'random', 'random_gaussian'
     range_random: [-3.141592, 3.141592]  # Range from which to uniformly sample, in radians
     range_clip:   # range at which to clip, leave empty for no clipping
-    increment: 0.02
-    reset_every_x_seconds: 18  # seconds, or 'inf' for no change
+    increment: 0.05  # increment in radians for random_walk and increase, std of gaussian for random_gaussian
+    reset_every_x_seconds: 'inf'  # seconds, or 'inf' for no change
   L:
     init_value: 0.395  # length of pend, m
     change_every_x_seconds: # If left empty angle shift changed at each simulation step, otherwise time in seconds, or 'inf' for no change
@@ -48,7 +48,7 @@ cartpole:
     reset_every_x_seconds: 'inf'  # seconds, or 'inf' for no change
 
   inform_controller_about_parameters_change:
-    mode: 'ON'  # 'OFF', 'ON', 'switching_random', 'switching_regular'
+    mode: 'OFF'  # 'OFF', 'ON', 'switching_random', 'switching_regular'
     change_to_on_after_x_seconds_off: 1.5  # seconds, if mode switching_random this is the upper bound
     change_to_off_after_x_seconds_on: 4  # seconds, if mode switching_random this is the upper bound
   num_control_inputs: 1
