@@ -116,8 +116,8 @@ def split_csv_files(path_source,
 if __name__ == "__main__":
     # Example usage:
     split_csv_files(
-        path_source="Experiment_Recordings/Experiment_26_03_2025/Q_calculated_offline_mpc",
-        path_target="./SI_Toolkit_ASF/Experiments/Experiment_26_03_2025/Recordings",
+        path_source="Experiment_Recordings/",
+        path_target="./SI_Toolkit_ASF/Experiments/Experiment_1_04_2025/Recordings",
         train_fraction=0.9,
         validation_fraction=0.05,
         random_seed=42,
