@@ -1,10 +1,10 @@
 library: 'TF'  # TF or Pytorch
 modeling:
-  NET_NAME: 'GRU-64H1-64H2'
+  NET_NAME: 'Dense-32H1-32H2'
 #  NET_NAME: 'Custom-ODE_module-ODEModel'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Vertical_Angle_Offset_30_11_2024/recordings_quantized'
+  path_to_experiment: 'CPS-17-02-2023-UpDown'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
   DATA_FOLDER:                    'Recordings'
 training_default:
@@ -20,9 +20,9 @@ training_default:
 #   outputs = inputs_list
 #   For training of a network imitating MPC:
   control_inputs: []
-  state_inputs: ['Q_applied_-1', 'position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_equilibrium', 'target_position']
+  state_inputs: ['position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_equilibrium', 'target_position']
   outputs:  ['Q_calculated']
-  EPOCHS: 100
+  EPOCHS: 30
   BATCH_SIZE: 64
   SEED: 1873
   LR:
@@ -32,8 +32,8 @@ training_default:
     PATIENCE: 2
     DECREASE_FACTOR: 0.5 # sqrt(0.1)
     MIN_DELTA: 1.0e-6
-  WASH_OUT_LEN: 50
-  POST_WASH_OUT_LEN: 10
+  WASH_OUT_LEN: 0
+  POST_WASH_OUT_LEN: 1
   ON_FLY_DATA_GENERATION: False
   NORMALIZE: True
   SHIFT_LABELS: 0  # for k, as a label to row i is taken row i+k
@@ -43,9 +43,9 @@ training_default:
   PLOT_WEIGHTS_DISTRIBUTION: true # CalculTFate histograms of weights and biases and activations, take long time
 
 CONFIG_SERIES_MODIFICATION:
-  MODE: 'train_for_random_vertical_angle_shift' # 'None' 'train_for_random_vertical_angle_shift'
+  MODE: None #'train_for_random_vertical_angle_shift'
   NOISE_LEVEL:
-    FEATURES: 0.1
+    FEATURES: 0.0
 
 REGULARIZATION:   # Implemented only for TF, no regularization for Pytorch
   ACTIVATED: false
