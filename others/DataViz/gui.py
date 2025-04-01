@@ -1,15 +1,11 @@
 # gui.py
-
+import sys
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-import threading
+from tkinter import ttk, messagebox
 
-import numpy as np
-import pandas as pd
 import matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
-from sklearn.cross_decomposition import PLSRegression  # still used in BFS logic or weighting, if needed
 
 from data_processor import DataProcessor
 from sampler import Sampler
@@ -22,16 +18,10 @@ from gui_elements.frames_filter import (
     ControlFilterFrame, FeatureFilterFrame, DensitySettingsFrame,
     StepsRemovalFrame, ErrorSettingsFrame
 )
-from gui_elements.frames_weight import WeightingFrame
+from gui_elements.frames_weight import WeightingFrame, on_export_weights, on_coverage_changed, on_alpha_changed
 from gui_elements.sampling import SamplingFrame
 
-# Import the separate modules with big logic
-from gui_elements.plot_logic import update_plot, apply_normalization, force_teacher_student_xy
-from gui_elements.weighting_logic import (
-    on_coverage_changed,
-    on_alpha_changed,
-    on_export_weights
-)
+from gui_elements.plot_logic import update_plot
 
 matplotlib.use("TkAgg")
 
@@ -49,8 +39,9 @@ class MainApplication(tk.Tk):
         # WeightManager and cluster-related data
         self.weight_manager = WeightManager()
         self.last_labels = None
+        self.last_main_labels = None
         self.main_clusters = None
-        self.boundaries = {}
+        self.boundaries = None
 
         self.title("Robot State Data Analysis")
         self.geometry("1600x1200")
@@ -94,6 +85,12 @@ class MainApplication(tk.Tk):
         self.show_main_clusters_var = tk.BooleanVar(value=False)
         self.color_by_weight_var = tk.BooleanVar(value=False)
 
+        # Eps variable & color-by-cluster
+        self.eps_var = tk.DoubleVar(value=0.1)
+        self.color_by_cluster_var = tk.BooleanVar(value=False)
+
+        self.error_density_ratio_var = tk.DoubleVar(value=0.1)
+
         # --------------------------------------------------------------------------------
         # Build layout & figure
         # --------------------------------------------------------------------------------
@@ -134,6 +131,17 @@ class MainApplication(tk.Tk):
         def _on_frame_configure(event):
             self.control_canvas.configure(scrollregion=self.control_canvas.bbox("all"))
         self.control_frame.bind("<Configure>", _on_frame_configure)
+
+        def _on_mousewheel(event):
+            if sys.platform == 'darwin':  # macOS
+                # Sur macOS, event.delta donne déjà un incrément adapté
+                self.control_canvas.yview_scroll(-1 * int(event.delta), "units")
+            else:
+                # Sous Windows, on divise par 120 pour obtenir le bon pas
+                self.control_canvas.yview_scroll(-1 * int(event.delta / 120), "units")
+
+        self.control_canvas.bind("<Enter>", lambda event: self.control_canvas.bind_all("<MouseWheel>", _on_mousewheel))
+        self.control_canvas.bind("<Leave>", lambda event: self.control_canvas.unbind_all("<MouseWheel>"))
 
         self.plot_frame = tk.Frame(self)
         self.plot_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
@@ -262,3 +270,9 @@ class MainApplication(tk.Tk):
     def update_plot(self):
         """Re-draw the entire plot (delegated to plot_logic.update_plot)."""
         update_plot(self)  # calls the big function from plot_logic.py
+
+    def _parse_bins(self, bins_str):
+        try:
+            return int(bins_str)
+        except ValueError:
+            return 50

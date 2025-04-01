@@ -43,7 +43,7 @@ training_default:
   PLOT_WEIGHTS_DISTRIBUTION: true # CalculTFate histograms of weights and biases and activations, take long time
 
 CONFIG_SERIES_MODIFICATION:
-  MODE: 'train_for_random_vertical_angle_shift' #'train_for_random_vertical_angle_shift'
+  MODE: 'train_for_random_vertical_angle_shift' # 'None' 'train_for_random_vertical_angle_shift'
   NOISE_LEVEL:
     FEATURES: 0.1
 

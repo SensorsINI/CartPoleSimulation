@@ -2,15 +2,15 @@ controller: mpc
 ML_Pipeline_mode: False  # If True a directory structure required by SI_Toolkit will be created, location taken from config_training, not from here.
 split: [0.8, 0.1]  # Train/Val/(Test) split - only matters if you run it in ML Pipeline mode
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default, can be overwritten in config_training if ML_Pipeline_mode is True
-seed: 1   # If not assign random seed based on datetime is used
-length_of_experiment: 7.5  # Length of each experiment in s:
+seed:   # If not assign random seed based on datetime is used
+length_of_experiment: 360  # Length of each experiment in s:
 random_initial_state:
   # Unassigned variables will be randomly initialized (see below)
-  position: 0.05
-  positionD: 0.0
-  angle:  2.0943951023931953 #Seems to be in radian
-  angleD: 0.0
-  target_position: 0.0
+  position:
+  positionD:
+  angle:  #Seems to be in radian
+  angleD:
+  target_position:
   init_limits: # The initial state is randomly chosen from below range if above is not assigned
     angle: [0.0, 180.0]  # degree, 0 is up, 180 down, set the range for right half plane, same will be applied to left
     angleD: 1200.0
@@ -20,16 +20,16 @@ start_at_target: True  # initial target position should be equal to initial stat
 track_fraction_usable_for_target_position: 1.0  # Set the max for smoothly interpolated random target position to avoid bumping into track ends.
 target_position_end: ~  # value OR not assigned - random value is taken
 initial_target_equilibrium: 'up'  # possible 'up', 'down', 'random' = 50/50
-keep_target_equilibrium_x_seconds_up: 20
+keep_target_equilibrium_x_seconds_up: 10
 keep_target_equilibrium_x_seconds_down: 2.5
 dt:
   simulation: 0.002  # simulation timestep, s
   control: 0.02  # control rate, s
   saving: 0.02  # save datapoints in csv in this interval, s
 turning_points:
-  track_relative_complexity: 0.2  # Randomly placed target points/s
-  interpolation_type: 'previous'  # How to interpolate between turning points of random trace, Possible options: '0-derivative-smooth', 'linear', 'previous'
-  turning_points: [0.0, 0.1, -0.1, 0.0] # List of target positions, can be None to simulate with random targets, Example: turning_points_DataGen = [0.0, 0.1, -0.1, 0.0]
+  track_relative_complexity: 1  # Randomly placed target points/s
+  interpolation_type: ['previous','0-derivative-smooth']  # How to interpolate between turning points of random trace, Possible options: '0-derivative-smooth', 'linear', 'previous'
+  turning_points: # List of target positions, can be None to simulate with random targets, Example: turning_points_DataGen = [0.0, 0.1, -0.1, 0.0]
   turning_points_period: 'regular' # How turning points should be distributed, Possible options: 'regular', 'random'; never used, leave it as it is
 save_mode: 'online'  # It was intended to save memory usage, but it doesn't seems to help, setit to "offline" only if you want to show summary plots
 # Show popup window in the end with summary of experiment?

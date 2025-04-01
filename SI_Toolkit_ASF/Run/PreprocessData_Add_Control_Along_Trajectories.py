@@ -65,5 +65,5 @@ if __name__ == '__main__':
     transform_dataset(get_files_from, save_files_to, transformation='add_control_along_trajectories',
                       controller_config=controller, controller_output_variable_name=controller_output_variable_name,
                       integration_num_evals=4,
-                      save_output_only=True,
+                      save_output_only=False,
                       )

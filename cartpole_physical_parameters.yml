@@ -31,15 +31,15 @@ cartpole:
     increment: 0.02
     reset_every_x_seconds: 18  # seconds, or 'inf' for no change
   L:
-    init_value: 0.2  # length of pend, m
+    init_value: 0.395  # length of pend, m
     change_every_x_seconds: # If left empty angle shift changed at each simulation step, otherwise time in seconds, or 'inf' for no change
-    mode: 'bounce'  # 'constant', 'random_walk', 'increase', 'random'
+    mode: 'constant'  # 'constant', 'random_walk', 'increase', 'random'
     range_random: [0.2, 0.5]  # Range from which to uniformly sample or at which to clip, leave empty for no clipping
     range_clip: [0.2, 0.5]  # range at which to clip, leave empty for no clipping
     increment: 0.00002
     reset_every_x_seconds: 'inf'  # seconds, or 'inf' for no change
   m_pole:
-    init_value: 0.050      # length of pend, m
+    init_value: 0.087      # length of pend, m
     change_every_x_seconds: 2 # If left empty angle shift changed at each simulation step, otherwise time in seconds, or 'inf' for no change
     mode: 'constant'  # 'constant', 'random_walk', 'increase', 'random'
     range_random: [ 0.015, 0.15]  # Range from which to uniformly sample or at which to clip, leave empty for no clipping

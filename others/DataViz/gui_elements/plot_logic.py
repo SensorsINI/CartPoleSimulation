@@ -76,20 +76,33 @@ def update_plot(main_app):
     if plot_option != "Density":
         c_data = _get_cdata_for_plot_option(main_app, plot_option, df_filtered)
 
-    # If user wants color by weights
-    if main_app.color_by_weight_var.get() and "weights" in main_app.df.columns:
+    if main_app.color_by_cluster_var.get():
+        if "cluster_main_label" in main_app.df.columns:
+            c_data = main_app.df["cluster_main_label"].values
+        else:
+            print("Warning: color_by_cluster is True but no 'cluster_main_label' in df.")
+
+    # If user wants color by weights, but not cluster
+    elif main_app.color_by_weight_var.get() and "weights" in main_app.df.columns:
         c_data = main_app.df["weights"].values
 
     # Scatter vs. Heatmap
     if plot_type == "Scatter":
-        if (plot_option == "Density") and not main_app.color_by_weight_var.get():
+        if (plot_option == "Density") and not main_app.color_by_cluster_var.get() \
+                                       and not main_app.color_by_weight_var.get():
             _plot_density_scatter(main_app, x_vals, y_vals, bins, norm)
         else:
             if c_data is not None:
-                sc = main_app.ax.scatter(x_vals, y_vals, c=c_data, cmap="viridis", s=5, norm=norm)
+                sc = main_app.ax.scatter(
+                    x_vals, y_vals,
+                    c=c_data,
+                    cmap="viridis",  # you can choose a discrete colormap if you prefer
+                    s=5,
+                    norm=norm
+                )
                 main_app.figure.colorbar(
                     sc, ax=main_app.ax,
-                    label=("Weight" if main_app.color_by_weight_var.get() else plot_option)
+                    label=_choose_colorbar_label(main_app, plot_option)
                 )
         if do_ols:
             _plot_ols_line(main_app, x_vals, y_vals)
@@ -109,7 +122,7 @@ def update_plot(main_app):
                 )
                 main_app.figure.colorbar(
                     im, ax=main_app.ax,
-                    label=("Weight" if main_app.color_by_weight_var.get() else f"{plot_option} (avg)")
+                    label=_choose_colorbar_label(main_app, plot_option, heatmap=True)
                 )
 
     # Title, axes
@@ -120,11 +133,10 @@ def update_plot(main_app):
 
     # Possibly draw cluster boundaries
     if main_app.show_main_clusters_var.get() and main_app.boundaries:
-        for lbl, poly in main_app.boundaries.items():
-            exterior = getattr(poly, "exterior", None)
-            if exterior:
-                xp, yp = exterior.xy
-                main_app.ax.plot(xp, yp, color="red", linewidth=1.5)
+        exterior = getattr(main_app.boundaries, "exterior", None)
+        if exterior:
+            xp, yp = exterior.xy
+            main_app.ax.plot(xp, yp, color="red", linewidth=1.5)
 
     main_app.canvas.draw_idle()
 
@@ -369,3 +381,14 @@ def _parse_range(main_app, s_min, s_max):
     except ValueError:
         return None, None
     return val_min, val_max
+
+def _choose_colorbar_label(main_app, plot_option, heatmap=False):
+    if main_app.color_by_cluster_var.get():
+        return "Cluster Label"
+    elif main_app.color_by_weight_var.get():
+        return "Weight"
+    else:
+        if heatmap:
+            return f"{plot_option} (avg)"
+        else:
+            return plot_option
