@@ -21,14 +21,15 @@ CartPole:
     R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in optimizer config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
 
   quadratic_boundary_grad_minimal:
-    dd_quadratic_weight_up: 10.0
-    ep_weight_up: 40.0
-    ekp_weight_up: 1.0
+    dd_quadratic_weight_up: 200.0
+    ep_weight_up: 20.0
+    ekp_weight_up: 30.0
+    vel_penalty_reg: 0.90
     db_weight_up: 10000
-    cc_weight_up: 5.0
+    cc_weight_up: 1.0
     R: 1.0
 
-    permissible_track_fraction: 0.85
+    permissible_track_fraction: 0.80
 
   quadratic_boundary_nonconvex:
     dd_weight: 600.0
