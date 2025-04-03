@@ -38,11 +38,11 @@ def args_fun():
 
 formatted_index = args_fun()
 if formatted_index is not None:
-    get_files_from = f'../Experiment_Recordings/Experiment_16_11_2024_pole_L_and_m_informed/Experiment-{formatted_index}.csv'
+    get_files_from = f'./Experiment_Recordings/Experiment-{formatted_index}.csv'
 else:
     get_files_from = 'SI_Toolkit_ASF/Run/df_to_transform/informed_gru_2.csv'
 
-save_files_to = 'SI_Toolkit_ASF/Run/df_transformed'
+save_files_to = './Experiment_Recordings'
 
 controller = {
     "controller_name": "mpc",
