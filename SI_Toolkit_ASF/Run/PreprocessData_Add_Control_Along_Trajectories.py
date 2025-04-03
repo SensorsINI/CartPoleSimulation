@@ -53,13 +53,13 @@ controller = {
     "environment_attributes_dict": {  # keys are names used by controller, values the csv column names
         "target_position": "target_position",
         "target_equilibrium": "target_equilibrium",
-        "L": "L_differentiate_",
-        "m_pole": "m_pole_differentiate_",
-        # "Q_ccrc": "Q_applied_-1",
+        # "L": "L_differentiate_",
+        # "m_pole": "m_pole_differentiate_",
+        "Q_ccrc": "Q_applied_-1",
     },
 }
 
-controller_output_variable_name = 'dQ'
+controller_output_variable_name = 'Q_calculated_offline_slow_swing'
 
 if __name__ == '__main__':
     transform_dataset(get_files_from, save_files_to, transformation='add_control_along_trajectories',

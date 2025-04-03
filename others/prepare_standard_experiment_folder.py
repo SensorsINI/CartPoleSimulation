@@ -110,8 +110,8 @@ def split_csv_files(path_source,
             print(f"Warning: log file or directory '{log_file}' not found; skipping.")
 
     # 8. Now that everything is safely copied, remove CSV files from source
-    for csv_file in csv_files:
-        os.remove(os.path.join(path_source, csv_file))
+    # for csv_file in csv_files:
+    #     os.remove(os.path.join(path_source, csv_file))
 
 if __name__ == "__main__":
     # Example usage:
