@@ -1,4 +1,5 @@
 import matplotlib
+
 matplotlib.use('MacOSX')
 
 import numpy as np
@@ -15,9 +16,10 @@ MODE = 2  # 1 and 2 for testing, 0 for processing the data.
 # Each column_to_interpolate will get its own figure.
 # -------------------------------------------------------------------------
 input_file = "../MPCswingups/CPP_swing_up-0.csv"  # CHANGE to your input CSV
-output_file = "example_single_upsampled.csv"      # Where to write upsampled result
-time_column = "time"                              # CHANGE to your actual time column name
-columns_to_interpolate = ["angle"]                # CHANGE to actual columns to interpolate
+output_file = "example_single_upsampled.csv"  # Where to write upsampled result
+time_column = "time"  # CHANGE to your actual time column name
+columns_to_interpolate = ["angle", "angle_sin", "angle_cos"]  # CHANGE to actual columns to interpolate
+
 
 def wavelet_denoise(data, wavelet='db4', threshold_method='hard', threshold_scale=0.7):
     """
@@ -33,6 +35,7 @@ def wavelet_denoise(data, wavelet='db4', threshold_method='hard', threshold_scal
     denoised_signal = pywt.waverec(denoised_coeff, wavelet)
     return denoised_signal
 
+
 def upsample_signal(time, signal, factor=2):
     """
     Upsamples the input signal by a given factor using cubic spline interpolation.
@@ -43,16 +46,17 @@ def upsample_signal(time, signal, factor=2):
     signal_new = cs(time_new)
     return time_new, signal_new
 
+
 def process_single_csv(
-    input_csv_path,
-    output_csv_path,
-    time_column,
-    columns_to_interpolate,
-    wavelet='db4',
-    threshold_method='hard',
-    threshold_scale=0.7,
-    factor=2,
-    plot_result=False
+        input_csv_path,
+        output_csv_path,
+        time_column,
+        columns_to_interpolate,
+        wavelet='db4',
+        threshold_method='hard',
+        threshold_scale=0.7,
+        factor=2,
+        plot_result=False
 ):
     """
     Process a single CSV file:
@@ -99,47 +103,84 @@ def process_single_csv(
         col_data = np.array([float(r[cidx]) for r in data_rows], dtype=float)
         signals_to_process[col] = col_data
 
-    # 3) Wavelet-denoise and upsample
-    new_length = len(time_data) * factor - (factor - 1)
-
-    # 3a) Denoise each signal
+    # 3) Wavelet-denoise each signal (for "angle", unwrap before denoising)
     denoised_signals = {}
     for col in columns_to_interpolate:
-        d = wavelet_denoise(signals_to_process[col],
-                            wavelet=wavelet,
-                            threshold_method=threshold_method,
-                            threshold_scale=threshold_scale)
-        # Truncate if wavelet reconstruction extends length
+        if col == 'angle':
+            d = wavelet_denoise(np.unwrap(signals_to_process[col]),
+                                wavelet=wavelet,
+                                threshold_method=threshold_method,
+                                threshold_scale=threshold_scale)
+        else:
+            d = wavelet_denoise(signals_to_process[col],
+                                wavelet=wavelet,
+                                threshold_method=threshold_method,
+                                threshold_scale=threshold_scale)
+        # Truncate if wavelet reconstruction extends length.
         denoised_signals[col] = d[:len(time_data)]
 
+    new_length = len(time_data) * factor - (factor - 1)
     # 3b) Upsample the time column based on first signal
     first_col = columns_to_interpolate[0]
     time_upsampled, _ = upsample_signal(time_data, denoised_signals[first_col], factor=factor)
 
+    # 3c) Upsample signals for columns EXCLUDING "angle_sin" and "angle_cos"
+    # We'll derive sin and cos from the upsampled angle.
     upsampled_signals = {}
     for col in columns_to_interpolate:
+        if col in ['angle_sin', 'angle_cos']:
+            # Skip these; they will be calculated later.
+            continue
+        # Get the upsampled signal using cubic spline interpolation.
         _, sig_upsampled = upsample_signal(time_data, denoised_signals[col], factor=factor)
-        # Overwrite exact original indices with original (noisy) data
-        augmented_col = np.copy(sig_upsampled)
-        original_indices = np.arange(0, len(augmented_col), factor)
-        augmented_col[original_indices] = signals_to_process[col]
-        upsampled_signals[col] = augmented_col
+        if col != 'angle':
+            # For non-angle columns, preserve original points.
+            augmented_col = np.copy(sig_upsampled)
+            original_indices = np.arange(0, len(augmented_col), factor)
+            augmented_col[original_indices] = signals_to_process[col]
+            upsampled_signals[col] = augmented_col
+        else:
+            # For the angle column, do not overwrite with the original (wrapped) values.
+            upsampled_signals[col] = sig_upsampled
 
-    # 4) For columns not interpolated (and not time), replicate the previous row's value
+    # Special treatment for angle interpolation:
+    # Recompute the angle from its denoised and unwrapped version, then rewrap.
+    if 'angle' in columns_to_interpolate:
+        if 'angle' not in denoised_signals:
+            raise ValueError("Column 'angle' not found in denoised signals.")
+        # Upsample the unwrapped denoised angle.
+        _, angle_interpolated = upsample_signal(time_data, denoised_signals['angle'], factor=factor)
+        # Rewrap to the range [-π, π].
+        wrapped_angle = (angle_interpolated + np.pi) % (2 * np.pi) - np.pi
+        # Update the upsampled angle in the dictionary.
+        upsampled_signals['angle'] = wrapped_angle
+        # Now, derive sin and cos from the rewrapped upsampled angle.
+        sin_from_angle = np.sin(wrapped_angle)
+        cos_from_angle = np.cos(wrapped_angle)
+        # Insert the derived values into the upsampled signals dictionary.
+        upsampled_signals['angle_sin'] = sin_from_angle
+        upsampled_signals['angle_cos'] = cos_from_angle
+
+    # 4) Build the upsampled table for CSV output.
     upsampled_table = [[""] * len(header) for _ in range(new_length)]
 
     # Fill time column
     for i in range(new_length):
         upsampled_table[i][time_idx] = f"{time_upsampled[i]:.6f}"
 
-    # Fill the columns we upsampled
+    # Fill the columns we upsampled (including derived sin and cos from angle).
     for col in columns_to_interpolate:
         cidx = col_index[col]
-        col_vals = upsampled_signals[col]
-        for i in range(new_length):
-            upsampled_table[i][cidx] = f"{col_vals[i]:.6f}"
+        # Use the computed value from upsampled_signals if available.
+        if col in upsampled_signals:
+            col_vals = upsampled_signals[col]
+            for i in range(new_length):
+                upsampled_table[i][cidx] = f"{col_vals[i]:.6f}"
+        else:
+            # In case any column was not processed (should not occur)
+            pass
 
-    # Fill other columns
+    # 5) For columns not interpolated (and not time), replicate the previous row's value.
     for col, idx in col_index.items():
         if col == time_column or col in columns_to_interpolate:
             continue
@@ -148,15 +189,14 @@ def process_single_csv(
         original_indices = np.arange(0, new_length, factor)
         for j, orig_idx in enumerate(original_indices):
             new_col_vals[orig_idx] = old_values[j]
-        # fill gaps
+        # Fill gaps.
         for i in range(new_length):
             if new_col_vals[i] is None:
                 new_col_vals[i] = new_col_vals[i - 1]
-        # place in table
         for i in range(new_length):
             upsampled_table[i][idx] = new_col_vals[i]
 
-    # 5) Write result to output_csv_path
+    # 6) Write result to output_csv_path.
     with open(output_csv_path, 'w', newline='') as fout:
         for cmt_line in comment_lines:
             fout.write(cmt_line + "\n")
@@ -166,23 +206,23 @@ def process_single_csv(
         for row in upsampled_table:
             writer.writerow(row)
 
-    # 6) Optionally plot results in the SAME style as MODE 1 (each column in its own figure)
+    # 7) Optionally plot results (each column in its own figure).
     if plot_result:
         for col in columns_to_interpolate:
-            # We already have an 'augmented' version: upsampled_signals[col].
-            # Identify original vs new indices
+            if col not in upsampled_signals:
+                continue
             augmented_col = upsampled_signals[col]
             original_indices = np.arange(0, len(augmented_col), factor)
             new_indices = np.setdiff1d(np.arange(len(augmented_col)), original_indices)
 
             plt.figure(figsize=(10, 5))
-            # Full augmented curve in gray
+            # Plot full augmented curve in gray.
             plt.plot(time_upsampled, augmented_col, label="Augmented Signal",
                      color='gray', alpha=0.5)
-            # Original points in blue
+            # Plot original points in blue.
             plt.scatter(time_upsampled[original_indices], augmented_col[original_indices],
                         color='blue', label="Original Points", s=20)
-            # New points in red
+            # Plot new points in red.
             plt.scatter(time_upsampled[new_indices], augmented_col[new_indices],
                         color='red', label="New Points", s=10)
             plt.xlabel(time_column)
@@ -192,11 +232,12 @@ def process_single_csv(
             plt.tight_layout()
             plt.show()
 
+
 if __name__ == "__main__":
 
     if MODE == 1:
         # -------------------------------------------------------------------------
-        # Original example from your code - unchanged
+        # Original example from your code - unchanged.
         # -------------------------------------------------------------------------
         np.random.seed(42)  # For reproducibility.
         N = 1000  # Number of data points.
@@ -210,20 +251,17 @@ if __name__ == "__main__":
         factor = 2
         t_upsampled, signal_upsampled = upsample_signal(t, denoised_signal, factor=factor)
 
-        # Combine original points
+        # Combine original points.
         augmented_signal = np.copy(signal_upsampled)
         original_indices = np.arange(0, len(t_upsampled), factor)
         augmented_signal[original_indices] = original_signal
         new_indices = np.setdiff1d(np.arange(len(t_upsampled)), original_indices)
 
-        # Plot
+        # Plot.
         plt.figure(figsize=(12, 6))
-        # Full augmented curve
         plt.plot(t_upsampled, augmented_signal, label="Augmented Signal", color='gray', alpha=0.5)
-        # Original points
         plt.scatter(t_upsampled[original_indices], augmented_signal[original_indices],
                     color='blue', label="Original Points", s=20)
-        # New points
         plt.scatter(t_upsampled[new_indices], augmented_signal[new_indices],
                     color='red', label="New Points", s=10)
         plt.xlabel("Time")
@@ -245,20 +283,20 @@ if __name__ == "__main__":
             threshold_method='hard',
             threshold_scale=0.7,
             factor=2,
-            plot_result=True  # We display the final result in the same style as MODE 1
+            plot_result=True  # Display final result.
         )
 
     elif MODE == 0:
         # -------------------------------------------------------------------------
         # Process ALL CSV files in a folder, write upsampled CSVs to target folder.
-        # No plotting is done (plot_result=False).
+        # No plotting is done.
         # -------------------------------------------------------------------------
         source_folder = "source_data"  # CHANGE to your source folder
         target_folder = "target_data"  # CHANGE to your target folder
         os.makedirs(target_folder, exist_ok=True)
 
-        time_column = "Time"                   # CHANGE as needed
-        columns_to_interpolate = ["Signal"]    # CHANGE as needed
+        time_column = "Time"  # CHANGE as needed
+        columns_to_interpolate = ["Signal"]  # CHANGE as needed
 
         for file_name in os.listdir(source_folder):
             if file_name.lower().endswith(".csv"):
@@ -274,5 +312,5 @@ if __name__ == "__main__":
                     threshold_method='hard',
                     threshold_scale=0.7,
                     factor=2,
-                    plot_result=False  # No plotting in batch mode
+                    plot_result=False  # No plotting in batch mode.
                 )
