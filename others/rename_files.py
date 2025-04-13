@@ -3,9 +3,18 @@ import os
 def rename_files_preserve_order(directory):
     # Get a sorted list of all files in the directory
     files = sorted(os.listdir(directory))
+    if not files:
+        print(f"No files found in {directory}.")
+        return
 
+    startswith = "CPP_"
+    endswith = ".csv"
     # Filter files that match the pattern
-    files_to_rename = [f for f in files if f.startswith("Experiment-") and f.endswith(".csv")]
+    files_to_rename = [f for f in files if f.startswith(startswith) and f.endswith(endswith)]
+
+    if not files_to_rename:
+        print(f"No files starting with {startswith} and ending with {endswith} found in {directory}.")
+        return
 
     # Debug: Print the list of files to be renamed
     print("Files to be renamed:")
