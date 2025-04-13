@@ -1,73 +1,154 @@
 import matplotlib
-
 matplotlib.use('MacOSX')
 
 import numpy as np
 import matplotlib.pyplot as plt
 import pywt
-from scipy.interpolate import CubicSpline
 import os
 import csv
 
-MODE = 2  # 1 and 2 for testing, 0 for processing the data.
-# -------------------------------------------------------------------------
-# Process a SINGLE CSV file, upsampling specified columns,
-# then optionally display the result in a plot (similar style to MODE 1).
-# Each column_to_interpolate will get its own figure.
-# -------------------------------------------------------------------------
-input_file = "../MPCswingups/CPP_swing_up-0.csv"  # CHANGE to your input CSV
-output_file = "example_single_upsampled.csv"  # Where to write upsampled result
-time_column = "time"  # CHANGE to your actual time column name
-columns_to_interpolate = ["angle", "angle_sin", "angle_cos"]  # CHANGE to actual columns to interpolate
+from tqdm import tqdm
 
+from scipy.interpolate import (
+    CubicSpline,
+    PchipInterpolator,
+    interp1d
+)
 
-def wavelet_denoise(data, wavelet='db4', threshold_method='hard', threshold_scale=0.7):
+########################################################################
+# User Configuration
+########################################################################
+MODE = 0  # 1 or 2 for testing, 0 for batch processing
+
+# Path to your CSV
+input_file = "./MPCswingups/CPP_swing_up-0.csv"
+output_file = "./example_single_upsampled.csv"
+
+time_column = "time"
+columns_to_interpolate = [
+    "angle", "angle_sin", "angle_cos",
+    "angleD", "position", "positionD",
+    "target_position", "Q", "Q_ccrc"
+]
+
+apply_denoising = False
+desired_dt = 0.01  # new time step (e.g. 1 ms)
+
+# Columns that are known to be step-like; we do zero-order hold interpolation
+step_columns = {"target_position"}
+
+########################################################################
+# Wavelet Denoising
+########################################################################
+def wavelet_denoise(
+    data,
+    wavelet='db4',
+    threshold_method='hard',
+    threshold_scale=0.7
+):
     """
     Denoises a time series using wavelet thresholding.
     """
     coeff = pywt.wavedec(data, wavelet)
-    sigma = np.median(np.abs(coeff[-1])) / 0.6745  # Robust noise estimation using MAD
-    uthresh = threshold_scale * sigma * np.sqrt(2 * np.log(len(data)))  # Scaled universal threshold
+    # Robust noise estimation using the median absolute deviation of last detail coeffs
+    sigma = np.median(np.abs(coeff[-1])) / 0.6745
+    uthresh = threshold_scale * sigma * np.sqrt(2 * np.log(len(data)))
+
     denoised_coeff = [coeff[0]]
     for detail in coeff[1:]:
-        denoised_detail = pywt.threshold(detail, value=uthresh, mode=threshold_method)
+        denoised_detail = pywt.threshold(
+            detail, value=uthresh, mode=threshold_method
+        )
         denoised_coeff.append(denoised_detail)
+
     denoised_signal = pywt.waverec(denoised_coeff, wavelet)
-    return denoised_signal
+    # Truncate if wavelet transform returns length off by 1
+    return denoised_signal[:len(data)]
 
 
-def upsample_signal(time, signal, factor=2):
+########################################################################
+# General Interpolation Function (by dt) with Different Methods
+########################################################################
+def upsample_signal_by_dt(time, signal, dt, method="pchip"):
     """
-    Upsamples the input signal by a given factor using cubic spline interpolation.
+    Resamples 'signal' at a new uniform time grid from time[0] to time[-1]
+    in increments of dt, using one of several interpolation methods.
+
+    :param time: 1D array of original time points (sorted).
+    :param signal: 1D array of signal values (same length as time).
+    :param dt: desired time step in the new uniform grid.
+    :param method: one of {"pchip", "cubic_spline", "linear", "previous"}.
+    :return: (time_new, signal_new)
     """
-    new_length = len(time) * factor - (factor - 1)
-    time_new = np.linspace(time[0], time[-1], new_length)
-    cs = CubicSpline(time, signal)
-    signal_new = cs(time_new)
-    return time_new, signal_new
+    t_min = time[0]
+    t_max = time[-1]
+    # Build new uniform time
+    t_new = np.arange(t_min, t_max + 0.5*dt, dt)
+    # Drop last point if it slightly exceeds t_max
+    if t_new[-1] > t_max + 1e-12:
+        t_new = t_new[:-1]
+
+    # Choose interpolation approach
+    if method == "cubic_spline":
+        interpolator = CubicSpline(time, signal)
+    elif method == "pchip":
+        interpolator = PchipInterpolator(time, signal)
+    elif method == "linear":
+        interpolator = interp1d(
+            time, signal, kind='linear', bounds_error=False,
+            fill_value="extrapolate"
+        )
+    elif method == "previous":  # zero-order hold
+        interpolator = interp1d(
+            time, signal, kind='previous', bounds_error=False,
+            fill_value=(signal[0], signal[-1])
+        )
+    else:
+        raise ValueError(f"Unknown interpolation method '{method}'")
+
+    signal_new = interpolator(t_new)
+    return t_new, signal_new
 
 
+########################################################################
+# Main Processing Logic
+########################################################################
 def process_single_csv(
-        input_csv_path,
-        output_csv_path,
-        time_column,
-        columns_to_interpolate,
-        wavelet='db4',
-        threshold_method='hard',
-        threshold_scale=0.7,
-        factor=2,
-        plot_result=False
+    input_csv_path,
+    output_csv_path,
+    time_column,
+    columns_to_interpolate,
+    desired_dt=0.001,
+    wavelet='db4',
+    threshold_method='hard',
+    threshold_scale=0.7,
+    plot_result=False,
+    apply_denoising=True,
+    step_columns=None
 ):
     """
-    Process a single CSV file:
-      1. Preserve leading comment lines (#).
-      2. Read data; find the time column and specified columns to interpolate.
-      3. Wavelet-denoise then upsample those columns by factor=2.
-      4. For other columns, fill new rows with the previous row's value.
-      5. Write result to output_csv_path (keeping comments).
-      6. Optionally plot the results in the same style as MODE 1 (if plot_result=True).
+    Process a single CSV to upsample specified columns at a uniform dt.
+     1) Preserve comment lines (#).
+     2) Read header/data. Identify time_column -> float array of times.
+     3) [Optional] wavelet denoising on each column to be interpolated
+        (angle is always unwrapped first).
+     4) For each column in columns_to_interpolate:
+        - pick an interpolation method:
+            * "previous" if column is in step_columns
+            * "cubic_spline" for 'angle'
+            * else "pchip" by default
+        - upsample to a new uniform time grid [time[0], time[-1]] with step = desired_dt
+     5) If 'angle' in columns_to_interpolate, re-wrap to [-pi, pi], then derive angle_sin/cos
+     6) Columns not in columns_to_interpolate: zero-order hold from old data to new time grid.
+     7) Write out to a CSV with the same column order. Comments on top.
+     8) [Optional] generate a plot for each upsampled column:
+         * Original data: blue line + blue dots
+         * Upsampled data: red line + red dots
     """
-    # 1) Read lines and separate comments
+    if step_columns is None:
+        step_columns = set()  # no step columns by default
+
+    # 1) read lines, separate comment lines
     with open(input_csv_path, 'r', newline='') as f:
         lines = f.readlines()
 
@@ -79,226 +160,248 @@ def process_single_csv(
         else:
             data_lines.append(line.rstrip('\n'))
 
-    # 2) Parse CSV header
+    # 2) parse CSV header
     reader = csv.reader(data_lines)
-    header = next(reader)  # first non-comment line is the header
-    # Create a dictionary {column_name -> index_in_csv}
-    col_index = {col_name: i for i, col_name in enumerate(header)}
+    header = next(reader)
+    col_index = {c: i for i, c in enumerate(header)}
 
-    # Read data into a list of lists
-    data_rows = [row for row in reader if len(row) == len(header)]
-
-    # Convert columns to float arrays
     if time_column not in col_index:
-        raise ValueError(f"Time column '{time_column}' not found in CSV header.")
+        raise ValueError(f"Time column '{time_column}' not found in header.")
 
+    data_rows = [row for row in reader if len(row) == len(header)]
     time_idx = col_index[time_column]
-    time_data = np.array([float(r[time_idx]) for r in data_rows], dtype=float)
 
+    # float array for original time
+    time_data = np.array([float(r[time_idx]) for r in data_rows], dtype=float)
+    time_data = time_data - np.min(time_data)  # normalize time to start from 0
+
+    # ensure sorted time
+    if not np.all(time_data[1:] >= time_data[:-1]):
+        sort_idx = np.argsort(time_data)
+        time_data = time_data[sort_idx]
+        data_rows = [data_rows[i] for i in sort_idx]
+
+    # gather columns to process
     signals_to_process = {}
     for col in columns_to_interpolate:
         if col not in col_index:
-            raise ValueError(f"Column '{col}' not found in CSV header.")
-        cidx = col_index[col]
-        col_data = np.array([float(r[cidx]) for r in data_rows], dtype=float)
+            raise ValueError(f"Column '{col}' not found in header.")
+        idx = col_index[col]
+        col_data = np.array([float(r[idx]) for r in data_rows], dtype=float)
         signals_to_process[col] = col_data
 
-    # 3) Wavelet-denoise each signal (for "angle", unwrap before denoising)
+    # 3) wavelet denoise if requested, unwrap angle first
     denoised_signals = {}
     for col in columns_to_interpolate:
+        arr = signals_to_process[col]
         if col == 'angle':
-            d = wavelet_denoise(np.unwrap(signals_to_process[col]),
-                                wavelet=wavelet,
-                                threshold_method=threshold_method,
-                                threshold_scale=threshold_scale)
-        else:
-            d = wavelet_denoise(signals_to_process[col],
-                                wavelet=wavelet,
-                                threshold_method=threshold_method,
-                                threshold_scale=threshold_scale)
-        # Truncate if wavelet reconstruction extends length.
-        denoised_signals[col] = d[:len(time_data)]
+            # unwrap angle
+            arr = np.unwrap(arr)
+        if apply_denoising and col not in ['angle_sin', 'angle_cos']:
+            arr = wavelet_denoise(
+                arr,
+                wavelet=wavelet,
+                threshold_method=threshold_method,
+                threshold_scale=threshold_scale
+            )
+        denoised_signals[col] = arr
 
-    new_length = len(time_data) * factor - (factor - 1)
-    # 3b) Upsample the time column based on first signal
-    first_col = columns_to_interpolate[0]
-    time_upsampled, _ = upsample_signal(time_data, denoised_signals[first_col], factor=factor)
-
-    # 3c) Upsample signals for columns EXCLUDING "angle_sin" and "angle_cos"
-    # We'll derive sin and cos from the upsampled angle.
+    # 4) build upsampled signals
+    # pick a single uniform time grid from time_data[0]..time_data[-1]
+    t_min, t_max = time_data[0], time_data[-1]
+    time_new = np.arange(t_min, t_max + 0.5*desired_dt, desired_dt)
+    if time_new[-1] > t_max + 1e-12:
+        time_new = time_new[:-1]
     upsampled_signals = {}
+
     for col in columns_to_interpolate:
-        if col in ['angle_sin', 'angle_cos']:
-            # Skip these; they will be calculated later.
+        if col in ('angle_sin', 'angle_cos'):
+            # skip for now, we derive from angle later
             continue
-        # Get the upsampled signal using cubic spline interpolation.
-        _, sig_upsampled = upsample_signal(time_data, denoised_signals[col], factor=factor)
-        if col != 'angle':
-            # For non-angle columns, preserve original points.
-            augmented_col = np.copy(sig_upsampled)
-            original_indices = np.arange(0, len(augmented_col), factor)
-            augmented_col[original_indices] = signals_to_process[col]
-            upsampled_signals[col] = augmented_col
+
+        # choose interpolation method
+        if col == 'angle':
+            method = "cubic_spline"  # or "pchip", your choice
+        elif col in step_columns:
+            method = "previous"
         else:
-            # For the angle column, do not overwrite with the original (wrapped) values.
-            upsampled_signals[col] = sig_upsampled
+            method = "pchip"
 
-    # Special treatment for angle interpolation:
-    # Recompute the angle from its denoised and unwrapped version, then rewrap.
+        # do the interpolation
+        signal_old = denoised_signals[col]
+        interpolator = None
+        if method == "cubic_spline":
+            interpolator = CubicSpline(time_data, signal_old)
+        elif method == "pchip":
+            interpolator = PchipInterpolator(time_data, signal_old)
+        elif method == "linear":
+            interpolator = interp1d(
+                time_data, signal_old, kind='linear', fill_value="extrapolate"
+            )
+        elif method == "previous":
+            interpolator = interp1d(
+                time_data, signal_old, kind='previous', bounds_error=False,
+                fill_value=(signal_old[0], signal_old[-1])
+            )
+        else:
+            raise ValueError(f"Unknown method '{method}'")
+
+        sig_new = interpolator(time_new)
+        upsampled_signals[col] = sig_new
+
+    # 5) angle re-wrap, then derive angle_sin/cos
     if 'angle' in columns_to_interpolate:
-        if 'angle' not in denoised_signals:
-            raise ValueError("Column 'angle' not found in denoised signals.")
-        # Upsample the unwrapped denoised angle.
-        _, angle_interpolated = upsample_signal(time_data, denoised_signals['angle'], factor=factor)
-        # Rewrap to the range [-π, π].
-        wrapped_angle = (angle_interpolated + np.pi) % (2 * np.pi) - np.pi
-        # Update the upsampled angle in the dictionary.
-        upsampled_signals['angle'] = wrapped_angle
-        # Now, derive sin and cos from the rewrapped upsampled angle.
-        sin_from_angle = np.sin(wrapped_angle)
-        cos_from_angle = np.cos(wrapped_angle)
-        # Insert the derived values into the upsampled signals dictionary.
-        upsampled_signals['angle_sin'] = sin_from_angle
-        upsampled_signals['angle_cos'] = cos_from_angle
+        angle_wrapped = (upsampled_signals['angle'] + np.pi) % (2*np.pi) - np.pi
+        upsampled_signals['angle'] = angle_wrapped
+        # derive sin, cos
+        angle_sin = np.sin(angle_wrapped)
+        angle_cos = np.cos(angle_wrapped)
+        upsampled_signals['angle_sin'] = angle_sin
+        upsampled_signals['angle_cos'] = angle_cos
 
-    # 4) Build the upsampled table for CSV output.
+    # 6) build final table
+    new_length = len(time_new)
     upsampled_table = [[""] * len(header) for _ in range(new_length)]
 
-    # Fill time column
+    # fill new time column
     for i in range(new_length):
-        upsampled_table[i][time_idx] = f"{time_upsampled[i]:.6f}"
+        upsampled_table[i][time_idx] = f"{time_new[i]:.6f}"
 
-    # Fill the columns we upsampled (including derived sin and cos from angle).
+    # fill columns we upsampled
     for col in columns_to_interpolate:
-        cidx = col_index[col]
-        # Use the computed value from upsampled_signals if available.
-        if col in upsampled_signals:
-            col_vals = upsampled_signals[col]
-            for i in range(new_length):
-                upsampled_table[i][cidx] = f"{col_vals[i]:.6f}"
-        else:
-            # In case any column was not processed (should not occur)
-            pass
+        if col not in upsampled_signals:
+            continue
+        idx = col_index[col]
+        svals = upsampled_signals[col]
+        for i in range(new_length):
+            upsampled_table[i][idx] = f"{svals[i]:.6f}"
 
-    # 5) For columns not interpolated (and not time), replicate the previous row's value.
+    # for others, do zero-order hold from old data
     for col, idx in col_index.items():
         if col == time_column or col in columns_to_interpolate:
             continue
-        old_values = [r[idx] for r in data_rows]  # strings from original
-        new_col_vals = [None] * new_length
-        original_indices = np.arange(0, new_length, factor)
-        for j, orig_idx in enumerate(original_indices):
-            new_col_vals[orig_idx] = old_values[j]
-        # Fill gaps.
-        for i in range(new_length):
-            if new_col_vals[i] is None:
-                new_col_vals[i] = new_col_vals[i - 1]
+        old_values = [r[idx] for r in data_rows]  # strings
+        # do zero-order hold by stepping through time_new
+        new_col_vals = []
+        i_old = 0
+        for t_new_val in time_new:
+            while (i_old < len(time_data) - 1) and (time_data[i_old+1] <= t_new_val):
+                i_old += 1
+            new_col_vals.append(old_values[i_old])
+
         for i in range(new_length):
             upsampled_table[i][idx] = new_col_vals[i]
 
-    # 6) Write result to output_csv_path.
+    # 7) write CSV
     with open(output_csv_path, 'w', newline='') as fout:
-        for cmt_line in comment_lines:
-            fout.write(cmt_line + "\n")
-
+        # comments
+        for cmt in comment_lines:
+            fout.write(cmt + "\n")
         writer = csv.writer(fout)
         writer.writerow(header)
         for row in upsampled_table:
             writer.writerow(row)
 
-    # 7) Optionally plot results (each column in its own figure).
+    # 8) Optionally plot each upsampled column
     if plot_result:
         for col in columns_to_interpolate:
             if col not in upsampled_signals:
                 continue
-            augmented_col = upsampled_signals[col]
-            original_indices = np.arange(0, len(augmented_col), factor)
-            new_indices = np.setdiff1d(np.arange(len(augmented_col)), original_indices)
+
+            # original data
+            original_y = signals_to_process[col]
+            # final upsampled data
+            upsampled_y = upsampled_signals[col]
 
             plt.figure(figsize=(10, 5))
-            # Plot full augmented curve in gray.
-            plt.plot(time_upsampled, augmented_col, label="Augmented Signal",
-                     color='gray', alpha=0.5)
-            # Plot original points in blue.
-            plt.scatter(time_upsampled[original_indices], augmented_col[original_indices],
-                        color='blue', label="Original Points", s=20)
-            # Plot new points in red.
-            plt.scatter(time_upsampled[new_indices], augmented_col[new_indices],
-                        color='red', label="New Points", s=10)
+
+            # Plot original as blue line + blue dots
+            plt.plot(
+                time_data, original_y, '-o',
+                color='blue', linewidth=1, markersize=4,
+                label='Original'
+            )
+
+            # Plot new as red line + red dots
+            plt.plot(
+                time_new, upsampled_y, '-o',
+                color='red', linewidth=1, markersize=3,
+                label='Upsampled'
+            )
+
             plt.xlabel(time_column)
             plt.ylabel(col)
-            plt.title(f"Column: {col} (Wavelet + Upsampling)")
+            if apply_denoising:
+                title_str = f"{col} (Denoised + Upsampled, dt={desired_dt})"
+            else:
+                title_str = f"{col} (Upsampled, dt={desired_dt})"
+            plt.title(title_str)
             plt.legend()
             plt.tight_layout()
             plt.show()
 
 
+########################################################################
+# MAIN
+########################################################################
 if __name__ == "__main__":
-
     if MODE == 1:
-        # -------------------------------------------------------------------------
-        # Original example from your code - unchanged.
-        # -------------------------------------------------------------------------
-        np.random.seed(42)  # For reproducibility.
-        N = 1000  # Number of data points.
-        t = np.linspace(0, 10, N)
-        noise_level = 0.3
-        original_signal = np.sin(2 * np.pi * t) + noise_level * np.random.randn(N)
+        # Example: small synthetic data
+        N = 20
+        time_data = np.linspace(0, 2*np.pi, N)
+        # example step-like data
+        signal_step = np.where(time_data < np.pi, 0.0, 1.0)
+        # example smooth data
+        signal_sin = np.sin(time_data)
 
-        denoised_signal = wavelet_denoise(original_signal, threshold_method='hard', threshold_scale=0.9)
-        denoised_signal = denoised_signal[:N]
+        # put them in columns, write to a test CSV, then read from it
+        import tempfile
+        test_csv = "test_data.csv"
+        with open(test_csv, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(["time", "step_col", "sin_col"])
+            for i in range(N):
+                writer.writerow([
+                    f"{time_data[i]:.6f}",
+                    f"{signal_step[i]:.6f}",
+                    f"{signal_sin[i]:.6f}"
+                ])
 
-        factor = 2
-        t_upsampled, signal_upsampled = upsample_signal(t, denoised_signal, factor=factor)
-
-        # Combine original points.
-        augmented_signal = np.copy(signal_upsampled)
-        original_indices = np.arange(0, len(t_upsampled), factor)
-        augmented_signal[original_indices] = original_signal
-        new_indices = np.setdiff1d(np.arange(len(t_upsampled)), original_indices)
-
-        # Plot.
-        plt.figure(figsize=(12, 6))
-        plt.plot(t_upsampled, augmented_signal, label="Augmented Signal", color='gray', alpha=0.5)
-        plt.scatter(t_upsampled[original_indices], augmented_signal[original_indices],
-                    color='blue', label="Original Points", s=20)
-        plt.scatter(t_upsampled[new_indices], augmented_signal[new_indices],
-                    color='red', label="New Points", s=10)
-        plt.xlabel("Time")
-        plt.ylabel("Signal Value")
-        plt.title("Augmented Dataset: Preserving Original Points, Augmenting with Interpolated Ones")
-        plt.legend()
-        plt.show()
+        # process it
+        process_single_csv(
+            input_csv_path=test_csv,
+            output_csv_path="test_data_upsampled.csv",
+            time_column="time",
+            columns_to_interpolate=["step_col", "sin_col"],
+            desired_dt=0.1,
+            plot_result=True,
+            apply_denoising=False,
+            step_columns={"step_col"}  # do zero-order hold for step_col
+        )
 
     elif MODE == 2:
-        # -------------------------------------------------------------------------
-        # Process a single CSV file and plot in Mode 1 style (multiple columns, each in its own figure).
-        # -------------------------------------------------------------------------
+        # Process a real CSV with your desired dt
         process_single_csv(
             input_csv_path=input_file,
             output_csv_path=output_file,
             time_column=time_column,
             columns_to_interpolate=columns_to_interpolate,
+            desired_dt=desired_dt,
             wavelet='db4',
             threshold_method='hard',
             threshold_scale=0.7,
-            factor=2,
-            plot_result=True  # Display final result.
+            plot_result=True,          # show plots
+            apply_denoising=apply_denoising,
+            step_columns=step_columns  # columns that need step interpolation
         )
 
     elif MODE == 0:
-        # -------------------------------------------------------------------------
-        # Process ALL CSV files in a folder, write upsampled CSVs to target folder.
-        # No plotting is done.
-        # -------------------------------------------------------------------------
-        source_folder = "source_data"  # CHANGE to your source folder
-        target_folder = "target_data"  # CHANGE to your target folder
+        # Process ALL CSV in a folder, no plotting
+        source_folder = "./MPCSwingUps_11_04_2025/"
+        target_folder = "./MPCSwingUps_11_04_2025_100Hz/"
         os.makedirs(target_folder, exist_ok=True)
 
-        time_column = "Time"  # CHANGE as needed
-        columns_to_interpolate = ["Signal"]  # CHANGE as needed
-
-        for file_name in os.listdir(source_folder):
+        for file_name in tqdm(os.listdir(source_folder)):
             if file_name.lower().endswith(".csv"):
                 input_path = os.path.join(source_folder, file_name)
                 output_path = os.path.join(target_folder, file_name)
@@ -308,9 +411,11 @@ if __name__ == "__main__":
                     output_csv_path=output_path,
                     time_column=time_column,
                     columns_to_interpolate=columns_to_interpolate,
+                    desired_dt=0.01,
                     wavelet='db4',
                     threshold_method='hard',
                     threshold_scale=0.7,
-                    factor=2,
-                    plot_result=False  # No plotting in batch mode.
+                    plot_result=False,
+                    apply_denoising=apply_denoising,
+                    step_columns=step_columns  # example
                 )
