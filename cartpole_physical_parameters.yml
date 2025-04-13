@@ -1,5 +1,4 @@
 cartpole:
-  actuator_noise: 0.1  #Only for lqr and old mppi, for new MPC use controlDisturbance instead. Noise on top of the calculated control input by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0.1 to test an not-ideal case
   mode: stabilization
   seed:  # This is a seed for rng for CartPole instance class only. If null random seed based on datetime is used
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
@@ -10,9 +9,10 @@ cartpole:
   v_max: 0.8  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented in model, but needed for MPC
   cart_length: 4.4e-2  # m, checked by Marcin&Asude
   track_length: 44.0e-2  # m, checked by Marcin&Asude, Total track length, usable track length is track_length-cart_length
-  controlDisturbance_mode: "additive"  # 'truncnorm' (with mu=Q+controlBias and scale controlDisturbance, trunc -1,1), 'additive' (old, Q+controlDisturbance*std_normal+controlBias), 'OFF'
-  controlDisturbance: 0.1  # disturbance, as factor of u_max # I used 0.2-0.5 for data collection
-  controlBias: 0.0  # bias of control input
+  controlNoise_mode: 'gaussian'  # 'truncnorm' (with mu=Q+controlNoiseBias and scale controlNoiseScale, trunc -1,1), 'gaussian' (old, Q+controlNoiseScale*std_normal+controlNoiseBias), 'OFF'
+  controlNoiseScale: 0.1  # disturbance, as factor of u_max # I used 0.2-0.5 for data collection
+  controlNoiseCorrelation: 0.0 #
+  controlNoiseBias: 0.0  # bias of control input
   g: 9.81  # absolute value of gravity acceleration, m/s^2
   k: "1.0/3.0"  # Dimensionless factor of moment of inertia of the pole with length 2L: I: (1/3)*m*(L)^2 = (4/3)*m*(L/2)^2
   latency: 0.0 # s
