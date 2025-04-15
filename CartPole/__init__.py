@@ -7,7 +7,7 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 @author: Marcin
 """
 # Import module to save history of the simulation as csv file
-
+import os
 # Import module to interact with OS
 import traceback
 # Import module to get a current time and date used to name the files containing the history of simulations
@@ -43,6 +43,7 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
 from CartPole.state_utilities import create_cartpole_state
 from CartPole.summary_plots import summary_plots
 from CartPole.controller_informer import ControllerInformer
+from SI_Toolkit.Predictors.predictor_autoregressive_neural import predictor_autoregressive_neural
 
 s0 = create_cartpole_state()
 
@@ -81,6 +82,19 @@ class CartPole(EnvironmentBatched):
 
         self.config = config["cartpole"]
         self.rng_CartPole = create_rng(self.__class__.__name__, self.config["seed"])
+
+        self.next_step_mode = self.config["next_step_mode"]
+
+        self.neural_model = None
+        if self.next_step_mode == 'NeuralModel':
+            self.neural_model_path = self.config['neural_model_path']
+            self.neural_model = predictor_autoregressive_neural(
+                model_name=os.path.basename(self.neural_model_path),
+                path_to_model=os.path.dirname(self.neural_model_path),
+                horizon=1,
+                batch_size=1,
+            )
+
 
         self.slider = target_slider
 
@@ -301,7 +315,7 @@ class CartPole(EnvironmentBatched):
         self.update_target_equilibrium()
 
         # Calculate the next state
-        self.cartpole_integration()
+        self.cartpole_next_step()
 
         # Calculate the correction to the state due to the bounce at the edge if applies
         self.edge_bounce()
@@ -448,6 +462,24 @@ class CartPole(EnvironmentBatched):
                 self.save_flag = True
 
             self.dt_save_steps_counter = 0
+
+
+    def cartpole_next_step(self):
+        if self.next_step_mode == 'Euler':
+            self.cartpole_integration()
+        elif self.next_step_mode == 'NeuralModel':
+            self.get_cartpole_next_step_from_neural_model()
+        else:
+            raise ValueError(f"Unknown next_step_mode: {self.next_step_mode}")
+
+    def get_cartpole_next_step_from_neural_model(self):
+        s_next = self.neural_model.predict(self.s, np.atleast_1d(self.Q_applied))[0, 1, :]
+
+        self.s[ANGLE_IDX] = s_next[ANGLE_IDX]
+        self.s[ANGLED_IDX] = s_next[ANGLED_IDX]
+        self.s[POSITION_IDX] = s_next[POSITION_IDX]
+        self.s[POSITIOND_IDX] = s_next[POSITIOND_IDX]
+
 
     # A method integrating the cartpole ode over time step dt
     # Currently we use a simple single step Euler stepping
