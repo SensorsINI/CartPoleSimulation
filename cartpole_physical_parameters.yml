@@ -1,5 +1,8 @@
 cartpole:
-  mode: stabilization
+  next_step_mode: 'Euler'  # 'Euler' or 'NeuralModel'
+  next_step_neural_model_path: 'SI_Toolkit_ASF/Experiments/Experiment_3_04_2025_derivative/Models/Dense-6IN-128H1-128H2-5OUT-0'  # Path to the neural model, if next_step_mode is 'NeuralModel
+  second_derivatives_mode: 'ODE'  # ODE or NeuralModel
+  second_derivatives_neural_model_path: 'SI_Toolkit_ASF/Experiments/Experiment_3_04_2025_derivative/Models/Dense-6IN-128H1-128H2-5OUT-0'
   seed:  # This is a seed for rng for CartPole instance class only. If null random seed based on datetime is used
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
   m_cart: 0.230  # mass of cart, kg # Checked by Antonio

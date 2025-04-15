@@ -44,6 +44,7 @@ from CartPole.state_utilities import create_cartpole_state
 from CartPole.summary_plots import summary_plots
 from CartPole.controller_informer import ControllerInformer
 from SI_Toolkit.Predictors.predictor_autoregressive_neural import predictor_autoregressive_neural
+from SI_Toolkit.Predictors.neural_network_evaluator import neural_network_evaluator
 
 s0 = create_cartpole_state()
 
@@ -85,13 +86,22 @@ class CartPole(EnvironmentBatched):
 
         self.next_step_mode = self.config["next_step_mode"]
 
-        self.neural_model = None
+        self.next_step_neural_model = None
         if self.next_step_mode == 'NeuralModel':
-            self.neural_model_path = self.config['neural_model_path']
-            self.neural_model = predictor_autoregressive_neural(
-                model_name=os.path.basename(self.neural_model_path),
-                path_to_model=os.path.dirname(self.neural_model_path),
-                horizon=1,
+            self.next_step_neural_model_path = self.config['next_step_neural_model_path']
+            self.next_step_neural_model = neural_network_evaluator(
+                net_name=os.path.basename(self.next_step_neural_model_path),
+                path_to_models=os.path.dirname(self.next_step_neural_model_path),
+                batch_size=1,
+            )
+
+        self.second_derivatives_mode = self.config["second_derivatives_mode"]
+        self.second_derivatives_neural_model = None
+        if self.second_derivatives_mode == 'NeuralModel':
+            self.second_derivatives_neural_model_path = self.config['second_derivatives_neural_model_path']
+            self.second_derivatives_neural_model = neural_network_evaluator(
+                net_name=os.path.basename(self.second_derivatives_neural_model_path),
+                path_to_models=os.path.dirname(self.second_derivatives_neural_model_path),
                 batch_size=1,
             )
 
@@ -338,7 +348,7 @@ class CartPole(EnvironmentBatched):
         self.Q2u()
 
         # Update second derivatives
-        self.cartpole_ode()
+        self.cartpole_second_derivatives()
 
         if block_pole_at_90:
             self.angleDD = 0.0
@@ -360,6 +370,39 @@ class CartPole(EnvironmentBatched):
         s_delayed = self.LatencyAdderInstance.get_interpolated_delayed_state()
         self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
         self.s_with_noise_and_latency = self.update_vertical_angle_offset(self.s_with_noise_and_latency)
+        
+    def cartpole_second_derivatives(self):
+        if self.second_derivatives_mode == 'ODE':
+            self.cartpole_ode()
+        elif self.second_derivatives_mode == 'NeuralModel':
+            self.get_second_derivatives_from_neural_model()
+        elif self.second_derivatives_mode == 'ODE_with_NeuralModel_correction':
+            self.cartpole_ode()
+            self.apply_neural_model_correction_to_second_derivatives()
+
+
+
+    def get_second_derivatives_from_neural_model(self):
+        network_input = self.second_derivatives_neural_model.compose_input(self.variables_to_log)
+        _ = self.second_derivatives_neural_model.step(network_input)
+        net_output_dict = self.second_derivatives_neural_model.net_output_dict
+
+        if 'angleDD' in net_output_dict:
+            self.angleDD = net_output_dict['angleDD']
+
+        if 'positionDD' in net_output_dict:
+            self.positionDD = net_output_dict['positionDD']
+
+    def apply_neural_model_correction_to_second_derivatives(self):
+        network_input = self.second_derivatives_neural_model.compose_input(self.variables_to_log)
+        _ = self.second_derivatives_neural_model.step(network_input)
+        net_output_dict = self.second_derivatives_neural_model.net_output_dict
+
+        if 'angleDD' in net_output_dict:
+            self.angleDD += net_output_dict['angleDD_err']
+
+        if 'positionDD' in net_output_dict:
+            self.positionDD += net_output_dict['positionDD_err']
 
     def cartpole_ode(self):
         self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L), m_pole=float(m_pole))
@@ -473,12 +516,18 @@ class CartPole(EnvironmentBatched):
             raise ValueError(f"Unknown next_step_mode: {self.next_step_mode}")
 
     def get_cartpole_next_step_from_neural_model(self):
-        s_next = self.neural_model.predict(self.s, np.atleast_1d(self.Q_applied))[0, 1, :]
+        network_input = self.next_step_neural_model.compose_input(self.variables_to_log)
+        _ = self.next_step_neural_model.step(network_input)
+        net_output_dict = self.next_step_neural_model.net_output_dict
 
-        self.s[ANGLE_IDX] = s_next[ANGLE_IDX]
-        self.s[ANGLED_IDX] = s_next[ANGLED_IDX]
-        self.s[POSITION_IDX] = s_next[POSITION_IDX]
-        self.s[POSITIOND_IDX] = s_next[POSITIOND_IDX]
+        if 'angle' in net_output_dict:
+            self.s[ANGLE_IDX] = net_output_dict['angle']
+        elif 'angle_cos' in net_output_dict and 'angle_sin' in net_output_dict:
+            self.s[ANGLE_IDX] = np.arctan2(net_output_dict['angle_sin'], net_output_dict['angle_cos'])
+
+        self.s[ANGLED_IDX] = net_output_dict['angleD']
+        self.s[POSITION_IDX] = net_output_dict['position']
+        self.s[POSITIOND_IDX] = net_output_dict['positionD']
 
 
     # A method integrating the cartpole ode over time step dt
@@ -714,7 +763,7 @@ class CartPole(EnvironmentBatched):
         else:
             raise ValueError('Unknown save mode value')
 
-        self.cartpole_ode()
+        self.cartpole_second_derivatives()
 
         # Create csv file for saving
         self.save_history_csv(
@@ -922,8 +971,8 @@ class CartPole(EnvironmentBatched):
 
             self.Q = self.Q_applied
             self.u = self.cpe.Q2u(self.Q)  # Calculate CURRENT control input
-            self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L))  # Calculate CURRENT second derivatives
-
+            self.cartpole_second_derivatives()  # Calculate CURRENT second derivatives
+            
         # Reset the dict keeping the experiment history and save the state for t = 0
         self.dt_save_steps_counter = 0
         self.dt_controller_steps_counter = 0
