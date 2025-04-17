@@ -2,7 +2,6 @@ import os
 import shutil
 import numpy as np
 
-
 def split_csv_files(path_source,
                     path_target=None,
                     train_fraction=0.7,
