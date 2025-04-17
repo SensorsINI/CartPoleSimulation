@@ -1,6 +1,43 @@
 from CartPole import Generate_Random_Trace_Function
 import numpy as np
 import pandas as pd
+from CartPole.cartpole_equations import _cartpole_ode_numba, Q2u
+from CartPole.load import load_cartpole_parameters
+
+
+def calculate_cartpole_ode_along_trajectories(df, variables_dict, current_path, **kwargs):
+    parameters = load_cartpole_parameters(current_path)
+
+    required_cols = ['angle_cos', 'angle_sin', 'angleD', 'positionD', 'Q_applied']
+    for col in required_cols:
+        if col not in df.columns:
+            raise ValueError(f"Column '{col}' is missing from DataFrame")
+
+    ca = df['ca'].values
+    sa = df['sa'].values
+    angleD = df['angleD'].values
+    positionD = df['positionD'].values
+    Q = df['Q_applied'].values
+
+    u_max = parameters.u_max
+    k = parameters.k
+    m_cart = parameters.m_cart
+    g = parameters.g
+    J_fric = parameters.J_fric
+    M_fric = parameters.M_fric
+
+    m_pole = df['m_pole'].values if 'm_pole' in df.columns else parameters.m_pole
+    L = df['L'].values if 'L' in df.columns else parameters.L
+
+    u = Q2u(Q, u_max)
+
+    angleDD, positionDD = _cartpole_ode_numba(ca, sa, angleD, positionD, u, k, m_cart, m_pole, g, J_fric, M_fric, L)
+
+    df['angleDD'] = angleDD
+    df['positionDD'] = positionDD
+
+    return df
+
 
 
 def add_new_target_position(df, target_position_config, new_target_position_variable_name, **kwargs):
