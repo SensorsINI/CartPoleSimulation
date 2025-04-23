@@ -29,20 +29,18 @@ formatted_index = args_fun()
 if formatted_index is not None:
     get_files_from = f'./Experiment_Recordings/Experiment-{formatted_index}.csv'
 else:
-    get_files_from = 'SI_Toolkit_ASF/Run/df_to_transform/informed_gru_2.csv'
+    get_files_from = 'SI_Toolkit_ASF/Experiments/CPP_MPCswingups_before_23_04_2025/Recordings/XTest'
 
-save_files_to = './Experiment_Recordings'
+save_files_to = './SI_Toolkit_ASF/Experiments/CPP_MPCswingups_before_23_04_2025/Recordings/XTest'
 
 variables_dict = {
     "action_components": CONTROL_INPUTS,
     "state_components": STATE_VARIABLES,
     "environment_attributes_dict": {  # keys are names used by ODE, values the csv column names
-        "L": "L_differentiate_",
-        "m_pole": "m_pole_differentiate_",
     },
 }
 
 if __name__ == '__main__':
-    transform_dataset(get_files_from, save_files_to, transformation='calculate_ode_along_trajectories',
+    transform_dataset(get_files_from, save_files_to, transformation='calculate_cartpole_ode_along_trajectories',
                       variables_dict=variables_dict,
                       )
