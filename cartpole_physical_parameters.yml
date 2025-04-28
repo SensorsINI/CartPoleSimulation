@@ -13,7 +13,7 @@ cartpole:
   cart_length: 4.4e-2  # m, checked by Marcin&Asude
   track_length: 44.0e-2  # m, checked by Marcin&Asude, Total track length, usable track length is track_length-cart_length
   controlNoise_mode: 'gaussian'  # 'truncnorm' (with mu=Q+controlNoiseBias and scale controlNoiseScale, trunc -1,1), 'gaussian' (old, Q+controlNoiseScale*std_normal+controlNoiseBias), 'OFF'
-  controlNoiseScale: 0.1  # disturbance, as factor of u_max # I used 0.2-0.5 for data collection
+  controlNoiseScale: 0.0  # disturbance, as factor of u_max # I used 0.2-0.5 for data collection
   controlNoiseCorrelation: 0.0 #
   controlNoiseBias: 0.0  # bias of control input
   g: 9.81  # absolute value of gravity acceleration, m/s^2
@@ -28,7 +28,7 @@ cartpole:
   vertical_angle_offset:
     init_value: 0.0  # deg, number or 'random'
     change_every_x_seconds: 3.0 # If left empty angle shift changed at each simulation step, otherwise time in seconds, or 'inf' for no change
-    mode: 'random_gaussian'  # 'constant', 'random_walk', 'increase', 'random', 'random_gaussian'
+    mode: 'constant'  # 'constant', 'random_walk', 'increase', 'random', 'random_gaussian'
     range_random: [-3.141592, 3.141592]  # Range from which to uniformly sample, in radians
     range_clip:   # range at which to clip, leave empty for no clipping
     increment: 0.05  # increment in radians for random_walk and increase, std of gaussian for random_gaussian
