@@ -7,6 +7,23 @@ from others.globals_and_utils import load_config
 
 class CartPoleParameters:
     def __init__(self, lib=NumpyLibrary(), get_parameters_from=None):
+
+        # === Pre-declare attributes so IDEs can see them ===
+        self.L = None
+        self.m_pole = None
+        self.k = None
+        self.m_cart = None
+        self.g = None
+        self.J_fric = None
+        self.M_fric = None
+        self.v_max = None
+        self.u_max = None
+        self.controlNoiseScale = None
+        self.controlNoiseBias = None
+        self.controlNoiseCorrelation = None
+        self.TrackHalfLength = None
+        self.controlNoise_mode = None
+
         self.lib = lib
         if get_parameters_from is None:
             get_parameters_from = "cartpole_physical_parameters.yml"
