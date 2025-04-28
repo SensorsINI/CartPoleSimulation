@@ -1,3 +1,7 @@
+# cartpole_equations.py
+
+import os
+
 from SI_Toolkit.computation_library import NumpyLibrary, PyTorchLibrary, TensorFlowLibrary
 
 from SI_Toolkit.Functions.TF.Compile import CompileAdaptive
@@ -6,7 +10,6 @@ from CartPole.cartpole_parameters import CartPoleParameters, TrackHalfLength
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 
-from scipy.integrate import solve_ivp
 import numpy as np
 
 
@@ -104,8 +107,9 @@ def _cartpole_ode(ca, sa, angleD, positionD, u,
 
     return angleDD, positionDD
 
+
 def cartpole_energy(ca, angleD, positionD,
-                  m_cart, m_pole, g, L):
+                    m_cart, m_pole, g, L):
     L_half = L/2.0
     T_cart = m_cart * positionD ** 2 / 2
     T_pole_trans = m_pole * (positionD ** 2 - 2 * L_half * angleD * positionD * ca) / 2
@@ -115,6 +119,7 @@ def cartpole_energy(ca, angleD, positionD,
     E_total = T_cart + T_pole_trans + T_pole_rot + V_pole
 
     return E_total, T_cart, T_pole_trans, T_pole_rot, V_pole
+
 
 def Q2u(Q, u_max):
     """
@@ -228,15 +233,15 @@ class CartPoleEquations:
 
         for _ in self.lib.arange(0, intermediate_steps):
             # Find second derivative for CURRENT "k" step (same as in input).
-            # State and u in input are from the same timestep, output is belongs also to THE same timestep ("k")
+            # State and u in input are from the same timestep, output belongs also to the same timestep
             angleDD, positionDD = self._cartpole_ode(angle_cos, angle_sin, angleD, positionD, u,
-                                                   k, m_cart, m_pole, g, J_fric, M_fric, L)
+                                                     k, m_cart, m_pole, g, J_fric, M_fric, L)
 
             # Find NEXT "k+1" state [angle, angleD, position, positionD]
             angle, angleD, position, positionD = self.cartpole_integration(angle, angleD, angleDD, position,
-                                                                      positionD,
-                                                                      positionDD, t_step, u,
-                                                                      k, m_cart, m_pole, g, J_fric, M_fric, L)
+                                                                           positionD,
+                                                                           positionDD, t_step, u,
+                                                                           k, m_cart, m_pole, g, J_fric, M_fric, L)
 
             # The edge bounce calculation seems to be too much for a GPU to tackle
             # angle_cos = tf.cos(angle)
@@ -248,25 +253,6 @@ class CartPoleEquations:
             angle = self.wrap_angle_rad(angle_sin, angle_cos)
 
         return angle, angleD, position, positionD, angle_cos, angle_sin
-
-    # def cartpole_dynamics(self, t, y, u):
-    #     angle, angleD, position, positionD  = y
-    #
-    #     angleDD, positionDD = _cartpole_ode(np.cos(angle), np.sin(angle), angleD, positionD, u,
-    #                       self.params.k, self.params.m_cart, self.params.m_pole, self.params.g, self.params.J_fric, self.params.M_fric, self.params.L)
-    #
-    #     return [angleD, angleDD, positionD, positionDD]
-    #
-    #
-    # def _cartpole_integration_scipy(self, angle, angleD, angleDD, position, positionD, positionDD, t_step, u):
-    #     y0 = [angle, angleD, position, positionD]
-    #     t_span = [0, t_step]
-    #
-    #     sol = solve_ivp(self.cartpole_dynamics, t_span, y0, args=(u,), method='RK45')
-    #
-    #     angle_next, angleD_next, position_next, positionD_next = sol.y[:, -1]
-    #
-    #     return angle_next, angleD_next, position_next, positionD_next
 
     @CompileAdaptive
     def _cartpole_integration(self, angle, angleD, angleDD, position, positionD, positionDD, t_step, u=None,
@@ -390,26 +376,27 @@ def cartpole_integration_leapfrog_numba(angle, angleD, angleDD, position, positi
 
 if __name__ == '__main__':
     import timeit
-    import numpy as np
     from CartPole.state_utilities import create_cartpole_state
 
     s0 = create_cartpole_state()
 
     # Set non-zero input
-    s = s0
-    s[POSITION_IDX] = -30.2
-    s[POSITIOND_IDX] = 2.87
-    s[ANGLE_IDX] = -0.32
-    s[ANGLED_IDX] = 0.237
-    u = -0.24
+    s_test = s0
+    s_test[POSITION_IDX] = -30.2
+    s_test[POSITIOND_IDX] = 2.87
+    s_test[ANGLE_IDX] = -0.32
+    s_test[ANGLED_IDX] = 0.237
+    u_test = -0.24
 
     # Calculate time necessary to evaluate cartpole ODE:
     initialisation = '''
 from CartPole.cartpole_equations import CartPoleEquations
-cpe = CartPoleEquations(numba_compiled=True)
+from others.globals_and_utils import load_config
+config = load_config("cartpole_physical_parameters.yml")["cartpole"]
+cpe = CartPoleEquations(numba_compiled=True, second_derivatives_mode=config["second_derivatives_mode"], second_derivatives_neural_model_path=config["second_derivatives_neural_model_path"])
 '''
 
-    f_to_measure = 'angleDD, positionDD = cpe.cartpole_ode_interface(s, u)'
+    f_to_measure = 'angleDD, positionDD = cpe.cartpole_ode_interface(s_test, u_test)'
     number = 1  # Gives the number of times each timeit call executes the function which we want to measure
     repeat_timeit = 100000  # Gives how many times timeit should be repeated
     timings = timeit.Timer(f_to_measure, setup=initialisation, globals=globals()).repeat(repeat_timeit, number)
