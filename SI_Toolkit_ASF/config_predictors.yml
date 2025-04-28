@@ -36,3 +36,16 @@ predictors:
     predictor_type: 'ODE'
     model_name:
     intermediate_steps: 10
+
+  NeuralModel:
+    predictor_type: 'ODE'
+    intermediate_steps: 1
+    second_derivatives_mode: 'NeuralModel'  # ODE or NeuralModel or ODE_with_NeuralModel_correction
+    second_derivatives_neural_model_path: 'SI_Toolkit_ASF/Experiments/CPP_MPCswingups_before_23_04_2025/Models/Dense-6IN-128H1-128H2-2OUT-3'
+
+  ODE_with_NeuralModel_correction:
+    predictor_type: 'ODE'
+    intermediate_steps: 1
+    second_derivatives_mode: 'ODE_with_NeuralModel_correction'  # ODE or NeuralModel or ODE_with_NeuralModel_correction
+    second_derivatives_neural_model_path: 'SI_Toolkit_ASF/Experiments/CPP_MPCswingups_before_23_04_2025/Models/Dense-6IN-128H1-128H2-2OUT-11'
+

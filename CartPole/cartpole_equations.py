@@ -9,6 +9,7 @@ from SI_Toolkit.Functions.TF.Compile import CompileAdaptive
 from CartPole.cartpole_parameters import CartPoleParameters, TrackHalfLength
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
+from SI_Toolkit.Predictors.neural_network_evaluator import neural_network_evaluator
 
 import numpy as np
 
@@ -143,10 +144,20 @@ def euler_step(state, stateD, t_step):
 class CartPoleEquations:
     supported_computation_libraries = (NumpyLibrary, TensorFlowLibrary, PyTorchLibrary)
 
-    def __init__(self, lib=NumpyLibrary(), get_parameters_from=None, numba_compiled=False):
+    def __init__(self, lib=NumpyLibrary(), get_parameters_from=None, numba_compiled=False, batch_size=1, second_derivatives_mode='ODE', second_derivatives_neural_model_path=None):
         self.lib = lib
         self.params = CartPoleParameters(lib, get_parameters_from)
         self.euler_step = CompileAdaptive(self.lib)(euler_step)  # This is a nested function, still it was compiled separately before for TF. TODO: Check if it is needed to compile it separately
+
+        self.second_derivatives_mode = second_derivatives_mode
+        self.second_derivatives_neural_model = None
+        if self.second_derivatives_mode == 'NeuralModel' or self.second_derivatives_mode == 'ODE_with_NeuralModel_correction':
+            self.second_derivatives_neural_model_path = second_derivatives_neural_model_path
+            self.second_derivatives_neural_model = neural_network_evaluator(
+                net_name=os.path.basename(self.second_derivatives_neural_model_path),
+                path_to_models=os.path.dirname(self.second_derivatives_neural_model_path),
+                batch_size=batch_size,
+            )
 
         if numba_compiled:
             self._cartpole_ode = _cartpole_ode_numba
@@ -161,10 +172,105 @@ class CartPoleEquations:
             self.cartpole_integration = self._cartpole_integration_euler_cromer
 
 
+    def cartpole_second_derivatives(
+        self,
+        s,
+        Q,
+        L=None,
+        m_pole=None,
+        u_max=None,
+        **kwargs
+    ):
+        """
+        Compute the angular and linear accelerations given the current state 's' and
+        physical force 'u'. Supports three modes:
+         - 'ODE': purely analytical
+         - 'NeuralModel': neural net output only
+         - 'ODE_with_NeuralModel_correction': ODE + learned residual
+        """
+        # Ensure numeric values for ODE call
+        L = float(L if L is not None else self.params.L)
+        m_pole = float(m_pole if m_pole is not None else self.params.m_pole)
+        u_max = float(u_max if u_max is not None else self.params.u_max)
+
+        u = Q2u(Q, u_max=u_max)
+
+        if self.second_derivatives_mode == 'ODE':
+            # Direct ODE evaluation
+            angleDD, positionDD = self.cartpole_ode(
+                s, u,
+                L=L,
+                m_pole=m_pole,
+                **kwargs
+            )
+        else:
+
+            variables_for_network = {
+                    'angle': s[..., ANGLE_IDX],
+                    'angleD': s[..., ANGLED_IDX],
+                    'angle_cos': s[..., ANGLE_COS_IDX],
+                    'angle_sin': s[..., ANGLE_SIN_IDX],
+                    'position': s[..., POSITION_IDX],
+                    'positionD': s[..., POSITIOND_IDX],
+
+                    'Q_calculated': Q,
+                    'Q_applied': Q,
+                    'u': u,
+                }
+
+            if self.second_derivatives_mode == 'NeuralModel':
+                # Purely neural network estimate
+                angleDD, positionDD = self.get_second_derivatives_from_neural_model(
+                    variables_for_network
+                )
+            elif self.second_derivatives_mode == 'ODE_with_NeuralModel_correction':
+                # First, analytical ODE
+                angleDD, positionDD = self.cartpole_ode(
+                    s, u,
+                    L=L,
+                    m_pole=m_pole,
+                    **kwargs
+                )
+                # Then, add learned residuals
+                angleDDerr, positionDDerr = self.get_neural_model_correction_to_second_derivatives(
+                    variables_for_network
+                )
+                angleDD += angleDDerr
+                positionDD += positionDDerr
+
+            else:
+                raise ValueError(
+                    f"Unknown second derivatives mode: {self.second_derivatives_mode}."
+                )
+
+        return angleDD, positionDD
+
+    def get_second_derivatives_from_neural_model(self, variables_to_log):
+
+        network_input = self.second_derivatives_neural_model.compose_input(variables_to_log)
+        net_output = self.second_derivatives_neural_model.step(network_input)
+
+        angleDD, positionDD = self.lib.squeeze(net_output[..., 0]), self.lib.squeeze(net_output[..., 1])
+
+        return angleDD, positionDD
+
+    def get_neural_model_correction_to_second_derivatives(self, variables_to_log):
+        network_input = self.second_derivatives_neural_model.compose_input(variables_to_log)
+        net_output = self.second_derivatives_neural_model.step(network_input)
+
+        angleDDerr, positionDDerr = self.lib.squeeze(net_output[..., 0]), self.lib.squeeze(net_output[..., 1])
+
+        return angleDDerr, positionDDerr
+
+    def cartpole_ode(self, s, u, L, m_pole, **kwargs):
+        angleDD, positionDD = self.cartpole_ode_interface(s, u, L=float(L), m_pole=float(m_pole), **kwargs)
+        return angleDD, positionDD
+
+
     @CompileAdaptive
-    def Q2u(self, Q):
+    def Q2u(self, Q, u_max):
         Q = self.lib.to_tensor(Q, self.lib.float32)
-        u = Q2u(Q, u_max=self.params.u_max)
+        u = Q2u(Q, u_max=u_max)
         return u
 
     def cartpole_ode_interface(self, s, u, **kwargs):
@@ -183,44 +289,111 @@ class CartPoleEquations:
         )
         return angleDD, positionDD
 
-    def cartpole_fine_integration(self, s, u, t_step, intermediate_steps, **kwargs):
+    def cartpole_fine_integration(
+        self,
+        s,
+        Q,
+        t_step,
+        intermediate_steps,
+        L=None,
+        m_pole=None,
+        u_max=None,
+        **kwargs
+    ):
         """
-        Just an upper wrapper changing the way data is provided to the function _cartpole_fine_integration_tf
+        Integrate the Cart-Pole state over 'intermediate_steps' sub-intervals
+        using an Euler-Cromer scheme under the hood.
         """
-
-        k = kwargs.get('k', self.params.k)
+        # Extract or default physical parameters
+        k      = kwargs.get('k',      self.params.k)
         m_cart = kwargs.get('m_cart', self.params.m_cart)
-        m_pole = kwargs.get('m_pole', self.params.m_pole)
-        g = kwargs.get('g', self.params.g)
+        g      = kwargs.get('g',      self.params.g)
         J_fric = kwargs.get('J_fric', self.params.J_fric)
         M_fric = kwargs.get('M_fric', self.params.M_fric)
-        L = kwargs.get('L', self.params.L)
+        L      = L if L is not None else self.params.L
+        m_pole = m_pole if m_pole is not None else self.params.m_pole
+        u_max = u_max if u_max is not None else self.params.u_max
 
-        (
-            angle, angleD, position, positionD, angle_cos, angle_sin
-        ) = self._cartpole_fine_integration(
-            angle=s[..., ANGLE_IDX],
-            angleD=s[..., ANGLED_IDX],
-            angle_cos=s[..., ANGLE_COS_IDX],
-            angle_sin=s[..., ANGLE_SIN_IDX],
-            position=s[..., POSITION_IDX],
-            positionD=s[..., POSITIOND_IDX],
-            u=u,
-            t_step=t_step,
-            intermediate_steps=intermediate_steps,
-            L=L,
-            k=k, m_cart=m_cart, m_pole=m_pole, g=g, J_fric=J_fric, M_fric=M_fric
-        )
+        # Unpack initial state (required by TF Autograph)
+        angle     = s[..., ANGLE_IDX]
+        angleD    = s[..., ANGLED_IDX]
+        angle_cos = s[..., ANGLE_COS_IDX]
+        angle_sin = s[..., ANGLE_SIN_IDX]
+        position  = s[..., POSITION_IDX]
+        positionD = s[..., POSITIOND_IDX]
 
-        ### TODO: This is ugly! But I don't know how to resolve it...
-        s_next = self.lib.stack([angle, angleD, angle_cos, angle_sin, position, positionD], axis=1)
+        features_shape = s.shape[:-1]
+
+        # Sub-stepping loop
+        for _ in self.lib.arange(0, intermediate_steps):
+            # Reassemble the state vector for second-derivative computation
+            state_vec = self.lib.stack([
+                angle, angleD,
+                angle_cos, angle_sin,
+                position, positionD
+            ], axis=1)
+
+            # Compute accelerations
+            angleDD, positionDD = self.cartpole_second_derivatives(
+                state_vec,
+                Q,
+                L=L,
+                m_pole=m_pole,
+                u_max=u_max,
+                k=k,
+                m_cart=m_cart,
+                g=g,
+                J_fric=J_fric,
+                M_fric=M_fric
+            )
+
+            # Advance velocities & positions (Euler-Cromer)
+            angle, angleD, position, positionD = self.cartpole_integration(
+                angle,
+                angleD,
+                angleDD,
+                position,
+                positionD,
+                positionDD,
+                t_step,
+                Q=Q,
+                k=k,
+                m_cart=m_cart,
+                m_pole=m_pole,
+                g=g,
+                J_fric=J_fric,
+                M_fric=M_fric,
+                L=L
+            )
+
+            angle = self.lib.reshape(angle, features_shape)
+            angleD = self.lib.reshape(angleD, features_shape)
+            position = self.lib.reshape(position, features_shape)
+            positionD = self.lib.reshape(positionD, features_shape)
+
+            # ---- update trigonometric terms & reshape them too ----------
+            angle_cos = self.lib.reshape(self.lib.cos(angle), features_shape)
+            angle_sin = self.lib.reshape(self.lib.sin(angle), features_shape)
+
+            angle     = self.wrap_angle_rad(angle_sin, angle_cos)
+
+        # Pack the final state
+        s_next = self.lib.stack([
+            angle,
+            angleD,
+            angle_cos,
+            angle_sin,
+            position,
+            positionD
+        ], axis=1)
+
         return s_next
 
     def _cartpole_fine_integration(self,
                                       angle, angleD,
                                       angle_cos, angle_sin,
                                       position, positionD,
-                                      u, t_step,
+                                      Q, t_step,
                                       intermediate_steps,
                                       **kwargs):
         k = kwargs.get('k', self.params.k)
@@ -230,6 +403,9 @@ class CartPoleEquations:
         J_fric = kwargs.get('J_fric', self.params.J_fric)
         M_fric = kwargs.get('M_fric', self.params.M_fric)
         L = kwargs.get('L', self.params.L)
+        u_max = kwargs.get('u_max', self.params.u_max)
+
+        u = self.Q2u(Q, u_max=u_max)
 
         for _ in self.lib.arange(0, intermediate_steps):
             # Find second derivative for CURRENT "k" step (same as in input).
@@ -255,7 +431,7 @@ class CartPoleEquations:
         return angle, angleD, position, positionD, angle_cos, angle_sin
 
     @CompileAdaptive
-    def _cartpole_integration(self, angle, angleD, angleDD, position, positionD, positionDD, t_step, u=None,
+    def _cartpole_integration(self, angle, angleD, angleDD, position, positionD, positionDD, t_step, Q=None,
                               k=None, m_cart=None, m_pole=None, g=None, J_fric=None, M_fric=None, L=None):
         angle_next = self.euler_step(angle, angleD, t_step)
         angleD_next = self.euler_step(angleD, angleDD, t_step)
@@ -265,7 +441,7 @@ class CartPoleEquations:
         return angle_next, angleD_next, position_next, positionD_next
 
     @CompileAdaptive
-    def _cartpole_integration_euler_cromer(self, angle, angleD, angleDD, position, positionD, positionDD, t_step, u=None,
+    def _cartpole_integration_euler_cromer(self, angle, angleD, angleDD, position, positionD, positionDD, t_step, Q=None,
                               k=None, m_cart=None, m_pole=None, g=None, J_fric=None, M_fric=None, L=None):
         # Update velocities first
         angleD_next = self.euler_step(angleD, angleDD, t_step)
