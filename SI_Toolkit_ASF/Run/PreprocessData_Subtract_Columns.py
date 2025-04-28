@@ -1,11 +1,13 @@
 from SI_Toolkit.data_preprocessing import transform_dataset
 
-get_files_from = './Experiment_Recordings/'
-save_files_to = './Experiment_Recordings/'
+get_files_from = './SI_Toolkit_ASF/Experiments/CPP_MPCswingups_before_23_04_2025/Recordings/Train/'
+save_files_to = './SI_Toolkit_ASF/Experiments/CPP_MPCswingups_before_23_04_2025/Recordings/Train/'
 variables_to_subtract = [  # ['a', 'b', 'c'] -> a-b = c
-    ['positionDD', 'positionD_D', 'err_positionDD']
+    ['D_angleD', 'angleDD', 'err_angleDD'],
+    ['D_positionD', 'positionDD', 'err_positionDD'],
 ]
-indices_by_which_to_shift = [-1]
 
-transform_dataset(get_files_from, save_files_to, transformation='subtract_columns',
-                    variables_to_shift=variables_to_shift, indices_by_which_to_shift=indices_by_which_to_shift)
+transform_dataset(get_files_from, save_files_to,
+                  transformation='subtract_columns',
+                  variables_to_subtract=variables_to_subtract,
+                  )
