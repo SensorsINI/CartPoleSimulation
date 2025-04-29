@@ -32,7 +32,7 @@ training_default:
     PATIENCE: 2
     DECREASE_FACTOR: 0.5 # sqrt(0.1)
     MIN_DELTA: 1.0e-6
-  LOSS_MODE: 'squared_with_clipping'  # 'squared', 'squared_with_clipping', 'absolute', 'absolute_with_clipping'
+  LOSS_MODE: 'squared'  # 'squared', 'squared_with_clipping', 'absolute', 'absolute_with_clipping'
   WASH_OUT_LEN: 50
   POST_WASH_OUT_LEN: 10
   ON_FLY_DATA_GENERATION: False
