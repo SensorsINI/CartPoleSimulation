@@ -1,5 +1,5 @@
 # Convert_Network_To_C.py
-""" Only dense networks with tanh activation on all but last layer are supported! """
+""" Only dense and gru networks with tanh activation on all but last layer are supported! """
 from SI_Toolkit.C_implementation.TF2C import tf2C
 
 path_to_models = '../Experiments/Trial_14__17_08_2024/Models/'

@@ -6,7 +6,7 @@ from Control_Toolkit.Cost_Functions import cost_function_base
 
 from others.globals_and_utils import load_config
 
-from CartPole.cartpole_parameters import TrackHalfLength, u_max
+from CartPole.cartpole_parameters import TrackHalfLength, u_max, g, L
 from CartPole.state_utilities import ANGLE_IDX, ANGLE_COS_IDX, ANGLED_IDX, POSITION_IDX
 
 import numpy as np
@@ -88,6 +88,12 @@ class quadratic_boundary_grad_minimal(cost_function_base):
         """Compute penalty for not balancing pole upright (penalize large angles)"""
         return angleD ** 2
 
+    def _E_kin_scaled_cost(self, angle, angleD, vel_penalty_reg):
+        """Compute penalty for not balancing pole upright (penalize large angles)"""
+        up_only = (self.variable_parameters.target_equilibrium+1.0)/2.0
+        # return up_only*(0.5 + self.lib.cos(angle))*(angleD ** 2)
+        return up_only * self.lib.abs(angleD ** 2 - vel_penalty_reg * (3.0*g/self.variable_parameters.L)*(1-self.lib.cos(angle)))
+
     def _CC_cost(self, u):
         return self.R * self.lib.sum(u**2, 2)
 
@@ -99,13 +105,13 @@ class quadratic_boundary_grad_minimal(cost_function_base):
     def weights(self):
         return (self.dd_quadratic_weight_up, self.db_weight_up,
                 self.ep_weight_up, self.ekp_weight_up,
-                self.cc_weight_up,
+                self.cc_weight_up, self.vel_penalty_reg
                 )
 
     def stage_cost_components(self, states: TensorType, inputs: TensorType, previous_input: TensorType):
 
 
-        dd_quadratic_weight, db_weight, ep_weight, ekp_weight, cc_weight = self.weights()
+        dd_quadratic_weight, db_weight, ep_weight, ekp_weight, cc_weight, vel_penalty_reg = self.weights()
 
         dd_quadratic = dd_quadratic_weight * self._distance_difference_cost_quadratic(
             states[:, :, POSITION_IDX],
@@ -114,7 +120,7 @@ class quadratic_boundary_grad_minimal(cost_function_base):
 
         db = db_weight * self._boundary_approach_cost(states[:, :, POSITION_IDX])
         ep = ep_weight * self._E_pot_cost(states[:, :, ANGLE_IDX])
-        ekp = ekp_weight * self._E_kin_cost(states[:, :, ANGLED_IDX])
+        ekp = ekp_weight * self._E_kin_scaled_cost(states[:, :, ANGLE_IDX], states[:, :, ANGLED_IDX], vel_penalty_reg)
 
         cc = cc_weight * self._CC_cost(inputs)
 
