@@ -94,17 +94,6 @@ class CartPole(EnvironmentBatched):
                 batch_size=1,
             )
 
-        self.second_derivatives_mode = self.config["second_derivatives_mode"]
-        self.second_derivatives_neural_model = None
-        if self.second_derivatives_mode == 'NeuralModel':
-            self.second_derivatives_neural_model_path = self.config['second_derivatives_neural_model_path']
-            self.second_derivatives_neural_model = neural_network_evaluator(
-                net_name=os.path.basename(self.second_derivatives_neural_model_path),
-                path_to_models=os.path.dirname(self.second_derivatives_neural_model_path),
-                batch_size=1,
-            )
-
-
         self.slider = target_slider
 
         self.time_L_last_change = None
