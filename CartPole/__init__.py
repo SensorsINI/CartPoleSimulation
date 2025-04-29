@@ -43,7 +43,6 @@ from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
 from CartPole.state_utilities import create_cartpole_state
 from CartPole.summary_plots import summary_plots
 from CartPole.controller_informer import ControllerInformer
-from SI_Toolkit.Predictors.predictor_autoregressive_neural import predictor_autoregressive_neural
 from SI_Toolkit.Predictors.neural_network_evaluator import neural_network_evaluator
 
 s0 = create_cartpole_state()
