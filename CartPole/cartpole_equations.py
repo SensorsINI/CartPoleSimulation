@@ -322,7 +322,8 @@ class CartPoleEquations:
         position  = s[..., POSITION_IDX]
         positionD = s[..., POSITIOND_IDX]
 
-        features_shape = s.shape[:-1]
+        # features_shape = s.shape[:-1]
+        features_shape = self.lib.shape(s)[:-1]
 
         # Sub-stepping loop
         for _ in self.lib.arange(0, intermediate_steps):
@@ -385,7 +386,7 @@ class CartPoleEquations:
             angle_sin,
             position,
             positionD
-        ], axis=1)
+        ], axis=-1)
 
         return s_next
 
