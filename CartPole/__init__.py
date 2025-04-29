@@ -371,37 +371,7 @@ class CartPole(EnvironmentBatched):
         self.s_with_noise_and_latency = self.update_vertical_angle_offset(self.s_with_noise_and_latency)
         
     def cartpole_second_derivatives(self):
-        if self.second_derivatives_mode == 'ODE':
-            self.cartpole_ode()
-        elif self.second_derivatives_mode == 'NeuralModel':
-            self.get_second_derivatives_from_neural_model()
-        elif self.second_derivatives_mode == 'ODE_with_NeuralModel_correction':
-            self.cartpole_ode()
-            self.apply_neural_model_correction_to_second_derivatives()
-
-
-
-    def get_second_derivatives_from_neural_model(self):
-        network_input = self.second_derivatives_neural_model.compose_input(self.variables_to_log)
-        _ = self.second_derivatives_neural_model.step(network_input)
-        net_output_dict = self.second_derivatives_neural_model.net_output_dict
-
-        if 'angleDD' in net_output_dict:
-            self.angleDD = net_output_dict['angleDD']
-
-        if 'positionDD' in net_output_dict:
-            self.positionDD = net_output_dict['positionDD']
-
-    def apply_neural_model_correction_to_second_derivatives(self):
-        network_input = self.second_derivatives_neural_model.compose_input(self.variables_to_log)
-        _ = self.second_derivatives_neural_model.step(network_input)
-        net_output_dict = self.second_derivatives_neural_model.net_output_dict
-
-        if 'angleDD' in net_output_dict:
-            self.angleDD += net_output_dict['angleDD_err']
-
-        if 'positionDD' in net_output_dict:
-            self.positionDD += net_output_dict['positionDD_err']
+        self.angleDD, self.positionDD = self.cpe.cartpole_second_derivatives(self.s, self.Q, L, m_pole, u_max)
 
     def cartpole_ode(self):
         self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L), m_pole=float(m_pole))

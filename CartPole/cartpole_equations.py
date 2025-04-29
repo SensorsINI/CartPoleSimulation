@@ -245,9 +245,9 @@ class CartPoleEquations:
 
         return angleDD, positionDD
 
-    def get_second_derivatives_from_neural_model(self, variables_to_log):
+    def get_second_derivatives_from_neural_model(self, variables_for_network):
 
-        network_input = self.second_derivatives_neural_model.compose_input(variables_to_log)
+        network_input = self.second_derivatives_neural_model.compose_input(variables_for_network)
         net_output = self.second_derivatives_neural_model.step(network_input)
 
         angleDD, positionDD = self.lib.squeeze(net_output[..., 0]), self.lib.squeeze(net_output[..., 1])
