@@ -1,10 +1,10 @@
-import os.path
+# ODE_module.py
+
+import os
 
 import tensorflow as tf
 from ruamel.yaml import YAML
 
-from SI_Toolkit.Functions.General.Normalising import get_normalization_function, get_denormalization_function
-from SI_Toolkit.Functions.General.Initialization import get_norm_info_for_net
 from SI_Toolkit.computation_library import TensorFlowLibrary
 from SI_Toolkit.Predictors.predictor_wrapper import PredictorWrapper
 
@@ -17,7 +17,7 @@ trainable_params = ['u_max']
 #   'ode' ........ only physical parameters
 #   'nn' ......... only neural-network residual
 #   'both' ....... both groups at once
-train_mode = 'ode'     # ← set to 'nn' or 'both' as desired
+train_mode = 'nn'     # ← set to 'nn' or 'both' as desired
 
 
 class ODEModel(tf.keras.Model):
@@ -28,6 +28,7 @@ class ODEModel(tf.keras.Model):
         self.lib = TensorFlowLibrary()
         self.batch_size = batch_size
         self.horizon = horizon
+        self._network_folder = None
 
         # 1) Instantiate predictor and mark residual net trainability *before* graph compilation
         self.predictor = PredictorWrapper()
@@ -107,10 +108,7 @@ class ODEModel(tf.keras.Model):
         return self.predictor.predict_core(s, Q)
 
     def save(self, filepath, overwrite=True, save_format=None, **kwargs):
-        # First save the Keras model
-        super().save(filepath, overwrite=overwrite, save_format=save_format, **kwargs)
-
-        # Extract physical parameters to YAML
+        # — First: dump ODE parameters into YAML (always in default folder) —
         path = filepath[:-len('.keras')]
         params_dict = {}
         for name, var in vars(self.predictor.predictor.params).items():
@@ -126,6 +124,99 @@ class ODEModel(tf.keras.Model):
         yaml.indent(mapping=2, sequence=4, offset=2)
         with open(path + '.yaml', 'w') as f:
             yaml.dump(params_dict, f)
+
+        # — Then: if we're only training ODE, save the full model here… —
+        if train_mode == 'ode':
+            super().save(filepath, overwrite=overwrite,
+                         save_format=save_format, **kwargs)
+
+        # — …otherwise we only save the NEURAL net into its own folder —
+        else:
+            parent = os.path.dirname(filepath)
+            base   = os.path.basename(path)  # e.g. "Dense-8IN-…-1OUT-0"
+
+            # — compute the network‐folder name only on first save —
+            if self._network_folder is None:
+                self._network_folder = self._next_network_folder(parent, base)
+            newdir = self._network_folder
+            full   = os.path.join(parent, newdir)
+            os.makedirs(full, exist_ok=True)
+
+            # save ONLY the residual network to avoid ODE duplication
+            net_fp = os.path.join(full, newdir + '.keras')
+            if self.residual_net is None:
+                raise RuntimeError("No residual_net to save, but train_mode!='ode'")
+            else:
+                print(f"Saving residual network to {net_fp}")
+            self.residual_net.save(
+                net_fp,
+                overwrite=overwrite,
+                save_format=save_format,
+                **kwargs
+            )
+
+            # — NEW: also save weights as a TensorFlow checkpoint (.ckpt) —
+            weights_fp = os.path.join(full, newdir + '.ckpt')
+            # save_weights will produce .data-00000-of-00001 and .index files
+            print(f"Saving residual network weights to {weights_fp}")
+            self.residual_net.save_weights(
+                weights_fp,
+                overwrite=overwrite
+            )
+
+    @property
+    def layers(self):
+        """
+        Expose both the ODEModel’s own layers and the nested residual_net’s layers
+        so that code doing `for layer in model.layers:` will see the network layers.
+        """
+        base = super().layers
+        if self.residual_net is not None:
+            return base + list(self.residual_net.layers)
+        return base
+
+    def get_config(self):
+        """
+        Needed so that `model.save()` won’t warn about non-serializable __init__ args.
+        We only serialize the numeric bits; net_info is omitted since we never
+        reload this full model from disk.
+        """
+        base = super().get_config()
+        base.update({
+            'horizon': self.horizon,
+            'batch_size': self.batch_size,
+            # note: net_info is intentionally NOT serialized
+        })
+        return base
+
+    @staticmethod
+    def _next_network_folder(parent_dir: str, base_name: str) -> str:
+        """
+        Scan parent_dir for directories named prefix-<number>, where
+        base_name == prefix-<initial_idx>.  Return the new subfolder name
+        prefix-<next_idx>.
+        """
+        prefix, initial_idx = base_name.rsplit('-', 1)
+        try:
+            init_idx = int(initial_idx)
+        except ValueError:
+            init_idx = 0
+
+        existing = []
+        for name in os.listdir(parent_dir):
+            full = os.path.join(parent_dir, name)
+            if os.path.isdir(full) and name.startswith(prefix + '-'):
+                try:
+                    existing.append(int(name.rsplit('-', 1)[1]))
+                except ValueError:
+                    pass
+
+        if existing:
+            next_idx = max(existing) + 1
+        else:
+            next_idx = init_idx
+
+        return f"{prefix}-{next_idx}"
 
 
 class CartpoleModel(ODEModel):
