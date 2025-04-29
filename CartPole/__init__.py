@@ -407,7 +407,7 @@ class CartPole(EnvironmentBatched):
         self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L), m_pole=float(m_pole))
 
     def Q2u(self):
-        self.u = self.cpe.Q2u(self.Q)
+        self.u = self.cpe.Q2u(self.Q, u_max)
 
     def update_vertical_angle_offset(self, s):
         self.vertical_angle_offset = self.vertical_angle_offset_updater.update_parameter(
@@ -969,7 +969,7 @@ class CartPole(EnvironmentBatched):
             self.Q_applied = self.control_noise_generator.add_control_noise(self.Q_calculated)
 
             self.Q = self.Q_applied
-            self.u = self.cpe.Q2u(self.Q)  # Calculate CURRENT control input
+            self.u = self.cpe.Q2u(self.Q, u_max)  # Calculate CURRENT control input
             self.cartpole_second_derivatives()  # Calculate CURRENT second derivatives
             
         # Reset the dict keeping the experiment history and save the state for t = 0
