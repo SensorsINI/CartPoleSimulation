@@ -1,7 +1,7 @@
 library: 'TF'  # TF or Pytorch
 modeling:
   NET_NAME: 'GRU-64H1-64H2'
-#  NET_NAME: 'Custom-ODE_module-ODEModel'
+#  NET_NAME: 'Custom-PredictorTrainer'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
   path_to_experiment: 'Experiment_3_04_2025'
