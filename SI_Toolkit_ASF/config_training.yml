@@ -59,6 +59,9 @@ REGULARIZATION:   # Implemented only for TF, no regularization for Pytorch
   ACTIVITY:  # Not for last layer, this has activity regularization set to 0
     l1: 0.00
     l2: 0.00
+  ACTIVITY_LAST: # Not for last layer, this has activity regularization set to 0
+    l1: 0.0
+    l2: 0.01
 
 
 QUANTIZATION: # Not implemented yet
