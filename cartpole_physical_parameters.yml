@@ -13,8 +13,8 @@ cartpole:
   cart_length: 4.4e-2  # m, checked by Marcin&Asude
   track_length: 44.0e-2  # m, checked by Marcin&Asude, Total track length, usable track length is track_length-cart_length
   controlNoise_mode: 'gaussian'  # 'truncnorm' (with mu=Q+controlNoiseBias and scale controlNoiseScale, trunc -1,1), 'gaussian' (old, Q+controlNoiseScale*std_normal+controlNoiseBias), 'OFF'
-  controlNoiseScale: 0.0  # disturbance, as factor of u_max # I used 0.2-0.5 for data collection
-  controlNoiseCorrelation: 0.0 #
+  controlNoiseScale: 0.3  # disturbance, as factor of u_max # I used 0.2-0.5 for data collection
+  controlNoiseCorrelation: 0.025 #
   controlNoiseBias: 0.0  # bias of control input
   g: 9.81  # absolute value of gravity acceleration, m/s^2
   k: "1.0/3.0"  # Dimensionless factor of moment of inertia of the pole with length 2L: I: (1/3)*m*(L)^2 = (4/3)*m*(L/2)^2
