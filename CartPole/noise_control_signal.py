@@ -53,12 +53,12 @@ class ControlNoiseGenerator:
 
         return Q_applied
 
-    def reset(self, s0=0.0, dt=None):
+    def reset(self, noise_initial_state=0.0, dt=None):
         """
         Reset the internal state and time step of the correlated noise generator.
 
         Parameters:
-            s0 (float): The new initial state for the noise process.
+            noise_initial_state (float): The new initial state for the noise process.
             dt (float): The new time step. If None, the current dt is retained.
         """
-        self.correlated_noise_generator.reset(s0=s0, dt=dt)
+        self.correlated_noise_generator.reset(noise_initial_state=noise_initial_state, dt=dt)

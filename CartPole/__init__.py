@@ -669,7 +669,7 @@ class CartPole(EnvironmentBatched):
         if keep_target_equilibrium_x_seconds_up is not None: self.keep_target_equilibrium_x_seconds_up = keep_target_equilibrium_x_seconds_up
         if keep_target_equilibrium_x_seconds_down is not None: self.keep_target_equilibrium_x_seconds_down = keep_target_equilibrium_x_seconds_down
 
-        self.control_noise_generator.reset(s0=self.s, dt=self.dt_controller)
+        self.control_noise_generator.reset(noise_initial_state=0.0, dt=self.dt_controller)
 
         self.random_track_f = Generate_Random_Trace_Function(
 

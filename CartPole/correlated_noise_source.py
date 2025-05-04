@@ -49,16 +49,16 @@ class CorrelatedNoiseGenerator:
         self.last_sample = sample
         return sample
 
-    def reset(self, s0=None, dt=None):
+    def reset(self, noise_initial_state=None, dt=None):
         """
         Reset the internal state of the correlated noise generator.
 
         Parameters:
-            s0 (float): The new initial state for the noise process.
+            noise_initial_state (float): The new initial state for the noise process.
             dt (float): The new time step. If None, the current dt is retained.
         """
-        if s0 is not None:
-            self.last_sample = s0
+        if noise_initial_state is not None:
+            self.last_sample = noise_initial_state
 
         if dt is not None:
             # Update the time step and recompute the effective correlation.
