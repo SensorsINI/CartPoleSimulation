@@ -24,7 +24,7 @@ CartPole:
     dd_quadratic_weight_up: 200.0
     ep_weight_up: 20.0
     ekp_weight_up: 30.0
-    vel_penalty_reg: 0.90
+    vel_penalty_reg: 0.95
     db_weight_up: 10000
     cc_weight_up: 1.0
     R: 1.0
