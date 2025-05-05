@@ -37,7 +37,7 @@ training_default:
   POST_WASH_OUT_LEN: 10
   ON_FLY_DATA_GENERATION: False
   NORMALIZE: True
-  SHIFT_LABELS: 1  # for k, as a label to row i is taken row i+k
+  SHIFT_LABELS: 0  # for k, as a label to row i is taken row i+k
   USE_NNI: False  # Decide if you want to use NNI package
   CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch; 'with cells' or 'with modules'
   VALIDATE_ALSO_ON_TRAINING_SET: false
