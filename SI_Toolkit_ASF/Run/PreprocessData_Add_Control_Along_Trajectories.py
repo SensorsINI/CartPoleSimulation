@@ -59,7 +59,7 @@ controller = {
     },
 }
 
-controller_output_variable_name = 'Q_calculated_offline_slow_swing'
+controller_output_variable_name = 'Q_calculated_offline'
 
 if __name__ == '__main__':
     transform_dataset(get_files_from, save_files_to, transformation='add_control_along_trajectories',

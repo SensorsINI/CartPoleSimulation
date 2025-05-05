@@ -7,7 +7,7 @@ def rename_files_preserve_order(directory):
         print(f"No files found in {directory}.")
         return
 
-    startswith = "CPP_"
+    startswith = "Experiment"
     endswith = ".csv"
     # Filter files that match the pattern
     files_to_rename = [f for f in files if f.startswith(startswith) and f.endswith(endswith)]
