@@ -4,26 +4,26 @@ modeling:
 #  NET_NAME: 'Custom-PredictorTrainer'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Experiment_3_04_2025'
+  path_to_experiment: 'Experiment_5_05_2025_set_1'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
   DATA_FOLDER:                    'Recordings'
 training_default:
   # For training closed loop dynamics model:
-#  control_inputs: ['Q']
-#  state_inputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
-#  outputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
-  #  outputs: ['D_angle_sin', 'D_angle_cos', 'D_angleD', 'D_position', 'D_positionD'] # Don't forget to change SHIFT_LABELS to 0
+#  control_inputs: ['Q_applied']
+#  state_inputs: ['angle_sin', 'angle_cos', 'angleD', 'positionD']
+#  outputs: ['err_angleDD', 'err_positionDD']
+#  outputs: ['angleDD', 'positionDD'] # Don't forget to change SHIFT_LABELS to 0
   setpoint_inputs: []  # Can be only 'target_position' or empty for CartPole
   translation_invariant_variables: []
   # For training open loop dynamics model:
-#   inputs = ['position', 'positionD', 'angle_sin', 'angle_cos', 'angleD']
-#   outputs = inputs_list
+#  state_inputs: ['angle', 'angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
+#  outputs: ['angle', 'angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
 #   For training of a network imitating MPC:
   control_inputs: []
-  state_inputs: ['Q_applied_-1', 'position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_equilibrium', 'target_position']
-  outputs:  ['Q_calculated']
+  state_inputs: ['Q_applied_-1', 'position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_position']
+  outputs:  ['Q_calculated_offline']
   EPOCHS: 100
-  BATCH_SIZE: 64
+  BATCH_SIZE: 1024
   SEED: 1873
   LR:
     INITIAL: 2.0e-3
@@ -37,7 +37,7 @@ training_default:
   POST_WASH_OUT_LEN: 10
   ON_FLY_DATA_GENERATION: False
   NORMALIZE: True
-  SHIFT_LABELS: 0  # for k, as a label to row i is taken row i+k
+  SHIFT_LABELS: 1  # for k, as a label to row i is taken row i+k
   USE_NNI: False  # Decide if you want to use NNI package
   CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch; 'with cells' or 'with modules'
   VALIDATE_ALSO_ON_TRAINING_SET: false
@@ -46,7 +46,7 @@ training_default:
 CONFIG_SERIES_MODIFICATION:
   MODE: 'train_for_random_vertical_angle_shift' # 'None' 'train_for_random_vertical_angle_shift'
   NOISE_LEVEL:
-    FEATURES: 0.1
+    FEATURES: 0.0
 
 REGULARIZATION:   # Implemented only for TF, no regularization for Pytorch
   ACTIVATED: false
@@ -109,9 +109,9 @@ FILTERS:
 #    absolute: true
 # Translates to a condition df = df[abs(df['angleD']) < 20.0]
 # Allowed are <, <=, >, >=, ==, !=
-#  - column: angleD
-#    condition: "< 20.0"
-#    absolute: true
+  - column: target_equilibrium
+    condition: "> 0.0"
+    absolute: false
 #  - column: positionD
 #    condition: "< 1.0"
 #    absolute: true
