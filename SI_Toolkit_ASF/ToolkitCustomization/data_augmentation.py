@@ -44,6 +44,14 @@ class DataAugmentation:
         features = tf.convert_to_tensor(features)
         targets = tf.convert_to_tensor(targets)
 
+        # —————— Ensure we have a batch axis ——————
+        # If features is [T, n_in] then insert a leading dim so B=1
+        _squeeze_batch = False
+        if features.shape.ndims == 2:
+            features = tf.expand_dims(features, axis=0)   # now [1, T, n_in]
+            targets  = tf.expand_dims(targets,  axis=0)   # now [1, T, n_out]
+            _squeeze_batch = True
+
         if self.mode == 'train_for_random_vertical_angle_shift':
             index_cos = self.inputs.index('angle_cos')
             index_sin = self.inputs.index('angle_sin')
@@ -90,5 +98,10 @@ class DataAugmentation:
             tf.shape(features), minval=-1.0, maxval=1.0, dtype=features.dtype
         )
         features = features * noise
+
+        # —————— Remove artificial batch axis if we added one ——————
+        if _squeeze_batch:
+            features = tf.squeeze(features, axis=0)
+            targets  = tf.squeeze(targets,  axis=0)
 
         return features, targets
