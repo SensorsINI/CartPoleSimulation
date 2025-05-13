@@ -34,8 +34,8 @@ class next_state_predictor_ODE:
                  **kwargs,
                  ):
         self.lib = lib
-        self.intermediate_steps = self.lib.to_tensor(intermediate_steps, dtype=self.lib.int32)
-        self.t_step = self.lib.to_tensor(dt / float(self.intermediate_steps), dtype=self.lib.float32)
+        self.intermediate_steps = int(intermediate_steps)
+        self.t_step = float(dt / float(self.intermediate_steps))
         self.variable_parameters = variable_parameters
 
         self.cpe = CartPoleEquations(lib=self.lib)
