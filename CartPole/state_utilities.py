@@ -10,6 +10,7 @@ STATE_INDICES = {x: np.where(STATE_VARIABLES == x)[0][0] for x in STATE_VARIABLE
 
 # CONTROL_INPUTS = np.sort(["Q_applied"])  # When running ODE on data from simulated cartpole
 CONTROL_INPUTS = np.sort(["Q"])
+CONTROL_INPUTS_LEN = len(CONTROL_INPUTS)
 
 CONTROL_INDICES = {x: np.where(CONTROL_INPUTS == x)[0][0] for x in CONTROL_INPUTS}
 

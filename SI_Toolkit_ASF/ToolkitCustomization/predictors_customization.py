@@ -12,7 +12,7 @@ E.g. the neural network predicts sin and cos this class can take care of adding 
 
 # The STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS import is needed
 # as from here the variables are imported to other files
-from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, CONTROL_INDICES
+from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, CONTROL_INPUTS_LEN, CONTROL_INDICES
 
 from SI_Toolkit.computation_library import NumpyLibrary
 from CartPole.cartpole_equations import CartPoleEquations
