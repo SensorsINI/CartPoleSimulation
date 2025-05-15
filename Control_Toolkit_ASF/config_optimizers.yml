@@ -60,42 +60,7 @@ gradient-tf:
   gradmax_clip: 5
   warmup: false
   warmup_iterations: 250
-mppi-optimize-tf:
-  seed: null                            # If null, random seed based on datetime is used
-  mppi_LR: 0.02
-  adam_beta_1: 0.4                      #default: 0.9
-  adam_beta_2: 0.8                      #default: 0.999
-  adam_epsilon: 1.0e-7                  #default: 1.0e-7
-  gradmax_clip: 1000
-  mpc_horizon: 35                       # steps
-  mpc_timestep: 0.02
-  num_rollouts: 400                     # Number of Monte Carlo samples
-  cc_weight: 1.0
-  R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in cost functions config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
-  LBD: 100.0                            # Cost parameter lambda
-  NU: 1000.0                            # Exploration variance
-  SQRTRHOINV: 0.02
-  period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
-  optim_steps: 10
-dist-adam-resamp2-tf:
-  seed: null                            # If null, random seed based on datetime is used
-  mpc_horizon: 35                       # steps
-  mpc_timestep: 0.02
-  period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
-  learning_rate: 0.05
-  adam_beta_1: 0.9
-  adam_beta_2: 0.999
-  adam_epsilon: 1.0e-08
-  gradmax_clip: 5
-  rtol: 1.0e-3
-  num_rollouts: 32
-  opt_keep_k_ratio: 0.25
-  outer_its: 2
-  resamp_per: 10
-  sample_stdev: 0.5
-  warmup: false
-  warmup_iterations: 250
-rpgd-tf:
+rpgd:
   seed: null                            # If null, random seed based on datetime is used
   mpc_horizon: 35                       # steps
   mpc_timestep: 0.02
@@ -119,100 +84,6 @@ rpgd-tf:
   shift_previous: 1  # How much to shift solution from previous timestep, to serve as the guess for current timestep
   warmup: false
   warmup_iterations: 250
-rpgd-me-tf:
-  seed: null                            # If null, random seed based on datetime is used
-  mpc_horizon: 35                       # steps
-  mpc_timestep: 0.02
-  SAMPLING_DISTRIBUTION: normal  # "normal" or "uniform"
-  period_interpolation_inducing_points: 5                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
-  learning_rate: 0.05
-  adam_beta_1: 0.9
-  adam_beta_2: 0.999
-  adam_epsilon: 1.0e-08
-  maximum_entropy_alpha: 0.1
-  gradmax_clip: 10
-  rtol: 1.0e-3
-  num_rollouts: 32
-  opt_keep_k_ratio: 0.25
-  outer_its: 5
-  resamp_per: 1
-  sample_stdev: 0.5
-  warmup: false
-  warmup_iterations: 250
-rpgd-me-param-tf:
-  seed: null                            # If null, random seed based on datetime is used
-  mpc_horizon: 40                       # steps
-  mpc_timestep: 0.02
-  SAMPLING_DISTRIBUTION: uniform  # "normal" or "uniform"
-  period_interpolation_inducing_points: 1                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
-  learning_rate: 0.01
-  adam_beta_1: 0.9
-  adam_beta_2: 0.999
-  adam_epsilon: 1.0e-08
-  maximum_entropy_alpha: 0.0
-  gradmax_clip: 10
-  rtol: 1.0e-3
-  num_rollouts: 32
-  opt_keep_k_ratio: 0.25
-  outer_its: 25
-  resamp_per: 1
-  sample_stdev: 0.5
-  warmup: false
-  warmup_iterations: 250
-rpgd-ml-tf:
-  seed: null                            # If null, random seed based on datetime is used
-  mpc_horizon: 35                       # steps
-  mpc_timestep: 0.02
-  SAMPLING_DISTRIBUTION: uniform  # "normal" or "uniform"
-  period_interpolation_inducing_points: 1                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
-  learning_rate: 0.01
-  adam_beta_1: 0.9
-  adam_beta_2: 0.999
-  adam_epsilon: 1.0e-08
-  maximum_entropy_alpha: 0.1
-  gradmax_clip: 10
-  rtol: 1.0e-3
-  num_rollouts: 32
-  opt_keep_k_ratio: 0.25
-  outer_its: 5
-  resamp_per: 1
-  sample_stdev: 0.5
-  warmup: false
-  warmup_iterations: 250
-rpgd-particle-tf:
-  seed: null                            # If null, random seed based on datetime is used
-  mpc_horizon: 35                       # steps
-  mpc_timestep: 0.02
-  period_interpolation_inducing_points: 1                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
-  learning_rate: 0.01
-  adam_beta_1: 0.9
-  adam_beta_2: 0.999
-  adam_epsilon: 1.0e-08
-  gradmax_clip: 10
-  rtol: 1.0e-3
-  num_rollouts: 32
-  opt_keep_k_ratio: 0.25
-  outer_its: 5
-  resamp_per: 1
-  sample_stdev: 0.5
-  warmup: false
-  warmup_iterations: 250
-mppi-var-tf:
-  seed: null                          # If null, random seed based on datetime is used
-  mpc_horizon: 35                       # steps
-  mpc_timestep: 0.02
-  num_rollouts: 400                     # Number of Monte Carlo samples
-  period_interpolation_inducing_points: 10                #interpolation stepsize when sampling, a random point is chosen every period_interpolation_inducing_points and horizon points in between are linearly interpolated
-  cc_weight: 1.0
-  R: 1.0                                # How much to punish Q, For MPPI YOU have to make sure that this is the same as in cost functions config, as it plays a special role in the optimization algorithm as well as is used in cost functions!
-  # mc stands for mathematical correct, as this controller uses the formula from the paper
-  LBD_mc: 10.0                          # Cost parameter lambda
-  SQRTRHOINV_mc: 0.002                  # Sampling variance
-  NU_mc: 20.0                           # Exploration variance
-  LR: 1000                              # Learning rate for adaption of variance, !!! Set to 0 to retrieve a mppi version in accordance with mppi paper
-  STDEV_min: 0.01                       # Maximal variance for sampling
-  STDEV_max: 10                         # Minimal sampling variance for sampling
-  max_grad_norm: 100000                 # max norm of gradient such that ||gradient||_2
 mppi:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                       # steps
