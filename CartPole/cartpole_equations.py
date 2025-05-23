@@ -1,6 +1,6 @@
 from SI_Toolkit.computation_library import NumpyLibrary, PyTorchLibrary, TensorFlowLibrary
 
-from SI_Toolkit.Functions.TF.Compile import CompileAdaptive
+from SI_Toolkit.Compile import CompileAdaptive
 
 from CartPole.cartpole_parameters import CartPoleParameters, TrackHalfLength
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
@@ -226,7 +226,7 @@ class CartPoleEquations:
         M_fric = kwargs.get('M_fric', self.params.M_fric)
         L = kwargs.get('L', self.params.L)
 
-        for _ in self.lib.arange(0, intermediate_steps):
+        def _step(counter, angle, angleD, position, positionD, angle_cos, angle_sin):
             # Find second derivative for CURRENT "k" step (same as in input).
             # State and u in input are from the same timestep, output is belongs also to THE same timestep ("k")
             angleDD, positionDD = self._cartpole_ode(angle_cos, angle_sin, angleD, positionD, u,
@@ -246,6 +246,17 @@ class CartPoleEquations:
             angle_sin = self.lib.sin(angle)
 
             angle = self.wrap_angle_rad(angle_sin, angle_cos)
+
+            return counter + 1, angle, angleD, position, positionD, angle_cos, angle_sin
+
+        # run the backend-specific loop
+        (_,
+         angle, angleD, position, positionD,
+         angle_cos, angle_sin) = self.lib.loop(
+             _step,
+             state=(angle, angleD, position, positionD, angle_cos, angle_sin),
+             steps=intermediate_steps,
+             counter=0)
 
         return angle, angleD, position, positionD, angle_cos, angle_sin
 
