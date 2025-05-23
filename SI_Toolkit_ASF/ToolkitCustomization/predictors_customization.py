@@ -17,7 +17,7 @@ from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INP
 from SI_Toolkit.computation_library import NumpyLibrary
 from CartPole.cartpole_equations import CartPoleEquations
 
-from SI_Toolkit.Functions.TF.Compile import CompileAdaptive
+from SI_Toolkit.Compile import CompileAdaptive
 
 from CartPole.state_utilities import ANGLE_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 

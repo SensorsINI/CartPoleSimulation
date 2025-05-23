@@ -1,6 +1,6 @@
 from SI_Toolkit.computation_library import NumpyLibrary, PyTorchLibrary, TensorFlowLibrary
 
-from SI_Toolkit.Functions.TF.Compile import CompileAdaptive
+from SI_Toolkit.Compile import CompileAdaptive
 
 from CartPole.cartpole_parameters import CartPoleParameters, TrackHalfLength
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
