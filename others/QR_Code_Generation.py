@@ -23,8 +23,10 @@ def generate_qr(url: str, filename: str) -> None:
 
 if __name__ == "__main__":
     links = {
-        "physical_cartpole": "https://github.com/SensorsINI/physical-cartpole",
-        "google_drive"     : "https://drive.google.com/drive/folders/1PbKjwNEYb3FqAs-qltQiflUjSwp6yNx1?usp=drive_link",
+        "qr_github": "https://github.com/SensorsINI/physical-cartpole",
+        "qr_publication": "https://drive.google.com/file/d/1E4Wk2n-Il384iHKY7QRkmt9OxP0j_vY8/view?usp=share_link",
+        "qr_video": "https://drive.google.com/file/d/1bnbxJL_1MCLTRwKlTkHMJ8Ei0QMZr1wR/view?usp=sharing",
+
     }
     for name, link in links.items():
         generate_qr(link, f"{name}.png")
