@@ -15,8 +15,8 @@ Get the code from Github:
 
 Create conda environment with 
 
-	conda create -n CartPoleSimulation python=3.8
-    conda activate CartPoleSimulation
+	conda create -n CPS python=3.11
+    conda activate CPS
 
 If  SI_Toolkit (System Identification Toolbox) or Control Toolkit folders are empty, use these lines to pull all submodules:
 ```bash
