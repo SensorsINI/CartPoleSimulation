@@ -23,6 +23,7 @@ predictors:
     predictor_type: 'ODE'
     model_name:
     intermediate_steps: 10
+    computation_library_name: "TF" # One of "Numpy", "TF", "Pytorch".
 
   # ADD YOUR PREDICTORS BELOW
 
