@@ -1,17 +1,23 @@
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
-from SI_Toolkit_ASF.L4DC_Plots.plots_helpers import break_line_on_jump
+from others.L4DC_Plots.plots_helpers import break_line_on_jump
 
+POSTER = True  # Set to True for poster style, False for paper style
+PATH_TO_DATA = '../L4DC_Plots_with_data/ControllersComparison_V2/'
 
 # 1. Set font sizes (same as the first plot)
-plt.rcParams.update({'font.size': 14})
-legend_fontsize = 14
+legend_fontsize = 21 if POSTER else 14
+font_size = 21 if POSTER else 14
+
+
+plt.rcParams.update({'font.size': font_size})
 
 # 1. Load 'cardinal_test_1.csv' and extract features
-df_main = pd.read_csv('./cardinal_test_1.csv', comment='#')
+df_main = pd.read_csv(os.path.join(PATH_TO_DATA, 'cardinal_test_1.csv'), comment='#')
 
 # List of features from 'cardinal_test_1.csv' to plot
 main_features = [
@@ -25,7 +31,7 @@ for feature in main_features:
     df_main[feature] = df_main[feature].clip(-1, 1)
 
 # 2. Load 'Q_calculated_integrated' from 'cardinal_test_1_1.csv' to 'cardinal_test_1_8.csv'
-integrated_files = [f'./cardinal_test_1_{i}.csv' for i in range(1, 9)]
+integrated_files = [os.path.join(PATH_TO_DATA, f'./cardinal_test_1_{i}.csv') for i in range(1, 9)]
 df_integrated_list = [pd.read_csv(f, comment='#') for f in integrated_files]
 
 # Extract 'time' and 'Q_calculated_integrated' from each file
@@ -177,11 +183,12 @@ for feature in legend_order:
     legend_handles.append(line)
 
 # Create legend at the top of the figure
+bbox_to_anchor = (0.515, 1.0) if POSTER else (0.5, 0.97)  # Adjust the second value to move the legend up or down
 legend = fig.legend(
     legend_handles,
     legend_labels,
     loc='upper center',
-    bbox_to_anchor=(0.5, 0.97),  # Adjust the second value to move the legend up or down
+    bbox_to_anchor=bbox_to_anchor,  # Adjust the second value to move the legend up or down
     ncol=2,
     fontsize=legend_fontsize
 )
@@ -201,9 +208,18 @@ target_position_color = 'black'
 ax2.plot(time_target, y_target_position, color=target_position_color, label='Target', linestyle='--')
 ax2.plot(time_target, y_position, color=position_color, label='Actual', linewidth=2.5)
 
-ax2.set_ylabel('Cart Position\n(cm)', labelpad=25)
+y_label = '  Cart\n  Position\n  (cm)' if POSTER else 'Cart Position\n(cm)'
+labelpad = 8 if POSTER else 25
+ax2.set_ylabel(y_label, labelpad=labelpad)
 
-legend2 = ax2.legend(fontsize=legend_fontsize)
+
+legend_kwargs = {"fontsize": legend_fontsize,}
+if POSTER:
+    legend_kwargs.update({
+        "loc": "center right",
+        "bbox_to_anchor": (1.0, 0.35),
+    })
+legend2 = ax2.legend(**legend_kwargs)
 legend2.get_frame().set_edgecolor('white')  # Remove border edge color
 legend2.get_frame().set_alpha(0)  # Make frame transparent
 

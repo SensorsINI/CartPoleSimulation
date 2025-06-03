@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -5,8 +6,10 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.legend_handler import HandlerBase
 from matplotlib.lines import Line2D
 
+PATH_TO_DATA = '../L4DC_Plots_with_data/ControllersComparison/'
+
 # 1. Load 'cardinal_test_1.csv' and extract features
-df_main = pd.read_csv('./cardinal_test_1.csv', comment='#')
+df_main = pd.read_csv(os.path.join(PATH_TO_DATA, 'cardinal_test_1.csv'), comment='#')
 
 # List of features from 'cardinal_test_1.csv' to plot
 main_features = [
@@ -23,7 +26,7 @@ for feature in main_features:
     df_main[feature] = df_main[feature].clip(-1, 1)
 
 # 2. Load 'Q_calculated_integrated' from 'cardinal_test_1_1.csv' to 'cardinal_test_1_8.csv'
-integrated_files = [f'./cardinal_test_1_{i}.csv' for i in range(1, 9)]
+integrated_files = [os.path.join(PATH_TO_DATA, f'./cardinal_test_1_{i}.csv') for i in range(1, 9)]
 df_integrated_list = [pd.read_csv(f, comment='#') for f in integrated_files]
 
 # Extract 'time' and 'Q_calculated_integrated' from each file

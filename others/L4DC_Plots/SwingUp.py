@@ -1,22 +1,35 @@
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
 from matplotlib.gridspec import GridSpec
 
-from SI_Toolkit_ASF.L4DC_Plots.plots_helpers import label_target_position_and_position, break_line_on_jump
+from others.L4DC_Plots.plots_helpers import label_target_position_and_position, break_line_on_jump
+
+POSTER = True  # Set to True for poster style, False for paper style
+
+PATH_TO_DATA = './L4DC_Plots_with_data/SwingUp'
 
 label_mpc = 'Informed MPC, pole: 15cm'
 label_informed = 'Adaptive NC'
 label_uninformed = 'Experience-Deprived NC'
 
-informed_df = pd.read_csv('./informed.csv', comment='#')
-uninformed_df = pd.read_csv('./uninformed.csv', comment='#')
-mpc_df = pd.read_csv('./mpc.csv', comment='#')
+informed_path = os.path.join(PATH_TO_DATA, 'informed.csv')
+uninformed_path = os.path.join(PATH_TO_DATA, 'uninformed.csv')
+mpc_path = os.path.join(PATH_TO_DATA, 'mpc.csv')
+
+informed_df = pd.read_csv(informed_path, comment='#')
+uninformed_df = pd.read_csv(uninformed_path, comment='#')
+mpc_df = pd.read_csv(mpc_path, comment='#')
 
 # 1. Set font sizes
-legend_fontsize = 14
-plt.rcParams.update({'font.size': 14})
+
+font_size = 21 if POSTER else 14
+legend_fontsize = 21 if POSTER else 14
+
+
+plt.rcParams.update({'font.size': font_size})
 
 # 2. Define time range for plotting
 time_start = 0  # Start time in seconds
@@ -85,7 +98,14 @@ ax0.set_xlim(time_angle.min(), time_angle.max())
 lines_0, labels_0 = ax0.get_legend_handles_labels()
 lines_0a, labels_0a = ax0a.get_legend_handles_labels()
 # Since the labels are the same, avoid duplication by only taking from ax0
-legend = ax0.legend(lines_0, labels_0, loc='upper right', ncol=3, fontsize=legend_fontsize)
+bbox_to_anchor = (1.02, 1.2) if POSTER else None  # Adjust the second value to move the legend up or down
+handletextpad = 0.3 if POSTER else 0.8  # Adjust column spacing for poster or paper style
+columnspacing = 1.5 if POSTER else 1.0  # Adjust column spacing for poster or paper style
+legend = ax0.legend(lines_0, labels_0,
+                    loc='upper right', bbox_to_anchor=bbox_to_anchor,
+                    ncol=3, handletextpad=handletextpad, columnspacing=columnspacing,
+                    fontsize=legend_fontsize,
+                    )
 legend.get_frame().set_edgecolor('white')  # Remove border edge color
 legend.get_frame().set_alpha(0)  # Make frame transparent
 
@@ -153,7 +173,8 @@ ax2.axvline(x=t_threshold, color='gray', linestyle='--', linewidth=3)
 # time_swing_up, control_uninformed_swing_up = time, control_uninformed
 ax2.plot(time_swing_up, control_uninformed_swing_up, color='red', label=label_uninformed, linewidth=2.0, zorder=1)
 
-ax2.set_ylabel('Control Signal', labelpad=15)
+y_label = 'Control\nSignal' if POSTER else 'Control Signal'
+ax2.set_ylabel(y_label, labelpad=15)
 ax2.set_xlabel('Time (s)')
 
 plt.savefig('SwingUp.pdf', format='pdf', bbox_inches='tight')
