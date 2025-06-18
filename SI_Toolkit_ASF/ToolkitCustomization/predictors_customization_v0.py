@@ -35,8 +35,8 @@ class next_state_predictor_ODE_v0:
 
         self.variable_parameters = variable_parameters
 
-        self.intermediate_steps = intermediate_steps
-        self.t_step = np.float32(dt / float(self.intermediate_steps))
+        self.intermediate_steps = int(intermediate_steps)
+        self.t_step = float(dt / float(self.intermediate_steps))
         
     def step(self, s, Q):
 

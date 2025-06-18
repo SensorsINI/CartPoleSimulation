@@ -12,12 +12,12 @@ E.g. the neural network predicts sin and cos this class can take care of adding 
 
 # The STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS import is needed
 # as from here the variables are imported to other files
-from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, CONTROL_INDICES
+from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, CONTROL_INPUTS_LEN, CONTROL_INDICES
 
 from SI_Toolkit.computation_library import NumpyLibrary
 from CartPole.cartpole_equations import CartPoleEquations
 
-from SI_Toolkit.Functions.TF.Compile import CompileAdaptive
+from SI_Toolkit.Compile import CompileAdaptive
 
 from CartPole.state_utilities import ANGLE_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
 
@@ -34,8 +34,8 @@ class next_state_predictor_ODE:
                  **kwargs,
                  ):
         self.lib = lib
-        self.intermediate_steps = self.lib.to_tensor(intermediate_steps, dtype=self.lib.int32)
-        self.t_step = self.lib.to_tensor(dt / float(self.intermediate_steps), dtype=self.lib.float32)
+        self.intermediate_steps = int(intermediate_steps)
+        self.t_step = float(dt / float(self.intermediate_steps))
         self.variable_parameters = variable_parameters
 
         second_derivatives_mode = kwargs.get("second_derivatives_mode", 'ODE')
