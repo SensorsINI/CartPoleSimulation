@@ -76,7 +76,8 @@ y_position = df['position'][time_range_mask].to_numpy() * 100  # Convert meters 
 y_target_equilibrium = df['target_equilibrium'][time_range_mask].to_numpy()
 
 # 3. Create the plots with adjusted subplot heights
-fig = plt.figure(figsize=(16, 8))  # Increased height for better spacing
+figure_height = 10 if POSTER else 8
+fig = plt.figure(figsize=(16, figure_height))  # Increased height for better spacing
 gs = GridSpec(3, 1, height_ratios=[2, 1, 1], hspace=0.1)  # Increased hspace for clarity
 
 # 4. First subplot: scatter and line plot for 'L'
@@ -110,10 +111,9 @@ target_position_color = 'black'
 ax1.plot(time_target, y_target_position, color=target_position_color, label='Target', linestyle='--')
 ax1.plot(time_target, y_position, color=position_color, label='Actual', linewidth=2.5)
 
-y_label = 'Cart\nPosition\n(cm)' if POSTER else 'Cart Position\n(cm)'
-ax1.set_ylabel(y_label)
+ax1.set_ylabel('Cart Position\n(cm)')
 
-bbox_to_anchor = (0.145, 0.675) if POSTER else None
+bbox_to_anchor = (0.145, 0.575) if POSTER else None
 handletextpad = 0.3 if POSTER else 0.8
 handlelength= 1.0 if POSTER else 2.0
 labelspacing = 0.2 if POSTER else 0.5

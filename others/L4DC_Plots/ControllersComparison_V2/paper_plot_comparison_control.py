@@ -249,6 +249,6 @@ legend3.get_frame().set_alpha(0)  # Make frame transparent
 
 plt.tight_layout()
 
-plt.savefig('ComparisonsControllers.pdf', format='pdf', bbox_inches='tight')
+plt.savefig('ComparisonControllers.pdf', format='pdf', bbox_inches='tight')
 
 plt.show()
