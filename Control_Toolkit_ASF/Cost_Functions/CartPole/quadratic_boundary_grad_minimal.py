@@ -50,6 +50,9 @@ class quadratic_boundary_grad_minimal(cost_function_base):
             "cost_component_ccrc": lambda: float(self.ccrc),
         })
 
+        if not hasattr(self.variable_parameters, "L"):
+            self.variable_parameters.L = L
+
 
 
     def reload_cost_parameters_from_config(self):
