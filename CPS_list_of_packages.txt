@@ -8,7 +8,7 @@ numba
 pip
 pygame
 scikit-learn
-scipy==1.9.1
+scipy
 setuptools
 sympy
 tqdm
