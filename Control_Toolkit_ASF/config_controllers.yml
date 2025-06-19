@@ -104,7 +104,7 @@ neural-imitator:
   input_at_input: False
   input_precision: 'float'  #'ap_fixed<20,6>'   # Can be 'float' - currently do nothing, or 'ap_fixed<total number of bits, integer bits + 1 sign bit>' - adjusting the number precision of the input
   controller_logging: True
-  hls4ml: false
+  nn_evaluator_mode: 'normal'  # 'normal', 'numpy', 'C'
 secloc:
   log_base: 1.05
   ref_period: 1
