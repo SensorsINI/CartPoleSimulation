@@ -23,9 +23,9 @@ initial_target_equilibrium: 'up'  # possible 'up', 'down', 'random' = 50/50
 keep_target_equilibrium_x_seconds_up: 10
 keep_target_equilibrium_x_seconds_down: 2.5
 dt:
-  simulation: 0.002  # simulation timestep, s
-  control: 0.02  # control rate, s
-  saving: 0.02  # save datapoints in csv in this interval, s
+  simulation: 0.001  # simulation timestep, s
+  control: 0.01  # control rate, s
+  saving: 0.01  # save datapoints in csv in this interval, s
 turning_points:
   track_relative_complexity: 1  # Randomly placed target points/s
   interpolation_type: ['previous','0-derivative-smooth']  # How to interpolate between turning points of random trace, Possible options: '0-derivative-smooth', 'linear', 'previous'
@@ -35,4 +35,4 @@ save_mode: 'online'  # It was intended to save memory usage, but it doesn't seem
 # Show popup window in the end with summary of experiment?
 show_summary_plots: False
 show_controller_report: False
-number_of_experiments: 1  # How many experiments will be generated
+number_of_experiments: 2  # How many experiments will be generated

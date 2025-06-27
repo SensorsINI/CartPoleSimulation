@@ -7,7 +7,9 @@ def split_csv_files(path_source,
                     train_fraction=0.7,
                     validation_fraction=0.2,
                     random_seed=42,
-                    files_to_log=None):
+                    files_to_log=None,
+                    remove_files_from_original_location=False,
+                    ):
     """
     In `path_target` (equal to `path_source` if `path_target` is None),
     create folders: "All", "Train", "Validate", "Test", "Logs".
@@ -34,6 +36,7 @@ def split_csv_files(path_source,
     :param validation_fraction: Fraction of CSV files to put into the "Validate" folder.
     :param random_seed: Random seed for reproducible split.
     :param files_to_log: List of file paths to copy into the "Logs" folder.
+    :param remove_files_from_original_location: If true removes files from original location after copying to new folder.
     """
 
     if files_to_log is None:
@@ -110,18 +113,13 @@ def split_csv_files(path_source,
             print(f"Warning: log file or directory '{log_file}' not found; skipping.")
 
     # 8. Now that everything is safely copied, remove CSV files from source
-    for csv_file in csv_files:
-        os.remove(os.path.join(path_source, csv_file))
+    if remove_files_from_original_location:
+        for csv_file in csv_files:
+            os.remove(os.path.join(path_source, csv_file))
 
 if __name__ == "__main__":
-    # Example usage:
-    split_csv_files(
-        path_source="Experiment_Recordings/Experiment_26_03_2025/Q_calculated_offline_mpc",
-        path_target="./SI_Toolkit_ASF/Experiments/Experiment_26_03_2025/Recordings",
-        train_fraction=0.9,
-        validation_fraction=0.05,
-        random_seed=42,
-        files_to_log=[
+
+    files_to_log = [
             "./cartpole_physical_parameters.yml",
             "./config_data_gen.yml",
             "./SI_Toolkit_ASF/config_predictors.yml",
@@ -130,4 +128,15 @@ if __name__ == "__main__":
             "./Control_Toolkit_ASF/config_optimizers.yml",
             "./Control_Toolkit_ASF/Cost_Functions/CartPole",
         ]
+    # files_to_log = []
+
+    # Example usage:
+    split_csv_files(
+        path_source="./MPCswingups_100Hz/",
+        path_target="./SI_Toolkit_ASF/Experiments/MPCswingups_100Hz_10_11_04_2025_100Hz/Recordings",
+        train_fraction=0.9,
+        validation_fraction=0.05,
+        random_seed=42,
+        files_to_log=files_to_log,
+        remove_files_from_original_location=False,
     )

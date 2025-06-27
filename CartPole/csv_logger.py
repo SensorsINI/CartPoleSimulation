@@ -116,28 +116,45 @@ def create_csv_file_name(controller='', controller_name='', optimizer_name='',
     return csv_filename
 
 
-def create_csv_title():
-    title = (f"This is CartPole simulation from {datetime.now().strftime('%d.%m.%Y')}" +
+def create_csv_title(mode='CPS'):
+
+    if mode == 'CPS':
+        mode_info = f'CartPole simulation'
+    else:
+        mode_info = f'a recording from physical cartpole'
+
+    title = (f"This is {mode_info} from {datetime.now().strftime('%d.%m.%Y')}" +
              f" at time {datetime.now().strftime('%H:%M:%S')}")
+
     return title
 
 
-def create_csv_header(cps, length_of_experiment):
-    header = [
-        f"Length of experiment: {str(length_of_experiment)} s",
+def create_csv_header(cps, length_of_experiment=None, mode='CPS'):
 
+    header = []
+
+    if length_of_experiment is not None:
+        header.extend([f"Length of experiment: {str(length_of_experiment)} s"])
+
+    header.extend([
         f"",
         f"Time intervals dt:",
-        f"Simulation: {str(cps.dt_simulation)} s",
+    ])
+
+    if mode == 'CPS':
+        header.append(f"Simulation: {str(cps.dt_simulation)} s")
+
+    header.extend([
         f"Controller update: {str(cps.dt_controller)} s",
         f"Saving: {str(cps.dt_save)} s",
         f"",
 
         f"Controller: {cps.controller_name}",
-    ]
+    ])
 
-    if cps.optimizer_name:
-        header.append(f"MPC Optimizer: {cps.optimizer_name}")
+    if cps.controller_name == 'mpc':
+        if cps.optimizer_name:
+            header.append(f"MPC Optimizer: {cps.optimizer_name}")
 
     header.append(
         f""
@@ -153,6 +170,22 @@ def create_csv_header(cps, length_of_experiment):
             if param_name != 'lib':
                 header.append(param_name + ': ' + str(parameter))
     header.append(f"")
+
+    header.extend([
+        f"Units:",
+        f"time: s",
+        f"deltaTimeMs: ms",
+        f"angle: rad",
+        f"angleD: rad/s",
+        f"position: m",
+        f"positionD: m/s",
+        f"angleTarget: rad",
+        f"angleErr: rad",
+        f"target_position: m",
+        f"positionErr: m",
+        f"Q: normed motor power",
+        f"",
+    ])
 
     header.append(f"Data:")
 

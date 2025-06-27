@@ -25,7 +25,7 @@ def network_evaluator():
         path_to_models=path_to_models,
         batch_size=1,
         input_precision='float',
-        hls4ml=False)
+        nn_evaluator_mode='normal')
 
     # Extract test features and targets
     x_tst = df.loc[:, network_inputs].to_numpy()

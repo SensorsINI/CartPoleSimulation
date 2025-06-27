@@ -7,6 +7,23 @@ from others.globals_and_utils import load_config
 
 class CartPoleParameters:
     def __init__(self, lib=NumpyLibrary(), get_parameters_from=None):
+
+        # === Pre-declare attributes so IDEs can see them ===
+        self.L = None
+        self.m_pole = None
+        self.k = None
+        self.m_cart = None
+        self.g = None
+        self.J_fric = None
+        self.M_fric = None
+        self.v_max = None
+        self.u_max = None
+        self.controlNoiseScale = None
+        self.controlNoiseBias = None
+        self.controlNoiseCorrelation = None
+        self.TrackHalfLength = None
+        self.controlNoise_mode = None
+
         self.lib = lib
         if get_parameters_from is None:
             get_parameters_from = "cartpole_physical_parameters.yml"
@@ -22,10 +39,10 @@ class CartPoleParameters:
                     value = float(value['init_value'])
             elif key == 'k':
                 value = float(value.split("/")[0])/float(value.split("/")[1])
-            elif key == 'controlDisturbance_mode':
+            elif key == 'controlNoise_mode':
                 value = value
             if key in ['k', 'm_cart', 'm_pole', 'g', 'J_fric', 'M_fric', 'L', 'v_max', 'u_max',
-                       'controlDisturbance', 'controlBias', 'TrackHalfLength']:
+                       'controlNoiseScale', 'controlNoiseBias', 'controlNoiseCorrelation', 'TrackHalfLength']:
                 value = lib.to_tensor(value, dtype=lib.float32)
             setattr(self, key, value)
             setattr(self, 'TrackHalfLength', lib.to_tensor((parameters['track_length']-parameters['cart_length'])/2.0, dtype=lib.float32))
@@ -61,13 +78,14 @@ class CartPoleParameters:
             convert(self.L),
             convert(self.v_max),
             convert(self.u_max),
-            convert(self.controlDisturbance),
-            convert(self.controlBias),
+            convert(self.controlNoiseScale),
+            convert(self.controlNoiseBias),
+            convert(self.controlNoiseCorrelation),
             convert(self.TrackHalfLength),
-            self.controlDisturbance_mode
+            self.controlNoise_mode
         )
 
 
 CP_PARAMETERS_DEFAULT = CartPoleParameters()
 (k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max,
- controlDisturbance, controlBias, TrackHalfLength, controlDisturbance_mode) = CP_PARAMETERS_DEFAULT.export_parameters()
+ controlNoiseScale, controlNoiseBias, controlNoiseCorrelation, TrackHalfLength, controlNoise_mode) = CP_PARAMETERS_DEFAULT.export_parameters()

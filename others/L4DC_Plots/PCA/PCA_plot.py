@@ -1,13 +1,18 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import matplotlib.gridspec as gridspec
 
+PATH_TO_DATA = '../L4DC_Plots_with_data/PCA/'
+
 # 1. Set font sizes (same as the first plot)
 plt.rcParams.update({'font.size': 14})
 
 # Load the data
-df = pd.read_csv('PCA_components.csv')
+path_to_csv = os.path.join(PATH_TO_DATA, 'PCA_components.csv')
+df = pd.read_csv(path_to_csv, comment='#')
 df = df.iloc[:-1500, :]  # Slice the data
 L = df['L'] * 100
 PCA1 = df['PCA1']

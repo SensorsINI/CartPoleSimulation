@@ -7,7 +7,7 @@ and many more. To run it needs some "environment": we provide you with GUI and d
 @author: Marcin
 """
 # Import module to save history of the simulation as csv file
-
+import os
 # Import module to interact with OS
 import traceback
 # Import module to get a current time and date used to name the files containing the history of simulations
@@ -25,7 +25,7 @@ from others.globals_and_utils import MockSpace, create_rng, load_config
 from CartPole.cartpole_parameters import (J_fric, L, m_cart, M_fric, TrackHalfLength,
                                           CP_PARAMETERS_DEFAULT,
                                           g, k, m_pole, u_max, v_max,
-                                          controlBias, controlDisturbance, controlDisturbance_mode
+                                          controlNoiseBias, controlNoiseScale, controlNoise_mode, controlNoiseCorrelation,
                                           )
 # Interpolate function to create smooth random track
 # Run range() automatically adding progress bar in terminal
@@ -36,13 +36,14 @@ from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
 from CartPole.latency_adder import LatencyAdder
 from CartPole.load import get_full_paths_to_csvs, load_csv_recording
 from CartPole.noise_adder import NoiseAdder
-from CartPole.noise_control_signal import add_control_noise
+from CartPole.noise_control_signal import ControlNoiseGenerator
 from CartPole.random_target_generator import Generate_Random_Trace_Function
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
                                       ANGLED_IDX, POSITION_IDX, POSITIOND_IDX)
 from CartPole.state_utilities import create_cartpole_state
 from CartPole.summary_plots import summary_plots
 from CartPole.controller_informer import ControllerInformer
+from SI_Toolkit.Predictors.neural_network_evaluator import neural_network_evaluator
 
 s0 = create_cartpole_state()
 
@@ -72,8 +73,6 @@ from CartPole.parameter_updater import ParameterUpdater, ParameterJointUpdater
 config = load_config("cartpole_physical_parameters.yml")
 PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT = config["cartpole"]["PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT"]
 
-rng = create_rng(__name__, config["cartpole"]["seed"])
-
 
 class CartPole(EnvironmentBatched):
     num_states = 6
@@ -83,6 +82,17 @@ class CartPole(EnvironmentBatched):
 
         self.config = config["cartpole"]
         self.rng_CartPole = create_rng(self.__class__.__name__, self.config["seed"])
+
+        self.next_step_mode = self.config["next_step_mode"]
+
+        self.next_step_neural_model = None
+        if self.next_step_mode == 'NeuralModel':
+            self.next_step_neural_model_path = self.config['next_step_neural_model_path']
+            self.next_step_neural_model = neural_network_evaluator(
+                net_name=os.path.basename(self.next_step_neural_model_path),
+                path_to_models=os.path.dirname(self.next_step_neural_model_path),
+                batch_size=1,
+            )
 
         self.slider = target_slider
 
@@ -137,6 +147,16 @@ class CartPole(EnvironmentBatched):
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
         self.NoiseAdderInstance = NoiseAdder()
         self.s_with_noise_and_latency = np.copy(self.s)
+
+        self.control_noise_generator = ControlNoiseGenerator(
+            self.rng_CartPole,
+            controlNoise_Mode=self.config["controlNoise_mode"],
+            controlNoise_Scale=self.config["controlNoiseScale"],
+            controlNoise_Bias=self.config["controlNoiseBias"],
+            controlNoise_Correlation=self.config["controlNoiseCorrelation"],
+            dt=1.0,  # Overwritten later
+            initial_state=0.0, # Overwritten later
+        )
 
         self.vertical_angle_offset_updater = ParameterUpdater(self.config['vertical_angle_offset'])
         self.vertical_angle_offset_init = np.deg2rad(self.config['vertical_angle_offset']['init_value'])
@@ -293,7 +313,7 @@ class CartPole(EnvironmentBatched):
         self.update_target_equilibrium()
 
         # Calculate the next state
-        self.cartpole_integration()
+        self.cartpole_next_step()
 
         # Calculate the correction to the state due to the bounce at the edge if applies
         self.edge_bounce()
@@ -316,7 +336,7 @@ class CartPole(EnvironmentBatched):
         self.Q2u()
 
         # Update second derivatives
-        self.cartpole_ode()
+        self.cartpole_second_derivatives()
 
         if block_pole_at_90:
             self.angleDD = 0.0
@@ -338,12 +358,15 @@ class CartPole(EnvironmentBatched):
         s_delayed = self.LatencyAdderInstance.get_interpolated_delayed_state()
         self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
         self.s_with_noise_and_latency = self.update_vertical_angle_offset(self.s_with_noise_and_latency)
+        
+    def cartpole_second_derivatives(self):
+        self.angleDD, self.positionDD = self.cpe.cartpole_second_derivatives(self.s, self.Q, L, m_pole, u_max)
 
     def cartpole_ode(self):
         self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L), m_pole=float(m_pole))
 
     def Q2u(self):
-        self.u = self.cpe.Q2u(self.Q)
+        self.u = self.cpe.Q2u(self.Q, u_max)
 
     def update_vertical_angle_offset(self, s):
         self.vertical_angle_offset = self.vertical_angle_offset_updater.update_parameter(
@@ -441,6 +464,30 @@ class CartPole(EnvironmentBatched):
 
             self.dt_save_steps_counter = 0
 
+
+    def cartpole_next_step(self):
+        if self.next_step_mode == 'Euler':
+            self.cartpole_integration()
+        elif self.next_step_mode == 'NeuralModel':
+            self.get_cartpole_next_step_from_neural_model()
+        else:
+            raise ValueError(f"Unknown next_step_mode: {self.next_step_mode}")
+
+    def get_cartpole_next_step_from_neural_model(self):
+        network_input = self.next_step_neural_model.compose_input(self.variables_to_log)
+        _ = self.next_step_neural_model.step(network_input)
+        net_output_dict = self.next_step_neural_model.net_output_dict
+
+        if 'angle' in net_output_dict:
+            self.s[ANGLE_IDX] = net_output_dict['angle']
+        elif 'angle_cos' in net_output_dict and 'angle_sin' in net_output_dict:
+            self.s[ANGLE_IDX] = np.arctan2(net_output_dict['angle_sin'], net_output_dict['angle_cos'])
+
+        self.s[ANGLED_IDX] = net_output_dict['angleD']
+        self.s[POSITION_IDX] = net_output_dict['position']
+        self.s[POSITIOND_IDX] = net_output_dict['positionD']
+
+
     # A method integrating the cartpole ode over time step dt
     # Currently we use a simple single step Euler stepping
     def cartpole_integration(self):
@@ -488,8 +535,7 @@ class CartPole(EnvironmentBatched):
                     raise AttributeError("Manual stabilization mode activated and no slider object created.")
                 self.Q_update_time = 0.0
             else:  # in this case slider gives a target position, lqr regulator
-                # self.Q_ccrc = add_control_noise(self.Q_calculated, rng,
-                #                                 controlDisturbance_mode, controlDisturbance, controlBias)
+                # self.Q_ccrc = self.control_noise_generator.add_control_noise(self.Q_calculated)
                 self.Q_ccrc = self.Q_applied
                 update_start = timeit.default_timer()
                 self.L_for_controller = float(self.controller_informer.get_parameters(
@@ -520,8 +566,7 @@ class CartPole(EnvironmentBatched):
                 ))
                 self.Q_update_time = timeit.default_timer()-update_start
 
-                self.Q_applied = add_control_noise(self.Q_calculated, rng,
-                                                   controlDisturbance_mode, controlDisturbance, controlBias)
+                self.Q_applied = self.control_noise_generator.add_control_noise(self.Q_calculated)
 
             self.Q = self.Q_applied
             self.dt_controller_steps_counter = 0
@@ -624,6 +669,8 @@ class CartPole(EnvironmentBatched):
         if keep_target_equilibrium_x_seconds_up is not None: self.keep_target_equilibrium_x_seconds_up = keep_target_equilibrium_x_seconds_up
         if keep_target_equilibrium_x_seconds_down is not None: self.keep_target_equilibrium_x_seconds_down = keep_target_equilibrium_x_seconds_down
 
+        self.control_noise_generator.reset(noise_initial_state=0.0, dt=self.dt_controller)
+
         self.random_track_f = Generate_Random_Trace_Function(
 
             length_of_experiment=self.length_of_experiment,
@@ -674,7 +721,7 @@ class CartPole(EnvironmentBatched):
         else:
             raise ValueError('Unknown save mode value')
 
-        self.cartpole_ode()
+        self.cartpole_second_derivatives()
 
         # Create csv file for saving
         self.save_history_csv(
@@ -809,9 +856,9 @@ class CartPole(EnvironmentBatched):
             pass
 
         # reset global variables
-        global k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlDisturbance, controlBias, TrackHalfLength, controlDisturbance_mode
+        global k, m_cart, m_pole, g, J_fric, M_fric, L, v_max, u_max, controlNoiseScale, controlNoiseBias, controlNoiseCorrelation, TrackHalfLength, controlNoise_mode
         (k[...], m_cart[...], m_pole[...], g[...], J_fric[...], M_fric[...], L[...], v_max[...], u_max[...],
-         controlDisturbance[...], controlBias[...], TrackHalfLength[...], controlDisturbance_mode) = CP_PARAMETERS_DEFAULT.export_parameters()
+         controlNoiseScale[...], controlNoiseBias[...], controlNoiseCorrelation[...], TrackHalfLength[...], controlNoise_mode) = CP_PARAMETERS_DEFAULT.export_parameters()
 
         self.time = 0.0
         self.time_last_target_equilibrium_change = None
@@ -878,13 +925,12 @@ class CartPole(EnvironmentBatched):
                     }
                 ))
 
-            self.Q_applied = add_control_noise(self.Q_calculated, rng,
-                                               controlDisturbance_mode, controlDisturbance, controlBias)
+            self.Q_applied = self.control_noise_generator.add_control_noise(self.Q_calculated)
 
             self.Q = self.Q_applied
-            self.u = self.cpe.Q2u(self.Q)  # Calculate CURRENT control input
-            self.angleDD, self.positionDD = self.cpe.cartpole_ode_interface(self.s, self.u, L=float(L))  # Calculate CURRENT second derivatives
-
+            self.u = self.cpe.Q2u(self.Q, u_max)  # Calculate CURRENT control input
+            self.cartpole_second_derivatives()  # Calculate CURRENT second derivatives
+            
         # Reset the dict keeping the experiment history and save the state for t = 0
         self.dt_save_steps_counter = 0
         self.dt_controller_steps_counter = 0
@@ -939,6 +985,7 @@ class CartPole(EnvironmentBatched):
     @dt_controller.setter
     def dt_controller(self, value):
         self._dt_controller = value
+        self.control_noise_generator.reset(dt=self._dt_controller)
         if self._dt_simulation is not None:
             self.dt_controller_number_of_steps = np.rint(value / self._dt_simulation).astype(np.int32)
             if self.dt_controller_number_of_steps == 0:

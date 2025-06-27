@@ -20,7 +20,6 @@ from others.globals_and_utils import create_rng, load_config
 
 s0 = create_cartpole_state()
 config = load_config("cartpole_physical_parameters.yml")
-actuator_noise = config["cartpole"]["actuator_noise"]
 
 
 class controller_lqr(template_controller):
@@ -43,7 +42,6 @@ class controller_lqr(template_controller):
         The optimal input is then computed as:
          input: u = -K*x
         """
-        self.p_Q = actuator_noise
         # ref Bertsekas, p.151
 
         seed = self.config_controller["seed"]
@@ -91,8 +89,6 @@ class controller_lqr(template_controller):
             [[s[POSITION_IDX] - self.variable_parameters.target_position], [s[POSITIOND_IDX]], [s[ANGLE_IDX]], [s[ANGLED_IDX]]])
 
         Q = np.dot(-self.K, state).item()
-
-        Q *= (1 + self.p_Q * float(self.rng.uniform(self.action_low, self.action_high)))
 
         # Clip Q
         Q = np.clip(Q, -1.0, 1.0, dtype=np.float32)
