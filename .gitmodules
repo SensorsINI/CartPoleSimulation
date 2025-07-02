@@ -6,6 +6,3 @@
 	path = Control_Toolkit
 	url = https://github.com/SensorsINI/Control_Toolkit
 	branch = main
-[submodule "Neuromorphic_MBRL"]
-	path = Neuromorphic_MBRL
-	url = https://github.com/Alex-Vasilache/NMBRL.git
