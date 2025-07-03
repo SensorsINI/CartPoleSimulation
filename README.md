@@ -15,8 +15,25 @@ Get the code from Github:
 
 Create conda environment with 
 
-	conda create -n CartPoleSimulation python=3.8
-    conda activate CartPoleSimulation
+	conda create -n CPS python=3.11
+
+Create aliases for convenience:
+
+```bash
+printf "\n# === My Custom Aliases ===
+alias cps='conda activate CPS'
+alias pypa='export PYTHONPATH=./'
+" >> ~/.bashrc
+source ~/.bashrc
+```
+
+    conda activate CPS
+
+Enter the CartPoleSimulation folder and run:
+
+```bash
+cd CartPoleSimulation
+```
 
 If  SI_Toolkit (System Identification Toolbox) or Control Toolkit folders are empty, use these lines to pull all submodules:
 ```bash

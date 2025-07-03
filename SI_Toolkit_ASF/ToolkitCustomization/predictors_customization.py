@@ -12,14 +12,15 @@ E.g. the neural network predicts sin and cos this class can take care of adding 
 
 # The STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS import is needed
 # as from here the variables are imported to other files
-from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, CONTROL_INDICES
+from CartPole.state_utilities import STATE_INDICES, STATE_VARIABLES, CONTROL_INPUTS, CONTROL_INPUTS_LEN, CONTROL_INDICES
 
 from SI_Toolkit.computation_library import NumpyLibrary
 from CartPole.cartpole_equations import CartPoleEquations
 
-from SI_Toolkit.Functions.TF.Compile import CompileAdaptive
+from SI_Toolkit.Compile import CompileAdaptive
 
 from CartPole.state_utilities import ANGLE_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX
+
 
 class next_state_predictor_ODE:
 
@@ -29,13 +30,22 @@ class next_state_predictor_ODE:
                  lib,
                  batch_size=1,
                  variable_parameters=None,
-                 disable_individual_compilation=False):
+                 disable_individual_compilation=False,
+                 **kwargs,
+                 ):
         self.lib = lib
-        self.intermediate_steps = self.lib.to_tensor(intermediate_steps, dtype=self.lib.int32)
-        self.t_step = self.lib.to_tensor(dt / float(self.intermediate_steps), dtype=self.lib.float32)
+        self.intermediate_steps = int(intermediate_steps)
+        self.t_step = float(dt / float(self.intermediate_steps))
         self.variable_parameters = variable_parameters
 
-        self.cpe = CartPoleEquations(lib=self.lib)
+        second_derivatives_mode = kwargs.get("second_derivatives_mode", 'ODE')
+        second_derivatives_neural_model_path = kwargs.get("second_derivatives_neural_model_path", None)
+        self.cpe = CartPoleEquations(
+            lib=self.lib,
+            batch_size=batch_size,
+            second_derivatives_mode=second_derivatives_mode,
+            second_derivatives_neural_model_path=second_derivatives_neural_model_path,
+        )
         self.params = self.cpe.params
 
         if disable_individual_compilation:
@@ -57,8 +67,8 @@ class next_state_predictor_ODE:
             pole_mass = self.lib.to_tensor(self.cpe.params.m_pole, dtype=self.lib.float32)
 
         Q = Q[..., 0]  # Removes features dimension, specific for cartpole as it has only one control input
-        u = self.cpe.Q2u(Q)
-        s_next = self.cpe.cartpole_fine_integration(s, u=u, t_step=self.t_step, intermediate_steps=self.intermediate_steps, L=pole_length, m_pole=pole_mass)
+
+        s_next = self.cpe.cartpole_fine_integration(s, Q=Q, t_step=self.t_step, intermediate_steps=self.intermediate_steps, L=pole_length, m_pole=pole_mass)
 
         return s_next
 

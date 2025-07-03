@@ -11,13 +11,19 @@ from GymlikeCartPole.Cartpole_RL._cartpole_rl_template import CartPoleRLTemplate
 from SI_Toolkit.computation_library import NumpyLibrary
 from CartPole.cartpole_equations import CartPoleEquations
 from CartPole.data_generator import random_experiment_setter
+from others.globals_and_utils import load_config
 
 
 class Cartpole_Sensors(CartPoleRLTemplate):
 
     def __init__(self, **kwargs):
 
-        self.cpe = CartPoleEquations(lib=NumpyLibrary())
+        config = load_config("cartpole_physical_parameters.yml")["cartpole"]
+        self.cpe = CartPoleEquations(
+            lib=NumpyLibrary(),
+            second_derivatives_mode=config["second_derivatives_mode"],
+            second_derivatives_neural_model_path=config["second_derivatives_neural_model_path"]
+            )
 
         self.RES = random_experiment_setter()
 
@@ -60,8 +66,7 @@ class Cartpole_Sensors(CartPoleRLTemplate):
         self.steps_beyond_terminated = None
 
     def get_next_state(self, state, action):
-        u = self.cpe.Q2u(action)
-        new_state = np.squeeze(self.cpe.cartpole_fine_integration(state, u=u, t_step=self.simulation_time_step, intermediate_steps=self.number_of_intermediate_integration_steps))
+        new_state = np.squeeze(self.cpe.cartpole_fine_integration(state, Q=action, t_step=self.simulation_time_step, intermediate_steps=self.number_of_intermediate_integration_steps))
         return new_state
 
     def reward_assignment(self, state, action, terminated, steps):

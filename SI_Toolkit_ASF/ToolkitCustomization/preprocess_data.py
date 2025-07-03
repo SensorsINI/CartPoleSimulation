@@ -1,6 +1,64 @@
-from CartPole import Generate_Random_Trace_Function
 import numpy as np
 import pandas as pd
+
+from types import SimpleNamespace
+from rich import print
+
+from CartPole import Generate_Random_Trace_Function
+from CartPole.cartpole_equations import _cartpole_ode_numba, Q2u
+from CartPole.load import load_cartpole_parameters
+
+
+Q_column_name = 'Q_calculated_offline_slow_swing'
+
+
+def calculate_cartpole_ode_along_trajectories(df, variables_dict, current_path, **kwargs):
+    parameters = load_cartpole_parameters(current_path)
+
+    if not parameters or not parameters.__dict__:
+        from CartPole.cartpole_parameters import u_max, k, m_cart, g, J_fric, M_fric, m_pole, L
+        print("\n[bold red]Warning: Parameters namespace empty, using fallback import.[/bold red]\n")
+        parameters = SimpleNamespace(
+            u_max=u_max,
+            k=k,
+            m_cart=m_cart,
+            g=g,
+            J_fric=J_fric,
+            M_fric=M_fric,
+            m_pole=m_pole,
+            L=L
+        )
+
+    required_cols = ['angle_cos', 'angle_sin', 'angleD', 'positionD', Q_column_name]
+    for col in required_cols:
+        if col not in df.columns:
+            raise ValueError(f"Column '{col}' is missing from DataFrame")
+
+    ca = df['angle_cos'].values
+    sa = df['angle_sin'].values
+    angleD = df['angleD'].values
+    positionD = df['positionD'].values
+    Q = df[Q_column_name].values
+
+    u_max = parameters.u_max
+    k = parameters.k
+    m_cart = parameters.m_cart
+    g = parameters.g
+    J_fric = parameters.J_fric
+    M_fric = parameters.M_fric
+
+    m_pole = df['m_pole'].values if 'm_pole' in df.columns else parameters.m_pole
+    L = df['L'].values if 'L' in df.columns else parameters.L
+
+    u = Q2u(Q, u_max)
+
+    angleDD, positionDD = _cartpole_ode_numba(ca, sa, angleD, positionD, u, k, m_cart, m_pole, g, J_fric, M_fric, L)
+
+    df['angleDD'] = angleDD
+    df['positionDD'] = positionDD
+
+    return df
+
 
 
 def add_new_target_position(df, target_position_config, new_target_position_variable_name, **kwargs):

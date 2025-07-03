@@ -38,11 +38,11 @@ def args_fun():
 
 formatted_index = args_fun()
 if formatted_index is not None:
-    get_files_from = f'../Experiment_Recordings/Experiment_16_11_2024_pole_L_and_m_informed/Experiment-{formatted_index}.csv'
+    get_files_from = f'./Experiment_Recordings/Experiment-{formatted_index}.csv'
 else:
     get_files_from = 'SI_Toolkit_ASF/Run/df_to_transform/informed_gru_2.csv'
 
-save_files_to = 'SI_Toolkit_ASF/Run/df_transformed'
+save_files_to = './Experiment_Recordings'
 
 controller = {
     "controller_name": "mpc",
@@ -53,17 +53,17 @@ controller = {
     "environment_attributes_dict": {  # keys are names used by controller, values the csv column names
         "target_position": "target_position",
         "target_equilibrium": "target_equilibrium",
-        "L": "L_differentiate_",
-        "m_pole": "m_pole_differentiate_",
-        # "Q_ccrc": "Q_applied_-1",
+        # "L": "L_differentiate_",
+        # "m_pole": "m_pole_differentiate_",
+        "Q_ccrc": "Q_applied_-1",
     },
 }
 
-controller_output_variable_name = 'dQ'
+controller_output_variable_name = 'Q_calculated_offline_slow_swing'
 
 if __name__ == '__main__':
     transform_dataset(get_files_from, save_files_to, transformation='add_control_along_trajectories',
                       controller_config=controller, controller_output_variable_name=controller_output_variable_name,
                       integration_num_evals=4,
-                      save_output_only=True,
+                      save_output_only=False,
                       )
