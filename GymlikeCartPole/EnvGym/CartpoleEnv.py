@@ -9,8 +9,8 @@ import gymnasium as gym
 from gymnasium.envs.classic_control import utils
 from gymnasium.error import DependencyNotInstalled
 
-from GymlikeCartPole.Cartpole_RL.Cartpole_CustomSim import Cartpole_CustomSim
-from GymlikeCartPole.Cartpole_RL.Cartpole_OpenAI import Cartpole_OpenAI
+from GymlikeCartPole.EnvGym.Cartpole_RL.Cartpole_CustomSim import Cartpole_CustomSim
+from GymlikeCartPole.EnvGym.Cartpole_RL import Cartpole_OpenAI
 from GymlikeCartPole.EnvGym.state_utils import *
 
 

@@ -5,7 +5,7 @@ import numpy as np
 from gymnasium import logger, spaces
 
 from GymlikeCartPole.EnvGym.state_utils import *
-from GymlikeCartPole.Cartpole_RL._cartpole_rl_template import CartPoleRLTemplate
+from GymlikeCartPole.EnvGym.Cartpole_RL._cartpole_rl_template import CartPoleRLTemplate
 
 from SI_Toolkit.computation_library import NumpyLibrary
 from CartPole.cartpole_equations import CartPoleEquations
