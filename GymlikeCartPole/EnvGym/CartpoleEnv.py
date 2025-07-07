@@ -1,3 +1,4 @@
+# CartpoleEnv.py
 
 from typing import Optional, Union
 
@@ -23,8 +24,11 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self,
         render_mode: Optional[str] = None,
         max_episode_steps: int = 500,
+        task: str = "stabilization",
     ):
         self.max_episode_steps = max_episode_steps
+
+        self.task = task
 
         # self.cartpole_rl = Cartpole_OpenAI()
         self.cartpole_rl = Cartpole_Sensors()

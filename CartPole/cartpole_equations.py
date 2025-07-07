@@ -332,7 +332,7 @@ class CartPoleEquations:
                 angle, angleD,
                 angle_cos, angle_sin,
                 position, positionD
-            ], axis=1)
+            ], -1)
 
             # Compute accelerations
             angleDD, positionDD = self.cartpole_second_derivatives(
