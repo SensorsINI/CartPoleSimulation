@@ -6,12 +6,13 @@ import numpy as np
 
 import gymnasium as gym
 
-from gymnasium.envs.classic_control import utils
 from gymnasium.error import DependencyNotInstalled
 
 from GymlikeCartPole.EnvGym.Cartpole_RL.Cartpole_CustomSim import Cartpole_CustomSim
-from GymlikeCartPole.EnvGym.Cartpole_RL import Cartpole_OpenAI
+from GymlikeCartPole.EnvGym.Cartpole_RL.Cartpole_OpenAI import Cartpole_OpenAI
 from GymlikeCartPole.EnvGym.state_utils import *
+
+from GymlikeCartPole.EnvGym.tasks import TASK_REGISTRY, Task
 
 
 class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
@@ -28,9 +29,21 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         task: str = "stabilization",
         cartpole_type: str = "openai",  # "openai", "custom_sim", "physical"
     ):
+
+        if isinstance(task, str):
+            try:
+                self.task: Task = TASK_REGISTRY[task]()  # create Task instance
+            except KeyError as e:
+                raise ValueError(f"Unknown task '{task}'."
+                                 f" Choose one of {list(TASK_REGISTRY)}") from e
+        elif isinstance(task, Task):
+            self.task = task
+        else:
+            raise TypeError("task must be either a str key or a Task instance")
+
+        self.task.max_episode_steps = max_episode_steps  # let it know the horizon
         self.max_episode_steps = max_episode_steps
 
-        self.task = task
         self.cartpole_type = cartpole_type
 
         if self.cartpole_type == "openai":
@@ -63,29 +76,33 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         self.target_position = 0.0
 
+        self.pole_length_rendering = self.cartpole_rl.pole_length
+        self.angle_rotation_direction_rendering = 1  # Heuristic, for rendering only, 1 or -1
+
         self.reset()
 
-    def step(self, action):
-        if not self.action_space.contains(
-            action
-        ):
-            f"{action!r} ({type(action)}) invalid"
-        assert self.state is not None, "Call reset before using step method."
-        self.state = self.cartpole_rl.get_next_state(self.state, action)
 
-        terminated = self.cartpole_rl.termination_condition(self.state)
+
+    def step(self, action):
+        if not self.action_space.contains(action):
+            raise ValueError(f"{action!r} not in {self.action_space}")
+        assert self.state is not None, "Call reset before using step method."
+        self.state = self.cartpole_rl.next_state(self.state, action)
+
+        terminated = self.task.done(self.state)
 
         self.steps += 1
 
         truncated = self.steps >= self.max_episode_steps
 
-        reward = self.cartpole_rl.reward_assignment(self.state, action, terminated)
+        reward = self.task.reward(self.state, action, self.steps, terminated)
 
         if self.render_mode == "human":
             self.render()
 
         # truncation=False as the time limit is handled by the `TimeLimit` wrapper added during `make`
         return np.array(self.state, dtype=np.float32), reward, terminated, truncated, {}
+
 
     def reset(
         self,
@@ -96,12 +113,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         super().reset(seed=seed)
         # Note that if you use custom reset bounds, it may lead to out-of-bound
         # state/observations.
-        low, high = utils.maybe_parse_reset_bounds(
-            options, -0.05, 0.05  # default low
-        )  # default high
-        self.state = self.np_random.uniform(low=low, high=high, size=(6,))
-        self.state[ANGLE_COS_IDX] = np.cos(self.state[ANGLE_IDX])
-        self.state[ANGLE_SIN_IDX] = np.sin(self.state[ANGLE_IDX])
+        self.state = self.task.init_state(self.np_random)
         self.steps = 0
         self.cartpole_rl.reset()
 
@@ -142,7 +154,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         world_width = self.cartpole_rl.x_threshold * 2
         scale = self.screen_width / world_width
         polewidth = 10.0
-        polelen = scale * self.cartpole_rl.pole_length_rendering
+        polelen = scale * self.pole_length_rendering
         cartwidth = 50.0
         cartheight = 30.0
 
@@ -171,7 +183,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         pole_coords = []
         for coord in [(l, b), (l, t), (r, t), (r, b)]:
             coord = pygame.math.Vector2(coord).rotate_rad(
-                self.cartpole_rl.angle_rotation_direction_rendering * self.state[ANGLE_IDX]
+                self.angle_rotation_direction_rendering * self.state[ANGLE_IDX]
             )
             coord = (coord[0] + cartx, coord[1] + carty + axleoffset)
             pole_coords.append(coord)
