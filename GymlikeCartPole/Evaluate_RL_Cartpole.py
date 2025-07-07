@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-"""
-evaluate_sac_cartpole.py
+# Evaluate_RL_Cartpole.py
 
-Standalone SAC evaluation for custom CartPoleEnv.
+"""
+Standalone evaluation for custom CartPoleEnv.
 """
 
 import os
