@@ -9,7 +9,7 @@ import gymnasium as gym
 from gymnasium.envs.classic_control import utils
 from gymnasium.error import DependencyNotInstalled
 
-from GymlikeCartPole.Cartpole_RL.Cartpole_Sensors import Cartpole_Sensors
+from GymlikeCartPole.Cartpole_RL.Cartpole_CustomSim import Cartpole_CustomSim
 from GymlikeCartPole.Cartpole_RL.Cartpole_OpenAI import Cartpole_OpenAI
 from GymlikeCartPole.EnvGym.state_utils import *
 
@@ -36,7 +36,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         if self.cartpole_type == "openai":
             self.cartpole_rl = Cartpole_OpenAI()
         elif self.cartpole_type == "custom_sim":
-            self.cartpole_rl = Cartpole_Sensors()
+            self.cartpole_rl = Cartpole_CustomSim()
         elif self.cartpole_type == "physical":
             raise NotImplementedError(
                 "Physical Cartpole type is not implemented in this environment."

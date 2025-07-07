@@ -13,7 +13,7 @@ from CartPole.data_generator import random_experiment_setter
 from others.globals_and_utils import load_config
 
 
-class Cartpole_Sensors(CartPoleRLTemplate):
+class Cartpole_CustomSim(CartPoleRLTemplate):
 
     def __init__(self, **kwargs):
 
