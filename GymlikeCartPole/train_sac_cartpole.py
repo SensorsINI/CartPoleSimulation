@@ -19,7 +19,6 @@ from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize, DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback, CallbackList
-from stable_baselines3.common.evaluation import evaluate_policy
 
 from GymlikeCartPole.EnvGym.CartpoleEnv import CartPoleEnv
 
@@ -28,6 +27,8 @@ from GymlikeCartPole.EnvGym.CartpoleEnv import CartPoleEnv
 #  - "stabilization" → balance only from near-upright starts
 #  - "swing_up"      → random starts + swing-up reward shaping
 TASK = "swing_up"
+
+CARTPOLE_TYPE = "custom_sim"  # "openai", "custom_sim", "physical"
 
 SEED = 42
 N_ENVS = 16
@@ -55,7 +56,7 @@ def make_env():
     Instantiate the CartPoleEnv, then wrap with Monitor.
     Monitor records episode reward/length for logging callbacks.
     """
-    env = CartPoleEnv(render_mode=None, task=TASK)
+    env = CartPoleEnv(render_mode=None, task=TASK, cartpole_type=CARTPOLE_TYPE)
     return Monitor(env)
 
 # ─── 3) VECTORIZED TRAINING ENV ───────────────────────────────────────────────
