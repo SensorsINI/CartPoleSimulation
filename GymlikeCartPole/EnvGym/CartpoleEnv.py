@@ -87,11 +87,15 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.steps += 1
         reward = self.task.reward(self.state, action, self.steps, terminated)
 
+        info = {
+            "swingup_reached": getattr(self.task, "upright_achieved", False)
+        }
+
         if self.render_mode == "human":
             self.render()
 
         # truncation=False as the time limit is handled by the `TimeLimit` wrapper added during `make`
-        return np.array(self.state, dtype=np.float32), reward, terminated, False, {}
+        return np.array(self.state, dtype=np.float32), reward, terminated, False, info
 
 
     def reset(

@@ -1,3 +1,5 @@
+# success_count_callback.py
+
 from collections import deque
 from stable_baselines3.common.callbacks import BaseCallback
 
@@ -36,8 +38,11 @@ class RollingSuccessCountCallback(BaseCallback):
             info = infos[idx]
             # ⮕ Gymnasium will set this when the episode ends due to hitting the time limit
             truncated = info.get("TimeLimit.truncated", False)
-            # ⮕ we treat a truncation by timeout as a “success”
-            success = int(truncated)
+
+            swingup_hit = info.get("swingup_reached", False)
+
+            # Episode is a true success only when it fulfilled BOTH conditions
+            success = int(truncated and swingup_hit)
 
             self._window.append(success)
 
