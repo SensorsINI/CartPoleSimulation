@@ -24,8 +24,8 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self,
         render_mode: Optional[str] = None,
         max_episode_steps: int = 500,
-        task: str = "stabilization",
-        cartpole_type: str = "openai",  # "openai", "custom_sim", "physical"
+        task: str = "swingup",
+        cartpole_type: str = "custom_sim",  # "openai", "custom_sim", "physical"
     ):
 
         self.max_episode_steps = max_episode_steps
