@@ -37,13 +37,34 @@ class Task(ABC):
     def init_state(self, rng: np.random.Generator) -> np.ndarray:
         """
         Provide an initial 6-D state vector.
-        May be overridden for fancier starts (energy-based swing-up etc.).
+
+        Default start:
+        • θ ∈ [−π, π] (full circle)
+        • θ̇ ∈ [−1200°/s, +1200°/s] converted to rad/s
+        • x ∈ [−x_limit, +x_limit]
+        • ẋ ∈ [−0.5, +0.5] m/s
         """
-        low, high = -0.05, 0.05
-        s = rng.uniform(low=low, high=high, size=(6,))
-        s[ANGLE_COS_IDX] = np.cos(s[ANGLE_IDX])
-        s[ANGLE_SIN_IDX] = np.sin(s[ANGLE_IDX])
-        return s.astype(np.float32)
+        # maximum angular velocity in rad/s (1200°/s)
+        max_ang_vel = 1200 * np.pi / 180.0
+
+        # sample raw state components
+        angle = rng.uniform(low=-np.pi, high=np.pi)                        # full‐circle angle
+        ang_vel = rng.uniform(low=-max_ang_vel, high=max_ang_vel)          # angular speed bound
+        pos     = rng.uniform(low=-self.physics.x_limit,
+                              high= self.physics.x_limit)                  # cart within track
+        vel     = rng.uniform(low=-0.5, high=0.5)                          # linear speed bound
+
+        # assemble the 6-vector: [θ, θ̇, cosθ, sinθ, x, ẋ]
+        s = np.empty(6, dtype=np.float32)
+        s[ANGLE_IDX]     = angle
+        s[ANGLED_IDX]    = ang_vel
+        s[ANGLE_COS_IDX] = np.cos(angle)
+        s[ANGLE_SIN_IDX] = np.sin(angle)
+        s[POSITION_IDX]  = pos
+        s[POSITION_IDX+1]= vel
+
+        return s
+
 
     @abstractmethod
     def done(self, state: np.ndarray) -> bool: ...
@@ -79,6 +100,28 @@ class Stabilization(Task):
             - 0.1  * abs(state[ANGLE_IDX]) \
             - 0.02 * abs(action[0])
         return r
+
+    def init_state(self, rng: np.random.Generator) -> np.ndarray:
+        """
+        Stabilization starts near upright with low velocity, but random position
+        anywhere on track. This prevents the agent from overfitting to centered starts.
+        """
+        low, high = -0.05, 0.05  # narrow bounds for angle and velocities
+
+        angle   = rng.uniform(low=low, high=high)
+        ang_vel = rng.uniform(low=low, high=high)
+        pos     = rng.uniform(low=-self.physics.x_limit, high=self.physics.x_limit)
+        vel     = rng.uniform(low=low, high=high)
+
+        s = np.empty(6, dtype=np.float32)
+        s[ANGLE_IDX]     = angle
+        s[ANGLED_IDX]    = ang_vel
+        s[ANGLE_COS_IDX] = np.cos(angle)
+        s[ANGLE_SIN_IDX] = np.sin(angle)
+        s[POSITION_IDX]  = pos
+        s[POSITION_IDX+1]= vel
+
+        return s
 
 
 class SwingUp(Task):
@@ -152,7 +195,26 @@ class StabilizationOpenAI(Task):
 
     # -------- Task API ----------------------------------------------------
     def init_state(self, rng: np.random.Generator) -> np.ndarray:
-        """Clear bookkeeping then delegate to the default random start."""
+        """
+        Stabilization starts near upright with low velocity, but random position
+        anywhere on track. This prevents the agent from overfitting to centered starts.
+        """
+
+        low, high = -0.05, 0.05  # narrow bounds for angle and velocities
+
+        angle   = rng.uniform(low=low, high=high)
+        ang_vel = rng.uniform(low=low, high=high)
+        pos     = rng.uniform(low=-self.physics.x_limit, high=self.physics.x_limit)
+        vel     = rng.uniform(low=low, high=high)
+
+        s = np.empty(6, dtype=np.float32)
+        s[ANGLE_IDX]     = angle
+        s[ANGLED_IDX]    = ang_vel
+        s[ANGLE_COS_IDX] = np.cos(angle)
+        s[ANGLE_SIN_IDX] = np.sin(angle)
+        s[POSITION_IDX]  = pos
+        s[POSITION_IDX+1]= vel
+
         self.steps_beyond_terminated = None
         return super().init_state(rng)
 
