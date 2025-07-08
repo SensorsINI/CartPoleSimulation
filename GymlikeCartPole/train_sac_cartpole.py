@@ -1,4 +1,3 @@
-# train_sac_cartpole.py
 #!/usr/bin/env python3
 """
 train_sac_cartpole.py
@@ -37,12 +36,23 @@ TOTAL_TIMESTEPS = 3_000_000
 NET_ARCH    = [32, 32]
 BATCH_SIZE  = 256
 INITIAL_LR  = 3e-4
-MODEL_DIR   = "models"
-LOG_DIR     = "logs"
 
-# Ensure directories exist
-os.makedirs(MODEL_DIR, exist_ok=True)
-os.makedirs(LOG_DIR, exist_ok=True)
+# ─── Run-specific directory setup ─────────────────────────────────────────────
+# Generate a unique folder for everything produced this run
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+run_dir   = os.path.join("runs", f"sac_cartpole_{timestamp}")
+
+# Inside that, separate subfolders for models and various logs
+MODEL_DIR = os.path.join(run_dir, "models")
+LOG_DIR   = os.path.join(run_dir, "logs")
+
+# Create the entire hierarchy in one go
+for d in (MODEL_DIR,
+          os.path.join(LOG_DIR, "tensorboard"),
+          os.path.join(LOG_DIR, "best_model"),
+          os.path.join(LOG_DIR, "eval_logs"),
+          os.path.join(LOG_DIR, "checkpoints")):
+    os.makedirs(d, exist_ok=True)
 
 # ─── 1) REPRODUCIBILITY ────────────────────────────────────────────────────────
 random.seed(SEED)
@@ -126,8 +136,7 @@ callbacks = CallbackList([eval_callback, checkpoint_callback])
 # ─── 6) TRAINING & SAVING ────────────────────────────────────────────────────
 model.learn(total_timesteps=TOTAL_TIMESTEPS, callback=callbacks, progress_bar=True)
 
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-model_name = f"sac_cartpole_{timestamp}_arch{'x'.join(map(str, NET_ARCH))}_bs{BATCH_SIZE}_lr{INITIAL_LR:.0e}"
+model_name = f"sac_cartpole_arch{'x'.join(map(str, NET_ARCH))}_bs{BATCH_SIZE}_lr{INITIAL_LR:.0e}"
 model_path = os.path.join(MODEL_DIR, f"{model_name}.zip")
 vec_path   = os.path.join(MODEL_DIR, f"{model_name}_vecnorm.pkl")
 

@@ -17,10 +17,24 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from GymlikeCartPole.EnvGym.CartpoleEnv import CartPoleEnv
 
 # ─── CONFIGURATION ────────────────────────────────────────────────────────────
-MODEL_DIR = "models"
+MODEL_DIR = "runs"
 N_EVAL    = 5
 N_RENDER  = 2
 SEED      = 42
+
+# ─── Locate latest run folder ─────────────────────────────────────────────────
+# We expect: runs/your_experiment_timestamp/models/...
+run_subdirs = [
+    d for d in os.listdir(RUNS_DIR)
+    if os.path.isdir(os.path.join(RUNS_DIR, d))
+]
+if not run_subdirs:
+    raise FileNotFoundError(f"No subfolders found in '{RUNS_DIR}' – did you run training?")
+latest_run = sorted(run_subdirs)[-1]
+run_dir    = os.path.join(RUNS_DIR, latest_run)
+
+# ─── POINT TO ITS models/ ─────────────────────────────────────────────────────
+MODEL_DIR = os.path.join(run_dir, "models")
 
 # ─── MODEL SELECTION AND ALGO INFERENCE ───────────────────────────────────────
 pattern     = os.path.join(MODEL_DIR, "*_cartpole_*.zip")
@@ -34,9 +48,11 @@ algo      = os.path.basename(MODEL_FILE).split("_")[0].lower()
 AlgoClass = SAC if algo == "sac" else PPO
 
 VEC_FILE = MODEL_FILE.replace(".zip", "_vecnorm.pkl")
-print(f"Detected algorithm:  {algo.upper()}")
-print(f"Loading {algo.upper()} model:  {MODEL_FILE}")
-print(f"Using VecNormalize stats: {VEC_FILE}")
+
+print(f"Detected run:       {latest_run}")
+print(f"Detected algorithm: {algo.upper()}")
+print(f"Loading model:      {MODEL_FILE}")
+print(f"Using Vec stats:    {VEC_FILE}")
 
 
 def make_raw_env(render_mode=None):
