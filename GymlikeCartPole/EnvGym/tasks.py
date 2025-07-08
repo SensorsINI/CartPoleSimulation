@@ -49,10 +49,10 @@ class Task(ABC):
 
         # sample raw state components
         angle = rng.uniform(low=-np.pi, high=np.pi)                        # full‐circle angle
-        ang_vel = rng.uniform(low=-max_ang_vel, high=max_ang_vel)          # angular speed bound
-        pos     = rng.uniform(low=-self.physics.x_limit,
+        ang_vel = 0.0 * rng.uniform(low=-max_ang_vel, high=max_ang_vel)          # angular speed bound
+        pos     = 0.8 * rng.uniform(low=-self.physics.x_limit,
                               high= self.physics.x_limit)                  # cart within track
-        vel     = rng.uniform(low=-0.5, high=0.5)                          # linear speed bound
+        vel     = 0.0 * rng.uniform(low=-0.5, high=0.5)                          # linear speed bound
 
         # assemble the 6-vector: [θ, θ̇, cosθ, sinθ, x, ẋ]
         s = np.empty(6, dtype=np.float32)
