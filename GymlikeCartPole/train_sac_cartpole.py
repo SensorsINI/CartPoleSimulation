@@ -12,6 +12,8 @@ from datetime import datetime
 import numpy as np
 import torch
 
+from gymnasium.wrappers import TimeLimit
+
 from typing import Callable
 from stable_baselines3 import SAC
 from stable_baselines3.common.utils import set_random_seed
@@ -67,6 +69,7 @@ def make_env():
     Monitor records episode reward/length for logging callbacks.
     """
     env = CartPoleEnv(render_mode=None, task=TASK, cartpole_type=CARTPOLE_TYPE)
+    env = TimeLimit(env, max_episode_steps=env.max_episode_steps)
     return Monitor(env)
 
 # ─── 3) VECTORIZED TRAINING ENV ───────────────────────────────────────────────
