@@ -43,7 +43,6 @@ class RollingSuccessCountCallback(BaseCallback):
 
             # ─── rolling sum over last N episodes ───────────────────────────────
             count = sum(self._window)
-            print(f"[Callback] Last {self.n_episodes} successes: {count}")
 
             # ─── log under the episode-indexed tag ───────────────────────────────
             self.logger.record("roll/last_N_successes_by_episode", count)
