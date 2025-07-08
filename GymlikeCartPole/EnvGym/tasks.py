@@ -26,6 +26,13 @@ class Task(ABC):
 
     max_episode_steps: int  # injected by the Env after construction
 
+    def __init__(self,
+                 physics,
+                 *,
+                 horizon: int = 500):
+        self.physics            = physics
+        self.max_episode_steps  = horizon
+
     # -------- public API --------
     def init_state(self, rng: np.random.Generator) -> np.ndarray:
         """
@@ -57,12 +64,9 @@ class Task(ABC):
 class Stabilization(Task):
     """Keep the pole upright and cart centred."""
 
-    ANGLE_LIMIT = 12 * np.pi / 180        # ±12°
-    X_LIMIT     = 0.18                    # metres
-
     def done(self, state: np.ndarray) -> bool:
-        return abs(state[ANGLE_IDX]) > self.ANGLE_LIMIT \
-            or abs(state[POSITION_IDX]) > self.X_LIMIT
+        return abs(state[ANGLE_IDX]) > self.physics.angle_limit \
+            or abs(state[POSITION_IDX]) > self.physics.x_limit
 
     def reward(self,
                state:    np.ndarray,
@@ -80,11 +84,9 @@ class Stabilization(Task):
 class SwingUp(Task):
     """Swing the pendulum to upright and keep it there."""
 
-    X_LIMIT = 0.18    # track half-length
-
     def done(self, state: np.ndarray) -> bool:
         # only terminate if we leave the track
-        return abs(state[POSITION_IDX]) > self.X_LIMIT
+        return abs(state[POSITION_IDX]) > self.physics.x_limit
 
     def reward(self,
                state:    np.ndarray,
@@ -93,7 +95,7 @@ class SwingUp(Task):
                terminated: bool
                ) -> float:
         upright   = (state[ANGLE_COS_IDX] + 1) / 2        # ∈[0,1]
-        centred   = 1 - abs(state[POSITION_IDX]) / self.X_LIMIT
+        centred   = 1 - abs(state[POSITION_IDX]) / self.physics.x_limit
         ang_vel_p = 0.05  * upright * abs(state[ANGLED_IDX])
         act_pen   = 0.001 * abs(action[0])
         r = 0.8 * upright + 0.2 * centred - ang_vel_p - act_pen
@@ -114,10 +116,12 @@ class StabilizationOpenAI(Task):
     bookkeeping so reward semantics are identical.
     """
 
-    ANGLE_LIMIT = 12 * np.pi / 180      # ±12°
-    X_LIMIT     = 2.4                   # metres  (matches OpenAI track)
-
-    def __init__(self, *, sutton_barto_reward: bool = False):
+    def __init__(self,
+                 physics,
+                 *,
+                 horizon: int = 500,
+                 sutton_barto_reward: bool = False):
+        super().__init__(physics, horizon=horizon)
         self._sutton_barto_reward = sutton_barto_reward
         self.steps_beyond_terminated: int | None = None
 
@@ -129,8 +133,8 @@ class StabilizationOpenAI(Task):
 
     def done(self, state: np.ndarray) -> bool:
         return (
-            abs(state[POSITION_IDX]) > self.X_LIMIT or
-            abs(state[ANGLE_IDX])    > self.ANGLE_LIMIT
+            abs(state[POSITION_IDX]) > self.physics.x_limit or
+            abs(state[ANGLE_IDX])    > self.physics.angle_limit
         )
 
     def reward(

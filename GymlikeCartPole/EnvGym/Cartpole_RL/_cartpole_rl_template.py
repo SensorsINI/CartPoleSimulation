@@ -66,14 +66,19 @@ class AttributeCheckMeta(ABCMeta):
 
 class CartPoleSimulatorBase(ABC, metaclass=AttributeCheckMeta):
     """
-    Pure-physics interface: advance dynamics & expose geometric params
+    Pure-physics interface.  In addition to `action_space`/`observation_space`
+    we mandate *termination limits*, so tasks can query them directly.
     """
-    # --- geometry required for rendering ----------------------------------
-    x_threshold: Annotated[float, Required]
-    pole_length: Annotated[float, Required]
 
-    # --- RL interface ------------------------------------------------------
-    action_space: Annotated[spaces.Box, Required]
+    # ─── rendering & physics parameters (existing) ────────────────────────
+    pole_length:    Annotated[float, Required]   # full length, metres
+
+    # ─── new: termination geometry ───────────────────────────────────────
+    angle_limit:    Annotated[float, Required]   # rad,  |θ| > angle_limit  → terminate
+    x_limit:        Annotated[float, Required]   # m,    |x| > x_limit      → terminate
+
+    # ─── RL interface (existing) ─────────────────────────────────────────
+    action_space:      Annotated[spaces.Box, Required]
     observation_space: Annotated[spaces.Box, Required]
 
     @abstractmethod

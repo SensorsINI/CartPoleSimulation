@@ -30,8 +30,8 @@ class Cartpole_CustomSim(CartPoleSimulatorBase):
         self.number_of_intermediate_integration_steps = int(self.RES.dt_controller_update/self.RES.dt_simulation)
 
         # Angle at which to fail the episode
-        self.theta_threshold_radians = 12 * 2 * math.pi / 360
-        self.x_threshold = self.cpe.params.TrackHalfLength
+        self.angle_limit = 12 * 2 * math.pi / 360
+        self.x_limit = self.cpe.params.TrackHalfLength
 
         self.pole_length = self.cpe.params.L
 
@@ -39,11 +39,11 @@ class Cartpole_CustomSim(CartPoleSimulatorBase):
         # is still within bounds.
         high = np.array(
             [
-                self.theta_threshold_radians * 2,
+                self.angle_limit * 2,
                 np.inf,
                 1.0,
                 1.0,
-                self.x_threshold * 2,
+                self.x_limit * 2,
                 np.inf,
             ],
             dtype=np.float32,

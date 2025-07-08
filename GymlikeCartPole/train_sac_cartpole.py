@@ -26,7 +26,7 @@ from GymlikeCartPole.EnvGym.CartpoleEnv import CartPoleEnv
 
 #  - "stabilization" → balance only from near-upright starts
 #  - "swing_up"      → random starts + swing-up reward shaping
-TASK = "swing_up"
+TASK = "swingup"
 
 CARTPOLE_TYPE = "custom_sim"  # "openai", "custom_sim", "physical"
 
