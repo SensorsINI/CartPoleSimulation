@@ -84,7 +84,26 @@ class Stabilization(Task):
 class SwingUp(Task):
     """Swing the pendulum to upright and keep it there."""
 
+    def __init__(self, physics, *, horizon: int = 500):
+        super().__init__(physics, horizon=horizon)
+        # once the pole passes within this small angle (radians),
+        # we consider "upright reached"
+        self._upright_thresh = 0.1   # ~5.7°; tune to your liking
+        self._upright_thresh_done = 1.0
+
+        # reset flag so each episode starts "not yet upright"
+        self.upright_achieved = False
+
+    def init_state(self, rng: np.random.Generator) -> np.ndarray:
+        # clear the flag at the very start of each episode
+        self.upright_achieved = False
+        return super().init_state(rng)
+
     def done(self, state: np.ndarray) -> bool:
+
+        if self.upright_achieved and abs(state[ANGLE_IDX]) > self._upright_thresh_done:
+            return True
+
         # only terminate if we leave the track
         return abs(state[POSITION_IDX]) > self.physics.x_limit
 
@@ -94,6 +113,12 @@ class SwingUp(Task):
                step_idx: int,
                terminated: bool
                ) -> float:
+
+        # detect the moment we enter the "upright" region
+        if not self.upright_achieved and abs(state[ANGLE_IDX]) < self._upright_thresh:
+            # first time we’re effectively vertical → mark it
+            self.upright_achieved = True
+
         upright   = (state[ANGLE_COS_IDX] + 1) / 2        # ∈[0,1]
         centred   = 1 - abs(state[POSITION_IDX]) / self.physics.x_limit
         ang_vel_p = 0.05  * upright * abs(state[ANGLED_IDX])
