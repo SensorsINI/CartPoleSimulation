@@ -22,6 +22,7 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback, CallbackList
 
 from GymlikeCartPole.EnvGym.CartpoleEnv import CartPoleEnv
+from GymlikeCartPole.success_count_callback import RollingSuccessCountCallback
 
 # ─── 0) CONFIGURATION ─────────────────────────────────────────────────────────
 
@@ -134,7 +135,10 @@ checkpoint_callback = CheckpointCallback(
     save_path=os.path.join(LOG_DIR, "checkpoints"),
     name_prefix="sac_cp"
 )
-callbacks = CallbackList([eval_callback, checkpoint_callback])
+
+rolling_cb = RollingSuccessCountCallback(n_episodes=20, verbose=1)
+
+callbacks = CallbackList([eval_callback, checkpoint_callback, rolling_cb])
 
 # ─── 6) TRAINING & SAVING ────────────────────────────────────────────────────
 model.learn(total_timesteps=TOTAL_TIMESTEPS, callback=callbacks, progress_bar=True)
