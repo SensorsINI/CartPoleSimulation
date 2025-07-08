@@ -17,7 +17,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from GymlikeCartPole.EnvGym.CartpoleEnv import CartPoleEnv
 
 # ─── CONFIGURATION ────────────────────────────────────────────────────────────
-MODEL_DIR = "runs"
+RUNS_DIR = "runs"
 N_EVAL    = 5
 N_RENDER  = 2
 SEED      = 42
