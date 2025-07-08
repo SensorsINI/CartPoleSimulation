@@ -34,7 +34,7 @@ CARTPOLE_TYPE = "custom_sim"  # "openai", "custom_sim", "physical"
 
 SEED = 42
 N_ENVS = 16
-TOTAL_TIMESTEPS = 3_000_000
+TOTAL_TIMESTEPS = 200_000
 
 NET_ARCH    = [32, 32]
 BATCH_SIZE  = 256
