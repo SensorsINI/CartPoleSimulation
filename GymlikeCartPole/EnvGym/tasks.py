@@ -11,13 +11,45 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+import math
 import numpy as np
+from typing import Callable, Optional
+
 
 # ----- indices shared with the rest of the code base -----
 from GymlikeCartPole.EnvGym.state_utils import (
     ANGLE_IDX, ANGLED_IDX, ANGLE_COS_IDX, ANGLE_SIN_IDX,
     POSITION_IDX
 )
+
+
+def random_target_x_generation_factory(
+    x_limit: float,
+    N: int,
+    rng: Optional[np.random.Generator] = None
+) -> Callable[[], float]:
+    # ---------- set-up --------------------------------------------------------
+    if rng is None:                               # allow dependency-injection
+        rng = np.random.default_rng()             # for determinism pass np.random.Generator(seed)
+    current_val = rng.uniform(-x_limit, x_limit)  # first target
+    counter     = 0                               # how many times we've emitted it so far
+
+    # ---------- the closure ---------------------------------------------------
+    def next_target(reset: bool = False) -> float:
+        nonlocal current_val, counter
+
+        if reset:
+            counter = 0
+        # When `counter` reaches N, time to pick a fresh value
+        if counter >= N:
+            current_val = rng.uniform(-x_limit, x_limit)
+            counter = 0                           # restart the tally
+
+        counter += 1
+        return current_val
+
+    return next_target
+
 
 
 class Task(ABC):
@@ -29,6 +61,9 @@ class Task(ABC):
                  physics,
                  ):
         self.physics            = physics
+
+        self.next_target_x = random_target_x_generation_factory(physics.x_limit, N=250)
+        self.target_x = self.next_target_x(reset=True)
 
         self._upright_thresh = 0.1  # ~5.7°;
         self.upright_achieved = False  # used by SwingUp
@@ -62,6 +97,8 @@ class Task(ABC):
         s[ANGLE_SIN_IDX] = np.sin(angle)
         s[POSITION_IDX]  = pos
         s[POSITION_IDX+1]= vel
+
+        self.target_x = self.next_target_x(reset=True)
 
         self.upright_achieved = False  # reset flag for SwingUp task
 
@@ -100,12 +137,12 @@ class Stabilization(Task):
                step_idx: int,
                terminated: bool
                ) -> float:
-
+        self.target_x = self.next_target_x()  # update target position
         if abs(state[ANGLE_IDX]) < self._upright_thresh:
             self.upright_achieved = True  # mark upright reached
         # small *shaping* to speed up learning:
         r = 1.0 \
-            - 0.1  * abs(state[ANGLE_IDX]) \
+            - 0.2  * (abs(self.target_x-state[POSITION_IDX])/2*self.physics.x_limit) \
             - 0.02 * abs(action[0])
         return r
 
@@ -128,6 +165,8 @@ class Stabilization(Task):
         s[ANGLE_SIN_IDX] = np.sin(angle)
         s[POSITION_IDX]  = pos
         s[POSITION_IDX+1]= vel
+
+        self.target_x = self.next_target_x(reset=True)
 
         self.upright_achieved = False  # reset flag
 
