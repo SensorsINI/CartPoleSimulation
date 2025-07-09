@@ -123,3 +123,6 @@ fpga:
   controller_logging: True
   SERIAL_PORT: 3
   SERIAL_BAUD: 230400
+remote:
+  remote_endpoint: "tcp://localhost:5555"
+  controller_logging: False
