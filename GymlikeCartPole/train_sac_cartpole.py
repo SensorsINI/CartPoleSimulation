@@ -45,6 +45,8 @@ INITIAL_LR  = 3e-4
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 run_dir   = os.path.join("runs", f"sac_cartpole_{CARTPOLE_TYPE}_{TASK}_{timestamp}")
 
+print(f"Creating run directory: {run_dir}")
+
 # Inside that, separate subfolders for models and various logs
 MODEL_DIR = os.path.join(run_dir, "models")
 LOG_DIR   = os.path.join(run_dir, "logs")
@@ -149,6 +151,10 @@ vec_path   = os.path.join(MODEL_DIR, f"{model_name}_vecnorm.pkl")
 
 model.save(model_path)
 train_env.save(vec_path)
+
+mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=10)
+print(f"🔍 Mean reward after training: {mean_reward:.1f} ± {std_reward:.1f}")
+
 
 # ─── 7) CLEANUP ─────────────────────────────────────────────────────────────
 train_env.close()
