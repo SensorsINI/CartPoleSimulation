@@ -30,7 +30,6 @@ class Cartpole_CustomSim(CartPoleSimulatorBase):
         self.number_of_intermediate_integration_steps = int(self.RES.dt_controller_update/self.RES.dt_simulation)
 
         # Angle at which to fail the episode
-        self.angle_limit = 12 * 2 * math.pi / 360
         self.x_limit = self.cpe.params.TrackHalfLength
 
         self.pole_length = self.cpe.params.L
@@ -39,7 +38,7 @@ class Cartpole_CustomSim(CartPoleSimulatorBase):
         # is still within bounds.
         high = np.array(
             [
-                self.angle_limit * 2,
+               np.pi,
                 np.inf,
                 1.0,
                 1.0,

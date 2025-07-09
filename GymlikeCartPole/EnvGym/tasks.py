@@ -86,9 +86,12 @@ class Task(ABC):
 
 class Stabilization(Task):
     """Keep the pole upright and cart centred."""
+    def __init__(self, physics):
+        super().__init__(physics)
+        self.angle_limit = 1.0
 
     def done(self, state: np.ndarray) -> bool:
-        return abs(state[ANGLE_IDX]) > self.physics.angle_limit \
+        return abs(state[ANGLE_IDX]) > self.angle_limit \
             or abs(state[POSITION_IDX]) > self.physics.x_limit
 
     def reward(self,
@@ -193,7 +196,8 @@ class StabilizationOpenAI(Task):
                  *,
                  horizon: int = 500,
                  sutton_barto_reward: bool = False):
-        super().__init__(physics, horizon=horizon)
+        super().__init__(physics)
+        self.angle_limit = 12 * 2 * math.pi / 360
         self._sutton_barto_reward = sutton_barto_reward
         self.steps_beyond_terminated = None
 
@@ -225,7 +229,7 @@ class StabilizationOpenAI(Task):
     def done(self, state: np.ndarray) -> bool:
         return (
             abs(state[POSITION_IDX]) > self.physics.x_limit or
-            abs(state[ANGLE_IDX])    > self.physics.angle_limit
+            abs(state[ANGLE_IDX])    > self.angle_limit
         )
 
     def reward(

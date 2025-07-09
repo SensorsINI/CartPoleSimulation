@@ -120,7 +120,6 @@ class Cartpole_OpenAI(CartPoleSimulatorBase):
         self.kinematics_integrator = "euler"
 
         # Angle at which to fail the episode
-        self.angle_limit = 12 * 2 * math.pi / 360
         self.x_limit = 2.4
 
         # Angle limit set to 2 * theta_threshold_radians so failing observation

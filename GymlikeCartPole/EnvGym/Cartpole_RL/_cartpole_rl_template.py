@@ -74,7 +74,6 @@ class CartPoleSimulatorBase(ABC, metaclass=AttributeCheckMeta):
     pole_length:    Annotated[float, Required]   # full length, metres
 
     # ─── new: termination geometry ───────────────────────────────────────
-    angle_limit:    Annotated[float, Required]   # rad,  |θ| > angle_limit  → terminate
     x_limit:        Annotated[float, Required]   # m,    |x| > x_limit      → terminate
 
     # ─── RL interface (existing) ─────────────────────────────────────────
