@@ -138,11 +138,8 @@ class SwingUp(Task):
         super().__init__(physics)
         # once the pole passes within this small angle (radians),
         # we consider "upright reached"
-        self._upright_thresh = 0.1   # ~5.7°; tune to your liking
         self._upright_thresh_done = 1.0
 
-        # reset flag so each episode starts "not yet upright"
-        self.upright_achieved = False
 
     def init_state(self, rng: np.random.Generator, **kwargs) -> np.ndarray:
         # clear the flag at the very start of each episode
