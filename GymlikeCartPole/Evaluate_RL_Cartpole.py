@@ -9,12 +9,18 @@ import glob
 import numpy as np
 import matplotlib.pyplot as plt
 
+from gymnasium.wrappers import TimeLimit
+
 from stable_baselines3 import SAC, PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.evaluation import evaluate_policy
 
 from GymlikeCartPole.EnvGym.CartpoleEnv import CartPoleEnv
+
+TASK = "stabilization"
+CARTPOLE_TYPE = "custom_sim"  # "openai", "custom_sim", "physical"
+MAX_EPISODE_STEPS = 500
 
 # ─── CONFIGURATION ────────────────────────────────────────────────────────────
 RUNS_DIR = "runs"
@@ -60,25 +66,12 @@ def make_raw_env(render_mode=None):
     Instantiate the unwrapped CartPoleEnv. Wrapping with Monitor and
     VecNormalize happens downstream.
     """
-    return CartPoleEnv(render_mode=render_mode)
+    env = CartPoleEnv(render_mode=render_mode, task=TASK, cartpole_type=CARTPOLE_TYPE)
+    env = TimeLimit(env, max_episode_steps=MAX_EPISODE_STEPS)
+    return env
 
-# ─── 1) BATCH EVALUATION
-batch_env = DummyVecEnv([lambda: Monitor(make_raw_env(render_mode=None))])
-batch_env = VecNormalize.load(VEC_FILE, batch_env)
-batch_env.training = False
-batch_env.seed(SEED)
 
-mean_reward, std_reward = evaluate_policy(
-    AlgoClass.load(MODEL_FILE),
-    batch_env,
-    n_eval_episodes=N_EVAL,
-    render=False,
-)
-
-print(f"[Batch Eval] {N_EVAL} episodes → mean {mean_reward:.2f} ± {std_reward:.2f}")
-batch_env.close()
-
-# ─── 2) HUMAN-RENDERED DEMOS
+# ─── 1) HUMAN-RENDERED DEMOS
 model = AlgoClass.load(MODEL_FILE)
 for episode in range(1, N_RENDER + 1):
     # Create a fresh env for visualization
@@ -112,3 +105,20 @@ for episode in range(1, N_RENDER + 1):
 
     vis.close()
     raw_env.close()
+
+
+# ─── 2) BATCH EVALUATION
+batch_env = DummyVecEnv([lambda: Monitor(make_raw_env(render_mode=None))])
+batch_env = VecNormalize.load(VEC_FILE, batch_env)
+batch_env.training = False
+batch_env.seed(SEED)
+
+mean_reward, std_reward = evaluate_policy(
+    AlgoClass.load(MODEL_FILE),
+    batch_env,
+    n_eval_episodes=N_EVAL,
+    render=False,
+)
+
+print(f"[Batch Eval] {N_EVAL} episodes → mean {mean_reward:.2f} ± {std_reward:.2f}")
+batch_env.close()

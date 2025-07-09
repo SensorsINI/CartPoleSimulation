@@ -23,12 +23,11 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     def __init__(
         self,
         render_mode: Optional[str] = None,
-        max_episode_steps: int = 500,
         task: str = "swingup",
         cartpole_type: str = "custom_sim",  # "openai", "custom_sim", "physical"
     ):
 
-        self.max_episode_steps = max_episode_steps
+        self._episode_count = 0
 
         self.cartpole_type = cartpole_type
 
@@ -51,7 +50,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         if isinstance(task, str):
             try:
-                self.task: Task = TASK_REGISTRY[task](self.cartpole_rl, horizon=max_episode_steps)  # create Task instance
+                self.task: Task = TASK_REGISTRY[task](self.cartpole_rl)  # create Task instance
             except KeyError as e:
                 raise ValueError(f"Unknown task '{task}'."
                                  f" Choose one of {list(TASK_REGISTRY)}") from e
@@ -110,6 +109,8 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.state = self.task.init_state(self.np_random)
         self.steps = 0
         self.cartpole_rl.reset()
+
+        self._episode_count += 1
 
         if self.render_mode == "human":
             self.render()

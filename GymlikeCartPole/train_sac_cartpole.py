@@ -31,6 +31,7 @@ from GymlikeCartPole.success_count_callback import RollingSuccessCountCallback
 TASK = "swingup"
 
 CARTPOLE_TYPE = "custom_sim"  # "openai", "custom_sim", "physical"
+MAX_EPISODE_STEPS = 500
 
 SEED = 42
 N_ENVS = 16
@@ -70,7 +71,7 @@ def make_env():
     Monitor records episode reward/length for logging callbacks.
     """
     env = CartPoleEnv(render_mode=None, task=TASK, cartpole_type=CARTPOLE_TYPE)
-    env = TimeLimit(env, max_episode_steps=env.max_episode_steps)
+    env = TimeLimit(env, max_episode_steps=MAX_EPISODE_STEPS)
     return Monitor(env)
 
 # ─── 3) VECTORIZED TRAINING ENV ───────────────────────────────────────────────

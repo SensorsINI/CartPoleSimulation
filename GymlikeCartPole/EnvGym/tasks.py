@@ -10,7 +10,6 @@ New tasks = subclass Task and override 3 small methods.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Protocol
 
 import numpy as np
 
@@ -28,13 +27,14 @@ class Task(ABC):
 
     def __init__(self,
                  physics,
-                 *,
-                 horizon: int = 500):
+                 ):
         self.physics            = physics
-        self.max_episode_steps  = horizon
+
+        self._upright_thresh = 0.1  # ~5.7°;
+        self.upright_achieved = False  # used by SwingUp
 
     # -------- public API --------
-    def init_state(self, rng: np.random.Generator) -> np.ndarray:
+    def init_state(self, rng: np.random.Generator, **kwargs) -> np.ndarray:
         """
         Provide an initial 6-D state vector.
 
@@ -101,7 +101,7 @@ class Stabilization(Task):
             - 0.02 * abs(action[0])
         return r
 
-    def init_state(self, rng: np.random.Generator) -> np.ndarray:
+    def init_state(self, rng: np.random.Generator, **kwargs) -> np.ndarray:
         """
         Stabilization starts near upright with low velocity, but random position
         anywhere on track. This prevents the agent from overfitting to centered starts.
@@ -137,7 +137,7 @@ class SwingUp(Task):
         # reset flag so each episode starts "not yet upright"
         self.upright_achieved = False
 
-    def init_state(self, rng: np.random.Generator) -> np.ndarray:
+    def init_state(self, rng: np.random.Generator, **kwargs) -> np.ndarray:
         # clear the flag at the very start of each episode
         self.upright_achieved = False
         return super().init_state(rng)
@@ -191,10 +191,10 @@ class StabilizationOpenAI(Task):
                  sutton_barto_reward: bool = False):
         super().__init__(physics, horizon=horizon)
         self._sutton_barto_reward = sutton_barto_reward
-        self.steps_beyond_terminated: int | None = None
+        self.steps_beyond_terminated = None
 
     # -------- Task API ----------------------------------------------------
-    def init_state(self, rng: np.random.Generator) -> np.ndarray:
+    def init_state(self, rng: np.random.Generator, **kwargs) -> np.ndarray:
         """
         Stabilization starts near upright with low velocity, but random position
         anywhere on track. This prevents the agent from overfitting to centered starts.
