@@ -214,9 +214,6 @@ class SwingUp(Task):
         act_pen   = 0.001 * abs(action[0])
         r = 0.8 * upright + 0.2 * centred - ang_vel_p - act_pen
 
-        # optional penalty if we crashed early
-        if terminated and step_idx < self.max_episode_steps:
-            r -= 1.0
         return float(r)
 
 
