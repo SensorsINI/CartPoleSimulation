@@ -63,6 +63,8 @@ class Task(ABC):
         s[POSITION_IDX]  = pos
         s[POSITION_IDX+1]= vel
 
+        self.upright_achieved = False  # reset flag for SwingUp task
+
         return s
 
 
@@ -95,6 +97,9 @@ class Stabilization(Task):
                step_idx: int,
                terminated: bool
                ) -> float:
+
+        if abs(state[ANGLE_IDX]) < self._upright_thresh:
+            self.upright_achieved = True  # mark upright reached
         # small *shaping* to speed up learning:
         r = 1.0 \
             - 0.1  * abs(state[ANGLE_IDX]) \
@@ -121,6 +126,8 @@ class Stabilization(Task):
         s[POSITION_IDX]  = pos
         s[POSITION_IDX+1]= vel
 
+        self.upright_achieved = False  # reset flag
+
         return s
 
 
@@ -128,7 +135,7 @@ class SwingUp(Task):
     """Swing the pendulum to upright and keep it there."""
 
     def __init__(self, physics, *, horizon: int = 500):
-        super().__init__(physics, horizon=horizon)
+        super().__init__(physics)
         # once the pole passes within this small angle (radians),
         # we consider "upright reached"
         self._upright_thresh = 0.1   # ~5.7°; tune to your liking
