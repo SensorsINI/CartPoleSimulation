@@ -44,7 +44,7 @@ INITIAL_LR  = 3e-4
 # ─── Run-specific directory setup ─────────────────────────────────────────────
 # Generate a unique folder for everything produced this run
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-run_dir   = os.path.join("runs", f"sac_cartpole_{timestamp}")
+run_dir   = os.path.join("runs", f"sac_cartpole_{CARTPOLE_TYPE}_{TASK}_{timestamp}")
 
 # Inside that, separate subfolders for models and various logs
 MODEL_DIR = os.path.join(run_dir, "models")
