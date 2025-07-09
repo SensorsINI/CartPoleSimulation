@@ -19,7 +19,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from GymlikeCartPole.EnvGym.CartpoleEnv import CartPoleEnv
 
 TASK = "stabilization"
-CARTPOLE_TYPE = "custom_sim"  # "openai", "custom_sim", "physical"
+CARTPOLE_TYPE = "custom_sim"  # "openai", "custom_sim", "remote"
 MAX_EPISODE_STEPS = 500
 
 # ─── CONFIGURATION ────────────────────────────────────────────────────────────

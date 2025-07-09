@@ -24,7 +24,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self,
         render_mode: Optional[str] = None,
         task: str = "swingup",
-        cartpole_type: str = "custom_sim",  # "openai", "custom_sim", "physical"
+        cartpole_type: str = "custom_sim",  # "openai", "custom_sim", "remote"
     ):
 
         self._episode_count = 0
@@ -35,14 +35,13 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             self.cartpole_rl = Cartpole_OpenAI()
         elif self.cartpole_type == "custom_sim":
             self.cartpole_rl = Cartpole_CustomSim()
-        elif self.cartpole_type == "physical":
-            raise NotImplementedError(
-                "Physical Cartpole type is not implemented in this environment."
-            )
+        elif self.cartpole_type == "remote":
+            from GymlikeCartPole.EnvGym.Cartpole_RL.CartpoleRemote import Cartpole_Remote
+            self.cartpole_rl = Cartpole_Remote()
         else:
             raise ValueError(
                 f"Unknown cartpole type: {self.cartpole_type}. "
-                "Choose from 'openai', 'custom_sim', or 'physical'."
+                "Choose from 'openai', 'custom_sim', or 'remote'."
             )
 
         self.action_space = self.cartpole_rl.action_space
@@ -106,7 +105,16 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         super().reset(seed=seed)
         # Note that if you use custom reset bounds, it may lead to out-of-bound
         # state/observations.
-        self.state = self.task.init_state(self.np_random)
+        if self.cartpole_type == "remote":
+            # (1) wait for the very first measurement
+            self.cartpole_rl.reset()
+            # (2) use the *measured* state, not a random one
+            self.state = self.cartpole_rl.get_initial_state()
+        else:
+            # original simulator branch
+            self.state = self.task.init_state(self.np_random)
+            self.cartpole_rl.reset()
+
         self.steps = 0
         self.cartpole_rl.reset()
 

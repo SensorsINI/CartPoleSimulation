@@ -12,6 +12,8 @@ from SI_Toolkit.computation_library import NumpyLibrary
 
 import matplotlib.pyplot as plt
 
+CARTPOLE_TYPE = "remote"  # "custom_sim", "remote",
+
 controller_name = "neural-imitator"
 # controller_name = "mpc"
 controller_full_name = f"controller-{controller_name}".replace("-", "_")
@@ -21,7 +23,7 @@ config = load_config("cartpole_physical_parameters.yml")
 
 logger = my_logger(__name__)
 
-env = CartPoleEnv(render_mode="human", task="swingup")
+env = CartPoleEnv(render_mode="human", task="swingup", cartpole_type=CARTPOLE_TYPE)
 initial_environment_attributes = {'target_position': 0.0, 'target_equilibrium': 1.0}
 
 controller = Controller('CartPole', (-1, 1), initial_environment_attributes)

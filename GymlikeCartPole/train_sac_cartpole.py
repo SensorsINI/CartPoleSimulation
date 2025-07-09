@@ -29,7 +29,7 @@ from GymlikeCartPole.success_count_callback import RollingSuccessCountCallback
 #  - "stabilization" → balance only from near-upright starts
 #  - "swingup"      → random starts + swing-up reward shaping
 TASK = "stabilization"
-CARTPOLE_TYPE = "custom_sim"  # "openai", "custom_sim", "physical"
+CARTPOLE_TYPE = "custom_sim"  # "openai", "custom_sim", "remote"
 MAX_EPISODE_STEPS = 500
 
 SEED = 42
