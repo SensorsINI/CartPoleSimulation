@@ -39,7 +39,6 @@ action_buf = []
 obs_buf = []
 environment_attributes = initial_environment_attributes
 for k in range(1000):
-    env.render()
     action = np.clip(np.reshape(controller.step(state, updated_attributes=environment_attributes), (-1,)), -1.0, 1.0)
     action_buf.append(action)
     # action = env.action_space.sample()  # take a random action
