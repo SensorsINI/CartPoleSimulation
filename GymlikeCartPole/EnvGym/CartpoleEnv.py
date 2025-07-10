@@ -116,7 +116,6 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             self.cartpole_rl.reset()
 
         self.steps = 0
-        self.cartpole_rl.reset()
 
         self._episode_count += 1
 
