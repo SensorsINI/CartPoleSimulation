@@ -37,13 +37,13 @@ done = False
 state = env.state
 action_buf = []
 obs_buf = []
-environment_attributes = initial_environment_attributes
+# environment_attributes = initial_environment_attributes
+environment_attributes = {'target_position': 0.1, 'target_equilibrium': 1.0}  # This would probably come from info of the environment or augmented state
 for k in range(1000):
     action = np.clip(np.reshape(controller.step(state, updated_attributes=environment_attributes), (-1,)), -1.0, 1.0)
     action_buf.append(action)
     # action = env.action_space.sample()  # take a random action
     state, reward, terminated, truncated, _ = env.step(action)
-    environment_attributes = {'target_position': 0.0, 'target_equilibrium': 1.0}  # This would probably come from info of the environment or augmented state
     # mpc_reward = -mpc_cost.get_cost(state, action, environment_attributes=environment_attributes)
     logger.info(f"Iteration {k}: Reward = {reward}")
     if done:
