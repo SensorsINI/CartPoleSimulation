@@ -126,3 +126,4 @@ fpga:
 remote:
   remote_endpoint: "tcp://localhost:5555"
   controller_logging: False
+  fallback_controller_name: "neural-imitator"
