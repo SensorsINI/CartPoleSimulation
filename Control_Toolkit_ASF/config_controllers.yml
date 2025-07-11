@@ -98,8 +98,8 @@ neural-imitator:
 #  seed: null                            # If null, random seed based on datetime is used
 #  PATH_TO_MODELS: './SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/'
 #  net_name: 'GRU-8IN-64H1-64H2-1OUT-2'  # TF
-  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments/CP_Models_02_06_2025/Long/quant/'
-  net_name: 'LSTM-7IN-64H1-64H2-1OUT-0'  # TF
+  PATH_TO_MODELS: './CartPoleSimulation/Control_Toolkit_ASF/Controllers/difflg_controller'
+  net_name: 'Dense-7IN-32H1-32H2-1OUT-0'  # TF
 #  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'  # Pytorch
   input_at_input: False
   input_precision: 'float'  #'ap_fixed<20,6>'   # Can be 'float' - currently do nothing, or 'ap_fixed<total number of bits, integer bits + 1 sign bit>' - adjusting the number precision of the input
@@ -127,3 +127,6 @@ remote:
   remote_endpoint: "tcp://localhost:5555"
   controller_logging: False
   fallback_controller_name: "neural-imitator"
+difflg:
+  controller_logging: False
+  input_at_input: False
