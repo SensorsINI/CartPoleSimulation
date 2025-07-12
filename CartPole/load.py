@@ -107,13 +107,14 @@ def load_csv_recording(file_path):
 
 def load_cartpole_parameters(dataset_path):
     p = SimpleNamespace()
-
+    line_count = 0
     # region Get information about the pretrained network from the associated txt file
     with open(dataset_path, newline='') as f:
         reader = csv.reader(f)
         updated_features = 0
         for line in reader:
             line = line[0]
+            line_count += 1
             if line[:len('# m: ')] == '# m: ':
                 p.m = float(line[len('# m: '):].rstrip("\n"))
                 updated_features += 1
@@ -146,8 +147,12 @@ def load_cartpole_parameters(dataset_path):
                 p.TrackHalfLength = float(line[len('# TrackHalfLength: '):].rstrip("\n"))
                 updated_features += 1
                 continue
-            if line[:len('# controlDisturbance: ')] == '# controlDisturbance: ':
-                p.controlDisturbance = float(line[len('# controlDisturbance: '):].rstrip("\n"))
+            if line[:len('# controlNoise: ')] == '# controlNoise: ':
+                p.controlNoise = float(line[len('# controlNoise: '):].rstrip("\n"))
+                updated_features += 1
+                continue
+            if line[:len('# controlNoiseCorrelation: ')] == '# controlNoiseCorrelation: ':
+                p.controlNoiseCorrelation = float(line[len('# controlNoiseCorrelation: '):].rstrip("\n"))
                 updated_features += 1
                 continue
             if line[:len('# g: ')] == '# g: ':
@@ -159,7 +164,7 @@ def load_cartpole_parameters(dataset_path):
                 updated_features += 1
                 continue
 
-            if updated_features == 12:
+            if line_count >= 25:  # Avoid going through the whole csv file
                 break
 
     return p

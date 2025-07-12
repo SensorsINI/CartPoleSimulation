@@ -1,3 +1,4 @@
+# CartpoleEnv.py
 
 from typing import Optional, Union
 
@@ -5,14 +6,14 @@ import numpy as np
 
 import gymnasium as gym
 
-from gymnasium.envs.classic_control import utils
-from gymnasium.error import DependencyNotInstalled
+from GymlikeCartPole.EnvGym.Cartpole_RL.Cartpole_CustomSim import Cartpole_CustomSim
+from GymlikeCartPole.EnvGym.Cartpole_RL.Cartpole_OpenAI import Cartpole_OpenAI
 
-from GymlikeCartPole.Cartpole_RL.Cartpole_Sensors import Cartpole_Sensors
-from GymlikeCartPole.EnvGym.state_utils import *
+from GymlikeCartPole.EnvGym.tasks import TASK_REGISTRY, Task
 
 
 class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
+
 
     metadata = {
         "render_modes": ["human", "rgb_array"],
@@ -22,22 +23,46 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     def __init__(
         self,
         render_mode: Optional[str] = None,
-        max_episode_steps: int = 500,
+        task: str = "swingup",
+        cartpole_type: str = "custom_sim",  # "openai", "custom_sim", "remote"
     ):
-        self.max_episode_steps = max_episode_steps
 
-        # self.cartpole_rl = Cartpole_OpenAI()
-        self.cartpole_rl = Cartpole_Sensors()
+        self._episode_count = 0
+
+        self.cartpole_type = cartpole_type
+
+        if self.cartpole_type == "openai":
+            self.cartpole_rl = Cartpole_OpenAI()
+        elif self.cartpole_type == "custom_sim":
+            self.cartpole_rl = Cartpole_CustomSim()
+        elif self.cartpole_type == "remote":
+            from GymlikeCartPole.EnvGym.Cartpole_RL.CartpoleRemote import Cartpole_Remote
+            self.cartpole_rl = Cartpole_Remote()
+        else:
+            raise ValueError(
+                f"Unknown cartpole type: {self.cartpole_type}. "
+                "Choose from 'openai', 'custom_sim', or 'remote'."
+            )
 
         self.action_space = self.cartpole_rl.action_space
         self.observation_space = self.cartpole_rl.observation_space
 
+        if isinstance(task, str):
+            try:
+                self.task: Task = TASK_REGISTRY[task](self.cartpole_rl)  # create Task instance
+            except KeyError as e:
+                raise ValueError(f"Unknown task '{task}'."
+                                 f" Choose one of {list(TASK_REGISTRY)}") from e
+        elif isinstance(task, Task):
+            self.task = task
+        else:
+            raise TypeError("task must be either a str key or a Task instance")
+
         self.render_mode = render_mode
+        self._viewer = None
 
         self.screen_width = 600
         self.screen_height = 400
-        self.screen = None
-        self.clock = None
         self.isopen = True
         self.state: np.ndarray | None = None
 
@@ -47,27 +72,29 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         self.reset()
 
-    def step(self, action):
-        if not self.action_space.contains(
-            action
-        ):
-            f"{action!r} ({type(action)}) invalid"
-        assert self.state is not None, "Call reset before using step method."
-        self.state = self.cartpole_rl.get_next_state(self.state, action)
 
-        terminated = self.cartpole_rl.termination_condition(self.state)
+
+    def step(self, action):
+        if not self.action_space.contains(action):
+            raise ValueError(f"{action!r} not in {self.action_space}")
+        assert self.state is not None, "Call reset before using step method."
+        self.state = self.cartpole_rl.next_state(self.state, action)
+
+        terminated = self.task.done(self.state)
 
         self.steps += 1
+        reward = self.task.reward(self.state, action, self.steps, terminated)
 
-        truncated = self.steps >= self.max_episode_steps
-
-        reward = self.cartpole_rl.reward_assignment(self.state, action, terminated)
+        info = {
+            "swingup_reached": getattr(self.task, "upright_achieved", False)
+        }
 
         if self.render_mode == "human":
             self.render()
 
         # truncation=False as the time limit is handled by the `TimeLimit` wrapper added during `make`
-        return np.array(self.state, dtype=np.float32), reward, terminated, truncated, {}
+        return np.array(self.state, dtype=np.float32), reward, terminated, False, info
+
 
     def reset(
         self,
@@ -78,129 +105,55 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         super().reset(seed=seed)
         # Note that if you use custom reset bounds, it may lead to out-of-bound
         # state/observations.
-        low, high = utils.maybe_parse_reset_bounds(
-            options, -0.05, 0.05  # default low
-        )  # default high
-        self.state = self.np_random.uniform(low=low, high=high, size=(6,))
-        self.state[ANGLE_COS_IDX] = np.cos(self.state[ANGLE_IDX])
-        self.state[ANGLE_SIN_IDX] = np.sin(self.state[ANGLE_IDX])
+        if self.cartpole_type == "remote":
+            # (1) wait for the very first measurement
+            self.cartpole_rl.reset()
+            # (2) use the *measured* state, not a random one
+            self.state = self.cartpole_rl.get_initial_state()
+        else:
+            # original simulator branch
+            self.state = self.task.init_state(self.np_random)
+            self.cartpole_rl.reset()
+
         self.steps = 0
-        self.cartpole_rl.reset()
+
+        self._episode_count += 1
 
         if self.render_mode == "human":
             self.render()
         return np.array(self.state, dtype=np.float32), {}
 
-    def render(self):
+    # ─── CartPoleEnv.render (replace the whole method) ───────────────────────────
+    def render(self) -> Optional[np.ndarray]:
+        """
+        • ‘human’ → draw via PygameViewer, return None
+        • ‘rgb_array’ → draw off-screen and return np.ndarray (H,W,3)
+        • any other render_mode → noop
+        """
         if self.render_mode is None:
-            assert self.spec is not None
-            gym.logger.warn(
-                "You are calling render method without specifying any render mode. "
-                "You can specify the render_mode at initialization, "
-                f'e.g. gym.make("{self.spec.id}", render_mode="rgb_array")'
-            )
-            return
-
-        try:
-            import pygame
-            from pygame import gfxdraw
-        except ImportError as e:
-            raise DependencyNotInstalled(
-                'pygame is not installed, run `pip install "gymnasium[classic-control]"`'
-            ) from e
-
-        if self.screen is None:
-            pygame.init()
-            if self.render_mode == "human":
-                pygame.display.init()
-                self.screen = pygame.display.set_mode(
-                    (self.screen_width, self.screen_height)
-                )
-            else:  # mode == "rgb_array"
-                self.screen = pygame.Surface((self.screen_width, self.screen_height))
-        if self.clock is None:
-            self.clock = pygame.time.Clock()
-
-        world_width = self.cartpole_rl.x_threshold * 2
-        scale = self.screen_width / world_width
-        polewidth = 10.0
-        polelen = scale * self.cartpole_rl.pole_length_rendering
-        cartwidth = 50.0
-        cartheight = 30.0
-
-        if self.state is None:
             return None
 
-        self.surf = pygame.Surface((self.screen_width, self.screen_height))
-        self.surf.fill((255, 255, 255))
+        # lazy-load to avoid pygame import when running on a cluster
+        if self._viewer is None:
+            if self.render_mode not in {"human", "rgb_array"}:
+                raise ValueError(f"Unsupported render_mode '{self.render_mode}'")
+            from GymlikeCartPole.EnvGym.render import PygameViewer  # local import
+            self._viewer = PygameViewer(self.screen_width,
+                                        self.screen_height,
+                                        self.metadata["render_fps"])
 
-        l, r, t, b = -cartwidth / 2, cartwidth / 2, cartheight / 2, -cartheight / 2
-        axleoffset = cartheight / 4.0
-        cartx = self.state[POSITION_IDX] * scale + self.screen_width / 2.0  # MIDDLE OF CART
-        carty = 100  # TOP OF CART
-        cart_coords = [(l, b), (l, t), (r, t), (r, b)]
-        cart_coords = [(c[0] + cartx, c[1] + carty) for c in cart_coords]
-        gfxdraw.aapolygon(self.surf, cart_coords, (0, 0, 0))
-        gfxdraw.filled_polygon(self.surf, cart_coords, (0, 0, 0))
+        frame = self._viewer.draw(self.state,
+                                  physics=self.cartpole_rl,
+                                  target_pos=getattr(self, "target_position", None))
 
-        l, r, t, b = (
-            -polewidth / 2,
-            polewidth / 2,
-            polelen - polewidth / 2,
-            -polewidth / 2,
-        )
+        if self.render_mode == "rgb_array":
+            return frame
+        return None
 
-        pole_coords = []
-        for coord in [(l, b), (l, t), (r, t), (r, b)]:
-            coord = pygame.math.Vector2(coord).rotate_rad(
-                self.cartpole_rl.angle_rotation_direction_rendering * self.state[ANGLE_IDX]
-            )
-            coord = (coord[0] + cartx, coord[1] + carty + axleoffset)
-            pole_coords.append(coord)
-        gfxdraw.aapolygon(self.surf, pole_coords, (202, 152, 101))
-        gfxdraw.filled_polygon(self.surf, pole_coords, (202, 152, 101))
-
-        gfxdraw.aacircle(
-            self.surf,
-            int(cartx),
-            int(carty + axleoffset),
-            int(polewidth / 2),
-            (129, 132, 203),
-        )
-        gfxdraw.filled_circle(
-            self.surf,
-            int(cartx),
-            int(carty + axleoffset),
-            int(polewidth / 2),
-            (129, 132, 203),
-        )
-        if hasattr(self, "target_position"):
-            gfxdraw.filled_circle(
-                self.surf,
-                int(self.target_position * scale + self.screen_width / 2.0),
-                int(carty),
-                int(10),
-                (231, 76, 60),
-            )
-
-        gfxdraw.hline(self.surf, 0, self.screen_width, carty, (0, 0, 0))
-
-        self.surf = pygame.transform.flip(self.surf, False, True)
-        self.screen.blit(self.surf, (0, 0))
-        if self.render_mode == "human":
-            pygame.event.pump()
-            self.clock.tick(self.metadata["render_fps"])
-            pygame.display.flip()
-
-        elif self.render_mode == "rgb_array":
-            return np.transpose(
-                np.array(pygame.surfarray.pixels3d(self.screen)), axes=(1, 0, 2)
-            )
 
     def close(self):
-        if self.screen is not None:
-            import pygame
-
-            pygame.display.quit()
-            pygame.quit()
-            self.isopen = False
+        """Tear down viewer if it was ever created."""
+        if self._viewer is not None:
+            self._viewer.close()
+            self._viewer = None
+        self.isopen = False

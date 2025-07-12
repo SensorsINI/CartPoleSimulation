@@ -1,4 +1,4 @@
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.evaluation import evaluate_policy
 
@@ -8,31 +8,43 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
-# env_name = "MountainCarContinuous-v0" # Not working
-# env_name = "Pendulum-v1"
-# env_name = "CartPole-v0"
-# env = gym.make(env_name)
+TRAINING_TYPE = "ppo"  # or "sac"
 
 
-# env = gym.make(env_name, render_mode=None)
-env = CartPoleEnv(render_mode=None)
-env = DummyVecEnv([lambda: env])
-model = PPO('MlpPolicy', env, verbose=1)
+def make_env(render_mode=None):
+
+    # env_name = "MountainCarContinuous-v0" # Not working
+    # env_name = "Pendulum-v1"
+    # env_name = "CartPole-v0"
+    # env = gym.make(env_name, render_mode=render_mode)
+
+    new_env = CartPoleEnv(render_mode=render_mode)
+
+    return new_env
+
+
+env = DummyVecEnv([lambda: make_env(render_mode=None)])
+
+if TRAINING_TYPE == "ppo":
+    model = PPO('MlpPolicy', env, verbose=1)
+elif TRAINING_TYPE == "sac":
+    model = SAC('MlpPolicy', env, verbose=1)
+else:
+    raise ValueError("Unsupported training type. Use 'ppo' or 'sac'.")
 
 model.learn(total_timesteps=500000, progress_bar=True)
 
-model.save('ppo model')
+model.save(f"{TRAINING_TYPE} model")
 
 
-# env = gym.make(env_name, render_mode="human")
-env = CartPoleEnv(render_mode="human")
-env = DummyVecEnv([lambda: env])
+
+# VISUAL EVALUATION
+env = DummyVecEnv([lambda: make_env(render_mode="human")])
 evaluate_policy(model, env, n_eval_episodes=2, render=True)
 env.close()
 
-
-env = CartPoleEnv(render_mode=None)
-env = DummyVecEnv([lambda: env])
+# EVALUATION WITHOUT RENDERING
+env = DummyVecEnv([lambda: make_env(render_mode=None)])
 
 for episode in range(1, 3):
     score = 0

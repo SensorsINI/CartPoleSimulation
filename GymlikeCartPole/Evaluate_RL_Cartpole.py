@@ -1,0 +1,124 @@
+# Evaluate_RL_Cartpole.py
+
+"""
+Standalone evaluation for custom CartPoleEnv.
+"""
+
+import os
+import glob
+import numpy as np
+import matplotlib.pyplot as plt
+
+from gymnasium.wrappers import TimeLimit
+
+from stable_baselines3 import SAC, PPO
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.evaluation import evaluate_policy
+
+from GymlikeCartPole.EnvGym.CartpoleEnv import CartPoleEnv
+
+TASK = "stabilization"
+CARTPOLE_TYPE = "custom_sim"  # "openai", "custom_sim", "remote"
+MAX_EPISODE_STEPS = 500
+
+# ─── CONFIGURATION ────────────────────────────────────────────────────────────
+RUNS_DIR = "runs"
+N_EVAL    = 5
+N_RENDER  = 2
+SEED      = 42
+
+# ─── Locate latest run folder ─────────────────────────────────────────────────
+# We expect: runs/your_experiment_timestamp/models/...
+run_subdirs = [
+    d for d in os.listdir(RUNS_DIR)
+    if os.path.isdir(os.path.join(RUNS_DIR, d))
+]
+if not run_subdirs:
+    raise FileNotFoundError(f"No subfolders found in '{RUNS_DIR}' – did you run training?")
+latest_run = sorted(run_subdirs)[-1]
+run_dir    = os.path.join(RUNS_DIR, latest_run)
+
+# ─── POINT TO ITS models/ ─────────────────────────────────────────────────────
+MODEL_DIR = os.path.join(run_dir, "models")
+
+# ─── MODEL SELECTION AND ALGO INFERENCE ───────────────────────────────────────
+pattern     = os.path.join(MODEL_DIR, "*_cartpole_*.zip")
+model_files = sorted(glob.glob(pattern))
+if not model_files:
+    raise FileNotFoundError(f"No model found in {MODEL_DIR}")
+MODEL_FILE = model_files[-1]
+
+# infer “sac” vs “ppo” from filename prefix
+algo      = os.path.basename(MODEL_FILE).split("_")[0].lower()
+AlgoClass = SAC if algo == "sac" else PPO
+
+VEC_FILE = MODEL_FILE.replace(".zip", "_vecnorm.pkl")
+
+print(f"Detected run:       {latest_run}")
+print(f"Detected algorithm: {algo.upper()}")
+print(f"Loading model:      {MODEL_FILE}")
+print(f"Using Vec stats:    {VEC_FILE}")
+
+
+def make_raw_env(render_mode=None):
+    """
+    Instantiate the unwrapped CartPoleEnv. Wrapping with Monitor and
+    VecNormalize happens downstream.
+    """
+    env = CartPoleEnv(render_mode=render_mode, task=TASK, cartpole_type=CARTPOLE_TYPE)
+    env = TimeLimit(env, max_episode_steps=MAX_EPISODE_STEPS)
+    return env
+
+
+# ─── 1) HUMAN-RENDERED DEMOS
+model = AlgoClass.load(MODEL_FILE)
+for episode in range(1, N_RENDER + 1):
+    # Create a fresh env for visualization
+    raw_env = make_raw_env(render_mode="human")
+    vis = DummyVecEnv([lambda: Monitor(raw_env)])
+    vis = VecNormalize.load(VEC_FILE, vis)
+    vis.training = False
+    vis.seed(SEED)
+
+    obs = vis.reset()  # returns only observations
+    done = False
+    actions, rewards = [], []
+
+    while not done:
+        action, _ = model.predict(obs, deterministic=True)
+        obs, reward, done, info = vis.step(action)  # VecEnv step returns 4-tuple
+        actions.append(action)
+        rewards.append(float(reward))
+
+    total_reward = sum(rewards)
+    print(f"[Render] Episode {episode} → Total Reward: {total_reward:.2f}")
+
+    # Plot cumulative reward
+    cum_rewards = np.cumsum(rewards)
+    plt.figure()
+    plt.plot(cum_rewards)
+    plt.title(f"Cumulative Reward – Episode {episode}")
+    plt.xlabel("Timestep")
+    plt.ylabel("Reward")
+    plt.show()
+
+    vis.close()
+    raw_env.close()
+
+
+# ─── 2) BATCH EVALUATION
+batch_env = DummyVecEnv([lambda: Monitor(make_raw_env(render_mode=None))])
+batch_env = VecNormalize.load(VEC_FILE, batch_env)
+batch_env.training = False
+batch_env.seed(SEED)
+
+mean_reward, std_reward = evaluate_policy(
+    AlgoClass.load(MODEL_FILE),
+    batch_env,
+    n_eval_episodes=N_EVAL,
+    render=False,
+)
+
+print(f"[Batch Eval] {N_EVAL} episodes → mean {mean_reward:.2f} ± {std_reward:.2f}")
+batch_env.close()

@@ -9,6 +9,8 @@ from abc import ABC, ABCMeta, abstractmethod
 from typing import Annotated, get_args, get_origin
 from gymnasium import spaces
 
+import numpy as np
+
 
 # Marker class to indicate required attributes
 class Required:
@@ -62,31 +64,29 @@ class AttributeCheckMeta(ABCMeta):
         return cls
 
 
-class CartPoleRLTemplate(ABC, metaclass=AttributeCheckMeta):
-    # Define required attributes using Annotated with their actual types and Required marker
-    x_threshold: Annotated[float, Required]
-    pole_length_rendering: Annotated[float, Required]
-    angle_rotation_direction_rendering: Annotated[int, Required]
-    action_space: Annotated[spaces.Box, Required]
+class CartPoleSimulatorBase(ABC, metaclass=AttributeCheckMeta):
+    """
+    Pure-physics interface.  In addition to `action_space`/`observation_space`
+    we mandate *termination limits*, so tasks can query them directly.
+    """
+
+    # ─── rendering & physics parameters (existing) ────────────────────────
+    pole_length:    Annotated[float, Required]   # full length, metres
+
+    # ─── new: termination geometry ───────────────────────────────────────
+    x_limit:        Annotated[float, Required]   # m,    |x| > x_limit      → terminate
+
+    # ─── RL interface (existing) ─────────────────────────────────────────
+    action_space:      Annotated[spaces.Box, Required]
     observation_space: Annotated[spaces.Box, Required]
 
     @abstractmethod
-    def __init__(self):
-        # No need to set attributes to None
-        pass
+    def __init__(self): ...
 
     @abstractmethod
-    def get_next_state(self, state, action):
-        pass
+    def next_state(self, state: np.ndarray, action: np.ndarray) -> np.ndarray: ...
 
-    @abstractmethod
-    def reward_assignment(self, state, action, terminated):
-        pass
+    def reset(self) -> None:
+        """Optional: clear internal integrator state."""
+        pass           # default is fine for most sims
 
-    @abstractmethod
-    def termination_condition(self, state):
-        pass
-
-    @abstractmethod
-    def reset(self):
-        pass
