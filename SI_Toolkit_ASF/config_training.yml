@@ -40,7 +40,7 @@ training_default:
   USE_NNI: False  # Decide if you want to use NNI package
   CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch; 'with cells' or 'with modules'
   VALIDATE_ALSO_ON_TRAINING_SET: false
-  PLOT_WEIGHTS_DISTRIBUTION: true # CalculTFate histograms of weights and biases and activations, take long time
+  PLOT_WEIGHTS_DISTRIBUTION: false # CalculTFate histograms of weights and biases and activations, take long time
 
 CONFIG_SERIES_MODIFICATION:
   MODE: 'train_for_random_vertical_angle_shift' # 'None' 'train_for_random_vertical_angle_shift'
