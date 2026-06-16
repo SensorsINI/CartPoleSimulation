@@ -84,6 +84,33 @@ rpgd:
   shift_previous: 1  # How much to shift solution from previous timestep, to serve as the guess for current timestep
   warmup: false
   warmup_iterations: 250
+rpgd_c:
+  seed: null                            # If null, random seed based on datetime is used
+  mpc_horizon: 35                       # steps
+  mpc_timestep: 0.02
+  SAMPLING_DISTRIBUTION: normal  # "normal" or "uniform"
+  period_interpolation_inducing_points: 4
+  intermediate_steps: 10  # ODE integration substeps per MPC step; matches SI_Toolkit_ASF/config_predictors.yml ODE_default
+  learning_rate: 0.05
+  adam_beta_1: 0.9
+  adam_beta_2: 0.999
+  adam_epsilon: 1.0e-08
+  gradmax_clip: 5
+  rtol: 1.0e-3
+  num_rollouts: 16
+  opt_keep_k_ratio: 0.75
+  outer_its: 5
+  resamp_per: 10
+  sample_stdev: 0.5
+  sample_mean: 0.0
+  sample_whole_control_space: false
+  uniform_dist_max: 0.8
+  uniform_dist_min: -0.8
+  shift_previous: 1
+  warmup: false
+  warmup_iterations: 250
+  num_threads: 0       # 0 = auto, use available CPU threads minus reserve_threads, capped by num_rollouts
+  reserve_threads: 1   # Leave this many CPU threads for other computer tasks
 mppi:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                       # steps
