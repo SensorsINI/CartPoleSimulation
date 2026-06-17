@@ -16,7 +16,6 @@ import atexit
 import os
 
 import numpy as np
-import tensorflow as tf
 from engineering_notation import EngNumber as eng  # only from pip
 from matplotlib import pyplot as plt
 from numpy.random import SFC64, Generator
@@ -209,6 +208,7 @@ def create_rng(id: str, seed: str, use_tf: bool=False):
         seed = current_time_ns ^ process_id
     
     if use_tf:
+        import tensorflow as tf
         return tf.random.Generator.from_seed(seed=seed)
     else:
         return Generator(SFC64(seed=seed))
