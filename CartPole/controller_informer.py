@@ -5,11 +5,17 @@ import numpy as np
 class ControllerInformer:
     def __init__(self, config):
         self.mode = config['mode']
-        self.change_to_on_after_x_seconds_off = config['change_to_on_after_x_seconds_off']
-        self.change_to_off_after_x_seconds_on = config['change_to_off_after_x_seconds_on']
+        self.change_to_on_after_x_seconds_off = float(config['change_to_on_after_x_seconds_off'])
+        self.change_to_off_after_x_seconds_on = float(config['change_to_off_after_x_seconds_on'])
 
-        self.change_to_on_after_x_seconds_off_random = np.random.uniform(0, config['change_to_on_after_x_seconds_off'])
-        self.change_to_off_after_x_seconds_on_random = np.random.uniform(0, config['change_to_off_after_x_seconds_on'])
+        if np.isfinite(self.change_to_on_after_x_seconds_off):
+            self.change_to_on_after_x_seconds_off_random = np.random.uniform(0, self.change_to_on_after_x_seconds_off)
+        else:
+            self.change_to_on_after_x_seconds_off_random = np.inf
+        if np.isfinite(self.change_to_off_after_x_seconds_on):
+            self.change_to_off_after_x_seconds_on_random = np.random.uniform(0, self.change_to_off_after_x_seconds_on)
+        else:
+            self.change_to_off_after_x_seconds_on_random = np.inf
 
         self.time_last_switch_to_on = 0.0
         self.time_last_switch_to_off = 0.0
