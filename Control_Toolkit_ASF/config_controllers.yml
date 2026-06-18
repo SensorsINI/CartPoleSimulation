@@ -78,8 +78,8 @@ do-mpc:
   controller_logging: True
 lqr:
   seed: null  # Seed for rng, for lqr only, put null to set random seed (do it when you generate data for training!)
-  Q: [10.0, 1.0, 1.0, 1.0]
-  R: 10.0
+  Q: [10000.0, 1.0, 1.0, 1.0]
+  R: 2000.0
   control_noise:  # Defined in cartpole config
   controller_logging: True
 pid:
