@@ -5,11 +5,30 @@ cartpole:
   second_derivatives_neural_model_path: 'SI_Toolkit_ASF/Experiments/CPP_MPCswingups_before_23_04_2025/Models/Dense-6IN-128H1-128H2-2OUT-5'
   seed:  # This is a seed for rng for CartPole instance class only. If null random seed based on datetime is used
   PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/'   # Where to save experiment recording per default
-  m_cart: 0.230  # mass of cart, kg # Checked by Antonio
-  u_max: 1.77  # max force produced by the motor, N # Checked by Marcin
-  M_fric: 3.22  # cart friction on track, N/m/s # Checked by Marcin
+  # NOTE: m_cart/u_max/M_fric below are REVERTED to the working hand-tuned set so RPGD runs
+  # on hardware. The honest system-ID story (and why those values broke RPGD) is recorded in
+  # Driver/DataAnalysis/MotorAndCartFriction/motor_force_identification_2026-06/README.md.
+  # HONEST, decorrelated system-ID values (no fudge factors).
+  #  * m_cart = 2.82 kg: effective translational mass (cart body + reflected motor rotor
+  #    inertia through the 19:1 gearbox and ~16 mm pulley); see
+  #    Driver/DataAnalysis/MotorAndCartFriction/README.md (estimate_effective_mass.py).
+  #  * u_max = 13 N: force gain at Q=1 from the decorrelated EMF power sweep
+  #    (estimate_emf.py on a bare-cart, no-pole emf_identification run). The ordinary
+  #    step response held Q constant while v ramped, so Q and v were collinear (corr
+  #    ~0.76) and its joint fit OVER-stated u_max to 25.8 N; the decorrelated shuttle
+  #    (corr ~0.40) recovers the true ~13 N.
+  #  * M_fric / v_max: reconciled with the step-response TERMINAL (saturation) velocity,
+  #    which is the cleanest measurement of the damping ratio -- the cart provably
+  #    reaches steady state at every Q (end-of-step accel ~0), giving k/M_fric =
+  #    9.42e-5 (m/s per PWM count), perfectly linear up to the safe PWM limit. Combined
+  #    with u_max=13 this gives M_fric ~22 N/(m/s) and terminal speed at Q=1 ~0.59 m/s.
+  #    (The EMF shuttle alone under-constrained M_fric at ~16 because it never dwelled
+  #    at steady high speed; the terminal-velocity ratio fixes it.)
+  m_cart: 0.230  # WORKING hand-tuned value (only set confirmed to swing up on hardware); honest effective mass ~2.82 kg, see Driver/DataAnalysis/MotorAndCartFriction/motor_force_identification_2026-06/README.md
+  u_max: 1.77  # WORKING hand-tuned value; honest ID points to ~21.5 N (pulse), see motor_force_identification_2026-06/README.md
+  M_fric: 3.22  # WORKING hand-tuned value; honest ID points to ~36 N/(m/s) (pulse), see motor_force_identification_2026-06/README.md
   J_fric: 5.0e-5  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
-  v_max: 0.8  # max DC motor speed, m/s, in absense of friction, used for motor back EMF model # TODO: not implemented in model, but needed for MPC
+  v_max: 0.59  # terminal speed at Q=1 = u_max/M_fric, from step-response saturation velocity # TODO: not implemented in model, but needed for MPC
   cart_length: 4.4e-2  # m, checked by Marcin&Asude
   track_length: 44.0e-2  # m, checked by Marcin&Asude, Total track length, usable track length is track_length-cart_length
   controlNoise_mode: 'gaussian'  # 'truncnorm' (with mu=Q+controlNoiseBias and scale controlNoiseScale, trunc -1,1), 'gaussian' (old, Q+controlNoiseScale*std_normal+controlNoiseBias), 'OFF'
