@@ -1,0 +1,93 @@
+library: 'TF'  # TF or Pytorch
+modeling:
+  NET_NAME: 'Dense-32H1-32H2'
+paths:
+  # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
+  path_to_experiment: 'Experiment-14'
+  PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
+  DATA_FOLDER:                    'Recordings'
+training_default:
+  # For training closed loop dynamics model:
+#  control_inputs: ['Q']
+#  state_inputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
+#  outputs: ['angle_sin', 'angle_cos', 'angleD', 'position', 'positionD']
+  #  outputs: ['D_angle_sin', 'D_angle_cos', 'D_angleD', 'D_position', 'D_positionD'] # Don't forget to change SHIFT_LABELS to 0
+  setpoint_inputs: []  # Can be only 'target_position' or empty for CartPole
+  translation_invariant_variables: []
+  # For training open loop dynamics model:
+#   inputs = ['position', 'positionD', 'angle_sin', 'angle_cos', 'angleD']
+#   outputs = inputs_list
+#   For training of a network imitating MPC:
+  control_inputs: []
+  state_inputs: ['position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_equilibrium', 'target_position']
+  outputs:  ['Q_calculated']
+  EPOCHS: 50
+  BATCH_SIZE: 64
+  SEED: 1873
+  LR:
+    INITIAL: 2.0e-3
+    REDUCE_LR_ON_PLATEAU: True
+    MINIMAL: 1.0e-7
+    PATIENCE: 2
+    DECREASE_FACTOR: 0.5 # sqrt(0.1)
+    MIN_DELTA: 1.0e-6
+  WASH_OUT_LEN: 0
+  POST_WASH_OUT_LEN: 1
+  ON_FLY_DATA_GENERATION: False
+  NORMALIZE: True
+  SHIFT_LABELS: 0  # for k, as a label to row i is taken row i+k
+  USE_NNI: False  # Decide if you want to use NNI package
+  CONSTRUCT_NETWORK: 'with cells'  # Matters only for Pytorch; 'with cells' or 'with modules'
+  VALIDATE_ALSO_ON_TRAINING_SET: false
+  PLOT_WEIGHTS_DISTRIBUTION: true # CalculTFate histograms of weights and biases and activations, take long time
+
+REGULARIZATION:   # Implemented only for TF, no regularization for Pytorch
+  ACTIVATED: false
+  KERNEL:  # For all layers
+    l1: 0.01
+    l2: 0.01
+  BIAS:  # For all layers
+    l1: 0.01
+    l2: 0.01
+  ACTIVITY:  # Not for last layer, this has activity regularization set to 0
+    l1: 0.00
+    l2: 0.00
+
+
+QUANTIZATION: # Not implemented yet
+  ACTIVATED: true
+  QUANTIZATION_DATASET: 'ap_fixed<12,2>'  # 'float' or ap_fixed<x,y> # Corresponds to <bits, integer+1> of qkeras # This is input & output quantisation of the network
+  ACTIVATION:
+    bits: 12
+  KERNEL:
+    bits: 12
+    integer: 3
+    symmetric: True
+  BIAS:
+    bits: 12
+    integer: 3
+    symmetric: True
+  RECURRENT:
+    bits: 12
+    integer: 3
+    symmetric: True
+
+PRUNING: # TF only for the moment
+  ACTIVATED: false
+  PRUNING_PARAMS:
+    PRUNING_SCHEDULE: 'CONSTANT_SPARSITY'
+  PRUNING_SCHEDULES:
+    CONSTANT_SPARSITY:
+      target_sparsity: 0.855
+      target_sparsity_last_layer: 0.0
+      begin_step_in_epochs: 1.0  # fraction of epoch allowed
+      end_step_in_training_fraction: 1.0
+      frequency_per_epoch: 100.0 # fraction of epoch allowed
+    POLYNOMIAL_DECAY:
+      initial_sparsity: 0.0
+      final_sparsity: 0.5
+      final_sparsity_last_layer: 0.0
+      begin_step_in_epochs: 10.0  # fraction of epoch allowed
+      end_step_in_training_fraction: 0.8
+      power: 3.0
+      frequency_per_epoch: 1000 # fraction of epoch allowed
