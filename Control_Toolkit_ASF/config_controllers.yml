@@ -98,12 +98,18 @@ neural-imitator:
 #  seed: null                            # If null, random seed based on datetime is used
 #  PATH_TO_MODELS: './SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/'
 #  net_name: 'GRU-8IN-64H1-64H2-1OUT-2'  # TF
+# ACTIVE: Dense-7IN-32H1-32H2-1OUT-8 (working PC swing-up net) run as generated C code,
+# to validate the exact C math before flashing it to the chip as pure C (NC_C path).
   PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments'
-  net_name: 'Dense-7IN-32H1-32H2-1OUT-8'  # Dense long-pole net: swing-up + stabilization
+  net_name: 'Dense-7IN-32H1-32H2-1OUT-8'
+# ALT: paper/FPGA net (x3232_12_2_v2 == 1OUT-1). To test it, uncomment these, comment the
+# two lines above, and set nn_evaluator_mode: 'normal'.
+#  PATH_TO_MODELS: '../experiment_in_paper'
+#  net_name: 'Dense-7IN-32H1-32H2-1OUT-1'
   input_at_input: False
   input_precision: 'ap_fixed<12,2>'  #'ap_fixed<20,6>'   # Can be 'float' - currently do nothing, or 'ap_fixed<total number of bits, integer bits + 1 sign bit>' - adjusting the number precision of the input
   controller_logging: True
-  nn_evaluator_mode: 'normal'  # 'normal', 'numpy', 'C'
+  nn_evaluator_mode: 'C'  # 'normal', 'numpy', 'C' -- 'C' runs the generated network.c (same math as on-chip)
 secloc:
   log_base: 1.05
   ref_period: 1
