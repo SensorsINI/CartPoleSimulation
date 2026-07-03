@@ -24,6 +24,7 @@ class controller_secloc_lqr(template_controller):
         )
         self.last_Q = 0
         self._sync_lqr_public_attributes()
+        self.controller_data_for_csv = self.secloc.get_csv_data()
 
         self.log_base = self.secloc.log_base
         self.dead_ang = self.secloc.dead_ang

@@ -32,7 +32,8 @@ class controller_secloc_mpc(template_controller):
             config_name=self.config_controller.get("secloc_config", "default"),
         )
         self.last_Q = 0
-        self.controller_data_for_csv = self.mpc.controller_data_for_csv
+        self.controller_data_for_csv = dict(self.mpc.controller_data_for_csv)
+        self.controller_data_for_csv.update(self.secloc.get_csv_data())
 
         self.log_base = self.secloc.log_base
         self.dead_ang = self.secloc.dead_ang

@@ -22,6 +22,7 @@ class controller_secloc_lqr_santiago(template_controller):
             config_name=self.config_controller.get("secloc_config", "default"),
         )
         self.last_Q = 0
+        self.controller_data_for_csv = self.secloc.get_csv_data()
 
         # Preserve the public attributes exposed by the original monolithic controller.
         self.K = self.lqr.K

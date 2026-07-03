@@ -108,6 +108,7 @@ class SeclocGate:
         self.total_decisions = 0
         self.skipped_decisions = 0
         self.update_decisions = 0
+        self.last_did_update = False
 
     def time_difference(self, time=None):
         if self.time_last is None:
@@ -151,6 +152,7 @@ class SeclocGate:
         return spike
 
     def record_decision(self, did_update):
+        self.last_did_update = bool(did_update)
         self.total_decisions += 1
         if did_update:
             self.update_decisions += 1
@@ -169,3 +171,8 @@ class SeclocGate:
             f"({self.skipped_decisions}/{self.total_decisions}; "
             f"LQR updates: {self.update_decisions})"
         )
+
+    def get_csv_data(self):
+        return {
+            "secloc_skipped_update": lambda: int(not self.last_did_update),
+        }
