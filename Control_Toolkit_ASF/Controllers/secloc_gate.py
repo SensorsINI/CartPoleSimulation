@@ -1,5 +1,6 @@
 import os
 import atexit
+from collections import deque
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -21,11 +22,12 @@ class SeclocConfigChangeHandler(FileSystemEventHandler):
 
 
 class SeclocGate:
-    def __init__(self, log_base, ref_period, dead_ang, dead_pos):
+    def __init__(self, log_base, ref_period, dead_ang, dead_pos, status_window_size=100):
         self.log_base = log_base
         self.ref_period = ref_period
         self.dead_ang = dead_ang
         self.dead_pos = dead_pos
+        self.status_window_size = status_window_size
         self.reset()
 
     @classmethod
@@ -35,6 +37,7 @@ class SeclocGate:
             ref_period=config_controller["ref_period"],
             dead_ang=config_controller["dead_ang"],
             dead_pos=config_controller["dead_pos"],
+            status_window_size=config_controller.get("status_window_size", 100),
         )
 
     @classmethod
@@ -47,6 +50,7 @@ class SeclocGate:
         self.ref_period = config_controller["ref_period"]
         self.dead_ang = config_controller["dead_ang"]
         self.dead_pos = config_controller["dead_pos"]
+        self.set_status_window_size(config_controller.get("status_window_size", self.status_window_size))
 
     def update_ref_period_from_config(self, config_controller):
         self.ref_period = config_controller["ref_period"]
@@ -109,6 +113,16 @@ class SeclocGate:
         self.skipped_decisions = 0
         self.update_decisions = 0
         self.last_did_update = False
+        self.recent_decisions = deque(maxlen=max(1, int(self.status_window_size)))
+
+    def set_status_window_size(self, status_window_size):
+        status_window_size = max(1, int(status_window_size))
+        if status_window_size == self.status_window_size:
+            return
+
+        self.status_window_size = status_window_size
+        existing_decisions = list(getattr(self, "recent_decisions", []))[-self.status_window_size:]
+        self.recent_decisions = deque(existing_decisions, maxlen=self.status_window_size)
 
     def time_difference(self, time=None):
         if self.time_last is None:
@@ -154,6 +168,7 @@ class SeclocGate:
     def record_decision(self, did_update):
         self.last_did_update = bool(did_update)
         self.total_decisions += 1
+        self.recent_decisions.append(self.last_did_update)
         if did_update:
             self.update_decisions += 1
         else:
@@ -165,11 +180,30 @@ class SeclocGate:
             return 0.0
         return 100.0 * self.skipped_decisions / self.total_decisions
 
+    @property
+    def recent_total_decisions(self):
+        return len(self.recent_decisions)
+
+    @property
+    def recent_update_decisions(self):
+        return sum(self.recent_decisions)
+
+    @property
+    def recent_skipped_decisions(self):
+        return self.recent_total_decisions - self.recent_update_decisions
+
+    @property
+    def recent_skipped_update_percentage(self):
+        if self.recent_total_decisions == 0:
+            return 0.0
+        return 100.0 * self.recent_skipped_decisions / self.recent_total_decisions
+
     def get_status(self):
         return (
-            f"Secloc skipped {self.skipped_update_percentage:.1f}% of controller updates "
-            f"({self.skipped_decisions}/{self.total_decisions}; "
-            f"LQR updates: {self.update_decisions})"
+            f"Secloc skipped {self.recent_skipped_update_percentage:.1f}% of controller updates "
+            f"in the last {self.recent_total_decisions}/{self.status_window_size} decisions "
+            f"({self.recent_skipped_decisions}/{self.recent_total_decisions}; "
+            f"updates: {self.recent_update_decisions})"
         )
 
     def get_csv_data(self):

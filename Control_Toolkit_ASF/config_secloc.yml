@@ -3,3 +3,4 @@ default:
   ref_period: 0.0
   dead_ang: 0.0
   dead_pos: 0.0
+  status_window_size: 100
