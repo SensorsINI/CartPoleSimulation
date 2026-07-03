@@ -198,6 +198,8 @@ class CartPole(EnvironmentBatched):
         self.optimizer_name = ''  # Placeholder for the currently used optimizer name
         self.controller_idx = None  # Placeholder for the currently used controller index
         self.optimizer_idx = None  # Placeholder for the currently used optimizer index
+        self.controller_status_print_period = 1.0
+        self._last_controller_status_print_time = -np.inf
         self.controller_names = get_available_controller_names()  # list of controllers available in controllers folder
         self.optimizer_names = get_available_optimizer_names()  # list of controllers available in controllers folder
         # endregion
@@ -565,11 +567,27 @@ class CartPole(EnvironmentBatched):
                     }
                 ))
                 self.Q_update_time = timeit.default_timer()-update_start
+                self.print_controller_status_if_available()
 
                 self.Q_applied = self.control_noise_generator.add_control_noise(self.Q_calculated)
 
             self.Q = self.Q_applied
             self.dt_controller_steps_counter = 0
+
+    def print_controller_status_if_available(self):
+        if self.controller is None:
+            return
+        if self.time - self._last_controller_status_print_time < self.controller_status_print_period:
+            return
+
+        get_controller_status = getattr(self.controller, "get_controller_status", None)
+        if get_controller_status is None:
+            return
+
+        controller_status = get_controller_status()
+        if controller_status:
+            print(f"[{self.controller_name}] {controller_status}", flush=True)
+            self._last_controller_status_print_time = self.time
 
     def update_parameters(self):
 
@@ -934,6 +952,7 @@ class CartPole(EnvironmentBatched):
         # Reset the dict keeping the experiment history and save the state for t = 0
         self.dt_save_steps_counter = 0
         self.dt_controller_steps_counter = 0
+        self._last_controller_status_print_time = -np.inf
 
         if reset_dict_history:
             self.dict_history = HistoryClass()

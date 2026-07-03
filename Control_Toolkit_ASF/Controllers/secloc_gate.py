@@ -105,6 +105,9 @@ class SeclocGate:
         self.ang_last_shift = 0.0001
         self.pos_last_shift = 0.0001
         self.time_last = None
+        self.total_decisions = 0
+        self.skipped_decisions = 0
+        self.update_decisions = 0
 
     def time_difference(self, time=None):
         if self.time_last is None:
@@ -116,6 +119,7 @@ class SeclocGate:
             time_difference = self.time_difference(time)
 
         if time_difference + self.ref_period / 20 < self.ref_period:
+            self.record_decision(False)
             return False
 
         spike = False
@@ -143,4 +147,25 @@ class SeclocGate:
         if spike:
             self.time_last = time
 
+        self.record_decision(spike)
         return spike
+
+    def record_decision(self, did_update):
+        self.total_decisions += 1
+        if did_update:
+            self.update_decisions += 1
+        else:
+            self.skipped_decisions += 1
+
+    @property
+    def skipped_update_percentage(self):
+        if self.total_decisions == 0:
+            return 0.0
+        return 100.0 * self.skipped_decisions / self.total_decisions
+
+    def get_status(self):
+        return (
+            f"Secloc skipped {self.skipped_update_percentage:.1f}% of controller updates "
+            f"({self.skipped_decisions}/{self.total_decisions}; "
+            f"LQR updates: {self.update_decisions})"
+        )

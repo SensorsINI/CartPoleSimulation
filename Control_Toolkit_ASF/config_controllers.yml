@@ -6,6 +6,15 @@ mpc:
   controller_logging: false
   calculate_optimal_trajectory: false
   device: '/device:CPU:0'
+secloc-mpc:
+  optimizer: rpgd
+  predictor_specification: "ODE"
+  cost_function_specification: quadratic_boundary_grad_minimal
+  computation_library: tensorflow
+  controller_logging: false
+  calculate_optimal_trajectory: false
+  device: '/device:CPU:0'
+  secloc_config: default
 mppi-cartpole:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                       # steps

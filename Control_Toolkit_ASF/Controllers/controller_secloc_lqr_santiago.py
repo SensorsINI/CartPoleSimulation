@@ -39,6 +39,9 @@ class controller_secloc_lqr_santiago(template_controller):
     def __del__(self):
         self.stop_config_watcher()
 
+    def get_controller_status(self):
+        return self.secloc.get_status()
+
     @property
     def log_base(self):
         return self.secloc.log_base

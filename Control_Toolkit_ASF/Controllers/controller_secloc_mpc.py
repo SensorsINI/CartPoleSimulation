@@ -1,20 +1,29 @@
 from SI_Toolkit.computation_library import NumpyLibrary, TensorType
 import numpy as np
 
-from Control_Toolkit_ASF.Controllers.controller_lqr import controller_lqr
+from Control_Toolkit.Controllers.controller_mpc import controller_mpc
 from Control_Toolkit_ASF.Controllers.secloc_gate import SeclocGate
 from Control_Toolkit.Controllers import template_controller
 
 
-class controller_secloc_lqr(template_controller):
+class controller_secloc_mpc(template_controller):
+    _has_optimizer = True
     _computation_library = NumpyLibrary()
 
-    def configure(self):
-        self.lqr = controller_lqr.__new__(controller_lqr)
-        self.lqr.config_controller = self.config_controller
-        self.lqr.variable_parameters = self.variable_parameters
-        self.lqr.update_attributes = self.update_attributes
-        self.lqr.configure()
+    def configure(self, optimizer_name=None):
+        self.mpc = controller_mpc.__new__(controller_mpc)
+        self.mpc.config_controller = self.config_controller
+        self.mpc.variable_parameters = self.variable_parameters
+        self.mpc.control_limits = self.control_limits
+        self.mpc.controller_logging = self.controller_logging
+        self.mpc.environment_name = self.environment_name
+        self.mpc._computation_library = self._computation_library
+        self.mpc.logs = self.logs
+        self.mpc.save_vars = self.save_vars
+        self.mpc.configure(optimizer_name=optimizer_name)
+        self.optimizer = self.mpc.optimizer
+        self.predictor = self.mpc.predictor
+        self.cost_function = self.mpc.cost_function
 
         self.secloc = SeclocGate.from_config_file(
             self.config_controller.get("secloc_config", "default")
@@ -23,28 +32,25 @@ class controller_secloc_lqr(template_controller):
             config_name=self.config_controller.get("secloc_config", "default"),
         )
         self.last_Q = 0
-        self._sync_lqr_public_attributes()
+        self.controller_data_for_csv = self.mpc.controller_data_for_csv
 
         self.log_base = self.secloc.log_base
         self.dead_ang = self.secloc.dead_ang
         self.dead_pos = self.secloc.dead_pos
 
-    def _sync_lqr_public_attributes(self):
-        self.K = self.lqr.K
-        self.X = self.lqr.X
-        self.eigVals = self.lqr.eigVals
-        self.Q = self.lqr.Q
-        self.R = self.lqr.R
-        self.config_controller = self.lqr.config_controller
-
     def stop_config_watcher(self):
-        if hasattr(self, "lqr"):
-            self.lqr.stop_config_watcher()
         if hasattr(self, "secloc"):
             self.secloc.stop_config_watcher()
 
     def __del__(self):
         self.stop_config_watcher()
+
+    def controller_reset(self):
+        if hasattr(self, "mpc"):
+            self.mpc.controller_reset()
+        if hasattr(self, "secloc"):
+            self.secloc.reset()
+        self.last_Q = 0
 
     def get_controller_status(self):
         return self.secloc.get_status()
@@ -102,9 +108,7 @@ class controller_secloc_lqr(template_controller):
         time_difference = self.secloc.time_difference(time)
 
         self.update_attributes(updated_attributes)
-        self.lqr.variable_parameters = self.variable_parameters
-        self.lqr.update_controller_parameters_from_config()
-        self._sync_lqr_public_attributes()
+        self.mpc.variable_parameters = self.variable_parameters
 
         target_position = self.variable_parameters.target_position
         if self.secloc.should_sample(
@@ -113,8 +117,9 @@ class controller_secloc_lqr(template_controller):
             time=time,
             time_difference=time_difference,
         ):
-            self.last_Q = self.lqr.step(s, time=time, updated_attributes={})
-            self._sync_lqr_public_attributes()
+            self.last_Q = self.mpc.step(s, time=time, updated_attributes={})
+            self.optimizer = self.mpc.optimizer
+            self.logs = self.mpc.logs
             return self.last_Q
 
         return self.last_Q
