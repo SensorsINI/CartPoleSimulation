@@ -6,15 +6,6 @@ mpc:
   controller_logging: false
   calculate_optimal_trajectory: false
   device: '/device:CPU:0'
-secloc-mpc:
-  optimizer: rpgd
-  predictor_specification: "ODE"
-  cost_function_specification: quadratic_boundary_grad_minimal
-  computation_library: tensorflow
-  controller_logging: false
-  calculate_optimal_trajectory: false
-  device: '/device:CPU:0'
-  secloc_config: default
 mppi-cartpole:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                       # steps
@@ -121,28 +112,16 @@ neural-imitator:
   controller_logging: True
   nn_evaluator_mode: 'C'  # 'normal', 'numpy', 'C' -- 'C' runs the generated network.c (same math as on-chip)
 secloc:
-  log_base: 1.05
-  ref_period: 1
-  dead_band: 0.0025  # Radians
-  pid_Kp: 15.0
-  pid_Kd: 0.0
-  pid_Ki: 1.0
-  #secloc_motor_map: 128
-  controller_logging: True
-secloc-lqr-santiago:
-  seed: null
-  # Q order: [position x, position velocity x_dot, pole angle theta, pole angular velocity theta_dot]
-  Q: [2000.0, 1.0, 1.0, 1.0]
-  R: 2000.0
-  secloc_config: default
-  controller_logging: True
-secloc-lqr:
-  seed: null
-  # Q order: [position x, position velocity x_dot, pole angle theta, pole angular velocity theta_dot]
-  Q: [2000.0, 1.0, 1.0, 1.0]
-  R: 2000.0
-  secloc_config: default
-  controller_logging: True
+  inner_controller: mpc  # Controller wrapped by the Secloc gate, e.g. "lqr" or "mpc" (lqr takes Q/R from the "lqr" entry above)
+  secloc_config: default  # Entry in config_secloc.yml with the gate parameters (log_base, ref_period, dead bands)
+  # The remaining keys configure the inner controller (here: mpc); for "lqr" only the two keys above are needed.
+  optimizer: rpgd
+  predictor_specification: "ODE"
+  cost_function_specification: quadratic_boundary_grad_minimal
+  computation_library: tensorflow
+  controller_logging: false
+  calculate_optimal_trajectory: false
+  device: '/device:CPU:0'
 secloc-lqr-c:
   controller_file: "secloc_lqr.c"
   ops_name: "SECLOC_LQR_Ops"
