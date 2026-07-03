@@ -120,17 +120,7 @@ secloc:
   pid_Ki: 1.0
   #secloc_motor_map: 128
   controller_logging: True
-secloc-lqr:
-  seed: null
-  # Q order: [position x, position velocity x_dot, pole angle theta, pole angular velocity theta_dot]
-  Q: [2000.0, 1.0, 1.0, 1.0]
-  R: 2000.0
-  log_base: 1.05
-  ref_period: 0.0
-  dead_ang: 0.0
-  dead_pos: 0.0
-  controller_logging: True
-secloc-lqr-split:
+secloc-lqr-santiago:
   seed: null
   # Q order: [position x, position velocity x_dot, pole angle theta, pole angular velocity theta_dot]
   Q: [2000.0, 1.0, 1.0, 1.0]
