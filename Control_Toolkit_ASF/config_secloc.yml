@@ -1,0 +1,5 @@
+default:
+  log_base: 1.05
+  ref_period: 0.0
+  dead_ang: 0.0
+  dead_pos: 0.0

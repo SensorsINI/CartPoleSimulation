@@ -15,7 +15,12 @@ class controller_secloc_lqr_santiago(template_controller):
         self.rng = create_rng(self.__class__.__name__, seed if seed == None else seed * 2)
 
         self.lqr = LQRSantiago.from_config(self.config_controller)
-        self.secloc = SeclocGate.from_config(self.config_controller)
+        self.secloc = SeclocGate.from_config_file(
+            self.config_controller.get("secloc_config", "default")
+        )
+        self.secloc.start_config_watcher(
+            config_name=self.config_controller.get("secloc_config", "default"),
+        )
         self.last_Q = 0
 
         # Preserve the public attributes exposed by the original monolithic controller.
@@ -27,6 +32,12 @@ class controller_secloc_lqr_santiago(template_controller):
         self.log_base = self.secloc.log_base
         self.dead_ang = self.secloc.dead_ang
         self.dead_pos = self.secloc.dead_pos
+
+    def stop_config_watcher(self):
+        self.secloc.stop_config_watcher()
+
+    def __del__(self):
+        self.stop_config_watcher()
 
     @property
     def log_base(self):
@@ -77,16 +88,15 @@ class controller_secloc_lqr_santiago(template_controller):
         self.secloc.time_last = value
 
     def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
-        self.secloc.ref_period = self.config_controller["ref_period"]
-        if self.time_last is None:
-            time_difference = self.config_controller["ref_period"]
-        else:
-            time_difference = time - self.time_last
+        self.secloc.update_from_config_file_if_needed()
+        time_difference = self.secloc.time_difference(time)
 
         self.update_attributes(updated_attributes)
 
+        if "config_controller" in updated_attributes and "ref_period" in self.config_controller:
+            self.secloc.update_ref_period_from_config(self.config_controller)
+
         target_position = self.variable_parameters.target_position
-        self.secloc.ref_period = self.config_controller["ref_period"]
         if self.secloc.should_sample(
             s,
             target_position,
