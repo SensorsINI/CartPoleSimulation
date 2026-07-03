@@ -21,14 +21,82 @@ class SeclocConfigChangeHandler(FileSystemEventHandler):
             self.secloc.reload_config_from_file_flag = True
 
 
-class SeclocGate:
-    def __init__(self, log_base, ref_period, dead_ang, dead_pos, status_window_size=100):
+class SeclocLogic:
+    def __init__(self, log_base, ref_period, dead_ang, dead_pos):
         self.log_base = log_base
         self.ref_period = ref_period
         self.dead_ang = dead_ang
         self.dead_pos = dead_pos
-        self.status_window_size = status_window_size
         self.reset()
+
+    @classmethod
+    def from_config(cls, config_controller):
+        return cls(
+            log_base=config_controller["log_base"],
+            ref_period=config_controller["ref_period"],
+            dead_ang=config_controller["dead_ang"],
+            dead_pos=config_controller["dead_pos"],
+        )
+
+    def update_from_config(self, config_controller):
+        self.log_base = config_controller["log_base"]
+        self.ref_period = config_controller["ref_period"]
+        self.dead_ang = config_controller["dead_ang"]
+        self.dead_pos = config_controller["dead_pos"]
+
+    def update_ref_period_from_config(self, config_controller):
+        self.ref_period = config_controller["ref_period"]
+
+    def reset(self):
+        self.ang_last_shift = 0.0001
+        self.pos_last_shift = 0.0001
+        self.time_last = None
+
+    def time_difference(self, time=None):
+        if self.time_last is None:
+            return self.ref_period
+        return time - self.time_last
+
+    def should_sample(self, s, target_position, time=None, time_difference=None):
+        if time_difference is None:
+            time_difference = self.time_difference(time)
+
+        if time_difference + self.ref_period / 20 < self.ref_period:
+            return False
+
+        spike = False
+        ang_shift = s[ANGLE_IDX]
+        pos_shift = s[POSITION_IDX] - target_position
+
+        if ang_shift < 0:
+            ang_shift = -ang_shift
+        if pos_shift < 0:
+            pos_shift = -pos_shift
+
+        if (ang_shift > self.dead_ang) and (self.ang_last_shift != 0):
+            ang_ratio_inc = ang_shift / self.ang_last_shift
+            ang_ratio_dec = 1.0 / ang_ratio_inc
+            if (ang_ratio_inc >= self.log_base) or (ang_ratio_dec >= self.log_base):
+                self.ang_last_shift = ang_shift
+                spike = True
+        elif (pos_shift > self.dead_pos) and (self.pos_last_shift != 0):
+            pos_ratio_inc = pos_shift / self.pos_last_shift
+            pos_ratio_dec = 1.0 / pos_ratio_inc
+            if (pos_ratio_inc >= self.log_base) or (pos_ratio_dec >= self.log_base):
+                self.pos_last_shift = pos_shift
+                spike = True
+
+        if spike:
+            self.time_last = time
+
+        return spike
+
+
+class SeclocGate:
+    def __init__(self, log_base, ref_period, dead_ang, dead_pos, status_window_size=100):
+        self.logic = SeclocLogic(log_base, ref_period, dead_ang, dead_pos)
+        self.status_window_size = status_window_size
+        self.reset_statistics()
 
     @classmethod
     def from_config(cls, config_controller):
@@ -45,15 +113,68 @@ class SeclocGate:
         config_secloc, _ = load_yaml(SECLOC_CONFIG_PATH, return_path=True)
         return cls.from_config(dict(config_secloc[config_name]))
 
+    @property
+    def log_base(self):
+        return self.logic.log_base
+
+    @log_base.setter
+    def log_base(self, value):
+        self.logic.log_base = value
+
+    @property
+    def ref_period(self):
+        return self.logic.ref_period
+
+    @ref_period.setter
+    def ref_period(self, value):
+        self.logic.ref_period = value
+
+    @property
+    def dead_ang(self):
+        return self.logic.dead_ang
+
+    @dead_ang.setter
+    def dead_ang(self, value):
+        self.logic.dead_ang = value
+
+    @property
+    def dead_pos(self):
+        return self.logic.dead_pos
+
+    @dead_pos.setter
+    def dead_pos(self, value):
+        self.logic.dead_pos = value
+
+    @property
+    def ang_last_shift(self):
+        return self.logic.ang_last_shift
+
+    @ang_last_shift.setter
+    def ang_last_shift(self, value):
+        self.logic.ang_last_shift = value
+
+    @property
+    def pos_last_shift(self):
+        return self.logic.pos_last_shift
+
+    @pos_last_shift.setter
+    def pos_last_shift(self, value):
+        self.logic.pos_last_shift = value
+
+    @property
+    def time_last(self):
+        return self.logic.time_last
+
+    @time_last.setter
+    def time_last(self, value):
+        self.logic.time_last = value
+
     def update_from_config(self, config_controller):
-        self.log_base = config_controller["log_base"]
-        self.ref_period = config_controller["ref_period"]
-        self.dead_ang = config_controller["dead_ang"]
-        self.dead_pos = config_controller["dead_pos"]
+        self.logic.update_from_config(config_controller)
         self.set_status_window_size(config_controller.get("status_window_size", self.status_window_size))
 
     def update_ref_period_from_config(self, config_controller):
-        self.ref_period = config_controller["ref_period"]
+        self.logic.update_ref_period_from_config(config_controller)
 
     def start_config_watcher(
         self,
@@ -106,9 +227,10 @@ class SeclocGate:
         self.stop_config_watcher()
 
     def reset(self):
-        self.ang_last_shift = 0.0001
-        self.pos_last_shift = 0.0001
-        self.time_last = None
+        self.logic.reset()
+        self.reset_statistics()
+
+    def reset_statistics(self):
         self.total_decisions = 0
         self.skipped_decisions = 0
         self.update_decisions = 0
@@ -125,43 +247,15 @@ class SeclocGate:
         self.recent_decisions = deque(existing_decisions, maxlen=self.status_window_size)
 
     def time_difference(self, time=None):
-        if self.time_last is None:
-            return self.ref_period
-        return time - self.time_last
+        return self.logic.time_difference(time)
 
     def should_sample(self, s, target_position, time=None, time_difference=None):
-        if time_difference is None:
-            time_difference = self.time_difference(time)
-
-        if time_difference + self.ref_period / 20 < self.ref_period:
-            self.record_decision(False)
-            return False
-
-        spike = False
-        ang_shift = s[ANGLE_IDX]
-        pos_shift = s[POSITION_IDX] - target_position
-
-        if ang_shift < 0:
-            ang_shift = -ang_shift
-        if pos_shift < 0:
-            pos_shift = -pos_shift
-
-        if (ang_shift > self.dead_ang) and (self.ang_last_shift != 0):
-            ang_ratio_inc = ang_shift / self.ang_last_shift
-            ang_ratio_dec = 1.0 / ang_ratio_inc
-            if (ang_ratio_inc >= self.log_base) or (ang_ratio_dec >= self.log_base):
-                self.ang_last_shift = ang_shift
-                spike = True
-        elif (pos_shift > self.dead_pos) and (self.pos_last_shift != 0):
-            pos_ratio_inc = pos_shift / self.pos_last_shift
-            pos_ratio_dec = 1.0 / pos_ratio_inc
-            if (pos_ratio_inc >= self.log_base) or (pos_ratio_dec >= self.log_base):
-                self.pos_last_shift = pos_shift
-                spike = True
-
-        if spike:
-            self.time_last = time
-
+        spike = self.logic.should_sample(
+            s,
+            target_position,
+            time=time,
+            time_difference=time_difference,
+        )
         self.record_decision(spike)
         return spike
 
