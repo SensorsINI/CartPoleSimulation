@@ -78,7 +78,8 @@ do-mpc:
   controller_logging: True
 lqr:
   seed: null  # Seed for rng, for lqr only, put null to set random seed (do it when you generate data for training!)
-  Q: [10000.0, 1.0, 1.0, 1.0]
+  # Q order: [position x, position velocity x_dot, pole angle theta, pole angular velocity theta_dot]
+  Q: [20000.0, 1.0, 1.0, 1.0]
   R: 2000.0
   control_noise:  # Defined in cartpole config
   controller_logging: True
@@ -118,6 +119,21 @@ secloc:
   pid_Kd: 0.0
   pid_Ki: 1.0
   #secloc_motor_map: 128
+  controller_logging: True
+secloc-lqr:
+  seed: null
+  # Q order: [position x, position velocity x_dot, pole angle theta, pole angular velocity theta_dot]
+  Q: [2000.0, 1.0, 1.0, 1.0]
+  R: 2000.0
+  log_base: 1.05
+  ref_period: 0.0
+  dead_ang: 0.0
+  dead_pos: 0.0
+  controller_logging: True
+secloc-lqr-c:
+  controller_file: "secloc_lqr.c"
+  ops_name: "SECLOC_LQR_Ops"
+  firmware_path: "../../Firmware/Src/General"
   controller_logging: True
 embedded:
   seed: null                            # If null, random seed based on datetime is used
