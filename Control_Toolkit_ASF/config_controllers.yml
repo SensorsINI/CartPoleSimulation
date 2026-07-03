@@ -127,6 +127,13 @@ secloc-lqr-santiago:
   R: 2000.0
   secloc_config: default
   controller_logging: True
+secloc-lqr:
+  seed: null
+  # Q order: [position x, position velocity x_dot, pole angle theta, pole angular velocity theta_dot]
+  Q: [2000.0, 1.0, 1.0, 1.0]
+  R: 2000.0
+  secloc_config: default
+  controller_logging: True
 secloc-lqr-c:
   controller_file: "secloc_lqr.c"
   ops_name: "SECLOC_LQR_Ops"
