@@ -1,5 +1,6 @@
+# Phase 1 hardware matrix: run A/B/C with log_base 1.00 / 1.05 / 1.10 (edit, save, reload on rig).
 default:
-  log_base: 1.05
+  log_base: 1.00
   ref_period: 0.0
   dead_ang: 0.0
   dead_pos: 0.0

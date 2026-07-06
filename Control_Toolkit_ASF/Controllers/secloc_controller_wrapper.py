@@ -22,12 +22,17 @@ zero-order hold on the last computed control.
 Unknown attribute reads (K, optimizer, predictor, cost_function, ...) are forwarded
 to the inner controller, so the wrapper is a drop-in replacement for it.
 """
+import os
+
 import numpy as np
 
 from Control_Toolkit.Controllers import template_controller
 from Control_Toolkit.others.globals_and_utils import import_controller_by_name
 from Control_Toolkit_ASF.Controllers.secloc_gate import SeclocGate
-from SI_Toolkit.computation_library import TensorType
+from SI_Toolkit.computation_library import NumpyLibrary, PyTorchLibrary, TensorFlowLibrary, TensorType
+from SI_Toolkit.load_and_normalize import load_yaml
+
+CONFIG_CONTROLLERS_PATH = os.path.join("Control_Toolkit_ASF", "config_controllers.yml")
 
 
 # Framework plumbing normally created by template_controller.__init__. It is shared
@@ -51,8 +56,7 @@ _SHARED_ATTRIBUTES = (
 
 
 class SeclocControllerWrapper(template_controller):
-    # Name understood by import_controller_by_name, e.g. "lqr" or "mpc".
-    # Can also be provided per config entry as "inner_controller".
+    # Optional default when set_inner_controller_name() is not called (subclasses, tests).
     inner_controller_name: str = None
 
     @property
@@ -63,12 +67,17 @@ class SeclocControllerWrapper(template_controller):
         inner = self.__dict__.get("inner")
         if inner is not None:
             return getattr(inner, "has_optimizer", False)
-        inner_name = self.config_controller.get(
-            "inner_controller", self.inner_controller_name
-        )
+        inner_name = self._resolved_inner_controller_name()
         if inner_name is None:
             return False
         return import_controller_by_name(inner_name)._has_optimizer
+
+    def set_inner_controller_name(self, inner_controller_name):
+        """Choose the wrapped controller at runtime; call before configure()."""
+        self._inner_controller_override = inner_controller_name
+
+    def _resolved_inner_controller_name(self):
+        return getattr(self, "_inner_controller_override", None) or self.inner_controller_name
 
     def configure(self, *args, **kwargs):
         self.inner = self.make_inner_controller(*args, **kwargs)
@@ -88,20 +97,18 @@ class SeclocControllerWrapper(template_controller):
         """Instantiate and configure the wrapped controller.
 
         The inner controller is created without running template_controller.__init__;
-        instead it shares this wrapper's already-initialized plumbing (config entry,
-        variable parameters, logs, ...) so the wrapper's config entry drives it.
-        Positional/keyword arguments (e.g. optimizer_name for MPC) are passed on to
-        the inner controller's configure().
+        it shares variable parameters and logs with this wrapper but loads its settings
+        from its own entry in config_controllers.yml (pid, mpc, lqr, ...).
         """
-        inner_name = self.config_controller.get(
-            "inner_controller", self.inner_controller_name
-        )
+        inner_name = self._resolved_inner_controller_name()
         if inner_name is None:
             raise ValueError(
-                f"{self.__class__.__name__} needs an inner controller: set the "
-                "inner_controller_name class attribute or the 'inner_controller' "
-                "key in its config entry."
+                f"{self.__class__.__name__} needs an inner controller: call "
+                "set_inner_controller_name() before configure(), or set "
+                "inner_controller_name on the class."
             )
+
+        inner_config = dict(load_yaml(CONFIG_CONTROLLERS_PATH)[inner_name])
 
         Controller = import_controller_by_name(inner_name)
         inner = Controller.__new__(Controller)
@@ -109,6 +116,19 @@ class SeclocControllerWrapper(template_controller):
         for attribute in _SHARED_ATTRIBUTES:
             if hasattr(self, attribute):
                 setattr(inner, attribute, getattr(self, attribute))
+        inner.config_controller = inner_config
+        computation_library_name = str(inner.config_controller.get("computation_library", ""))
+        if computation_library_name:
+            if "tensorflow" in computation_library_name.lower():
+                inner._computation_library = TensorFlowLibrary()
+            elif "pytorch" in computation_library_name.lower():
+                inner._computation_library = PyTorchLibrary()
+            elif "numpy" in computation_library_name.lower():
+                inner._computation_library = NumpyLibrary()
+            else:
+                raise ValueError(
+                    f"Computation library {computation_library_name!r} could not be interpreted."
+                )
         inner.configure(*args, **kwargs)
         return inner
 

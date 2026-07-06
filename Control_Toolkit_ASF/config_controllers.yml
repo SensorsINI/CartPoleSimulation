@@ -112,16 +112,8 @@ neural-imitator:
   controller_logging: True
   nn_evaluator_mode: 'C'  # 'normal', 'numpy', 'C' -- 'C' runs the generated network.c (same math as on-chip)
 secloc:
-  inner_controller: mpc  # Controller wrapped by the Secloc gate, e.g. "lqr" or "mpc" (lqr takes Q/R from the "lqr" entry above)
-  secloc_config: default  # Entry in config_secloc.yml with the gate parameters (log_base, ref_period, dead bands)
-  # The remaining keys configure the inner controller (here: mpc); for "lqr" only the two keys above are needed.
-  optimizer: rpgd
-  predictor_specification: "ODE"
-  cost_function_specification: quadratic_boundary_grad_minimal
-  computation_library: tensorflow
+  secloc_config: default  # config_secloc.yml: log_base, ref_period, dead bands
   controller_logging: false
-  calculate_optimal_trajectory: false
-  device: '/device:CPU:0'
 secloc-lqr-c:
   controller_file: "secloc_lqr.c"
   ops_name: "SECLOC_LQR_Ops"

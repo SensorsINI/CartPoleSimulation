@@ -811,13 +811,16 @@ class CartPole(EnvironmentBatched):
             self.controller.configure(self.optimizer_name)
 
     # Set the controller of CartPole
-    def set_controller(self, controller_name=None, controller_idx=None):
+    def set_controller(self, controller_name=None, controller_idx=None, use_secloc=False):
         self.controller_name, self.controller_idx = get_controller_name(
             controller_name=controller_name, controller_idx=controller_idx
         )
-        
+
         if self.controller_name != 'manual-stabilization':
-            Controller: "type[template_controller]" = import_controller_by_name(self.controller_name)
+            if use_secloc:
+                Controller = import_controller_by_name('secloc')
+            else:
+                Controller: "type[template_controller]" = import_controller_by_name(self.controller_name)
             self.L_for_controller = float(self.controller_informer.get_parameters(
                 L, float(self.L_updater.init_value), self.time
             ))
@@ -833,6 +836,10 @@ class CartPole(EnvironmentBatched):
                 },
                 control_limits=(self.action_space.low, self.action_space.high),
             )
+            if use_secloc:
+                # Tell the secloc wrapper which controller it wraps; has_optimizer
+                # then reflects the inner controller in the branches below.
+                self.controller.set_inner_controller_name(self.controller_name)
             # Final configuration of controller
             if self.controller.has_optimizer:
                 self.controller.configure(self.optimizer_name)
