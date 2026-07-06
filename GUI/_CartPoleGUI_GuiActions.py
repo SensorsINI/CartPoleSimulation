@@ -853,6 +853,9 @@ class CartPole_GuiActions:
         else:
             self.slider_on_click = False
 
+    def cb_sensor_quantization_f(self, state):
+        self.CartPoleInstance.SensorQuantizerInstance.enabled = bool(state)
+
     # endregion
 
     # region - Additional GUI Popups
@@ -952,6 +955,10 @@ class CartPole_GuiActions:
     @property
     def stop_at_90(self):
         return self.CartPoleInstance.stop_at_90
+
+    @property
+    def sensor_quantization(self):
+        return self.CartPoleInstance.SensorQuantizerInstance.enabled
 
     @property
     def latency(self):

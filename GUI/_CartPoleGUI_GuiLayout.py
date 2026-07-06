@@ -352,6 +352,14 @@ class CartPole_GuiLayout:
 
         # endregion
 
+        # region -- Checkbox: Quantize angle/position to ADC/encoder counts (physical sensors)
+        self.cb_sensor_quantization = QCheckBox('Sensor quantization', main_window)
+        if self.GuiActions.sensor_quantization:
+            self.cb_sensor_quantization.toggle()
+        self.cb_sensor_quantization.toggled.connect(self.GuiActions.cb_sensor_quantization_f)
+        l_cb.addWidget(self.cb_sensor_quantization)
+        # endregion
+
         # endregion
 
         # region - Radio buttons selecting simulator mode: user defined experiment, random experiment, replay

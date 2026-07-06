@@ -36,6 +36,7 @@ from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
 from CartPole.latency_adder import LatencyAdder
 from CartPole.load import get_full_paths_to_csvs, load_csv_recording
 from CartPole.noise_adder import NoiseAdder
+from CartPole.sensor_quantizer import SensorQuantizer
 from CartPole.noise_control_signal import ControlNoiseGenerator
 from CartPole.random_target_generator import Generate_Random_Trace_Function
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
@@ -146,6 +147,7 @@ class CartPole(EnvironmentBatched):
         self.latency = self.config["latency"]
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
         self.NoiseAdderInstance = NoiseAdder()
+        self.SensorQuantizerInstance = SensorQuantizer(self.config.get("sensor_quantization"))
         self.s_with_noise_and_latency = np.copy(self.s)
 
         self.control_noise_generator = ControlNoiseGenerator(
@@ -359,6 +361,9 @@ class CartPole(EnvironmentBatched):
         self.LatencyAdderInstance.add_current_state_to_latency_buffer(self.s)
         s_delayed = self.LatencyAdderInstance.get_interpolated_delayed_state()
         self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
+        self.s_with_noise_and_latency = self.SensorQuantizerInstance.quantize_measurement(
+            self.s_with_noise_and_latency, copy=False
+        )
         self.s_with_noise_and_latency = self.update_vertical_angle_offset(self.s_with_noise_and_latency)
         
     def cartpole_second_derivatives(self):

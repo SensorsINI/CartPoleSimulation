@@ -44,6 +44,11 @@ cartpole:
     sigma_position: 0.0005
     sigma_angleD: 0.075 # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
     sigma_positionD: 0.005
+  # Quantize simulated measurements to integer ADC / encoder counts (physical cartpole path).
+  # Set enabled: true or pass quantize_sensors=True in secloc sweep tests.
+  sensor_quantization:
+    enabled: false
+    source: physical  # physical -> Driver/globals.py when available, else ZEDBOARD defaults
   vertical_angle_offset:
     init_value: 0.0  # deg, number or 'random'
     change_every_x_seconds: 3.0 # If left empty angle shift changed at each simulation step, otherwise time in seconds, or 'inf' for no change
