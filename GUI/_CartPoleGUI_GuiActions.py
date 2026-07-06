@@ -358,19 +358,24 @@ class CartPole_GuiActions:
 
         with self.PhysicalCartPoleDriverInstance.mlm.terminal_manager():
 
-            while not self.PhysicalCartPoleDriverInstance.terminate_experiment and not self.terminate_experiment_or_replay_thread:
+            driver = self.PhysicalCartPoleDriverInstance
 
-                self.PhysicalCartPoleDriverInstance.experiment_sequence()
-
+            def _update_slider_after_io_step():
+                if self.terminate_experiment_or_replay_thread:
+                    driver.terminate_experiment = True
+                    return
                 if self.CartPoleInstance.controller_name == 'manual-stabilization':
                     self.target_slider.value = self.CartPoleInstance.Q
                 else:
                     self.target_slider.value = self.CartPoleInstance.target_position / TrackHalfLength
 
-            self.PhysicalCartPoleDriverInstance.terminate_experiment = True
+            driver.on_io_step = _update_slider_after_io_step
+            driver.run_experiment()
+
+            driver.terminate_experiment = True
             self.terminate_experiment_or_replay_thread = True
 
-            self.PhysicalCartPoleDriverInstance.quit_experiment()
+            driver.quit_experiment()
 
             self.PhysicalCartPoleDriverInstance = None
 
@@ -612,6 +617,8 @@ class CartPole_GuiActions:
         # Stops the two threads updating the GUI labels and updating the state of Cart instance
         self.run_set_labels_thread = False
         self.terminate_experiment_or_replay_thread = True
+        if self.PhysicalCartPoleDriverInstance is not None:
+            self.PhysicalCartPoleDriverInstance.terminate_experiment = True
         self.pause_experiment_or_replay_thread = False
         # Closes the GUI window
 
