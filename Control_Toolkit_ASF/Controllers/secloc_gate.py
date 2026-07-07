@@ -1,11 +1,14 @@
 import os
 import atexit
-from collections import deque
+from collections import deque, namedtuple
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from CartPole.state_utilities import ANGLE_IDX, POSITION_IDX
 from SI_Toolkit.load_and_normalize import load_yaml
+
+
+PollStat = namedtuple("PollStat", ("time", "ang_unchanged", "pos_unchanged", "skipped"))
 
 
 SECLOC_CONFIG_PATH = os.path.join("Control_Toolkit_ASF", "config_secloc.yml")
@@ -93,9 +96,18 @@ class SeclocLogic:
 
 
 class SeclocGate:
-    def __init__(self, log_base, ref_period, dead_ang, dead_pos, status_window_size=100):
+    def __init__(
+        self,
+        log_base,
+        ref_period,
+        dead_ang,
+        dead_pos,
+        status_window_size=100,
+        poll_stats_window_s=5.0,
+    ):
         self.logic = SeclocLogic(log_base, ref_period, dead_ang, dead_pos)
         self.status_window_size = status_window_size
+        self.poll_stats_window_s = float(poll_stats_window_s)
         self.reset_statistics()
 
     @classmethod
@@ -106,6 +118,7 @@ class SeclocGate:
             dead_ang=config_controller["dead_ang"],
             dead_pos=config_controller["dead_pos"],
             status_window_size=config_controller.get("status_window_size", 100),
+            poll_stats_window_s=config_controller.get("poll_stats_window_s", 5.0),
         )
 
     @classmethod
@@ -172,6 +185,9 @@ class SeclocGate:
     def update_from_config(self, config_controller):
         self.logic.update_from_config(config_controller)
         self.set_status_window_size(config_controller.get("status_window_size", self.status_window_size))
+        self.set_poll_stats_window_s(
+            config_controller.get("poll_stats_window_s", self.poll_stats_window_s)
+        )
 
     def update_ref_period_from_config(self, config_controller):
         self.logic.update_ref_period_from_config(config_controller)
@@ -236,6 +252,10 @@ class SeclocGate:
         self.update_decisions = 0
         self.last_did_update = False
         self.recent_decisions = deque(maxlen=max(1, int(self.status_window_size)))
+        self.recent_poll_stats = deque()
+        self._prev_poll_ang_shift = None
+        self._prev_poll_pos_shift = None
+        self._last_poll_stat_time = None
 
     def set_status_window_size(self, status_window_size):
         status_window_size = max(1, int(status_window_size))
@@ -246,16 +266,84 @@ class SeclocGate:
         existing_decisions = list(getattr(self, "recent_decisions", []))[-self.status_window_size:]
         self.recent_decisions = deque(existing_decisions, maxlen=self.status_window_size)
 
+    def set_poll_stats_window_s(self, poll_stats_window_s):
+        poll_stats_window_s = max(0.1, float(poll_stats_window_s))
+        if poll_stats_window_s == self.poll_stats_window_s:
+            return
+
+        self.poll_stats_window_s = poll_stats_window_s
+        if self._last_poll_stat_time is not None:
+            self._prune_poll_stats(self._last_poll_stat_time)
+
+    @staticmethod
+    def _poll_shifts(s, target_position):
+        ang_shift = abs(s[ANGLE_IDX])
+        pos_shift = abs(s[POSITION_IDX] - target_position)
+        return ang_shift, pos_shift
+
+    def _gate_evaluated(self, time_difference):
+        if time_difference is None:
+            return True
+        return time_difference + self.ref_period / 20 >= self.ref_period
+
+    def _record_poll_stat(self, ang_unchanged, pos_unchanged, skipped, time):
+        poll_time = 0.0 if time is None else float(time)
+        self._last_poll_stat_time = poll_time
+        self.recent_poll_stats.append(
+            PollStat(
+                time=poll_time,
+                ang_unchanged=ang_unchanged,
+                pos_unchanged=pos_unchanged,
+                skipped=skipped,
+            )
+        )
+        self._prune_poll_stats(poll_time)
+
+    def _prune_poll_stats(self, current_time):
+        cutoff = current_time - self.poll_stats_window_s
+        while self.recent_poll_stats and self.recent_poll_stats[0].time < cutoff:
+            self.recent_poll_stats.popleft()
+
+    def _active_poll_stats(self):
+        if self._last_poll_stat_time is None:
+            return []
+        cutoff = self._last_poll_stat_time - self.poll_stats_window_s
+        return [stat for stat in self.recent_poll_stats if stat.time >= cutoff]
+
+    def _poll_stat_percentage(self, predicate):
+        active_stats = self._active_poll_stats()
+        if not active_stats:
+            return 0.0
+        return 100.0 * sum(predicate(stat) for stat in active_stats) / len(active_stats)
+
     def time_difference(self, time=None):
         return self.logic.time_difference(time)
 
     def should_sample(self, s, target_position, time=None, time_difference=None):
+        if time_difference is None:
+            time_difference = self.time_difference(time)
+
+        ang_shift, pos_shift = self._poll_shifts(s, target_position)
+        gate_evaluated = self._gate_evaluated(time_difference)
+
         spike = self.logic.should_sample(
             s,
             target_position,
             time=time,
             time_difference=time_difference,
         )
+
+        if gate_evaluated:
+            if self._prev_poll_ang_shift is not None:
+                self._record_poll_stat(
+                    ang_unchanged=ang_shift == self._prev_poll_ang_shift,
+                    pos_unchanged=pos_shift == self._prev_poll_pos_shift,
+                    skipped=not spike,
+                    time=time,
+                )
+            self._prev_poll_ang_shift = ang_shift
+            self._prev_poll_pos_shift = pos_shift
+
         self.record_decision(spike)
         return spike
 
@@ -293,11 +381,22 @@ class SeclocGate:
         return 100.0 * self.recent_skipped_decisions / self.recent_total_decisions
 
     def get_status(self):
+        active_stats = self._active_poll_stats()
+        poll_count = len(active_stats)
+        ang_flat_pct = self._poll_stat_percentage(lambda stat: stat.ang_unchanged)
+        pos_flat_pct = self._poll_stat_percentage(lambda stat: stat.pos_unchanged)
+        skip_or_changed_pct = self._poll_stat_percentage(
+            lambda stat: (not stat.ang_unchanged or not stat.pos_unchanged) and stat.skipped
+        )
+        skip_and_changed_pct = self._poll_stat_percentage(
+            lambda stat: (not stat.ang_unchanged and not stat.pos_unchanged) and stat.skipped
+        )
         return (
-            f"Secloc skipped {self.recent_skipped_update_percentage:.1f}% of controller updates "
-            f"in the last {self.recent_total_decisions}/{self.status_window_size} decisions "
-            f"({self.recent_skipped_decisions}/{self.recent_total_decisions}; "
-            f"updates: {self.recent_update_decisions})"
+            f"Secloc: angle not changed {ang_flat_pct:.1f}% | "
+            f"position not changed {pos_flat_pct:.1f}% | "
+            f"skipped (angle or position changed) {skip_or_changed_pct:.1f}% | "
+            f"skipped (angle and position changed) {skip_and_changed_pct:.1f}% "
+            f"[{poll_count} gate polls, {self.poll_stats_window_s:.0f}s window]"
         )
 
     def get_csv_data(self):
