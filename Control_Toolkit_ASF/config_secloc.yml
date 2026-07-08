@@ -5,3 +5,12 @@ default:
   dead_ang: 0.0
   dead_pos: 0.0
   poll_stats_window_s: 5.0
+
+# mpc + rpgd_c on physical cartpole: ref_period matches mpc_timestep (0.02 s);
+# dead bands suppress gate noise near equilibrium.
+physical_mpc:
+  log_base: 1.05
+  ref_period: 0.02
+  dead_ang: 0.001
+  dead_pos: 0.001
+  poll_stats_window_s: 5.0

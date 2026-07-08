@@ -262,6 +262,25 @@ class SeclocControllerWrapper(template_controller):
             time_difference=time_difference,
         )
 
+    def peek_secloc_gate(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
+        """Evaluate the Secloc gate without triggering compute or mutating gate state."""
+        self.secloc.update_from_config_file_if_needed()
+        time_difference = self.secloc.time_difference(time)
+
+        self.update_attributes(updated_attributes)
+        self.sync_inner_parameters()
+
+        if "config_controller" in updated_attributes and "ref_period" in self.config_controller:
+            self.secloc.update_ref_period_from_config(self.config_controller)
+
+        target_position = self.variable_parameters.target_position
+        return self.secloc.peek_would_update(
+            s,
+            target_position,
+            time=time,
+            time_difference=time_difference,
+        )
+
     def compute_step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
         """Run the (potentially expensive) controller computation, no gate involved."""
         self.update_attributes(updated_attributes)

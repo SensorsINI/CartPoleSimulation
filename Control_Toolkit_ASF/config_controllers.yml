@@ -1,5 +1,5 @@
 mpc:
-  optimizer: rpgd
+  optimizer: rpgd_c  # Overridden by globals.OPTIMIZER_NAME ('rpgd-c' or 'rpgd')
   predictor_specification: "ODE"    # Can be "ODE", "ODE_v0", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
   cost_function_specification: quadratic_boundary_grad_minimal  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary"
   computation_library: tensorflow  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.
@@ -112,7 +112,7 @@ neural-imitator:
   controller_logging: True
   nn_evaluator_mode: 'C'  # 'normal' = TensorFlow/Keras on PC; 'C' = generated network.c (on-chip math)
 secloc:
-  secloc_config: default  # config_secloc.yml: log_base, ref_period, dead bands
+  secloc_config: physical_mpc  # config_secloc.yml gate profile for mpc + rpgd_c
   controller_logging: false
 secloc-lqr-c:
   controller_file: "secloc_lqr.c"

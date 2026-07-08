@@ -61,7 +61,7 @@ gradient-tf:
   warmup: false
   warmup_iterations: 250
 rpgd:
-  seed: null                            # If null, random seed based on datetime is used
+  seed: 123  # Fixed for cross-backend comparison; use null for random
   mpc_horizon: 35                       # steps
   mpc_timestep: 0.02
   SAMPLING_DISTRIBUTION: normal  # "normal" or "uniform"
@@ -85,7 +85,8 @@ rpgd:
   warmup: false
   warmup_iterations: 250
 rpgd_c:
-  seed: null                            # If null, random seed based on datetime is used
+  # Algorithmic settings mirror 'rpgd' above; only C-backend extras differ.
+  seed: 123  # Same seed as rpgd for cross-backend comparison
   mpc_horizon: 35                       # steps
   mpc_timestep: 0.02
   SAMPLING_DISTRIBUTION: normal  # "normal" or "uniform"

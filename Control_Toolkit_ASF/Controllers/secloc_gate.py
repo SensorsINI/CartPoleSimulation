@@ -67,7 +67,27 @@ class SeclocLogic:
         if time_difference + self.ref_period / 20 < self.ref_period:
             return False
 
-        spike = False
+        spike, axis, shift = self._evaluate_spike(s, target_position)
+        if spike:
+            if axis == "ang":
+                self.ang_last_shift = shift
+            else:
+                self.pos_last_shift = shift
+            self.time_last = time
+        return spike
+
+    def peek_should_sample(self, s, target_position, time=None, time_difference=None):
+        """Return whether the gate would update, without changing internal state."""
+        if time_difference is None:
+            time_difference = self.time_difference(time)
+
+        if time_difference + self.ref_period / 20 < self.ref_period:
+            return False
+
+        spike, _, _ = self._evaluate_spike(s, target_position)
+        return spike
+
+    def _evaluate_spike(self, s, target_position):
         ang_shift = s[ANGLE_IDX]
         pos_shift = s[POSITION_IDX] - target_position
 
@@ -80,19 +100,14 @@ class SeclocLogic:
             ang_ratio_inc = ang_shift / self.ang_last_shift
             ang_ratio_dec = 1.0 / ang_ratio_inc
             if (ang_ratio_inc >= self.log_base) or (ang_ratio_dec >= self.log_base):
-                self.ang_last_shift = ang_shift
-                spike = True
+                return True, "ang", ang_shift
         elif (pos_shift > self.dead_pos) and (self.pos_last_shift != 0):
             pos_ratio_inc = pos_shift / self.pos_last_shift
             pos_ratio_dec = 1.0 / pos_ratio_inc
             if (pos_ratio_inc >= self.log_base) or (pos_ratio_dec >= self.log_base):
-                self.pos_last_shift = pos_shift
-                spike = True
+                return True, "pos", pos_shift
 
-        if spike:
-            self.time_last = time
-
-        return spike
+        return False, None, None
 
 
 class SeclocGate:
@@ -256,6 +271,8 @@ class SeclocGate:
         self._prev_poll_ang_shift = None
         self._prev_poll_pos_shift = None
         self._last_poll_stat_time = None
+        self.last_gate_evaluated = False
+        self.last_gate_would_update = False
 
     def set_status_window_size(self, status_window_size):
         status_window_size = max(1, int(status_window_size))
@@ -319,6 +336,24 @@ class SeclocGate:
     def time_difference(self, time=None):
         return self.logic.time_difference(time)
 
+    def peek_would_update(self, s, target_position, time=None, time_difference=None):
+        """Evaluate the gate without recording stats or mutating gate state."""
+        if time_difference is None:
+            time_difference = self.time_difference(time)
+
+        gate_evaluated = self._gate_evaluated(time_difference)
+        would_update = False
+        if gate_evaluated:
+            would_update = self.logic.peek_should_sample(
+                s,
+                target_position,
+                time=time,
+                time_difference=time_difference,
+            )
+        self.last_gate_evaluated = gate_evaluated
+        self.last_gate_would_update = would_update
+        return would_update
+
     def should_sample(self, s, target_position, time=None, time_difference=None):
         if time_difference is None:
             time_difference = self.time_difference(time)
@@ -332,6 +367,9 @@ class SeclocGate:
             time=time,
             time_difference=time_difference,
         )
+
+        self.last_gate_evaluated = gate_evaluated
+        self.last_gate_would_update = spike
 
         if gate_evaluated:
             if self._prev_poll_ang_shift is not None:
@@ -402,4 +440,7 @@ class SeclocGate:
     def get_csv_data(self):
         return {
             "secloc_skipped_update": lambda: int(not self.last_did_update),
+            "secloc_gate_skipped": lambda: int(
+                self.last_gate_evaluated and not self.last_gate_would_update
+            ),
         }
