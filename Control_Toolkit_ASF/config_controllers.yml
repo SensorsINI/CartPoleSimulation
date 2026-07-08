@@ -110,7 +110,7 @@ neural-imitator:
   input_at_input: False
   input_precision: 'ap_fixed<12,2>'  #'ap_fixed<20,6>'   # Can be 'float' - currently do nothing, or 'ap_fixed<total number of bits, integer bits + 1 sign bit>' - adjusting the number precision of the input
   controller_logging: True
-  nn_evaluator_mode: 'C'  # 'normal', 'numpy', 'C' -- 'C' runs the generated network.c (same math as on-chip)
+  nn_evaluator_mode: 'C'  # 'normal' = TensorFlow/Keras on PC; 'C' = generated network.c (on-chip math)
 secloc:
   secloc_config: default  # config_secloc.yml: log_base, ref_period, dead bands
   controller_logging: false

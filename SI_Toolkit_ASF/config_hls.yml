@@ -1,10 +1,10 @@
-board: 'digilentinc.com:zybo-z7-20:part0:1.0'
-part: 'XC7Z020'
-path_to_hls_installation: '/tools/Xilinx/Vivado/2020.1/bin'
+board: 'digilentinc.com:zedboard:part0:1.1'
+part: 'xc7z020clg484-1'
+path_to_hls_installation: '/media/santiago/Data/tools/Xilinx/Vivado/2020.1/bin'
 
 
 path_to_models: './SI_Toolkit_ASF/Experiments/'
-net_name: 'Dense-7IN-32H1-32H2-1OUT-1'
+net_name: 'Dense-7IN-32H1-32H2-1OUT-8'
 batch_size: 1
 
 
@@ -22,4 +22,4 @@ backend: 'Vivado'  # VivadoAccelerator or Vivado
 
 with_brunton_testing: false
 
-hls4ml_output_folder_name: '20250918_1' # Name for hls4ml output folder (e.g., 'v1', 'v2', 'experimental', etc.)
+hls4ml_output_folder_name: 'zedboard_20260707_1' # Name for hls4ml output folder (e.g., 'v1', 'v2', 'experimental', etc.)
