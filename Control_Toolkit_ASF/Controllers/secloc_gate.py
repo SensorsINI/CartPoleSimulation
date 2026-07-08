@@ -30,7 +30,21 @@ class SeclocLogic:
         self.ref_period = ref_period
         self.dead_ang = dead_ang
         self.dead_pos = dead_pos
+        # Time quantum (s) of the incoming timestamps (chip polling period or
+        # simulation dt). When set, the ref_period check runs in integer ticks
+        # instead of comparing float seconds with a tolerance.
+        self.time_quantum = None
         self.reset()
+
+    def set_time_quantum(self, time_quantum_s):
+        self.time_quantum = float(time_quantum_s) if time_quantum_s else None
+
+    @property
+    def ref_period_ticks(self):
+        return max(1, int(round(self.ref_period / self.time_quantum)))
+
+    def _tick(self, time):
+        return int(round(time / self.time_quantum))
 
     @classmethod
     def from_config(cls, config_controller):
@@ -54,17 +68,30 @@ class SeclocLogic:
         self.ang_last_shift = 0.0001
         self.pos_last_shift = 0.0001
         self.time_last = None
+        self.tick_last = None
 
     def time_difference(self, time=None):
         if self.time_last is None:
             return self.ref_period
         return time - self.time_last
 
-    def should_sample(self, s, target_position, time=None, time_difference=None):
+    def period_elapsed(self, time=None, time_difference=None):
+        """True when at least ref_period has passed since the last accepted update.
+
+        With a time quantum set, this is exact integer arithmetic on tick counts;
+        otherwise the legacy float comparison with a ref_period/20 tolerance.
+        """
+        if self.time_quantum is not None and time is not None:
+            if self.tick_last is None:
+                return True
+            return self._tick(time) - self.tick_last >= self.ref_period_ticks
+
         if time_difference is None:
             time_difference = self.time_difference(time)
+        return time_difference + self.ref_period / 20 >= self.ref_period
 
-        if time_difference + self.ref_period / 20 < self.ref_period:
+    def should_sample(self, s, target_position, time=None, time_difference=None):
+        if not self.period_elapsed(time=time, time_difference=time_difference):
             return False
 
         spike, axis, shift = self._evaluate_spike(s, target_position)
@@ -74,14 +101,13 @@ class SeclocLogic:
             else:
                 self.pos_last_shift = shift
             self.time_last = time
+            if self.time_quantum is not None and time is not None:
+                self.tick_last = self._tick(time)
         return spike
 
     def peek_should_sample(self, s, target_position, time=None, time_difference=None):
         """Return whether the gate would update, without changing internal state."""
-        if time_difference is None:
-            time_difference = self.time_difference(time)
-
-        if time_difference + self.ref_period / 20 < self.ref_period:
+        if not self.period_elapsed(time=time, time_difference=time_difference):
             return False
 
         spike, _, _ = self._evaluate_spike(s, target_position)
@@ -197,6 +223,15 @@ class SeclocGate:
     def time_last(self, value):
         self.logic.time_last = value
 
+    @property
+    def time_quantum(self):
+        return self.logic.time_quantum
+
+    def set_time_quantum(self, time_quantum_s):
+        """Timestamp granularity (chip polling period / sim dt); enables exact
+        tick-based ref_period decisions instead of float-seconds comparisons."""
+        self.logic.set_time_quantum(time_quantum_s)
+
     def update_from_config(self, config_controller):
         self.logic.update_from_config(config_controller)
         self.set_status_window_size(config_controller.get("status_window_size", self.status_window_size))
@@ -298,10 +333,10 @@ class SeclocGate:
         pos_shift = abs(s[POSITION_IDX] - target_position)
         return ang_shift, pos_shift
 
-    def _gate_evaluated(self, time_difference):
-        if time_difference is None:
+    def _gate_evaluated(self, time, time_difference):
+        if time is None and time_difference is None:
             return True
-        return time_difference + self.ref_period / 20 >= self.ref_period
+        return self.logic.period_elapsed(time=time, time_difference=time_difference)
 
     def _record_poll_stat(self, ang_unchanged, pos_unchanged, skipped, time):
         poll_time = 0.0 if time is None else float(time)
@@ -341,7 +376,7 @@ class SeclocGate:
         if time_difference is None:
             time_difference = self.time_difference(time)
 
-        gate_evaluated = self._gate_evaluated(time_difference)
+        gate_evaluated = self._gate_evaluated(time, time_difference)
         would_update = False
         if gate_evaluated:
             would_update = self.logic.peek_should_sample(
@@ -359,7 +394,7 @@ class SeclocGate:
             time_difference = self.time_difference(time)
 
         ang_shift, pos_shift = self._poll_shifts(s, target_position)
-        gate_evaluated = self._gate_evaluated(time_difference)
+        gate_evaluated = self._gate_evaluated(time, time_difference)
 
         spike = self.logic.should_sample(
             s,
