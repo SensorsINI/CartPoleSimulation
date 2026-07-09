@@ -1,3 +1,10 @@
+"""Run the on-chip SecLoc C controller (Firmware/Src/General) on the PC.
+
+Compiles the modular firmware sources (secloc_controller.c + secloc.c + inner
+controllers) into a shared library and drives them through ctypes, so the
+exact C gate + inner-controller math that runs on the chip can be exercised
+from the Python driver.
+"""
 import ctypes
 import hashlib
 import os
@@ -12,46 +19,105 @@ from CartPole.state_utilities import ANGLE_IDX, ANGLED_IDX, POSITION_IDX, POSITI
 from Control_Toolkit.Controllers import template_controller
 
 
-class controller_secloc_lqr_c(template_controller):
+# Stubs for the hardware-facing symbols pulled in by hardware_pid.c; ctypes
+# loads with RTLD_NOW, so every referenced symbol must resolve at load time.
+_HARDWARE_STUBS_H = """
+#ifndef HARDWARE_BRIDGE_H
+#define HARDWARE_BRIDGE_H
+
+void enable_irq(void);
+void disable_irq(void);
+void Message_SendToPC(const unsigned char* data, unsigned int length);
+
+#endif
+"""
+
+_HARDWARE_STUBS_C = """
+#include <stdbool.h>
+
+void enable_irq(void) {}
+void disable_irq(void) {}
+void Message_SendToPC(const unsigned char* data, unsigned int length)
+{
+    (void)data;
+    (void)length;
+}
+unsigned char crc(const unsigned char * message, unsigned int len)
+{
+    (void)message;
+    (void)len;
+    return 0;
+}
+bool crcIsValid(const unsigned char * buff, unsigned int len, unsigned char crcVal)
+{
+    (void)buff;
+    (void)len;
+    (void)crcVal;
+    return true;
+}
+void prepare_message_to_PC_config_PID(
+    unsigned char * txBuffer,
+    float position_KP, float position_KI, float position_KD,
+    float angle_KP, float angle_KI, float angle_KD)
+{
+    (void)txBuffer;
+    (void)position_KP; (void)position_KI; (void)position_KD;
+    (void)angle_KP; (void)angle_KI; (void)angle_KD;
+}
+"""
+
+
+class controller_secloc_c(template_controller):
     _computation_library = NumpyLibrary()
 
     def configure(self):
-        self._source_path = self._resolve_controller_source()
+        self._source_paths = self._resolve_controller_sources()
         self._library_path = self._build_shared_library()
         self._load_shared_library()
 
-    def _resolve_controller_source(self):
+    def _resolve_controller_sources(self):
         firmware_path = Path(self.config_controller["firmware_path"])
-        controller_file = self.config_controller["controller_file"]
+        source_names = [self.config_controller["controller_file"]]
+        source_names.extend(self.config_controller.get("extra_sources", []))
 
+        source_dir = self._resolve_firmware_dir(firmware_path, source_names[0])
+        return [source_dir / name for name in source_names]
+
+    def _resolve_firmware_dir(self, firmware_path, probe_file):
         candidates = []
         if firmware_path.is_absolute():
-            candidates.append(firmware_path / controller_file)
+            candidates.append(firmware_path)
         else:
             cwd = Path.cwd()
             repo_root = Path(__file__).resolve().parents[4]
             cartpole_root = Path(__file__).resolve().parents[2]
             candidates.extend(
                 [
-                    cwd / firmware_path / controller_file,
-                    cartpole_root / firmware_path / controller_file,
-                    repo_root / firmware_path / controller_file,
+                    cwd / firmware_path,
+                    cartpole_root / firmware_path,
+                    repo_root / firmware_path,
                 ]
             )
 
         for candidate in candidates:
-            if candidate.exists():
+            if (candidate / probe_file).exists():
                 return candidate.resolve()
 
         tried = ", ".join(str(candidate) for candidate in candidates)
-        raise FileNotFoundError(f"C controller source {controller_file} not found. Tried: {tried}")
+        raise FileNotFoundError(f"C controller source {probe_file} not found. Tried: {tried}")
 
     def _build_shared_library(self):
         ops_name = self.config_controller["ops_name"]
-        source_bytes = self._source_path.read_bytes()
-        build_key = hashlib.sha256(source_bytes + ops_name.encode("utf-8")).hexdigest()[:16]
+        hasher = hashlib.sha256(ops_name.encode("utf-8"))
+        for source_path in self._source_paths:
+            hasher.update(source_path.read_bytes())
+        build_key = hasher.hexdigest()[:16]
         build_dir = Path("/tmp") / "cartpole_c_controllers" / build_key
         build_dir.mkdir(parents=True, exist_ok=True)
+
+        (build_dir / "hardware_bridge.h").write_text(_HARDWARE_STUBS_H, encoding="utf-8")
+        stubs_path = build_dir / "hardware_stubs.c"
+        stubs_path.write_text(_HARDWARE_STUBS_C, encoding="utf-8")
 
         wrapper_path = build_dir / "controller_wrapper.c"
         library_path = build_dir / "controller_wrapper.so"
@@ -93,7 +159,7 @@ float controller_step(const float* inputs)
             encoding="utf-8",
         )
 
-        include_path = self._source_path.parent
+        include_path = self._source_paths[0].parent
         compiler = self._select_c_compiler()
         command = [
             compiler,
@@ -104,7 +170,10 @@ float controller_step(const float* inputs)
             "-o",
             str(library_path),
             str(wrapper_path),
-            str(self._source_path),
+            str(stubs_path),
+            *[str(source_path) for source_path in self._source_paths],
+            "-I",
+            str(build_dir),  # stubbed hardware_bridge.h shadows none in General
             "-I",
             str(include_path),
             "-lm",
@@ -120,8 +189,8 @@ float controller_step(const float* inputs)
                 return candidate
 
         raise RuntimeError(
-            "No C compiler found for secloc-lqr-c. Install gcc/clang, set CC, "
-            "or add c_compiler to the secloc-lqr-c controller config."
+            "No C compiler found for secloc-c. Install gcc/clang, set CC, "
+            "or add c_compiler to the secloc-c controller config."
         )
 
     def _load_shared_library(self):
@@ -152,6 +221,10 @@ float controller_step(const float* inputs)
             return float(s[POSITIOND_IDX])
         if name == "target_position":
             return float(np.asarray(self.variable_parameters.target_position).item())
+        if name == "target_equilibrium":
+            return float(
+                np.asarray(getattr(self.variable_parameters, "target_equilibrium", 1.0)).item()
+            )
         if name == "time":
             return 0.0 if time is None else float(time)
         raise ValueError(f"C controller requested unknown input {name!r}")
