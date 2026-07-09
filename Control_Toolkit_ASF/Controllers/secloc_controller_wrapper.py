@@ -260,6 +260,7 @@ class SeclocControllerWrapper(template_controller):
             target_position,
             time=time,
             time_difference=time_difference,
+            target_equilibrium=self._target_equilibrium(),
         )
 
     def peek_secloc_gate(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
@@ -279,7 +280,12 @@ class SeclocControllerWrapper(template_controller):
             target_position,
             time=time,
             time_difference=time_difference,
+            target_equilibrium=self._target_equilibrium(),
         )
+
+    def _target_equilibrium(self):
+        """Active target equilibrium (+1 up / -1 down) for the gate's angle frame."""
+        return float(getattr(self.variable_parameters, "target_equilibrium", 1.0))
 
     def compute_step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
         """Run the (potentially expensive) controller computation, no gate involved."""

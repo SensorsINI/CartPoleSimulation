@@ -1,3 +1,4 @@
+import math
 import os
 import atexit
 from collections import deque, namedtuple
@@ -90,50 +91,82 @@ class SeclocLogic:
             time_difference = self.time_difference(time)
         return time_difference + self.ref_period / 20 >= self.ref_period
 
-    def should_sample(self, s, target_position, time=None, time_difference=None):
+    def should_sample(self, s, target_position, time=None, time_difference=None,
+                      target_equilibrium=1.0):
         if not self.period_elapsed(time=time, time_difference=time_difference):
             return False
 
-        spike, axis, shift = self._evaluate_spike(s, target_position)
+        ang_spike, pos_spike, ang_shift, pos_shift = self._evaluate_spike(
+            s, target_position, target_equilibrium
+        )
+        spike = ang_spike or pos_spike
         if spike:
-            if axis == "ang":
-                self.ang_last_shift = shift
-            else:
-                self.pos_last_shift = shift
+            if ang_spike:
+                self.ang_last_shift = ang_shift
+            if pos_spike:
+                self.pos_last_shift = pos_shift
             self.time_last = time
             if self.time_quantum is not None and time is not None:
                 self.tick_last = self._tick(time)
         return spike
 
-    def peek_should_sample(self, s, target_position, time=None, time_difference=None):
+    def peek_should_sample(self, s, target_position, time=None, time_difference=None,
+                           target_equilibrium=1.0):
         """Return whether the gate would update, without changing internal state."""
         if not self.period_elapsed(time=time, time_difference=time_difference):
             return False
 
-        spike, _, _ = self._evaluate_spike(s, target_position)
-        return spike
+        ang_spike, pos_spike, _, _ = self._evaluate_spike(
+            s, target_position, target_equilibrium
+        )
+        return ang_spike or pos_spike
 
-    def _evaluate_spike(self, s, target_position):
-        ang_shift = s[ANGLE_IDX]
+    @staticmethod
+    def angle_shift_from_target(angle, target_equilibrium):
+        """Angle distance from the active target equilibrium.
+
+        Target up (equilibrium > 0): distance from upright, |angle|.
+        Target down: distance from hanging, pi - |angle| (angle wraps at +/-pi,
+        so hanging is angle = +/-pi and this is the wrap-aware distance).
+        Without this, the multiplicative log_base criterion is evaluated around
+        |angle| ~ pi during down phases, where a factor of e.g. 1.05 needs a
+        ~0.16 rad excursion before an update fires - the gate goes nearly blind
+        exactly at the equilibrium it is supposed to track.
+        """
+        shift = abs(angle)
+        if target_equilibrium < 0:
+            shift = math.pi - shift
+        return shift
+
+    def _evaluate_spike(self, s, target_position, target_equilibrium=1.0):
+        """Independent per-axis event checks.
+
+        Angle and position are evaluated independently (an update fires when
+        either exceeds the log_base ratio); on update, only the reference of
+        the axis (or axes) that fired is refreshed.
+        """
+        ang_shift = self.angle_shift_from_target(s[ANGLE_IDX], target_equilibrium)
         pos_shift = s[POSITION_IDX] - target_position
-
-        if ang_shift < 0:
-            ang_shift = -ang_shift
         if pos_shift < 0:
             pos_shift = -pos_shift
 
+        ang_spike = False
         if (ang_shift > self.dead_ang) and (self.ang_last_shift != 0):
             ang_ratio_inc = ang_shift / self.ang_last_shift
             ang_ratio_dec = 1.0 / ang_ratio_inc
-            if (ang_ratio_inc >= self.log_base) or (ang_ratio_dec >= self.log_base):
-                return True, "ang", ang_shift
-        elif (pos_shift > self.dead_pos) and (self.pos_last_shift != 0):
+            ang_spike = bool(
+                (ang_ratio_inc >= self.log_base) or (ang_ratio_dec >= self.log_base)
+            )
+
+        pos_spike = False
+        if (pos_shift > self.dead_pos) and (self.pos_last_shift != 0):
             pos_ratio_inc = pos_shift / self.pos_last_shift
             pos_ratio_dec = 1.0 / pos_ratio_inc
-            if (pos_ratio_inc >= self.log_base) or (pos_ratio_dec >= self.log_base):
-                return True, "pos", pos_shift
+            pos_spike = bool(
+                (pos_ratio_inc >= self.log_base) or (pos_ratio_dec >= self.log_base)
+            )
 
-        return False, None, None
+        return ang_spike, pos_spike, ang_shift, pos_shift
 
 
 class SeclocGate:
@@ -328,8 +361,8 @@ class SeclocGate:
             self._prune_poll_stats(self._last_poll_stat_time)
 
     @staticmethod
-    def _poll_shifts(s, target_position):
-        ang_shift = abs(s[ANGLE_IDX])
+    def _poll_shifts(s, target_position, target_equilibrium=1.0):
+        ang_shift = SeclocLogic.angle_shift_from_target(s[ANGLE_IDX], target_equilibrium)
         pos_shift = abs(s[POSITION_IDX] - target_position)
         return ang_shift, pos_shift
 
@@ -371,7 +404,8 @@ class SeclocGate:
     def time_difference(self, time=None):
         return self.logic.time_difference(time)
 
-    def peek_would_update(self, s, target_position, time=None, time_difference=None):
+    def peek_would_update(self, s, target_position, time=None, time_difference=None,
+                          target_equilibrium=1.0):
         """Evaluate the gate without recording stats or mutating gate state."""
         if time_difference is None:
             time_difference = self.time_difference(time)
@@ -384,16 +418,18 @@ class SeclocGate:
                 target_position,
                 time=time,
                 time_difference=time_difference,
+                target_equilibrium=target_equilibrium,
             )
         self.last_gate_evaluated = gate_evaluated
         self.last_gate_would_update = would_update
         return would_update
 
-    def should_sample(self, s, target_position, time=None, time_difference=None):
+    def should_sample(self, s, target_position, time=None, time_difference=None,
+                      target_equilibrium=1.0):
         if time_difference is None:
             time_difference = self.time_difference(time)
 
-        ang_shift, pos_shift = self._poll_shifts(s, target_position)
+        ang_shift, pos_shift = self._poll_shifts(s, target_position, target_equilibrium)
         gate_evaluated = self._gate_evaluated(time, time_difference)
 
         spike = self.logic.should_sample(
@@ -401,6 +437,7 @@ class SeclocGate:
             target_position,
             time=time,
             time_difference=time_difference,
+            target_equilibrium=target_equilibrium,
         )
 
         self.last_gate_evaluated = gate_evaluated
