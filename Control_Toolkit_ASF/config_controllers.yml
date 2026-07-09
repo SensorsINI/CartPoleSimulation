@@ -112,13 +112,14 @@ neural-imitator:
   controller_logging: True
   nn_evaluator_mode: 'normal'  # Python/TF on PC; 'C' = generated network.c (on-chip math parity)
 secloc:
-  secloc_config: physical_mpc  # gate profile for mpc / neural-imitator + rpgd_c (ref_period=0.02 s)
+  secloc_config: default  # gate profile (config_secloc.yml)
   controller_logging: false
 secloc-c:
-  # On-chip SecLoc gate + inner controller (LQR/PID), compiled from the
-  # modular firmware sources and run on the PC via ctypes.
+  # On-chip SecLoc gate + inner controller (LQR/PID/neural controller C),
+  # compiled from the modular firmware sources and run on the PC via ctypes.
   controller_file: "secloc_controller.c"
-  extra_sources: ["secloc.c", "lqr.c", "hardware_pid.c"]
+  extra_sources: ["secloc.c", "lqr.c", "hardware_pid.c",
+                  "neural_controller_C.c", "NC_C/network.c", "NC_C/network_parameters.c"]
   ops_name: "SECLOC_Ops"
   firmware_path: "../../Firmware/Src/General"
   controller_logging: True

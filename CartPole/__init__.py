@@ -854,8 +854,12 @@ class CartPole(EnvironmentBatched):
 
             else:
                 self.controller.configure()
-            
-                
+
+            if use_secloc:
+                # The gate's ref_period_ticks throttle counts controller update
+                # periods; in simulation the quantum is dt_controller.
+                self.controller.secloc.set_time_quantum(self.dt_controller)
+
         # Set the maximal allowed value of the slider - relevant only for GUI
         if self.slider is not None:
             if self.controller_name == 'manual-stabilization':

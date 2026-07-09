@@ -230,12 +230,11 @@ class controller_secloc(template_controller):
     def should_trigger(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
         """Evaluate the Secloc gate (cheap). Returns True if a fresh computation is due."""
         self.secloc.update_from_config_file_if_needed()
-        time_difference = self.secloc.time_difference(time)
 
         self.update_attributes(updated_attributes)
         self.sync_inner_parameters()
 
-        if "config_controller" in updated_attributes and "ref_period" in self.config_controller:
+        if "config_controller" in updated_attributes and "ref_period_ticks" in self.config_controller:
             self.secloc.update_ref_period_from_config(self.config_controller)
 
         target_position = self.variable_parameters.target_position
@@ -243,19 +242,17 @@ class controller_secloc(template_controller):
             s,
             target_position,
             time=time,
-            time_difference=time_difference,
             target_equilibrium=self._target_equilibrium(),
         )
 
     def peek_secloc_gate(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
         """Evaluate the Secloc gate without triggering compute or mutating gate state."""
         self.secloc.update_from_config_file_if_needed()
-        time_difference = self.secloc.time_difference(time)
 
         self.update_attributes(updated_attributes)
         self.sync_inner_parameters()
 
-        if "config_controller" in updated_attributes and "ref_period" in self.config_controller:
+        if "config_controller" in updated_attributes and "ref_period_ticks" in self.config_controller:
             self.secloc.update_ref_period_from_config(self.config_controller)
 
         target_position = self.variable_parameters.target_position
@@ -263,7 +260,6 @@ class controller_secloc(template_controller):
             s,
             target_position,
             time=time,
-            time_difference=time_difference,
             target_equilibrium=self._target_equilibrium(),
         )
 

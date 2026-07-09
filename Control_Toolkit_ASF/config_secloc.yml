@@ -1,16 +1,10 @@
-# Phase 1 hardware matrix: run A/B/C with log_base 1.00 / 1.05 / 1.10 (edit, save, reload on rig).
+# SecLoc gate profile, used by the PC secloc wrapper and pushed to the chip
+# (CMD_SET_SECLOC_CONFIG) when the driver is connected. Edit and save to
+# reload on the rig during operation; keep the values in sync with the
+# standalone-chip defaults in Firmware/Src/General/secloc_defaults.h.
 default:
   log_base: 1.05
-  ref_period: 0.0
-  dead_ang: 0.0
-  dead_pos: 0.0
-  poll_stats_window_s: 5.0
-
-# mpc / neural-imitator on physical cartpole: ref_period matches 20 ms apply window;
-# dead bands suppress gate noise near equilibrium.
-physical_mpc:
-  log_base: 1.05
-  ref_period: 0.02
-  dead_ang: 0.001
+  ref_period_ticks: 4  # in control loop iterations (POLLING_PERIOD_MS each); 4 x 5 ms = 20 ms apply window of mpc / neural-imitator. 0 or 1 = gate checked every iteration.
+  dead_ang: 0.001      # dead bands suppress gate noise near equilibrium
   dead_pos: 0.001
   poll_stats_window_s: 5.0

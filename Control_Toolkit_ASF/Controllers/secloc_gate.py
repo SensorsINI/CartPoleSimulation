@@ -26,23 +26,23 @@ class SeclocConfigChangeHandler(FileSystemEventHandler):
 
 
 class SeclocLogic:
-    def __init__(self, log_base, ref_period, dead_ang, dead_pos):
+    def __init__(self, log_base, ref_period_ticks, dead_ang, dead_pos):
         self.log_base = log_base
-        self.ref_period = ref_period
+        # Throttle in integer control loop iterations (ticks of the time
+        # quantum): after an accepted update the gate is next consulted
+        # ref_period_ticks iterations later. 0 and 1 both mean the gate is
+        # consulted every iteration.
+        self.ref_period_ticks = int(ref_period_ticks)
         self.dead_ang = dead_ang
         self.dead_pos = dead_pos
         # Time quantum (s) of the incoming timestamps (chip polling period or
-        # simulation dt). When set, the ref_period check runs in integer ticks
-        # instead of comparing float seconds with a tolerance.
+        # simulation dt); maps timestamps to tick indices. Required whenever
+        # ref_period_ticks > 0.
         self.time_quantum = None
         self.reset()
 
     def set_time_quantum(self, time_quantum_s):
         self.time_quantum = float(time_quantum_s) if time_quantum_s else None
-
-    @property
-    def ref_period_ticks(self):
-        return max(1, int(round(self.ref_period / self.time_quantum)))
 
     def _tick(self, time):
         return int(round(time / self.time_quantum))
@@ -51,19 +51,19 @@ class SeclocLogic:
     def from_config(cls, config_controller):
         return cls(
             log_base=config_controller["log_base"],
-            ref_period=config_controller["ref_period"],
+            ref_period_ticks=config_controller["ref_period_ticks"],
             dead_ang=config_controller["dead_ang"],
             dead_pos=config_controller["dead_pos"],
         )
 
     def update_from_config(self, config_controller):
         self.log_base = config_controller["log_base"]
-        self.ref_period = config_controller["ref_period"]
+        self.ref_period_ticks = int(config_controller["ref_period_ticks"])
         self.dead_ang = config_controller["dead_ang"]
         self.dead_pos = config_controller["dead_pos"]
 
     def update_ref_period_from_config(self, config_controller):
-        self.ref_period = config_controller["ref_period"]
+        self.ref_period_ticks = int(config_controller["ref_period_ticks"])
 
     def reset(self):
         self.ang_last_shift = 0.0001
@@ -71,29 +71,28 @@ class SeclocLogic:
         self.time_last = None
         self.tick_last = None
 
-    def time_difference(self, time=None):
-        if self.time_last is None:
-            return self.ref_period
-        return time - self.time_last
+    def period_elapsed(self, time=None):
+        """True when at least ref_period_ticks control loop iterations have
+        passed since the last accepted update.
 
-    def period_elapsed(self, time=None, time_difference=None):
-        """True when at least ref_period has passed since the last accepted update.
-
-        With a time quantum set, this is exact integer arithmetic on tick counts;
-        otherwise the legacy float comparison with a ref_period/20 tolerance.
+        Exact integer arithmetic on tick counts of the time quantum; a positive
+        ref_period_ticks requires the quantum (and timestamps) to be set.
         """
-        if self.time_quantum is not None and time is not None:
-            if self.tick_last is None:
-                return True
-            return self._tick(time) - self.tick_last >= self.ref_period_ticks
+        if self.ref_period_ticks <= 0:
+            return True
+        if self.time_quantum is None:
+            raise ValueError(
+                "Secloc ref_period_ticks > 0 requires a time quantum: call "
+                "set_time_quantum() with the polling period / simulation dt."
+            )
+        if self.tick_last is None:
+            return True
+        if time is None:
+            raise ValueError("Secloc ref_period_ticks > 0 requires timestamps (time=None)")
+        return self._tick(time) - self.tick_last >= self.ref_period_ticks
 
-        if time_difference is None:
-            time_difference = self.time_difference(time)
-        return time_difference + self.ref_period / 20 >= self.ref_period
-
-    def should_sample(self, s, target_position, time=None, time_difference=None,
-                      target_equilibrium=1.0):
-        if not self.period_elapsed(time=time, time_difference=time_difference):
+    def should_sample(self, s, target_position, time=None, target_equilibrium=1.0):
+        if not self.period_elapsed(time=time):
             return False
 
         ang_spike, pos_spike, ang_shift, pos_shift = self._evaluate_spike(
@@ -110,10 +109,9 @@ class SeclocLogic:
                 self.tick_last = self._tick(time)
         return spike
 
-    def peek_should_sample(self, s, target_position, time=None, time_difference=None,
-                           target_equilibrium=1.0):
+    def peek_should_sample(self, s, target_position, time=None, target_equilibrium=1.0):
         """Return whether the gate would update, without changing internal state."""
-        if not self.period_elapsed(time=time, time_difference=time_difference):
+        if not self.period_elapsed(time=time):
             return False
 
         ang_spike, pos_spike, _, _ = self._evaluate_spike(
@@ -173,13 +171,13 @@ class SeclocGate:
     def __init__(
         self,
         log_base,
-        ref_period,
+        ref_period_ticks,
         dead_ang,
         dead_pos,
         status_window_size=100,
         poll_stats_window_s=5.0,
     ):
-        self.logic = SeclocLogic(log_base, ref_period, dead_ang, dead_pos)
+        self.logic = SeclocLogic(log_base, ref_period_ticks, dead_ang, dead_pos)
         self.status_window_size = status_window_size
         self.poll_stats_window_s = float(poll_stats_window_s)
         self.reset_statistics()
@@ -188,7 +186,7 @@ class SeclocGate:
     def from_config(cls, config_controller):
         return cls(
             log_base=config_controller["log_base"],
-            ref_period=config_controller["ref_period"],
+            ref_period_ticks=config_controller["ref_period_ticks"],
             dead_ang=config_controller["dead_ang"],
             dead_pos=config_controller["dead_pos"],
             status_window_size=config_controller.get("status_window_size", 100),
@@ -209,12 +207,12 @@ class SeclocGate:
         self.logic.log_base = value
 
     @property
-    def ref_period(self):
-        return self.logic.ref_period
+    def ref_period_ticks(self):
+        return self.logic.ref_period_ticks
 
-    @ref_period.setter
-    def ref_period(self, value):
-        self.logic.ref_period = value
+    @ref_period_ticks.setter
+    def ref_period_ticks(self, value):
+        self.logic.ref_period_ticks = int(value)
 
     @property
     def dead_ang(self):
@@ -261,8 +259,9 @@ class SeclocGate:
         return self.logic.time_quantum
 
     def set_time_quantum(self, time_quantum_s):
-        """Timestamp granularity (chip polling period / sim dt); enables exact
-        tick-based ref_period decisions instead of float-seconds comparisons."""
+        """Timestamp granularity (chip polling period / sim dt); the ref_period
+        throttle counts integer ticks of this quantum and requires it whenever
+        ref_period_ticks > 0."""
         self.logic.set_time_quantum(time_quantum_s)
 
     def update_from_config(self, config_controller):
@@ -316,7 +315,7 @@ class SeclocGate:
             self.update_from_config(dict(config_secloc[self.config_name]))
             print(
                 "Secloc config reloaded: "
-                f"log_base={self.log_base}, ref_period={self.ref_period}, "
+                f"log_base={self.log_base}, ref_period_ticks={self.ref_period_ticks}, "
                 f"dead_ang={self.dead_ang}, dead_pos={self.dead_pos}"
             )
         except Exception as exc:
@@ -366,10 +365,8 @@ class SeclocGate:
         pos_shift = abs(s[POSITION_IDX] - target_position)
         return ang_shift, pos_shift
 
-    def _gate_evaluated(self, time, time_difference):
-        if time is None and time_difference is None:
-            return True
-        return self.logic.period_elapsed(time=time, time_difference=time_difference)
+    def _gate_evaluated(self, time):
+        return self.logic.period_elapsed(time=time)
 
     def _record_poll_stat(self, ang_unchanged, pos_unchanged, skipped, time):
         poll_time = 0.0 if time is None else float(time)
@@ -401,42 +398,29 @@ class SeclocGate:
             return 0.0
         return 100.0 * sum(predicate(stat) for stat in active_stats) / len(active_stats)
 
-    def time_difference(self, time=None):
-        return self.logic.time_difference(time)
-
-    def peek_would_update(self, s, target_position, time=None, time_difference=None,
-                          target_equilibrium=1.0):
+    def peek_would_update(self, s, target_position, time=None, target_equilibrium=1.0):
         """Evaluate the gate without recording stats or mutating gate state."""
-        if time_difference is None:
-            time_difference = self.time_difference(time)
-
-        gate_evaluated = self._gate_evaluated(time, time_difference)
+        gate_evaluated = self._gate_evaluated(time)
         would_update = False
         if gate_evaluated:
             would_update = self.logic.peek_should_sample(
                 s,
                 target_position,
                 time=time,
-                time_difference=time_difference,
                 target_equilibrium=target_equilibrium,
             )
         self.last_gate_evaluated = gate_evaluated
         self.last_gate_would_update = would_update
         return would_update
 
-    def should_sample(self, s, target_position, time=None, time_difference=None,
-                      target_equilibrium=1.0):
-        if time_difference is None:
-            time_difference = self.time_difference(time)
-
+    def should_sample(self, s, target_position, time=None, target_equilibrium=1.0):
         ang_shift, pos_shift = self._poll_shifts(s, target_position, target_equilibrium)
-        gate_evaluated = self._gate_evaluated(time, time_difference)
+        gate_evaluated = self._gate_evaluated(time)
 
         spike = self.logic.should_sample(
             s,
             target_position,
             time=time,
-            time_difference=time_difference,
             target_equilibrium=target_equilibrium,
         )
 
