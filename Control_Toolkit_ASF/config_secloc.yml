@@ -6,7 +6,7 @@ default:
   dead_pos: 0.0
   poll_stats_window_s: 5.0
 
-# mpc + rpgd_c on physical cartpole: ref_period matches mpc_timestep (0.02 s);
+# mpc / neural-imitator on physical cartpole: ref_period matches 20 ms apply window;
 # dead bands suppress gate noise near equilibrium.
 physical_mpc:
   log_base: 1.05
