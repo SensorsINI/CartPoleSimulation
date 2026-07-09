@@ -1,6 +1,6 @@
 """Run the on-chip SecLoc C controller (Firmware/Src/General) on the PC.
 
-Compiles the modular firmware sources (secloc_controller.c + secloc.c + inner
+Compiles the modular firmware sources (secloc_controller.c + secloc_logic.c + inner
 controllers) into a shared library and drives them through ctypes, so the
 exact C gate + inner-controller math that runs on the chip can be exercised
 from the Python driver.
