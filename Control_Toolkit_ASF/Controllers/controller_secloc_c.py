@@ -203,6 +203,15 @@ float controller_step(const float* inputs)
         self._lib.controller_input_name.restype = ctypes.c_char_p
         self._lib.controller_step.argtypes = [ctypes.POINTER(ctypes.c_float)]
         self._lib.controller_step.restype = ctypes.c_float
+        self._lib.secloc_set_backend.argtypes = [ctypes.c_int]
+        self._lib.secloc_set_backend.restype = None
+
+        # The firmware boot default is a PL backend (secloc_defaults.h), and a
+        # selected PL backend without registered PL hardware faults every step
+        # to zero force by design. No PL exists in the PC ctypes build, so
+        # request the SW gate + inner controller path explicitly.
+        SECLOC_BACKEND_SW = 0
+        self._lib.secloc_set_backend(SECLOC_BACKEND_SW)
 
         self._lib.controller_init()
         self.input_names = [
