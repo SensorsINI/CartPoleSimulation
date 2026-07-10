@@ -6,7 +6,7 @@ import os
 from PyQt6.QtWidgets import QRadioButton, QSlider, QVBoxLayout, \
     QHBoxLayout, QLabel, QPushButton, QCheckBox, \
     QLineEdit, QMessageBox, QComboBox, QButtonGroup, \
-    QSpacerItem, QSizePolicy
+    QSpacerItem, QSizePolicy, QScrollArea, QWidget, QFrame
 from PyQt6.QtCore import QThreadPool, QTimer, Qt
 from PyQt6.QtGui import QFontMetrics
 # The main drawing functionalities are implemented in CartPole Class
@@ -61,18 +61,24 @@ class CartPole_GuiLayout:
         for button in self.rbs_optimizers:
             self.optimizers_buttons_group.addButton(button)
 
-        lr_c = QVBoxLayout()
-        lr_c.addStretch(1)
+        controller_panel = QWidget()
+        lr_c = QVBoxLayout(controller_panel)
         lr_c.addWidget(QLabel("Controller"))
         for rb in self.rbs_controllers:
             rb.clicked.connect(self.GuiActions.RadioButtons_controller_selection)
             lr_c.addWidget(rb)
-        lr_c.addStretch(1)
         lr_c.addWidget(QLabel("MPC Optimizer"))
         for rb in self.rbs_optimizers:
             rb.clicked.connect(self.GuiActions.RadioButtons_optimizer_selection)
             lr_c.addWidget(rb)
-        lr_c.addStretch(1)
+        controller_panel.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+
+        self.controller_scroll_area = QScrollArea()
+        self.controller_scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.controller_scroll_area.setWidget(controller_panel)
+        self.controller_scroll_area.setWidgetResizable(False)
+        self.controller_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.controller_scroll_area.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.rbs_controllers[self.GuiActions.controller_idx].setChecked(True)
         if self.GuiActions.optimizer_idx is not None:
@@ -83,7 +89,7 @@ class CartPole_GuiLayout:
         # region - Create central part of the layout for figures and radio buttons and add it to the whole layout
         lc = QHBoxLayout()
         lc.addLayout(lf)
-        lc.addLayout(lr_c)
+        lc.addWidget(self.controller_scroll_area)
         layout.addLayout(lc)
 
         # endregion
