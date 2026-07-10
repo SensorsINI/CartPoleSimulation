@@ -67,6 +67,10 @@ class CartPole_GuiLayout:
         for rb in self.rbs_controllers:
             rb.clicked.connect(self.GuiActions.RadioButtons_controller_selection)
             lr_c.addWidget(rb)
+        self.cb_use_secloc = QCheckBox("Use SecLoc")
+        self.cb_use_secloc.setChecked(self.GuiActions.use_secloc)
+        self.cb_use_secloc.stateChanged.connect(self.GuiActions.Checkbox_use_secloc)
+        lr_c.addWidget(self.cb_use_secloc)
         lr_c.addWidget(QLabel("MPC Optimizer"))
         for rb in self.rbs_optimizers:
             rb.clicked.connect(self.GuiActions.RadioButtons_optimizer_selection)

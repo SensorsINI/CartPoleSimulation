@@ -144,7 +144,7 @@ secloc-c:
   # On-chip SecLoc gate + inner controller (LQR/PID/neural controller C),
   # compiled from the modular firmware sources and run on the PC via ctypes.
   controller_file: "secloc_controller.c"
-  extra_sources: ["secloc_logic.c", "lqr.c", "hardware_pid.c",
+  extra_sources: ["secloc_logic.c", "secloc_controller_pl.c", "lqr.c", "hardware_pid.c",
                   "neural_controller_C.c", "NC_C/network.c", "NC_C/network_parameters.c"]
   ops_name: "SECLOC_Ops"
   firmware_path: "../../Firmware/Src/General"
