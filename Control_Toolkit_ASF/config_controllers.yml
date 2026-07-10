@@ -114,6 +114,32 @@ neural-imitator:
 secloc:
   secloc_config: default  # gate profile (config_secloc.yml)
   controller_logging: false
+secloc-lqr:
+  # Legacy monolithic SecLoc gate + LQR (gate fused into the controller).
+  # Twin of the on-chip Firmware/Src/General/secloc_lqr.c (SECLOC_LQR_Ops).
+  seed: null
+  # Q order: [position x, position velocity x_dot, pole angle theta, pole angular velocity theta_dot]
+  Q: [2000.0, 1.0, 1.0, 1.0]  # Q0=R gives K0=-1, matching the gains baked into secloc_lqr.c
+  R: 2000.0
+  ref_period: 1     # gate checked every ref_period control ticks
+  log_base: 1.05    # multiplicative event threshold on |shift| ratio
+  dead_ang: 0.001   # dead bands suppress gate noise near equilibrium
+  dead_pos: 0.001
+  controller_logging: True
+secloc-do-mpc-discrete:
+  # Legacy monolithic SecLoc gate + do-mpc discrete (gate fused into the controller).
+  # On events the MPC re-optimizes; between events the last control is replayed.
+  mpc_horizon: 50   # steps
+  ref_period: 4     # gate checked every ref_period control ticks; also scales the MPC prediction dt
+  log_base: 1.05
+  dead_ang: 0.001
+  dead_pos: 0.001
+  # Initial positions
+  position_init: 0.0
+  positionD_init: 0.0
+  angle_init: 0.0
+  angleD_init: 0.0
+  controller_logging: True
 secloc-c:
   # On-chip SecLoc gate + inner controller (LQR/PID/neural controller C),
   # compiled from the modular firmware sources and run on the PC via ctypes.
