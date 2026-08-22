@@ -16,6 +16,7 @@ time_scales:  # Cannot be changed after starting the program
 gui_settings: # Can be changed in GUI
   controller_init_cpp: 'mpc'  # Load as default if loaded as part of physical-cartpole.
   controller_init_cps: 'lqr'  # Load as default if loaded as cartpole simulator stand alone.
+  use_secloc_init: false  # Wrap the selected controller with the Python SecLoc gate (controller_secloc).
 
 #  Possible choices for CartPole controller include:
 #

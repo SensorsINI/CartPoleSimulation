@@ -78,6 +78,7 @@ do-mpc:
   controller_logging: True
 lqr:
   seed: null  # Seed for rng, for lqr only, put null to set random seed (do it when you generate data for training!)
+  # Q order: [position x, position velocity x_dot, pole angle theta, pole angular velocity theta_dot]
   Q: [10000.0, 1.0, 1.0, 1.0]
   R: 2000.0
   control_noise:  # Defined in cartpole config
@@ -98,8 +99,8 @@ neural-imitator:
 #  seed: null                            # If null, random seed based on datetime is used
 #  PATH_TO_MODELS: './SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/'
 #  net_name: 'GRU-8IN-64H1-64H2-1OUT-2'  # TF
-# ACTIVE: Dense-7IN-32H1-32H2-1OUT-8 (working PC swing-up net) run as generated C code,
-# to validate the exact C math before flashing it to the chip as pure C (NC_C path).
+# ACTIVE: Dense-7IN-32H1-32H2-1OUT-8 (swing-up net). nn_evaluator_mode 'normal' = TF on PC;
+# 'C' = generated network.c (on-chip math parity / NC_C path).
   PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments'
   net_name: 'Dense-7IN-32H1-32H2-1OUT-8'
 # ALT: paper/FPGA net (x3232_12_2_v2 == 1OUT-1). To test it, uncomment these, comment the
@@ -111,13 +112,42 @@ neural-imitator:
   controller_logging: True
   nn_evaluator_mode: 'C'  # 'normal', 'numpy', 'C' -- 'C' runs the generated network.c (same math as on-chip)
 secloc:
+  secloc_config: default  # gate profile (config_secloc.yml)
+  controller_logging: false
+secloc-lqr:
+  # Legacy monolithic SecLoc gate + LQR (gate fused into the controller).
+  # Twin of the on-chip Firmware/Src/General/secloc_lqr.c (SECLOC_LQR_Ops).
+  seed: null
+  # Q order: [position x, position velocity x_dot, pole angle theta, pole angular velocity theta_dot]
+  Q: [2000.0, 1.0, 1.0, 1.0]  # Q0=R gives K0=-1, matching the gains baked into secloc_lqr.c
+  R: 2000.0
+  ref_period: 1     # gate checked every ref_period control ticks
+  log_base: 1.05    # multiplicative event threshold on |shift| ratio
+  dead_ang: 0.001   # dead bands suppress gate noise near equilibrium
+  dead_pos: 0.001
+  controller_logging: True
+secloc-do-mpc-discrete:
+  # Legacy monolithic SecLoc gate + do-mpc discrete (gate fused into the controller).
+  # On events the MPC re-optimizes; between events the last control is replayed.
+  mpc_horizon: 50   # steps
+  ref_period: 4     # gate checked every ref_period control ticks; also scales the MPC prediction dt
   log_base: 1.05
-  ref_period: 1
-  dead_band: 0.0025  # Radians
-  pid_Kp: 15.0
-  pid_Kd: 0.0
-  pid_Ki: 1.0
-  #secloc_motor_map: 128
+  dead_ang: 0.001
+  dead_pos: 0.001
+  # Initial positions
+  position_init: 0.0
+  positionD_init: 0.0
+  angle_init: 0.0
+  angleD_init: 0.0
+  controller_logging: True
+secloc-c:
+  # On-chip SecLoc gate + inner controller (LQR/PID/neural controller C),
+  # compiled from the modular firmware sources and run on the PC via ctypes.
+  controller_file: "secloc_controller.c"
+  extra_sources: ["secloc_logic.c", "secloc_controller_pl.c", "lqr.c", "hardware_pid.c",
+                  "neural_controller_C.c", "NC_C/network.c", "NC_C/network_parameters.c"]
+  ops_name: "SECLOC_Ops"
+  firmware_path: "../../Firmware/Src/General"
   controller_logging: True
 embedded:
   seed: null                            # If null, random seed based on datetime is used

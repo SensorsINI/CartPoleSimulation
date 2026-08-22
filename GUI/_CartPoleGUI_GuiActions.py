@@ -26,6 +26,14 @@ from GUI._ControllerGUI_NoiseOptionsWindow import NoiseOptionsWindow
 from others.globals_and_utils import load_config
 
 
+# Python SecLoc wrapper only — not a selectable inner controller in the GUI.
+SECLOC_WRAPPER_ONLY_CONTROLLERS = frozenset({'secloc'})
+# Controllers that already embed SecLoc; the wrapper checkbox does not apply.
+SECLOC_STANDALONE_CONTROLLERS = frozenset(
+    {'secloc-c', 'secloc-lqr', 'secloc-do-mpc-discrete'}
+)
+
+
 class CartPole_GuiActions:
 
     def __init__(self, gui_layout, *args, **kwargs):
@@ -49,6 +57,8 @@ class CartPole_GuiActions:
             controller_init = controller_init_cpp  # Load as default if loaded as part of physical-cartpole
         else:
             controller_init = controller_init_cps  # Load as default if loaded as cartpole simulator stand alone
+
+        self.use_secloc = config['gui_settings'].get('use_secloc_init', False)
 
         save_history_init = config['gui_settings']['save_history_init']
         show_experiment_summary_init = config['gui_settings']['show_experiment_summary_init']
@@ -79,7 +89,7 @@ class CartPole_GuiActions:
         self.CartPoleInstance.dt_save = save_interval
 
         # set other settings
-        self.CartPoleInstance.set_controller(controller_init)
+        self.CartPoleInstance.set_controller(controller_init, use_secloc=self.use_secloc)
         self.CartPoleInstance.stop_at_90 = stop_at_90_init
         self.set_random_experiment_generator_init_params()
 
@@ -165,6 +175,7 @@ class CartPole_GuiActions:
 
         # region Open controller-specific popup windows
         self.open_additional_controller_widget()
+        self._update_use_secloc_checkbox_state()
         # endregion
         
         # Mark initialization as complete to allow controller changes
@@ -277,7 +288,7 @@ class CartPole_GuiActions:
                     continue
 
                 if controller_set:
-                    self.gui.rbs_controllers[self.CartPoleInstance.controller_idx].setChecked(True)
+                    self.gui.rbs_controllers[self.controller_idx].setChecked(True)
                 else:
                     self.gui.rbs_controllers[1].setChecked(True)  # Set first, but not manual stabilization
                 if optimizer_set:
@@ -358,19 +369,24 @@ class CartPole_GuiActions:
 
         with self.PhysicalCartPoleDriverInstance.mlm.terminal_manager():
 
-            while not self.PhysicalCartPoleDriverInstance.terminate_experiment and not self.terminate_experiment_or_replay_thread:
+            driver = self.PhysicalCartPoleDriverInstance
 
-                self.PhysicalCartPoleDriverInstance.experiment_sequence()
-
+            def _update_slider_after_io_step():
+                if self.terminate_experiment_or_replay_thread:
+                    driver.terminate_experiment = True
+                    return
                 if self.CartPoleInstance.controller_name == 'manual-stabilization':
                     self.target_slider.value = self.CartPoleInstance.Q
                 else:
                     self.target_slider.value = self.CartPoleInstance.target_position / TrackHalfLength
 
-            self.PhysicalCartPoleDriverInstance.terminate_experiment = True
+            driver.on_io_step = _update_slider_after_io_step
+            driver.run_experiment()
+
+            driver.terminate_experiment = True
             self.terminate_experiment_or_replay_thread = True
 
-            self.PhysicalCartPoleDriverInstance.quit_experiment()
+            driver.quit_experiment()
 
             self.PhysicalCartPoleDriverInstance = None
 
@@ -443,6 +459,8 @@ class CartPole_GuiActions:
             rb.setEnabled(False)
         for rb in self.gui.rbs_controllers:
             rb.setEnabled(False)
+        if hasattr(self.gui, 'cb_use_secloc'):
+            self.gui.cb_use_secloc.setEnabled(False)
         if self.simulator_mode != 'Replay':
             self.gui.cb_show_experiment_summary.setEnabled(False)
 
@@ -523,6 +541,7 @@ class CartPole_GuiActions:
             rb.setEnabled(True)
         for rb in self.gui.rbs_controllers:
             rb.setEnabled(True)
+        self._update_use_secloc_checkbox_state()
 
         self.start_or_stop_action = "START!"  # What should happen when "START! / STOP!" is pushed NEXT time
 
@@ -612,6 +631,8 @@ class CartPole_GuiActions:
         # Stops the two threads updating the GUI labels and updating the state of Cart instance
         self.run_set_labels_thread = False
         self.terminate_experiment_or_replay_thread = True
+        if self.PhysicalCartPoleDriverInstance is not None:
+            self.PhysicalCartPoleDriverInstance.terminate_experiment = True
         self.pause_experiment_or_replay_thread = False
         # Closes the GUI window
 
@@ -678,20 +699,73 @@ class CartPole_GuiActions:
     # Chose the controller method which should be used with the CartPole
     def RadioButtons_controller_selection(self):
         if self.simulator_mode != 'Replay':
-            # Change the mode variable depending on the Radiobutton state
-            for i in range(len(self.gui.rbs_controllers)):
-                if self.gui.rbs_controllers[i].isChecked():
-                    self.CartPoleInstance.set_controller(controller_idx=i)
-
-            self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)
-
-            self.open_additional_controller_widget()
+            inner_name = self._selected_gui_controller_name()
+            if inner_name is not None and not self._secloc_wrapper_available(inner_name):
+                self.use_secloc = False
+                if hasattr(self.gui, 'cb_use_secloc'):
+                    self.gui.cb_use_secloc.setChecked(False)
+            self._update_use_secloc_checkbox_state()
+            self._apply_controller_selection()
 
         # Reset the state of GUI and of the Cart instance after the mode has changed
         # TODO: Do I need the follwowing lines?
         self.reset_variables(0)
         self.cp_drawer.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
         self.canvas.draw()
+
+    def Checkbox_use_secloc(self):
+        if self.simulator_mode == 'Replay' or self._initializing:
+            return
+        self.use_secloc = self.gui.cb_use_secloc.isChecked()
+        self._apply_controller_selection()
+        self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)
+        self.open_additional_controller_widget()
+        self.reset_variables(0)
+        self.cp_drawer.draw_constant_elements(self.fig, self.fig.AxCart, self.fig.AxSlider)
+        self.canvas.draw()
+
+    def _gui_controller_names(self):
+        return [
+            name
+            for name in self.CartPoleInstance.controller_names
+            if name not in SECLOC_WRAPPER_ONLY_CONTROLLERS
+        ]
+
+    def _selected_gui_controller_name(self):
+        if not hasattr(self.gui, 'rbs_controllers'):
+            return None
+        for index, radio_button in enumerate(self.gui.rbs_controllers):
+            if radio_button.isChecked():
+                return self._gui_controller_names()[index]
+        return None
+
+    def _secloc_wrapper_available(self, controller_name):
+        if controller_name in SECLOC_STANDALONE_CONTROLLERS:
+            return False
+        if controller_name == 'manual-stabilization':
+            return False
+        return True
+
+    def _update_use_secloc_checkbox_state(self):
+        if not hasattr(self.gui, 'cb_use_secloc'):
+            return
+        controller_name = self._selected_gui_controller_name()
+        available = (
+            controller_name is not None
+            and self._secloc_wrapper_available(controller_name)
+        )
+        self.gui.cb_use_secloc.setEnabled(available)
+
+    def _apply_controller_selection(self):
+        inner_name = self._selected_gui_controller_name()
+        if inner_name is None:
+            return
+        self.CartPoleInstance.set_controller(
+            controller_name=inner_name,
+            use_secloc=self.use_secloc,
+        )
+        self.update_rbs_optimizers_status(visible=self.CartPoleInstance.controller.has_optimizer)
+        self.open_additional_controller_widget()
 
     def update_rbs_optimizers_status(self, visible: bool):
         for rb in self.gui.rbs_optimizers:
@@ -846,6 +920,9 @@ class CartPole_GuiActions:
         else:
             self.slider_on_click = False
 
+    def cb_sensor_quantization_f(self, state):
+        self.CartPoleInstance.SensorQuantizerInstance.enabled = bool(state)
+
     # endregion
 
     # region - Additional GUI Popups
@@ -916,11 +993,11 @@ class CartPole_GuiActions:
 
     @property
     def controller_names(self):
-        return self.CartPoleInstance.controller_names
+        return self._gui_controller_names()
 
     @property
     def controller_idx(self):
-        return self.CartPoleInstance.controller_idx
+        return self._gui_controller_names().index(self.CartPoleInstance.controller_name)
 
     @property
     def optimizer_names(self):
@@ -945,6 +1022,10 @@ class CartPole_GuiActions:
     @property
     def stop_at_90(self):
         return self.CartPoleInstance.stop_at_90
+
+    @property
+    def sensor_quantization(self):
+        return self.CartPoleInstance.SensorQuantizerInstance.enabled
 
     @property
     def latency(self):

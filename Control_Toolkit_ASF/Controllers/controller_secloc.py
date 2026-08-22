@@ -1,214 +1,281 @@
+"""Sparse Event-Based Closed-Loop Control (SECLOC) applied to an arbitrary controller.
 
-from SI_Toolkit.computation_library import NumpyLibrary, TensorType
-import numpy as np
-import math
-from datetime import datetime
-import yaml
+On the physical cartpole, set globals.CONTROLLER_NAME to the inner controller (e.g.
+"pid", "mpc", "neural-imitator") and globals.USE_SECLOC = True. The driver loads
+this controller and calls set_inner_controller_name() before configure() so the
+wrapped inner is chosen at runtime.
+
+Inner controller settings come from that controller's entry in config_controllers.yml.
+Gate settings come from config_secloc.yml (via secloc_config in the secloc entry).
+
+The wrapped ("inner") controller does the actual control computation; SeclocGate
+decides on every step whether that computation is due or whether the previous
+control value is held (zero-order hold).
+
+Exposes the split interface used by the async driver wrappers: should_trigger()
+(cheap gate evaluation, safe every loop iteration) and compute_step() (potentially
+expensive). step() combines both. Unknown attribute reads (K, optimizer, predictor,
+cost_function, ...) are forwarded to the inner controller.
+
+Theory: https://www.frontiersin.org/articles/10.3389/fnins.2019.00827/full
+"""
 import os
 
-from scipy.interpolate import interp1d
-from dataclasses import dataclass
+import numpy as np
+
 from Control_Toolkit.Controllers import template_controller
+from Control_Toolkit.others.globals_and_utils import import_controller_by_name
+from Control_Toolkit_ASF.Controllers.secloc_gate import SeclocGate
+from SI_Toolkit.computation_library import NumpyLibrary, PyTorchLibrary, TensorFlowLibrary, TensorType
+from SI_Toolkit.load_and_normalize import load_yaml
+
+CONFIG_CONTROLLERS_PATH = os.path.join("Control_Toolkit_ASF", "config_controllers.yml")
 
 
-dt = 1.0  # In the Arduino code is 1000
+# Framework plumbing normally created by template_controller.__init__. It is shared
+# with the inner controller instead of running its __init__, which would re-derive
+# everything (config entry, computation library, variable parameters) from the inner
+# controller's own name instead of this wrapper's.
+_SHARED_ATTRIBUTES = (
+    "config_controller",
+    "environment_name",
+    "control_limits",
+    "action_low",
+    "action_high",
+    "initial_environment_attributes",
+    "variable_parameters",
+    "u",
+    "controller_logging",
+    "save_vars",
+    "logs",
+    "controller_data_for_csv",
+)
 
 
-"""
-Python implementation of the theory for Sparse Envent-Based Closed Loop Control (SECLOC):
-https://www.frontiersin.org/articles/10.3389/fnins.2019.00827/full
-"""
 class controller_secloc(template_controller):
     _computation_library = NumpyLibrary()
-    
-    def configure(self):
-        log_base = self.config_controller["log_base"]
-        ref_period = self.config_controller["ref_period"]
-        dead_band = self.config_controller["dead_band"]
-        pid_Kp = self.config_controller["pid_Kp"]
-        pid_Kd = self.config_controller["pid_Kd"]
-        pid_Ki = self.config_controller["pid_Ki"]
-        
-        self.pid = Event_based_PID(Kp=pid_Kp, Kd=pid_Kd, Ki=pid_Ki, sensor_log_base=1.15, disp=True)
-        self.potentiometer = Event_based_sensor(pid=self.pid, log_base=log_base, dt=dt, ref_period=ref_period, dead_band=dead_band, disp=True)
-        self.potentiometer.set_point = 0
-        self.motor_map = 128
-        self.interpolation = interp1d([-self.motor_map,self.motor_map], [1,-1])
-        self.step_idx = 0
+
+    @property
+    def has_optimizer(self):
+        # CartPole reads this before configure() to decide whether to pass an
+        # optimizer name, so before the inner controller exists it is derived
+        # from the inner controller's class.
+        inner = self.__dict__.get("inner")
+        if inner is not None:
+            return getattr(inner, "has_optimizer", False)
+        inner_name = self._resolved_inner_controller_name()
+        if inner_name is None:
+            return False
+        return import_controller_by_name(inner_name)._has_optimizer
+
+    def set_inner_controller_name(self, inner_controller_name):
+        """Choose the wrapped controller at runtime; call before configure()."""
+        self._inner_controller_override = inner_controller_name
+
+    def _resolved_inner_controller_name(self):
+        return getattr(self, "_inner_controller_override", None)
+
+    def configure(self, *args, **kwargs):
+        self.inner = self.make_inner_controller(*args, **kwargs)
+
+        secloc_config_name = self.config_controller.get("secloc_config", "default")
+        self.secloc = SeclocGate.from_config_file(secloc_config_name)
+        self.secloc.start_config_watcher(config_name=secloc_config_name)
+        self.last_Q = 0
+
+        self.controller_data_for_csv = dict(
+            getattr(self.inner, "controller_data_for_csv", {})
+        )
+        self.controller_data_for_csv.update(self.secloc.get_csv_data())
+
+    # ------------------------------------------------------------- inner controller
+    def make_inner_controller(self, *args, **kwargs):
+        """Instantiate and configure the wrapped controller.
+
+        The inner controller is created without running template_controller.__init__;
+        it shares variable parameters and logs with this wrapper but loads its settings
+        from its own entry in config_controllers.yml (pid, mpc, lqr, ...).
+        """
+        inner_name = self._resolved_inner_controller_name()
+        if inner_name is None:
+            raise ValueError(
+                f"{self.__class__.__name__} needs an inner controller: call "
+                "set_inner_controller_name() before configure()."
+            )
+
+        inner_config = dict(load_yaml(CONFIG_CONTROLLERS_PATH)[inner_name])
+
+        Controller = import_controller_by_name(inner_name)
+        inner = Controller.__new__(Controller)
+        inner._computation_library = self._computation_library
+        for attribute in _SHARED_ATTRIBUTES:
+            if hasattr(self, attribute):
+                setattr(inner, attribute, getattr(self, attribute))
+        inner.config_controller = inner_config
+        computation_library_name = str(inner.config_controller.get("computation_library", ""))
+        if computation_library_name:
+            if "tensorflow" in computation_library_name.lower():
+                inner._computation_library = TensorFlowLibrary()
+            elif "pytorch" in computation_library_name.lower():
+                inner._computation_library = PyTorchLibrary()
+            elif "numpy" in computation_library_name.lower():
+                inner._computation_library = NumpyLibrary()
+            else:
+                raise ValueError(
+                    f"Computation library {computation_library_name!r} could not be interpreted."
+                )
+        inner.configure(*args, **kwargs)
+        return inner
+
+    def sync_inner_parameters(self):
+        """Propagate wrapper state to the inner controller before it is queried."""
+        self.inner.variable_parameters = self.variable_parameters
+        update_from_config = getattr(
+            self.inner, "update_controller_parameters_from_config", None
+        )
+        if callable(update_from_config):
+            update_from_config()
+
+    def inner_step(self, s, time=None):
+        return self.inner.step(s, time=time, updated_attributes={})
+
+    def __getattr__(self, name):
+        # Forward unknown attribute reads (K, optimizer, predictor, ...) to the
+        # inner controller so the wrapper is a drop-in replacement for it.
+        inner = self.__dict__.get("inner")
+        if inner is None or name.startswith("__"):
+            raise AttributeError(
+                f"{self.__class__.__name__!r} object has no attribute {name!r}"
+            )
+        return getattr(inner, name)
+
+    # ------------------------------------------------------------------- lifecycle
+    def stop_config_watcher(self):
+        inner = self.__dict__.get("inner")
+        if inner is not None and hasattr(inner, "stop_config_watcher"):
+            inner.stop_config_watcher()
+        secloc = self.__dict__.get("secloc")
+        if secloc is not None:
+            secloc.stop_config_watcher()
+
+    def __del__(self):
+        self.stop_config_watcher()
+
+    def controller_reset(self):
+        inner = self.__dict__.get("inner")
+        inner_reset = getattr(inner, "controller_reset", None)
+        if callable(inner_reset):
+            try:
+                inner_reset()
+            except NotImplementedError:
+                pass
+        secloc = self.__dict__.get("secloc")
+        if secloc is not None:
+            secloc.reset()
+        self.last_Q = 0
+
+    def get_controller_status(self):
+        return self.secloc.get_status()
+
+    # ------------------------------------------------------------- secloc tunables
+    @property
+    def log_base(self):
+        return self.secloc.log_base
+
+    @log_base.setter
+    def log_base(self, value):
+        self.secloc.log_base = value
+
+    @property
+    def dead_ang(self):
+        return self.secloc.dead_ang
+
+    @dead_ang.setter
+    def dead_ang(self, value):
+        self.secloc.dead_ang = value
+
+    @property
+    def dead_pos(self):
+        return self.secloc.dead_pos
+
+    @dead_pos.setter
+    def dead_pos(self, value):
+        self.secloc.dead_pos = value
+
+    @property
+    def ang_last_shift(self):
+        return self.secloc.ang_last_shift
+
+    @ang_last_shift.setter
+    def ang_last_shift(self, value):
+        self.secloc.ang_last_shift = value
+
+    @property
+    def pos_last_shift(self):
+        return self.secloc.pos_last_shift
+
+    @pos_last_shift.setter
+    def pos_last_shift(self, value):
+        self.secloc.pos_last_shift = value
+
+    @property
+    def time_last(self):
+        return self.secloc.time_last
+
+    @time_last.setter
+    def time_last(self, value):
+        self.secloc.time_last = value
+
+    # ------------------------------------------------------------------ control API
+    def should_trigger(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
+        """Evaluate the Secloc gate (cheap). Returns True if a fresh computation is due."""
+        self.secloc.update_from_config_file_if_needed()
+
+        self.update_attributes(updated_attributes)
+        self.sync_inner_parameters()
+
+        if "config_controller" in updated_attributes and "ref_period_ticks" in self.config_controller:
+            self.secloc.update_ref_period_from_config(self.config_controller)
+
+        target_position = self.variable_parameters.target_position
+        return self.secloc.should_sample(
+            s,
+            target_position,
+            time=time,
+            target_equilibrium=self._target_equilibrium(),
+        )
+
+    def peek_secloc_gate(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
+        """Evaluate the Secloc gate without triggering compute or mutating gate state."""
+        self.secloc.update_from_config_file_if_needed()
+
+        self.update_attributes(updated_attributes)
+        self.sync_inner_parameters()
+
+        if "config_controller" in updated_attributes and "ref_period_ticks" in self.config_controller:
+            self.secloc.update_ref_period_from_config(self.config_controller)
+
+        target_position = self.variable_parameters.target_position
+        return self.secloc.peek_would_update(
+            s,
+            target_position,
+            time=time,
+            target_equilibrium=self._target_equilibrium(),
+        )
+
+    def _target_equilibrium(self):
+        """Active target equilibrium (+1 up / -1 down) for the gate's angle frame."""
+        return float(getattr(self.variable_parameters, "target_equilibrium", 1.0))
+
+    def compute_step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
+        """Run the (potentially expensive) controller computation, no gate involved."""
+        self.update_attributes(updated_attributes)
+        self.sync_inner_parameters()
+        self.last_Q = self.inner_step(s, time=time)
+        return self.last_Q
 
     def step(self, s: np.ndarray, time=None, updated_attributes: "dict[str, TensorType]" = {}):
-        self.update_attributes(updated_attributes)
-        # Read the cartpole state s = ["angle", "angleD", "angle_cos", "angle_sin", "position", "positionD"]
-        # angle: pole UP -> 0, then +/-pi
-        print(f"***** Step #{self.step_idx} *****")
-        pole_angle = s[0]
-        print(f"Current pole angle value: {pole_angle} radians. left/right --> +/- pi. Pole UP --> angle=0")
-        print("Update the potentiometer event based sensor using the cartpole sate")
-        self.potentiometer.update(signal_in= pole_angle)
-        # Get the new control command and return it in the range [-1, 1]
-        motor_signal = self.potentiometer.pid.motor_signal
-        if motor_signal > self.motor_map:
-            motor_signal = self.motor_map
-        elif motor_signal < -self.motor_map:
-            motor_signal = -self.motor_map
-        motor_signal = self.interpolation(motor_signal)
-        print(f"Map the motor signal {self.potentiometer.pid.motor_signal} to [-1,1]: motor_action: {motor_signal}")
-        Q = np.float32(motor_signal)
-        # Clip Q
-        if Q > 1.0:
-            Q = 1.0
-        elif Q < -1.0:
-            Q = -1.0
-        self.step_idx += 1
-        print(f"********************")
-        print(" ")
-        return Q  # normed control input in the range [-1,1]. Move cart left:- right:+ 
+        if self.should_trigger(s, time=time, updated_attributes=updated_attributes):
+            return self.compute_step(s, time=time, updated_attributes={})
 
-
-@dataclass
-class Event:
-    time: int
-    polarity: int
-    change_sign: int
-    n_change_base: int
-
-
-class Motor_control:
-    def __init__(self) -> None:
-        pass
-
-
-class Event_based_PID:
-    def __init__(self, Kp: float, Ki:float, Kd: float, sensor_log_base: float, disp: bool):
-        self.Kp = Kp
-        self.Ki = Ki
-        self.Kd = Kd
-        self.sensor_log_base = sensor_log_base
-        self.disp = disp
-        self.t = None
-        self.Err = None
-        self.I_err = None
-        self.D_err = None
-        self.c_time_micros = None
-        self.motor_signal = 0
-
-    def change_event_received(self, polarity: int, change_sign: int, n_change_base: int):
-        elapsed_time = (self.c_time_micros - datetime.now().microsecond)*0.000001
-        self.c_time_micros = datetime.now().microsecond
-        self.I_err += self.Err * (2.0 + pow(-1.0, change_sign) * (pow(self.sensor_log_base, n_change_base * polarity) - 1.0)) / (elapsed_time * 2.0)
-        self.D_err = pow(-1.0, change_sign) * (pow(self.sensor_log_base, n_change_base * polarity) - 1.0) * self.Err / elapsed_time
-        self.Err += (pow(self.sensor_log_base, n_change_base * polarity) - 1.0) * self.Err
-        self.Err *= pow(-1.0, change_sign)
-        self.motor_signal = self.Kp * self.Err + self.Ki * self.I_err + self.Kd * self.D_err
-        if self.disp:
-            print(f"Change event received -- Err: {self.Err}; I-Err: {self.I_err}; dErr/dt: {self.D_err}")
-    
-    def init_error(self, e0: float):
-        print(f"Initializing the Err: {e0}")
-        self.Err = e0
-        self.I_err = 0
-        self.D_err = 0
-        self.c_time_micros = datetime.now().microsecond 
-
-
-class Event_based_sensor:
-    def __init__(self, pid: Event_based_PID, log_base: float, dt: int, ref_period: int, dead_band: float, disp: bool):
-        self.dt = dt # Temporal base of the system (in microseconds)
-        self.ref_period = ref_period # Refractory period (in microseconds)
-        self.log_base = log_base # Base for the computation of the event
-        self.dead_band = dead_band # Dead band around the setpoint that is used to avoid reacting to sensor noise.
-        self.disp = disp # Verbosity of the library
-        self.last_val = None # Last value stored
-        self.set_point = None # Sensor setpoint
-        self.shift_base = 0.0
-        self.has_init = False
-        self.internal_timer = None
-        self.last_event_time = None
-        self.spike_change_sign = None
-        self.pid = pid
-        self.reset_state()
-
-    def reset_state(self):
-        self.internal_timer = 0
-        self.last_event_time = 0
-        self.spike_change_sign = 0
-
-    def init_sensor(self, x0: int):
-        print(f"Initializing the sensor to last_var: {x0}")
-        self.last_val = x0
-        self.pid.init_error(x0)
-        self.has_init = True
-
-    def update(self, signal_in: float):
-        signal_shift = self.set_point - signal_in
-        print(f"Signal_shift: {signal_shift}; Dead_band: {self.dead_band}")
-        if(abs(signal_shift) > self.dead_band):
-            self.update_change_event(signal_shift)
-        self.internal_timer += 1
-
-    def update_change_event(self, signal_shift: float):
-        n_change_base = 1
-        polarity = 0
-        if self.has_init == False:
-            self.init_sensor(signal_shift)
-        # Check if the refractory periof if fit
-        if (self.internal_timer - self.last_event_time) >= self.ref_period: #TODO check the time makes sense in term of microseconds
-            ratio_increase = 0.0
-            ratio_decrease = 0.0	
-            ratio_sign = 0
-
-            if self.last_val != 0:
-                ratio_increase = abs(signal_shift / self.last_val) #abs(signal_shift) / abs(self.last_val)
-                ratio_sign = self.sign(signal_shift / self.last_val)
-            else:
-                ratio_increase = self.log_base
-                ratio_sign = self.sign(signal_shift)
-                    
-            if (signal_shift != 0.0) and (self.last_val != 0.0):
-                ratio_decrease = abs(self.last_val / signal_shift) #abs(self.last_val) / abs(signal_shift)
-                ratio_sign = self.sign(signal_shift / self.last_val)
-
-            if ratio_sign >= 0:
-                ratio_sign = 0
-            else:
-                ratio_sign = 1
-
-            print(f"Ref_periof reached. ratio_increase: {ratio_increase}; ratio_decrease: {ratio_decrease}; ratio_sign: {ratio_sign}")
-            
-            if ratio_increase >= self.log_base:
-                self.spike_change_sign = ratio_sign
-                n_change_base = round(math.log(ratio_increase) / math.log(self.log_base))
-                self.last_val = signal_shift
-                self.last_event_time = self.internal_timer
-                polarity = 1
-                self.emitEvent(polarity=polarity, change_sign=self.spike_change_sign, n_change_base=n_change_base)
-            
-            if ratio_decrease >= self.log_base: #if abs(ratio_decrease) >= self.log_base:
-                self.spike_change_sign = ratio_sign
-                n_change_base = round(math.log(ratio_decrease) / math.log(self.log_base))
-                self.last_val = signal_shift
-                self.last_event_time = self.internal_timer
-                polarity = -1
-                self.emitEvent(polarity=polarity, change_sign=self.spike_change_sign, n_change_base=n_change_base)
-        
-        else:
-            print(f"TRef_periof NOT reached. Time since last event: {self.internal_timer - self.last_event_time}; Ref_period: {self.ref_period}")
-
-        # if self.disp:
-        #     self.printInfo(time= self.internal_timer, polarity= polarity, change_sign=self.spike_change_sign, n_change_base= n_change_base)
-
-    def sign(self, x: float):
-        if x > 0:
-            return 1.0
-        elif x < 0:
-            return -1.0
-        else:
-            return 0
-
-    def emitEvent(self, polarity: int, change_sign: int, n_change_base: int):
-        if self.pid is not None:
-            print(f"Emiting and event -- pol: {polarity}; change_sign: {change_sign}; n_change_base: {n_change_base}")
-            self.pid.change_event_received(polarity, change_sign, n_change_base)
-
-    def printInfo(self, time: int, polarity: int, change_sign: int, n_change_base: int):
-        print(f"Info -- time: {time}; pol: {polarity}; n_change_base: {n_change_base}; change_sign: {change_sign}")
+        return self.last_Q

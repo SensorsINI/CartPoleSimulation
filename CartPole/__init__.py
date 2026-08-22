@@ -36,6 +36,7 @@ from CartPole._CartPole_mathematical_helpers import wrap_angle_rad
 from CartPole.latency_adder import LatencyAdder
 from CartPole.load import get_full_paths_to_csvs, load_csv_recording
 from CartPole.noise_adder import NoiseAdder
+from CartPole.sensor_quantizer import SensorQuantizer
 from CartPole.noise_control_signal import ControlNoiseGenerator
 from CartPole.random_target_generator import Generate_Random_Trace_Function
 from CartPole.state_utilities import (ANGLE_COS_IDX, ANGLE_IDX, ANGLE_SIN_IDX,
@@ -146,6 +147,7 @@ class CartPole(EnvironmentBatched):
         self.latency = self.config["latency"]
         self.LatencyAdderInstance = LatencyAdder(latency=self.latency, dt_sampling=0.002)
         self.NoiseAdderInstance = NoiseAdder()
+        self.SensorQuantizerInstance = SensorQuantizer(self.config.get("sensor_quantization"))
         self.s_with_noise_and_latency = np.copy(self.s)
 
         self.control_noise_generator = ControlNoiseGenerator(
@@ -198,6 +200,8 @@ class CartPole(EnvironmentBatched):
         self.optimizer_name = ''  # Placeholder for the currently used optimizer name
         self.controller_idx = None  # Placeholder for the currently used controller index
         self.optimizer_idx = None  # Placeholder for the currently used optimizer index
+        self.controller_status_print_period = 1.0
+        self._last_controller_status_print_time = -np.inf
         self.controller_names = get_available_controller_names()  # list of controllers available in controllers folder
         self.optimizer_names = get_available_optimizer_names()  # list of controllers available in controllers folder
         # endregion
@@ -357,6 +361,9 @@ class CartPole(EnvironmentBatched):
         self.LatencyAdderInstance.add_current_state_to_latency_buffer(self.s)
         s_delayed = self.LatencyAdderInstance.get_interpolated_delayed_state()
         self.s_with_noise_and_latency = self.NoiseAdderInstance.add_noise_to_measurement(s_delayed, copy=False)
+        self.s_with_noise_and_latency = self.SensorQuantizerInstance.quantize_measurement(
+            self.s_with_noise_and_latency, copy=False
+        )
         self.s_with_noise_and_latency = self.update_vertical_angle_offset(self.s_with_noise_and_latency)
         
     def cartpole_second_derivatives(self):
@@ -565,11 +572,27 @@ class CartPole(EnvironmentBatched):
                     }
                 ))
                 self.Q_update_time = timeit.default_timer()-update_start
+                self.print_controller_status_if_available()
 
                 self.Q_applied = self.control_noise_generator.add_control_noise(self.Q_calculated)
 
             self.Q = self.Q_applied
             self.dt_controller_steps_counter = 0
+
+    def print_controller_status_if_available(self):
+        if self.controller is None:
+            return
+        if self.time - self._last_controller_status_print_time < self.controller_status_print_period:
+            return
+
+        get_controller_status = getattr(self.controller, "get_controller_status", None)
+        if get_controller_status is None:
+            return
+
+        controller_status = get_controller_status()
+        if controller_status:
+            print(f"[{self.controller_name}] {controller_status}", flush=True)
+            self._last_controller_status_print_time = self.time
 
     def update_parameters(self):
 
@@ -793,13 +816,16 @@ class CartPole(EnvironmentBatched):
             self.controller.configure(self.optimizer_name)
 
     # Set the controller of CartPole
-    def set_controller(self, controller_name=None, controller_idx=None):
+    def set_controller(self, controller_name=None, controller_idx=None, use_secloc=False):
         self.controller_name, self.controller_idx = get_controller_name(
             controller_name=controller_name, controller_idx=controller_idx
         )
-        
+
         if self.controller_name != 'manual-stabilization':
-            Controller: "type[template_controller]" = import_controller_by_name(self.controller_name)
+            if use_secloc:
+                Controller = import_controller_by_name('secloc')
+            else:
+                Controller: "type[template_controller]" = import_controller_by_name(self.controller_name)
             self.L_for_controller = float(self.controller_informer.get_parameters(
                 L, float(self.L_updater.init_value), self.time
             ))
@@ -815,6 +841,10 @@ class CartPole(EnvironmentBatched):
                 },
                 control_limits=(self.action_space.low, self.action_space.high),
             )
+            if use_secloc:
+                # Tell the secloc wrapper which controller it wraps; has_optimizer
+                # then reflects the inner controller in the branches below.
+                self.controller.set_inner_controller_name(self.controller_name)
             # Final configuration of controller
             if self.controller.has_optimizer:
                 self.controller.configure(self.optimizer_name)
@@ -824,8 +854,12 @@ class CartPole(EnvironmentBatched):
 
             else:
                 self.controller.configure()
-            
-                
+
+            if use_secloc:
+                # The gate's ref_period_ticks throttle counts controller update
+                # periods; in simulation the quantum is dt_controller.
+                self.controller.secloc.set_time_quantum(self.dt_controller)
+
         # Set the maximal allowed value of the slider - relevant only for GUI
         if self.slider is not None:
             if self.controller_name == 'manual-stabilization':
@@ -934,6 +968,7 @@ class CartPole(EnvironmentBatched):
         # Reset the dict keeping the experiment history and save the state for t = 0
         self.dt_save_steps_counter = 0
         self.dt_controller_steps_counter = 0
+        self._last_controller_status_print_time = -np.inf
 
         if reset_dict_history:
             self.dict_history = HistoryClass()
