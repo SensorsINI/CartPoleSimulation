@@ -151,6 +151,38 @@ def configure_c_api(lib):
     if hasattr(lib, "rpgd_validate_config"):
         lib.rpgd_validate_config.argtypes = [ctypes.POINTER(RpgdConfig)]
         lib.rpgd_validate_config.restype = ctypes.c_int
+    if hasattr(lib, "rpgd_get_worker_scratch_bytes"):
+        lib.rpgd_get_worker_scratch_bytes.argtypes = []
+        lib.rpgd_get_worker_scratch_bytes.restype = ctypes.c_size_t
+    if hasattr(lib, "rpgd_step_prepare"):
+        lib.rpgd_step_prepare.argtypes = [
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_float),
+            ctypes.POINTER(RpgdRuntime),
+            ctypes.c_void_p,
+        ]
+        lib.rpgd_step_prepare.restype = ctypes.c_int
+        lib.rpgd_step_optimize_range.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_void_p,
+        ]
+        lib.rpgd_step_optimize_range.restype = ctypes.c_int
+        lib.rpgd_step_finalize.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        lib.rpgd_step_finalize.restype = ctypes.c_float
+        lib.rpgd_step_abort.argtypes = [ctypes.c_void_p, ctypes.c_int]
+        lib.rpgd_step_abort.restype = None
+    if hasattr(lib, "rpgd_is_busy"):
+        lib.rpgd_is_busy.argtypes = [ctypes.c_void_p]
+        lib.rpgd_is_busy.restype = ctypes.c_int
+    if hasattr(lib, "rpgd_get_resample_phase"):
+        lib.rpgd_get_resample_phase.argtypes = [ctypes.c_void_p]
+        lib.rpgd_get_resample_phase.restype = ctypes.c_int
+    if hasattr(lib, "rpgd_debug_get_q"):
+        lib.rpgd_debug_get_q.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_float)]
+        lib.rpgd_debug_get_q.restype = None
     return lib
 
 
@@ -167,6 +199,7 @@ def _c_source_mtime(c_dir):
         c_dir / "cartpole_model.h",
         c_dir / "cartpole_cost.h",
         c_dir / "rpgd_platform.h",
+        c_dir / "rpgd_worker.h",
     ]
     return max(path.stat().st_mtime for path in sources)
 
@@ -564,6 +597,150 @@ def compare_safety_guards():
     print("safety_guards=PASS")
 
 
+class RpgdStepPlan(ctypes.Structure):
+    _fields_ = [
+        ("state6", ctypes.c_float * 6),
+        ("runtime", RpgdRuntime),
+        ("active_iterations", ctypes.c_int),
+        ("prepared", ctypes.c_int),
+        ("range_error", ctypes.c_int),
+    ]
+
+
+def _snapshot(lib, solver, cfg):
+    n = cfg.num_rollouts * cfg.mpc_horizon
+    q = np.empty(n, dtype=np.float32)
+    m = np.empty(n, dtype=np.float32)
+    v = np.empty(n, dtype=np.float32)
+    costs = np.empty(cfg.num_rollouts, dtype=np.float32)
+    indices = np.empty(cfg.num_rollouts, dtype=np.int32)
+    step = ctypes.c_int()
+    lib.rpgd_debug_get_q(solver, q.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+    lib.rpgd_debug_get_adam(
+        solver,
+        m.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        v.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        ctypes.byref(step),
+    )
+    lib.rpgd_debug_get_costs(solver, costs.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+    lib.rpgd_debug_get_indices(solver, indices.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))
+    return {
+        "q": q.copy(),
+        "m": m.copy(),
+        "v": v.copy(),
+        "costs": costs.copy(),
+        "indices": indices.copy(),
+        "adam_step": step.value,
+        "resample": lib.rpgd_get_resample_phase(solver),
+        "status": lib.rpgd_get_last_status(solver),
+    }
+
+
+def _split_step(lib, solver, state, rt, ranges):
+    plan = RpgdStepPlan()
+    scratch_size = lib.rpgd_get_worker_scratch_bytes()
+    rc = lib.rpgd_step_prepare(solver, state, ctypes.byref(rt), ctypes.byref(plan))
+    if rc != 0:
+        return 0.0, rc
+    for first, last in ranges:
+        scratch = ctypes.create_string_buffer(scratch_size)
+        rc = lib.rpgd_step_optimize_range(
+            solver, ctypes.byref(plan), first, last, scratch
+        )
+        if rc != 0:
+            lib.rpgd_step_abort(solver, rc)
+            return 0.0, rc
+    u = lib.rpgd_step_finalize(solver, ctypes.byref(plan))
+    return u, lib.rpgd_get_last_status(solver)
+
+
+def compare_split_phases():
+    cfg = build_config(num_threads=1)
+    rt = RpgdRuntime(0.0, 1.0, cfg.L, cfg.m_pole)
+    state = np.array([0.2, 0.1, np.cos(0.2), np.sin(0.2), 0.0, 0.0], dtype=np.float32)
+    c_state = (ctypes.c_float * 6)(*state)
+    rng = np.random.default_rng(99)
+    q_init = rng.uniform(-0.2, 0.2, size=(cfg.num_rollouts, cfg.mpc_horizon)).astype(np.float32)
+    n = cfg.num_rollouts
+    partitions = {
+        "one_range": [(0, n)],
+        "8_8": [(0, 8), (8, n)],
+        "7_9": [(0, 7), (7, n)],
+        "9_7": [(0, 9), (9, n)],
+        "four": [(0, 4), (4, 8), (8, 12), (12, n)],
+    }
+
+    lib = load_c_lib()
+    bm = load_baremetal_lib()
+    for name, lib_i in (("host", lib), ("baremetal", bm)):
+        mono = lib_i.rpgd_create(ctypes.byref(cfg))
+        lib_i.rpgd_debug_set_q(mono, q_init.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+        mono_seq = []
+        mono_snaps = []
+        for _ in range(12):
+            mono_seq.append(lib_i.rpgd_step(mono, c_state, ctypes.byref(rt)))
+            mono_snaps.append(_snapshot(lib_i, mono, cfg))
+        lib_i.rpgd_destroy(mono)
+
+        for part_name, ranges in partitions.items():
+            solver = lib_i.rpgd_create(ctypes.byref(cfg))
+            lib_i.rpgd_debug_set_q(solver, q_init.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+            for i, expected in enumerate(mono_seq):
+                u, status = _split_step(lib_i, solver, c_state, rt, ranges)
+                snap = _snapshot(lib_i, solver, cfg)
+                assert status == 0
+                assert u == expected, f"{name} {part_name} step {i}: {u} vs {expected}"
+                for key in ("q", "m", "v", "costs", "indices"):
+                    assert np.array_equal(snap[key], mono_snaps[i][key]), f"{name} {part_name} {key}"
+                assert snap["adam_step"] == mono_snaps[i]["adam_step"]
+                assert snap["resample"] == mono_snaps[i]["resample"]
+            lib_i.rpgd_destroy(solver)
+        print(f"split_phases_{name}=PASS")
+
+    solver = bm.rpgd_create(ctypes.byref(cfg))
+    plan = RpgdStepPlan()
+    scratch = ctypes.create_string_buffer(bm.rpgd_get_worker_scratch_bytes())
+    rc = bm.rpgd_step_prepare(solver, c_state, ctypes.byref(rt), ctypes.byref(plan))
+    assert rc == 0
+    assert bm.rpgd_is_busy(solver) == 1
+    rc_busy = bm.rpgd_step_prepare(solver, c_state, ctypes.byref(rt), ctypes.byref(plan))
+    assert rc_busy != 0
+    bm.rpgd_step_abort(solver, 0)
+    assert bm.rpgd_is_busy(solver) == 0
+
+    phase_before = bm.rpgd_get_resample_phase(solver)
+    step = ctypes.c_int()
+    bm.rpgd_debug_get_adam(solver, None, None, ctypes.byref(step))
+    adam_before = step.value
+    rc = bm.rpgd_step_prepare(solver, c_state, ctypes.byref(rt), ctypes.byref(plan))
+    assert rc == 0
+    bm.rpgd_step_abort(solver, -7)
+    assert bm.rpgd_is_busy(solver) == 0
+    assert bm.rpgd_get_resample_phase(solver) == phase_before
+    bm.rpgd_debug_get_adam(solver, None, None, ctypes.byref(step))
+    assert step.value == adam_before
+
+    rc = bm.rpgd_step_prepare(solver, c_state, ctypes.byref(rt), ctypes.byref(plan))
+    assert rc == 0
+    assert bm.rpgd_step_optimize_range(solver, ctypes.byref(plan), 0, 99, scratch) != 0
+    assert plan.range_error != 0
+    u_bad = bm.rpgd_step_finalize(solver, ctypes.byref(plan))
+    assert u_bad == 0.0
+    assert bm.rpgd_is_busy(solver) == 0
+    bm.rpgd_debug_get_adam(solver, None, None, ctypes.byref(step))
+    assert step.value == adam_before
+
+    rc = bm.rpgd_step_prepare(solver, c_state, ctypes.byref(rt), ctypes.byref(plan))
+    assert rc == 0
+    assert bm.rpgd_step_optimize_range(solver, ctypes.byref(plan), 0, n, scratch) == 0
+    u = bm.rpgd_step_finalize(solver, ctypes.byref(plan))
+    assert np.isfinite(u)
+    u2 = bm.rpgd_step_finalize(solver, ctypes.byref(plan))
+    assert u2 == 0.0
+    bm.rpgd_destroy(solver)
+    print("split_failure_injection=PASS")
+
+
 def compare_short_closed_loop():
     state_low = [-np.pi, -np.inf, -1.0, -1.0, -0.22, -np.inf]
     state_high = [-v for v in state_low]
@@ -645,6 +822,7 @@ if __name__ == "__main__":
     compare_optimizer_step()
     compare_baremetal_library()
     compare_safety_guards()
+    compare_split_phases()
     if args.reference_lib is not None:
         compare_reference_library(args.reference_lib)
     compare_short_closed_loop()

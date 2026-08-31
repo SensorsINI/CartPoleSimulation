@@ -54,20 +54,24 @@ def c_int(name, value):
     return str(int(value))
 
 
-def write_config_header(cfg, path, fingerprint):
+def write_config_header(cfg, path, fingerprint, guard="RPGD_CONFIG_DEFAULTS_H", macro="RPGD_DEFAULT_CONFIG", extra_defines=None):
     fields = [name for name, _ in cfg._fields_]
     lines = [
         "/* Generated from Control_Toolkit_ASF YAML + CartPoleParameters.",
         " * Do not edit by hand; rerun generate_rpgd_zynq_golden.py",
         " */",
         f"/* Source/config fingerprint: {fingerprint} */",
-        "#ifndef RPGD_CONFIG_DEFAULTS_H",
-        "#define RPGD_CONFIG_DEFAULTS_H",
+        f"#ifndef {guard}",
+        f"#define {guard}",
         "",
         '#include "rpgd_c/rpgd_cartpole.h"',
         "",
-        "#define RPGD_DEFAULT_CONFIG { \\",
     ]
+    for define in extra_defines or []:
+        lines.append(define)
+    if extra_defines:
+        lines.append("")
+    lines.append(f"#define {macro} {{ \\")
     for name in fields:
         value = 1 if name == "num_threads" else getattr(cfg, name)
         if name in INT_FIELDS:
@@ -92,14 +96,14 @@ def fmt_array(name, values, ctype="float"):
     return "\n".join(lines)
 
 
-def write_golden_header(path, state, q_init, q_kernel, u_steps, costs, indices, grad, fingerprint):
+def write_golden_header(path, state, q_init, q_kernel, u_steps, costs, indices, grad, fingerprint, guard="RPGD_GOLDEN_VECTORS_H"):
     lines = [
         "/* Generated golden vectors from the host RPGD-C library (seed 123, q_init rng 1234).",
         " * On-target checks use tier-B absolute tolerances, not bit-exact ARM/x86 equality.",
         " */",
         f"/* Source/config fingerprint: {fingerprint} */",
-        "#ifndef RPGD_GOLDEN_VECTORS_H",
-        "#define RPGD_GOLDEN_VECTORS_H",
+        f"#ifndef {guard}",
+        f"#define {guard}",
         "",
         "#define RPGD_GOLDEN_U_ABS_TOL      2.0e-4f",
         "#define RPGD_GOLDEN_COST_ABS_TOL   1.0e-3f",
@@ -130,8 +134,11 @@ def write_golden_header(path, state, q_init, q_kernel, u_steps, costs, indices, 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--lib", type=Path, default=None)
+    parser.add_argument("--profile", choices=("pc20", "zynq30"), default="pc20")
     args = parser.parse_args()
     cfg = build_config(num_threads=1)
+    if args.profile == "zynq30":
+        cfg.mpc_timestep = 0.03
     lib = configure_c_api(load_c_lib(args.lib)) if args.lib else load_c_lib()
     rt = RpgdRuntime(0.0, 1.0, cfg.L, cfg.m_pole)
     state = np.array([0.2, 0.1, np.cos(0.2), np.sin(0.2), 0.0, 0.0], dtype=np.float32)
@@ -173,21 +180,48 @@ def main():
 
     FIRMWARE_GENERAL.mkdir(parents=True, exist_ok=True)
     FIRMWARE_APP.mkdir(parents=True, exist_ok=True)
-    write_config_header(cfg, FIRMWARE_GENERAL / "rpgd_config_defaults.h", fingerprint)
-    write_golden_header(
-        FIRMWARE_APP / "rpgd_golden_vectors.h",
-        state,
-        q_init,
-        q_kernel,
-        u_steps,
-        costs,
-        indices,
-        grad,
-        fingerprint,
-    )
-    print(f"wrote {FIRMWARE_GENERAL / 'rpgd_config_defaults.h'}")
-    print(f"wrote {FIRMWARE_APP / 'rpgd_golden_vectors.h'}")
-    print(f"golden_u0={u_steps[0]:.9g} best={int(indices[0])}")
+    if args.profile == "zynq30":
+        write_config_header(
+            cfg,
+            FIRMWARE_GENERAL / "rpgd_zynq_30ms_config.h",
+            fingerprint,
+            guard="RPGD_ZYNQ_30MS_CONFIG_H",
+            macro="RPGD_30MS_CONFIG",
+            extra_defines=[
+                "#define RPGD_CONTROL_PERIOD_MS 30",
+                "#define RPGD_30MS_DERIVATIVE_STEPS 1",
+            ],
+        )
+        write_golden_header(
+            FIRMWARE_APP / "rpgd_golden_vectors_30ms.h",
+            state,
+            q_init,
+            q_kernel,
+            u_steps,
+            costs,
+            indices,
+            grad,
+            fingerprint,
+            guard="RPGD_GOLDEN_VECTORS_30MS_H",
+        )
+        print(f"wrote {FIRMWARE_GENERAL / 'rpgd_zynq_30ms_config.h'}")
+        print(f"wrote {FIRMWARE_APP / 'rpgd_golden_vectors_30ms.h'}")
+    else:
+        write_config_header(cfg, FIRMWARE_GENERAL / "rpgd_config_defaults.h", fingerprint)
+        write_golden_header(
+            FIRMWARE_APP / "rpgd_golden_vectors.h",
+            state,
+            q_init,
+            q_kernel,
+            u_steps,
+            costs,
+            indices,
+            grad,
+            fingerprint,
+        )
+        print(f"wrote {FIRMWARE_GENERAL / 'rpgd_config_defaults.h'}")
+        print(f"wrote {FIRMWARE_APP / 'rpgd_golden_vectors.h'}")
+    print(f"golden_u0={u_steps[0]:.9g} best={int(indices[0])} profile={args.profile}")
 
 
 if __name__ == "__main__":
