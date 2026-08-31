@@ -99,18 +99,21 @@ neural-imitator:
 #  seed: null                            # If null, random seed based on datetime is used
 #  PATH_TO_MODELS: './SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/'
 #  net_name: 'GRU-8IN-64H1-64H2-1OUT-2'  # TF
-# ACTIVE: Dense-7IN-32H1-32H2-1OUT-8 (swing-up net). nn_evaluator_mode 'normal' = TF on PC;
-# 'C' = generated network.c (on-chip math parity / NC_C path).
-  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments'
-  net_name: 'Dense-7IN-32H1-32H2-1OUT-8'
-# ALT: paper/FPGA net (x3232_12_2_v2 == 1OUT-1). To test it, uncomment these, comment the
-# two lines above, and set nn_evaluator_mode: 'normal'.
-#  PATH_TO_MODELS: '../experiment_in_paper'
-#  net_name: 'Dense-7IN-32H1-32H2-1OUT-1'
+# ACTIVE: exact 3 Jun 2025 committed experiment model (b9c6cfae).
+# It was created 1 Jun with random vertical-angle shifts.
+  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments/CP_Models_02_06_2025/Long/quant/'
+  net_name: 'LSTM-7IN-64H1-64H2-1OUT-0'
+# ALT: non-quant swing-label model selected later by 01c754b3:
+#  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments/CP_Models_02_06_2025/Long/'
+#  net_name: 'LSTM-7IN-64H1-64H2-1OUT-1'
+# ALT: Dense-7IN-32H1-32H2-1OUT-8 (set nn_evaluator_mode: 'C', input_precision ap_fixed):
+#  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments'
+#  net_name: 'Dense-7IN-32H1-32H2-1OUT-8'
   input_at_input: False
-  input_precision: 'ap_fixed<12,2>'  #'ap_fixed<20,6>'   # Can be 'float' - currently do nothing, or 'ap_fixed<total number of bits, integer bits + 1 sign bit>' - adjusting the number precision of the input
+  input_precision: 'float'  #'ap_fixed<20,6>'   # Can be 'float' - currently do nothing, or 'ap_fixed<total number of bits, integer bits + 1 sign bit>' - adjusting the number precision of the input
+  clip_output: true  # June 2025 behavior: keep normalized motor command in [-1, 1]
   controller_logging: True
-  nn_evaluator_mode: 'C'  # 'normal', 'numpy', 'C' -- 'C' runs the generated network.c (same math as on-chip)
+  nn_evaluator_mode: 'normal'  # 'normal', 'numpy', 'C' -- LSTM has no generated C next to the net
 secloc:
   secloc_config: default  # gate profile (config_secloc.yml)
   controller_logging: false
