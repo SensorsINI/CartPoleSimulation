@@ -100,8 +100,9 @@ neural-imitator:
 #  PATH_TO_MODELS: './SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/'
 #  net_name: 'GRU-8IN-64H1-64H2-1OUT-2'  # TF
 # ACTIVE: exact 3 Jun 2025 committed experiment model (b9c6cfae).
-# It was created 1 Jun with random vertical-angle shifts.
-  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments/CP_Models_02_06_2025/Long/quant/'
+# It was created 1 Jun with random vertical-angle shifts and is preserved,
+# with provenance and validation data, in the parent repository examples.
+  PATH_TO_MODELS: '../examples/models/adaptive-quant-lstm-2025-06-01/models/'
   net_name: 'LSTM-7IN-64H1-64H2-1OUT-0'
 # ALT: non-quant swing-label model selected later by 01c754b3:
 #  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments/CP_Models_02_06_2025/Long/'
