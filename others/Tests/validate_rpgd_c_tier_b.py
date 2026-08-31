@@ -102,6 +102,7 @@ def configure_c_api(lib):
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
     ]
+    lib.rpgd_debug_rollout_final_state.restype = None
     lib.rpgd_debug_gradient_adjoint.argtypes = [
         ctypes.POINTER(RpgdConfig),
         ctypes.POINTER(RpgdRuntime),
@@ -109,33 +110,92 @@ def configure_c_api(lib):
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
     ]
+    lib.rpgd_debug_gradient_adjoint.restype = None
     lib.rpgd_debug_gradient_fd.argtypes = lib.rpgd_debug_gradient_adjoint.argtypes
+    lib.rpgd_debug_gradient_fd.restype = None
     lib.rpgd_create.argtypes = [ctypes.POINTER(RpgdConfig)]
     lib.rpgd_create.restype = ctypes.c_void_p
     lib.rpgd_destroy.argtypes = [ctypes.c_void_p]
+    lib.rpgd_destroy.restype = None
     lib.rpgd_debug_set_q.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_float)]
+    lib.rpgd_debug_set_q.restype = None
+    lib.rpgd_debug_get_adam.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_float),
+        ctypes.POINTER(ctypes.c_float),
+        ctypes.POINTER(ctypes.c_int),
+    ]
+    lib.rpgd_debug_get_adam.restype = None
     lib.rpgd_debug_get_costs.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_float)]
+    lib.rpgd_debug_get_costs.restype = None
     lib.rpgd_debug_get_indices.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int)]
+    lib.rpgd_debug_get_indices.restype = None
     lib.rpgd_step.argtypes = [
         ctypes.c_void_p,
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(RpgdRuntime),
     ]
     lib.rpgd_step.restype = ctypes.c_float
+    if hasattr(lib, "rpgd_is_baremetal"):
+        lib.rpgd_is_baremetal.argtypes = []
+        lib.rpgd_is_baremetal.restype = ctypes.c_int
+    if hasattr(lib, "rpgd_get_workspace_bytes"):
+        lib.rpgd_get_workspace_bytes.argtypes = [ctypes.c_void_p]
+        lib.rpgd_get_workspace_bytes.restype = ctypes.c_size_t
+    if hasattr(lib, "rpgd_get_last_status"):
+        lib.rpgd_get_last_status.argtypes = [ctypes.c_void_p]
+        lib.rpgd_get_last_status.restype = ctypes.c_int
+    if hasattr(lib, "rpgd_get_static_workspace_bytes"):
+        lib.rpgd_get_static_workspace_bytes.argtypes = []
+        lib.rpgd_get_static_workspace_bytes.restype = ctypes.c_size_t
+    if hasattr(lib, "rpgd_validate_config"):
+        lib.rpgd_validate_config.argtypes = [ctypes.POINTER(RpgdConfig)]
+        lib.rpgd_validate_config.restype = ctypes.c_int
     return lib
+
+
+def _c_dir():
+    return ROOT / "Control_Toolkit" / "Optimizers" / "rpgd_c"
+
+
+def _c_source_mtime(c_dir):
+    sources = [
+        c_dir / "rpgd_cartpole.c",
+        c_dir / "cartpole_model.c",
+        c_dir / "cartpole_cost.c",
+        c_dir / "rpgd_cartpole.h",
+        c_dir / "cartpole_model.h",
+        c_dir / "cartpole_cost.h",
+        c_dir / "rpgd_platform.h",
+    ]
+    return max(path.stat().st_mtime for path in sources)
 
 
 def load_c_lib(path=None):
     if path is not None:
         return configure_c_api(ctypes.CDLL(str(path)))
-    c_dir = ROOT / "Control_Toolkit" / "Optimizers" / "rpgd_c"
+    c_dir = _c_dir()
     ext = {"linux": ".so", "darwin": ".dylib", "win32": ".dll"}[sys.platform]
     lib_path = c_dir / f"librpgd_cartpole{ext}"
-    src = c_dir / "rpgd_cartpole.c"
-    header = c_dir / "rpgd_cartpole.h"
-    if (not lib_path.exists()) or lib_path.stat().st_mtime < max(src.stat().st_mtime, header.stat().st_mtime):
+    if (not lib_path.exists()) or lib_path.stat().st_mtime < _c_source_mtime(c_dir):
         optimizer_rpgd_c._build_c_library(c_dir, lib_path.name)
     return configure_c_api(ctypes.CDLL(str(lib_path)))
+
+
+def load_baremetal_lib():
+    c_dir = _c_dir()
+    ext = {"linux": ".so", "darwin": ".dylib", "win32": ".dll"}[sys.platform]
+    lib_path = c_dir / f"librpgd_cartpole_baremetal{ext}"
+    if (not lib_path.exists()) or lib_path.stat().st_mtime < _c_source_mtime(c_dir):
+        optimizer_rpgd_c._build_c_library(
+            c_dir,
+            lib_path.name,
+            extra_cflags=["-DRPGD_BAREMETAL"],
+            allow_openmp=False,
+        )
+    lib = configure_c_api(ctypes.CDLL(str(lib_path)))
+    assert lib.rpgd_is_baremetal() == 1
+    return lib
 
 
 def tf_optimizer_step(cfg, rt, state, q_init):
@@ -370,6 +430,140 @@ def compare_reference_library(reference_lib_path):
     assert same_best
 
 
+def compare_baremetal_library():
+    cfg = build_config(num_threads=1)
+    rt = RpgdRuntime(0.0, 1.0, cfg.L, cfg.m_pole)
+    state = np.array([0.2, 0.1, np.cos(0.2), np.sin(0.2), 0.0, 0.0], dtype=np.float32)
+    q = np.array([0.05 * np.cos(i * 0.2) for i in range(cfg.mpc_horizon)], dtype=np.float32)
+    current = load_c_lib()
+    baremetal = load_baremetal_lib()
+    assert current.rpgd_is_baremetal() == 0
+    assert baremetal.rpgd_is_baremetal() == 1
+
+    c_state = (ctypes.c_float * 6)(*state)
+    c_q = (ctypes.c_float * cfg.mpc_horizon)(*q)
+    cur_final = (ctypes.c_float * 6)()
+    bm_final = (ctypes.c_float * 6)()
+    current.rpgd_debug_rollout_final_state(ctypes.byref(cfg), ctypes.byref(rt), c_state, c_q, cur_final)
+    baremetal.rpgd_debug_rollout_final_state(ctypes.byref(cfg), ctypes.byref(rt), c_state, c_q, bm_final)
+    cur_cost = current.rpgd_debug_rollout_cost(ctypes.byref(cfg), ctypes.byref(rt), c_state, c_q)
+    bm_cost = baremetal.rpgd_debug_rollout_cost(ctypes.byref(cfg), ctypes.byref(rt), c_state, c_q)
+    cur_grad = (ctypes.c_float * cfg.mpc_horizon)()
+    bm_grad = (ctypes.c_float * cfg.mpc_horizon)()
+    current.rpgd_debug_gradient_adjoint(ctypes.byref(cfg), ctypes.byref(rt), c_state, c_q, cur_grad)
+    baremetal.rpgd_debug_gradient_adjoint(ctypes.byref(cfg), ctypes.byref(rt), c_state, c_q, bm_grad)
+
+    final_err = np.max(np.abs(np.array(cur_final) - np.array(bm_final)))
+    cost_err = abs(cur_cost - bm_cost)
+    grad_err = np.max(np.abs(np.array(cur_grad) - np.array(bm_grad)))
+
+    rng = np.random.default_rng(4321)
+    q_init = rng.uniform(-0.2, 0.2, size=(cfg.num_rollouts, cfg.mpc_horizon)).astype(np.float32)
+    outputs = []
+    costs = []
+    indices = []
+    sequences = []
+    for lib in (current, baremetal):
+        solver = lib.rpgd_create(ctypes.byref(cfg))
+        lib.rpgd_debug_set_q(solver, q_init.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+        seq = [lib.rpgd_step(solver, c_state, ctypes.byref(rt)) for _ in range(3)]
+        c_costs = np.empty((cfg.num_rollouts,), dtype=np.float32)
+        c_indices = np.empty((cfg.num_rollouts,), dtype=np.int32)
+        lib.rpgd_debug_get_costs(solver, c_costs.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+        lib.rpgd_debug_get_indices(solver, c_indices.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))
+        lib.rpgd_destroy(solver)
+        outputs.append(seq[0])
+        sequences.append(seq)
+        costs.append(c_costs)
+        indices.append(c_indices)
+
+    rng_seq = []
+    for lib in (current, baremetal):
+        solver = lib.rpgd_create(ctypes.byref(cfg))
+        rng_seq.append([lib.rpgd_step(solver, c_state, ctypes.byref(rt)) for _ in range(3)])
+        lib.rpgd_destroy(solver)
+
+    u_err = abs(outputs[0] - outputs[1])
+    step_cost_err = float(np.max(np.abs(costs[0] - costs[1])))
+    seq_err = max(abs(a - b) for a, b in zip(sequences[0], sequences[1]))
+    rng_err = max(abs(a - b) for a, b in zip(rng_seq[0], rng_seq[1]))
+    same_best = int(indices[0][0]) == int(indices[1][0])
+    print(f"baremetal_final_max_abs={final_err:.6g}")
+    print(f"baremetal_cost_abs={cost_err:.6g}")
+    print(f"baremetal_gradient_max_abs={grad_err:.6g}")
+    print(f"baremetal_step_u_abs={u_err:.6g}")
+    print(f"baremetal_step_seq_max_abs={seq_err:.6g}")
+    print(f"baremetal_rng_seq_max_abs={rng_err:.6g}")
+    print(f"baremetal_step_costs_max_abs={step_cost_err:.6g}")
+    print(f"baremetal_step_same_best={same_best}")
+    assert final_err == 0.0
+    assert cost_err == 0.0
+    assert grad_err == 0.0
+    assert u_err == 0.0
+    assert seq_err == 0.0
+    assert rng_err == 0.0
+    assert step_cost_err == 0.0
+    assert same_best
+
+
+def compare_safety_guards():
+    current = load_c_lib()
+    baremetal = load_baremetal_lib()
+    cfg = build_config(num_threads=1)
+
+    invalid_cfg = build_config(num_threads=1)
+    invalid_cfg.adam_beta_2 = np.nan
+    assert current.rpgd_validate_config(ctypes.byref(invalid_cfg)) != 0
+    assert not current.rpgd_create(ctypes.byref(invalid_cfg))
+
+    solver = baremetal.rpgd_create(ctypes.byref(cfg))
+    assert solver
+    assert not baremetal.rpgd_create(ctypes.byref(cfg))
+    assert baremetal.rpgd_get_workspace_bytes(solver) == baremetal.rpgd_get_static_workspace_bytes()
+
+    state = np.array(
+        [np.nan, 0.1, np.cos(0.2), np.sin(0.2), 0.0, 0.0],
+        dtype=np.float32,
+    )
+    runtime = RpgdRuntime(0.0, 1.0, cfg.L, cfg.m_pole)
+    output = baremetal.rpgd_step(
+        solver,
+        state.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        ctypes.byref(runtime),
+    )
+    assert output == 0.0
+    assert baremetal.rpgd_get_last_status(solver) != 0
+    baremetal.rpgd_destroy(solver)
+
+    warm_cfg = build_config(num_threads=1)
+    warm_cfg.outer_its = 2
+    warm_cfg.warmup = 1
+    warm_cfg.warmup_iterations = 7
+    warm_solver = baremetal.rpgd_create(ctypes.byref(warm_cfg))
+    assert warm_solver
+    finite_state = np.array(
+        [0.2, 0.1, np.cos(0.2), np.sin(0.2), 0.0, 0.0],
+        dtype=np.float32,
+    )
+    baremetal.rpgd_step(
+        warm_solver,
+        finite_state.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        ctypes.byref(runtime),
+    )
+    adam_step = ctypes.c_int()
+    baremetal.rpgd_debug_get_adam(warm_solver, None, None, ctypes.byref(adam_step))
+    assert adam_step.value == 7
+    baremetal.rpgd_step(
+        warm_solver,
+        finite_state.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        ctypes.byref(runtime),
+    )
+    baremetal.rpgd_debug_get_adam(warm_solver, None, None, ctypes.byref(adam_step))
+    assert adam_step.value == 9
+    baremetal.rpgd_destroy(warm_solver)
+    print("safety_guards=PASS")
+
+
 def compare_short_closed_loop():
     state_low = [-np.pi, -np.inf, -1.0, -1.0, -0.22, -np.inf]
     state_high = [-v for v in state_low]
@@ -449,6 +643,8 @@ if __name__ == "__main__":
     compare_kernel()
     compare_thread_determinism()
     compare_optimizer_step()
+    compare_baremetal_library()
+    compare_safety_guards()
     if args.reference_lib is not None:
         compare_reference_library(args.reference_lib)
     compare_short_closed_loop()
