@@ -97,7 +97,7 @@ rpgd_c:
   adam_epsilon: 1.0e-08
   gradmax_clip: 5
   rtol: 1.0e-3
-  num_rollouts: 16
+  num_rollouts: 8  # 2026-09-02 go-to: match on-chip AMP (20 ms, dt=0.02)
   opt_keep_k_ratio: 0.75
   outer_its: 5
   resamp_per: 10
