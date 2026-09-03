@@ -1,142 +1,218 @@
 # Cartpole Simulator
 
-![Alt Text](https://raw.githubusercontent.com/SensorsINI/CartPoleSimulation/master/others/Media/CartPoleSimulator.gif "CartPole Simulator Demo")
+![CartPole Simulator Demo](https://raw.githubusercontent.com/SensorsINI/CartPoleSimulation/master/others/Media/CartPoleSimulator.gif)
 
-## Tutorial
-Check our [tutorial](https://youtu.be/ad3t2cUHbts "LTC Tutorial CartPoleSimulator") which will guide you through installation and explain basic functionalities!
+Python simulation of the cartpole plant: interactive GUI, batch data generation,
+MPC / neural controllers, and an SI_Toolkit training pipeline.
 
-A lengthy explanation of the code is provided in [this video series](https://www.youtube.com/playlist?list=PLelUYMyCiZG9Xjq7fEk0fay9ZB3RdXh9m "CartPoleSimulation Repository Walkthrough").
+This tree is also vendored as a **git submodule** inside
+[physical-cartpole](https://github.com/SensorsINI/physical-cartpole) at
+`Driver/CartPoleSimulation/`. When used from there, install the parent
+`requirements.txt`, use the parent `cpp()` alias, and run scripts from the
+repo root or with `Driver/CartPoleSimulation` on `PYTHONPATH` — see
+[physical-cartpole README](https://github.com/SensorsINI/physical-cartpole#set-up-and-installation).
+
+## Tutorial videos
+
+* [Installation and basic use (YouTube)](https://youtu.be/ad3t2cUHbts)
+* [Repository walkthrough (playlist)](https://www.youtube.com/playlist?list=PLelUYMyCiZG9Xjq7fEk0fay9ZB3RdXh9m)
+
+Video paths may predate the current file layout; prefer this README for paths.
+
+## Contents
+
+* [Installation](#installation)
+* [Quick start](#quick-start)
+* [Configuration map](#configuration-map)
+* [Machine learning pipeline](#machine-learning-pipeline)
+* [Controllers](#controllers)
+* [Code map](#code-map)
+* [Analysis tools](#analysis-tools)
+* [Deploying to hardware](#deploying-to-hardware)
 
 ## Installation
 
-Get the code from Github:
-
-	git clone --recurse-submodules https://github.com/SensorsINI/CartPoleSimulation.git
-
-Create conda environment with 
-
-	conda create -n CPS python=3.11
-
-Create aliases for convenience:
+### Standalone clone
 
 ```bash
-printf "\n# === My Custom Aliases ===
-alias cps='conda activate CPS'
-alias pypa='export PYTHONPATH=./'
-" >> ~/.bashrc
-source ~/.bashrc
-```
-
-    conda activate CPS
-
-Enter the CartPoleSimulation folder and run:
-
-```bash
+git clone --recurse-submodules https://github.com/SensorsINI/CartPoleSimulation.git
 cd CartPoleSimulation
+conda create -n CPS python=3.11
+conda activate CPS
+pip install -r requirements.txt
 ```
 
-If  SI_Toolkit (System Identification Toolbox) or Control Toolkit folders are empty, use these lines to pull all submodules:
+If `SI_Toolkit` or `Control_Toolkit` folders are empty:
+
 ```bash
 git submodule update --init --recursive
 ```
 
-`SI_Toolkit` and `Control_Toolkit` track `cartpole_master`, not the toolkit `master`/`main` defaults used by [f1tenth_development_gym](https://github.com/F1Tenth-INI/f1tenth_development_gym). Prefer the pinned submodule commits. `git submodule update --remote` follows `cartpole_master` only.
+`SI_Toolkit` and `Control_Toolkit` track `cartpole_master`, not the toolkit
+`master`/`main` defaults used by
+[f1tenth_development_gym](https://github.com/F1Tenth-INI/f1tenth_development_gym).
+Prefer pinned submodule commits. `git submodule update --remote` follows
+`cartpole_master` only.
 
+Convenience aliases (optional):
 
-Preferable way to install python packages:
-`pip install -r requirements.txt` in a conda env or pip venv.
+```bash
+alias cps='conda activate CPS'
+alias pypa='export PYTHONPATH=./'
+```
 
-This file was created and tested on macOS,
-running on Linux and Windows may require some minor changes
-and/or installing some packages manually.
-However, the Simulator should work on all major OSes (macOS, Linux, Windows).
+### From physical-cartpole
 
-Note that you might want to uninstall the `ptvsd` package
-unless you use VS Code. This package enables debugging in VS Code,
-however causes proliferation of useless warnings if imported in another environment.
+Use the parent environment and paths — do not maintain a separate CPS env unless
+you prefer isolation:
 
-We created the requirements.txt
-on macOS with `pip list --format=freeze > requirements.txt`.
-It required some minor manual corrections (deleting the package versions) to make the re-installation smooth.
-It should be also possible to create this file with `conda list -e > requirements.txt`.
+```bash
+git clone --recurse-submodules https://github.com/SensorsINI/physical-cartpole
+cd physical-cartpole
+pip install -r requirements.txt
+# cpp() alias — see parent README
+python Driver/CartPoleSimulation/run_cartpole_gui.py
+```
 
-## Basic Operation
-1. **Run GUI:** Run `python run_cartpole_gui.py` from top-level path.
-2. **Run a single experiment:** Open `run_data_generator.py`. In the marked section, you can define your experiment. For a single run, set `number_of_experiments = 1`. Then open `./config.yml` to modify controller-related parameters. For example, you can choose there whether MPPI should run with the true model ('predictor_ODE_v0' == Euler Integrator) or with a neural network ('predictor_autoregressive_neural'). Once set, run `python -m run_data_generator`. It will create a new folder `./Experiment_Recordings/` and store a csv log file in it.
+## Quick start
 
-## Run a Machine Learning Pipeline
+### GUI
 
-You can use this repository to generate training data, train a neural network model using SI_Toolkit, and run the resulting controller.
+From the CartPoleSimulation directory (standalone) or repo root (submodule):
 
-1. Define all the parameters in `config_data_gen.yml` to your liking.
-2. Run `python -m SI_Toolkit_ASF.run.run_data_generator_for_ML_Pipeline`. This will create a new experiment folder `./SI_Toolkit_ASF/Experiments/Experiment-[X]/`. You will work in this folder from now on. Within there, in `Recordings/` there is now a set of CSVs saved and split up into Train/Validate/Test folders. Also, copies of the current configuration files are saved there.
-3. In `./SI_Toolkit_ASF/config_training.yml` you can now set `paths/path_to_experiment:` to the newly created one. All pipeline-related scripts access this parameter to know which data to work on and where to store the models.
-4. Normalize the data using `python -m SI_Toolkit_ASF.run.Create_normalization_file`. This creates a normalization file within the experiment folder set in step 3.
-5. Train a model using either TensorFlow (default) or PyTorch. Specify the library to use in `./SI_Toolkit_ASF/config_training.yml`. Type `python -m SI_Toolkit_ASF.run.Train_Network -h` for a list of parameters you can define. Some default values are set in the same config as in step 3 and can also be modified there. Now run the Train module with all parameter flags that you wish. You will want to specify the network architecture. Training will store a new model within a subfolder `Models/` in the chosen experiment folder.
-6. Test the model. Adjust the parameters in `./SI_Toolkit_ASF/config_testing.yml` to select the correct test file and model. Run `python -m SI_Toolkit_ASF.run.Run_Brunton_Test` which selects the test run set in config and compares the model's predictions versus true model behavior in Brunton-style plots. You can again see all params with the flag `-h`. If the script breaks, set a smaller `--test_len`.
-   ![Alt Text](https://raw.githubusercontent.com/SensorsINI/CartPoleSimulation/master/others/Media/Brunton.gif "Brunton plots Demo")
-7. Run MPPI with the trained model. Define an experiment in `run_data_generator.py`, select "predictor_autoregressive_neural" in the top-level config file, and run `python -m run_data_generator`. The results can be replayed in GUI.
+```bash
+python run_cartpole_gui.py
+```
 
-## Structure:
+Default controller and timing: [config_gui.yml](config_gui.yml).
 
-The CartPole class in CartPole folder corresponds to a physical cartpole.
-It contains methods for setting cartpole parameters, calculating dynamical equation, drawing cartpole and many more.
+### Single batch experiment
 
-To perform an experiment CartPole needs an "environment". This environment is provided with CartPole GUI - suitable to visualize dynamical evolution and impact of parameter change -
-and Data Generator, with which user can easily generate hours of experimental data. 
-  They can be started by running run_cartpole_gui.py and run_data_generator.py respectively.
+1. Edit [config_data_gen.yml](config_data_gen.yml) (`controller`, `length_of_experiment`,
+   `number_of_experiments`, …).
+2. Run:
 
-The CartPole loads controllers from Controllers folder.
-One can specify in GUI or in Data Generator which controller should be used.
-Adding controllers is easy:
-They just have to fit the template provided in Control_Toolkit/Controllers/template_controller.py.
-CartPole-specific controllers can be defined in Control_Toolkit_ASF/Controllers
-If a file in Controllers folder is named controller_....py and contains the function with the same name (controller_...)
-it will be automatically detected and added to the list of possible controllers.
-The MPC controller can be used in combination with any of the optimizers in Control_Toolkit/Optimizers. You can define new optimizers as well
+```bash
+python run_data_generator.py
+```
 
-## Operation hints:
-  
-While the documentation of parameters is still missing in Readme,
-they are extensively commented in `CartPole/cartpole_model.py`, `GUI/gui_default_params.py` and `run_data_generator.py`. Look inside for more details.
+Recordings go to `./Experiment_Recordings/` unless `ML_Pipeline_mode` is enabled.
 
-In the “Manual Stabilization” mode you can provide the control input (motor power related to the force acting on the cart)
-by hovering/clicking with your mouse over the lower chart.
-Due current Cart-Pole system parameters everything happens to fast to make it doable now.
-Try to change length of the pole and make motor power weaker in cartpole_model.py to make this task feasible.
+## Configuration map
 
-In the “LQR-Stabilization” mode an automatic (LQR) controller takes care that the Pole stays in the upright position.
-You can provide the target position of the cart by hovering or clicking with your mouse over the lower chart.
-The same is true for do-mpc controller which is mpc implementation based on true cartpole ODE
-done with do-mpc python library
+| File | Purpose |
+|---|---|
+| [config_data_gen.yml](config_data_gen.yml) | Batch experiments; set `ML_Pipeline_mode: True` for train/val/test split layout |
+| [config_gui.yml](config_gui.yml) | GUI defaults (dt, default controller) |
+| [cartpole_physical_parameters.yml](cartpole_physical_parameters.yml) | Sim parameters aligned with the physical robot |
+| [Control_Toolkit_ASF/config_controllers.yml](Control_Toolkit_ASF/config_controllers.yml) | Controller hyperparameters (`mpc`, `neural-imitator`, `lqr`, …) |
+| [Control_Toolkit_ASF/config_optimizers.yml](Control_Toolkit_ASF/config_optimizers.yml) | MPC optimizers (`rpgd`, `rpgd-c`, …) |
+| [Control_Toolkit_ASF/config_cost_function.yml](Control_Toolkit_ASF/config_cost_function.yml) | MPC cost definitions |
+| [SI_Toolkit_ASF/config_training.yml](SI_Toolkit_ASF/config_training.yml) | Training pipeline paths and architecture |
+| [SI_Toolkit_ASF/config_testing.yml](SI_Toolkit_ASF/config_testing.yml) | Brunton test selection |
+| [SI_Toolkit_ASF/config_predictors.yml](SI_Toolkit_ASF/config_predictors.yml) | Neural / GP predictors for MPC |
 
-Quit button is provided
-because when launched from some IDEs (e.g. Spyder on Windows 10)
-the standard cross in the window corner may not work correctly.
+Parameter comments also live in [CartPole/cartpole_parameters.py](CartPole/cartpole_parameters.py)
+and [CartPole/data_generator.py](CartPole/data_generator.py).
 
-The "CSV file name" text box is used for naming a file to be saved or to be loaded. The path is assumed relative to `./SI_Toolkit_ASF/Experiments/`. If left empty while saving, the default name is given. If left empty while loading data, the latest experiment will be loaded.
+## Machine learning pipeline
+
+1. Set `ML_Pipeline_mode: True` and experiment count in [config_data_gen.yml](config_data_gen.yml).
+2. Generate data:
+
+```bash
+python run_data_generator.py
+```
+
+This creates `SI_Toolkit_ASF/Experiments/Experiment-[X]/` with Train/Validate/Test
+CSVs and copied configs.
+
+3. Point [SI_Toolkit_ASF/config_training.yml](SI_Toolkit_ASF/config_training.yml)
+   `paths/path_to_experiment` to that folder.
+4. Normalize:
+
+```bash
+python SI_Toolkit_ASF/Run/A1_Create_Normalization_File.py
+```
+
+5. Train (TensorFlow default; library in `config_training.yml`):
+
+```bash
+python SI_Toolkit_ASF/Run/A2_Train_Network.py -h   # architecture flags
+python SI_Toolkit_ASF/Run/A2_Train_Network.py ...
+```
+
+6. Brunton test:
+
+```bash
+python SI_Toolkit_ASF/Run/A3_Run_Brunton_Test.py -h
+python SI_Toolkit_ASF/Run/A3_Run_Brunton_Test.py ...
+```
+
+7. Export C for embedded targets:
+
+```bash
+python SI_Toolkit_ASF/Run/Convert_Network_To_C.py
+```
+
+8. Closed loop in sim: set predictor / controller in `config_data_gen.yml` or
+   GUI, run `run_data_generator.py` or GUI, replay in GUI.
+
+Preprocessing helpers live under [SI_Toolkit_ASF/Run/](SI_Toolkit_ASF/Run/).
+
+## Controllers
+
+CartPole loads controllers from Control Toolkit. Cartpole-specific controllers
+are in [Control_Toolkit_ASF/Controllers/](Control_Toolkit_ASF/Controllers/).
+
+Overview: [Control_Toolkit_ASF/CONTROLLER_DESCRIPTION.md](Control_Toolkit_ASF/CONTROLLER_DESCRIPTION.md).
+
+Adding a controller: implement the template in
+`Control_Toolkit/Controllers/template_controller.py` or add
+`controller_*.py` under `Control_Toolkit_ASF/Controllers/`.
+
+MPC can use any optimizer listed in [config_optimizers.yml](Control_Toolkit_ASF/config_optimizers.yml).
+
+## Code map
+
+| Component | Location |
+|---|---|
+| Plant dynamics | [CartPole/cartpole_equations.py](CartPole/cartpole_equations.py), [cartpole_parameters.py](CartPole/cartpole_parameters.py) |
+| Batch data generation | [CartPole/data_generator.py](CartPole/data_generator.py), [run_data_generator.py](run_data_generator.py) |
+| GUI | [GUI/](GUI/), entry [run_cartpole_gui.py](run_cartpole_gui.py) |
+| State utilities | [CartPole/state_utilities.py](CartPole/state_utilities.py) |
+| SI_Toolkit customization | [SI_Toolkit_ASF/ToolkitCustomization/](SI_Toolkit_ASF/ToolkitCustomization/) |
+
+## Analysis tools
+
+* [others/DataViz/](others/DataViz/) — Tkinter GUI for CSV exploration.
+  See [others/DataViz/README.md](others/DataViz/README.md).
+* [others/L4DC_Plots/](others/L4DC_Plots/) — paper figures (historical).
+
+## Deploying to hardware
+
+Training and simulation live in this repository. To run a controller on the
+physical cartpole, use the
+[physical-cartpole](https://github.com/SensorsINI/physical-cartpole) repo:
+
+* Set `CONTROLLER_NAME` or on-chip weights (`NC_C/`, `NC_LSTM/`, PL bitstream).
+* Align `MOTOR_CORRECTION`, hanging, and angle constants between sim and firmware.
+* Flash / program per [Docs/firmware-and-flash.md](https://github.com/SensorsINI/physical-cartpole/blob/master/Docs/firmware-and-flash.md).
+
+Details: physical-cartpole [Docs/pc-driver.md](https://github.com/SensorsINI/physical-cartpole/blob/master/Docs/pc-driver.md)
+and [examples/models/](https://github.com/SensorsINI/physical-cartpole/tree/master/examples/models).
+
+## GUI notes
+
+* **Manual stabilization** — click the lower chart to set motor power. Default
+  plant parameters are fast; reduce pole length or motor gain in
+  `cartpole_parameters.py` to make it feasible.
+* **LQR / do-mpc** — click the lower chart to set cart target position.
+* **Quit button** — provided for IDEs where the window close button fails (e.g.
+  Spyder on Windows).
+* **CSV file name** — path relative to `./SI_Toolkit_ASF/Experiments/`; empty on
+  load selects the latest experiment.
 
 ## Folding convention
-Files regions are folded with #region #endregion syntax
-For Pycharm default, for Atom install
 
-## Parameter exploration with NNI
-
-For intelligent parameter space exploration with NNI, we have 2 special files : 
-
-1. modeling/rnn_tf/search_space.json : Search space for parameter search
-2. config.yml : Configuring the NNI experiments. 
-
-
-Step 1: In Modeling/TF/Train.py comment line:
-
-        train_network()
-
-and uncomment lines:
-
-        nni_parameters = nni.get_next_parameter()
-        train_network(nni_parameters)
-
-Step 2 : nnictl create --config Modeling/TF/NNI/config.yml
-Step 3 : Open the url as displayed on terminal after Step 1
-
+Regions use `#region` / `#endregion`. PyCharm default; Atom needs a fold plugin.
