@@ -99,20 +99,23 @@ neural-imitator:
 #  seed: null                            # If null, random seed based on datetime is used
 #  PATH_TO_MODELS: './SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/'
 #  net_name: 'GRU-8IN-64H1-64H2-1OUT-2'  # TF
-# ACTIVE: Dense-7IN-32H1-32H2-1OUT-8 (Experiment-14). Chip twin is NC_C.
-  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments'
-  net_name: 'Dense-7IN-32H1-32H2-1OUT-8'
+# ACTIVE: IROS short pole Exp-29 Dense-1. Long Dense-8 go-to is da41c737.
+  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments/Experiment-29-30-quant-10-shiftD-1/Models'
+  net_name: 'Dense-7IN-32H1-32H2-1OUT-1'
+# ALT: Dense-8 long pole:
+#  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments'
+#  net_name: 'Dense-7IN-32H1-32H2-1OUT-8'
 # ALT: LSTM go-to 49b2aec1:
 #  PATH_TO_MODELS: '../examples/models/adaptive-quant-lstm-2025-06-01/models/'
 #  net_name: 'LSTM-7IN-64H1-64H2-1OUT-0'
-# ALT: paper Dense-1:
+# ALT: paper Dense-1 (long pole, not short):
 #  PATH_TO_MODELS: '../experiment_in_paper'
 #  net_name: 'Dense-7IN-32H1-32H2-1OUT-1'
   input_at_input: False
-  input_precision: 'float'  # match chip C: normalize only, no extra ap_fixed
+  input_precision: 'float'  # C evaluator; TF path can use ap_fixed<14,3>
   clip_output: true  # June 2025 behavior: keep normalized motor command in [-1, 1]
   controller_logging: True
-  nn_evaluator_mode: 'C'  # same generated NC_C as OnChipController_neural_controller_C
+  nn_evaluator_mode: 'C'  # generated C of Exp-29; same weights as Firmware/Src/General/NC_C
 secloc:
   secloc_config: default  # gate profile (config_secloc.yml)
   controller_logging: false
