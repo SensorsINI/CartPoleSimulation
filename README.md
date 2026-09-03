@@ -38,8 +38,10 @@ cd CartPoleSimulation
 If  SI_Toolkit (System Identification Toolbox) or Control Toolkit folders are empty, use these lines to pull all submodules:
 ```bash
 git submodule update --init --recursive
-git submodule update --recursive --remote
 ```
+
+`SI_Toolkit` and `Control_Toolkit` track `cartpole_master`, not the toolkit `master`/`main` defaults used by [f1tenth_development_gym](https://github.com/F1Tenth-INI/f1tenth_development_gym). Prefer the pinned submodule commits. `git submodule update --remote` follows `cartpole_master` only.
+
 
 Preferable way to install python packages:
 `pip install -r requirements.txt` in a conda env or pip venv.
