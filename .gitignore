@@ -24,6 +24,7 @@ eggs/
 # The 835 MB Recordings/ CSVs are a GitHub Release artifact, not this tree.
 !/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/
 !/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/README.md
+!/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/CHECKSUMS.sha256
 !/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/NormalizationInfo/
 !/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/NormalizationInfo/NI_2024-11-16_20-04-12.csv
 !/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/

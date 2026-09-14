@@ -12,24 +12,56 @@ Privileged parameters the GRU must infer from history:
 
 The net never sees L or m as inputs.
 
+## Give this to a customer
+
+Branch: `L4DC25-adaptive-neural-control-recreated`  
+Data: CartPoleSimulation Release [`l4dc25-pole-L-and-m-data`](https://github.com/SensorsINI/CartPoleSimulation/releases/tag/l4dc25-pole-L-and-m-data)
+
+```bash
+git clone --recurse-submodules -b L4DC25-adaptive-neural-control-recreated \
+  https://github.com/SensorsINI/physical-cartpole.git
+cd physical-cartpole
+git submodule update --init --recursive
+# Recordings (~301 MB). Needs zstd (e.g. brew install zstd).
+./Driver/CartPoleSimulation/others/EulerClusterScripts/fetch_l4dc_pole_L_and_m_recordings.sh
+```
+
+Standalone simulator (no robot repo):
+
+```bash
+git clone --recurse-submodules -b L4DC25-adaptive-neural-control-recreated \
+  https://github.com/SensorsINI/CartPoleSimulation.git
+cd CartPoleSimulation
+git submodule update --init --recursive
+./others/EulerClusterScripts/fetch_l4dc_pole_L_and_m_recordings.sh
+```
+
+Do **not** run `git submodule update --remote` — that would move Control_Toolkit
+off the Driver-cwd optimizer fix.
+
 ## What is in git vs the Release artifact
 
 | Path | Where |
 |---|---|
 | `Models/GRU-8IN-64H1-64H2-1OUT-2/` | **This repo** — paper A-NC weights + training yaml |
 | `NormalizationInfo/NI_2024-11-16_20-04-12.csv` | **This repo** |
-| `Recordings/Train` (172 files, 3.096 M rows) | **GitHub Release artifact** (~835 MB) |
+| `Recordings/Train` (172 files, 3.096 M rows) | **GitHub Release** `l4dc25-pole-L-and-m-data` (~301 MB `tar.zst`) |
 | `Recordings/Validate` (10 files, 180 k) | same artifact |
 | `Recordings/Test` (10 files, 180 k) | same artifact |
 
 Paper text said “5 M / ~28 h” train. The archived set is **3.10 M / 17.2 h**.
 Validation **180 k** matches. Treat the files, not the prose, as ground truth.
 
-After you attach the artifact (see below):
+SHA256 of `Experiment_16_11_2024_pole_L_and_m_informed_recordings.tar.zst`:
+
+`c6613c058a0fbe6d7f111d691113861f2fa7f5813ba9dc79b6d79b8e20ea5787`
+
+Also in [CHECKSUMS.sha256](CHECKSUMS.sha256).
 
 ```bash
-./others/EulerClusterScripts/pack_l4dc_pole_L_and_m_artifact.sh --extract \
-  /path/to/Experiment_16_11_2024_pole_L_and_m_informed_recordings.tar.zst
+./others/EulerClusterScripts/fetch_l4dc_pole_L_and_m_recordings.sh
+# or, if you already have the archive:
+./others/EulerClusterScripts/fetch_l4dc_pole_L_and_m_recordings.sh /path/to/the.tar.zst
 ```
 
 Inputs: `Q_applied_-1`, `angleD`, `angle_cos`, `angle_sin`, `position`,
@@ -94,11 +126,8 @@ Pack (from CartPoleSimulation root):
 ./others/EulerClusterScripts/pack_l4dc_pole_L_and_m_artifact.sh
 ```
 
-Attach to a GitHub Release on this branch (after the branch is pushed):
+After this branch is on GitHub (`gh auth login` if needed):
 
 ```bash
-gh release create l4dc25-pole-L-and-m-data \
-  --title "L4DC 2025 A-NC pole length and pole mass — recordings" \
-  --notes "Train/Val/Test CSVs for Experiment_16_11_2024_pole_L_and_m_informed (not angle offset)." \
-  Experiment_16_11_2024_pole_L_and_m_informed_recordings.tar.zst
+./others/EulerClusterScripts/publish_l4dc_pole_L_and_m_release.sh
 ```

@@ -35,10 +35,10 @@ fi
 [[ -d "$REC/Train" ]] || { echo "Missing $REC/Train — nothing to pack."; exit 1; }
 
 if command -v zstd >/dev/null 2>&1; then
-  tar --zstd -cf "$OUT" -C "$(dirname "$REC")" Recordings
+  COPYFILE_DISABLE=1 tar --zstd --exclude='.DS_Store' -cf "$OUT" -C "$(dirname "$REC")" Recordings
 else
   OUT="${OUT%.tar.zst}.tar.gz"
-  tar -czf "$OUT" -C "$(dirname "$REC")" Recordings
+  COPYFILE_DISABLE=1 tar --exclude='.DS_Store' -czf "$OUT" -C "$(dirname "$REC")" Recordings
 fi
 echo "Wrote $OUT"
 ls -lh "$OUT"
