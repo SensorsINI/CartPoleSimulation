@@ -11,7 +11,7 @@ from PyQt6.QtCore import QThreadPool, QTimer, Qt
 from PyQt6.QtGui import QFontMetrics
 # The main drawing functionalities are implemented in CartPole Class
 # Some more functions needed for interaction of matplotlib with PyQt6
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from CartPole.cartpole_parameters import TrackHalfLength
 
 

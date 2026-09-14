@@ -52,6 +52,9 @@ def run_gui():
     window.show()
     # Next line hands the control over to Python GUI
     app.exec()
+    # PyQt6 SIP can SIGBUS in widget destructors on macOS interpreter shutdown
+    # (common when the GUI is launched from Cursor's terminal). Skip that path.
+    os._exit(0)
 
 
 # Run only if this file is run as a main file, that is not as an imported module
