@@ -32,7 +32,7 @@ cartpole:
   cart_length: 4.4e-2  # m, checked by Marcin&Asude
   track_length: 44.0e-2  # m, checked by Marcin&Asude, Total track length, usable track length is track_length-cart_length
   controlNoise_mode: 'gaussian'  # 'truncnorm' (with mu=Q+controlNoiseBias and scale controlNoiseScale, trunc -1,1), 'gaussian' (old, Q+controlNoiseScale*std_normal+controlNoiseBias), 'OFF'
-  controlNoiseScale: 0.0  # disturbance, as factor of u_max # I used 0.2-0.5 for data collection
+  controlNoiseScale: 0.5  # L4DC pole L&m collection (was controlDisturbance: 0.5). Set 0.0 for a clean GUI retry.
   controlNoiseCorrelation: 0.0 #
   controlNoiseBias: 0.0  # bias of control input
   g: 9.81  # absolute value of gravity acceleration, m/s^2
@@ -51,33 +51,38 @@ cartpole:
     source: physical  # physical -> Driver/globals.py when available, else ZEDBOARD defaults
   vertical_angle_offset:
     init_value: 0.0  # deg, number or 'random'
-    change_every_x_seconds: 3.0 # If left empty angle shift changed at each simulation step, otherwise time in seconds, or 'inf' for no change
-    mode: 'constant'  # 'constant', 'random_walk', 'increase', 'random', 'random_gaussian'
+    change_every_x_seconds: 'inf'
+    mode: 'constant'  # 'constant', 'random walk', 'increase', 'random', 'random_gaussian', 'bounce'
     range_random: [-3.141592, 3.141592]  # Range from which to uniformly sample, in radians
     range_clip:   # range at which to clip, leave empty for no clipping
-    increment: 0.05  # increment in radians for random_walk and increase, std of gaussian for random_gaussian
+    increment: 0.05  # increment in radians for random walk and increase
     reset_every_x_seconds: 'inf'  # seconds, or 'inf' for no change
   L:
-    init_value: 0.395  # length of pend, m
-    change_every_x_seconds: # If left empty angle shift changed at each simulation step, otherwise time in seconds, or 'inf' for no change
-    mode: 'constant'  # 'constant', 'random_walk', 'increase', 'random'
-    range_random: [0.2, 0.5]  # Range from which to uniformly sample or at which to clip, leave empty for no clipping
-    range_clip: [0.2, 0.5]  # range at which to clip, leave empty for no clipping
-    increment: 0.00002
-    reset_every_x_seconds: 'inf'  # seconds, or 'inf' for no change
-  m_pole:
-    init_value: 0.087      # length of pend, m
-    change_every_x_seconds: 2 # If left empty angle shift changed at each simulation step, otherwise time in seconds, or 'inf' for no change
-    mode: 'constant'  # 'constant', 'random_walk', 'increase', 'random'
-    range_random: [ 0.015, 0.15]  # Range from which to uniformly sample or at which to clip, leave empty for no clipping
-    range_clip: [ 0.015, 0.15 ]  # range at which to clip, leave empty for no clipping
+    # Full pole length in metres (ODE uses L_half = L/2). Paper range [0.05, 0.8] m.
+    # Collection: one uniform draw per file, then held (mode constant).
+    init_value: 'random'
+    change_every_x_seconds: 3.9
+    mode: 'constant'
+    range_random: [0.05, 0.8]
+    range_clip: [0.05, 0.8]
     increment: 0.002
-    reset_every_x_seconds: 'inf'  # seconds, or 'inf' for no change
+    reset_every_x_seconds: 'inf'
+  m_pole:
+    # Pole mass in kg. Paper range [0.015, 0.15] kg. Resampled every 2.6 s.
+    init_value: 'random'
+    change_every_x_seconds: 2.6
+    mode: 'random'
+    range_random: [0.015, 0.15]
+    range_clip: [0.015, 0.15]
+    increment: 0.0
+    reset_every_x_seconds: 'inf'
 
   inform_controller_about_parameters_change:
-    mode: 'ON'  # 'OFF', 'ON', 'switching_random', 'switching_regular'
+    # Collection: 4.5 s informed / 1.5 s uninformed (paper Sec. 3.1).
+    # Closed-loop A-NC retry: set mode to 'OFF' so the GRU must infer L and m.
+    mode: 'switching_regular'  # 'OFF', 'ON', 'switching_random', 'switching_regular'
     change_to_on_after_x_seconds_off: 1.5  # seconds, if mode switching_random this is the upper bound
-    change_to_off_after_x_seconds_on: 4  # seconds, if mode switching_random this is the upper bound
+    change_to_off_after_x_seconds_on: 4.5  # seconds, if mode switching_random this is the upper bound
   num_control_inputs: 1
 
 cartpole_predictor:

@@ -1,7 +1,7 @@
 mpc:
-  optimizer: rpgd
+  optimizer: rpgd_c_l4dc
   predictor_specification: "ODE"    # Can be "ODE", "ODE_v0", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
-  cost_function_specification: quadratic_boundary_grad_minimal  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary"
+  cost_function_specification: quadratic_boundary_grad_l4dc  # L4DC 2025 A-NC teacher (pole length & mass). Lab default on master is quadratic_boundary_grad_minimal.
   computation_library: tensorflow  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.
   controller_logging: false
   calculate_optimal_trajectory: false
@@ -96,12 +96,14 @@ mpc-opti:
   mpc_horizon: 10                       # steps
   controller_logging: True
 neural-imitator:
-#  seed: null                            # If null, random seed based on datetime is used
-#  PATH_TO_MODELS: './SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/'
-#  net_name: 'GRU-8IN-64H1-64H2-1OUT-2'  # TF
-# ACTIVE: IROS short pole Exp-29 Dense-1. Long Dense-8 go-to is da41c737.
-  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments/Experiment-29-30-quant-10-shiftD-1/Models'
-  net_name: 'Dense-7IN-32H1-32H2-1OUT-1'
+# L4DC 2025 A-NC GRU for pole LENGTH and pole MASS (not the angle-offset net).
+# Paths below assume cwd is CartPoleSimulation/. From physical-cartpole Driver/
+# prefix with ./CartPoleSimulation/
+  PATH_TO_MODELS: './SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/'
+  net_name: 'GRU-8IN-64H1-64H2-1OUT-2'
+# ALT: IROS short pole Exp-29 Dense-1:
+#  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments/Experiment-29-30-quant-10-shiftD-1/Models'
+#  net_name: 'Dense-7IN-32H1-32H2-1OUT-1'
 # ALT: Dense-8 long pole:
 #  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments'
 #  net_name: 'Dense-7IN-32H1-32H2-1OUT-8'
@@ -112,10 +114,10 @@ neural-imitator:
 #  PATH_TO_MODELS: '../experiment_in_paper'
 #  net_name: 'Dense-7IN-32H1-32H2-1OUT-1'
   input_at_input: False
-  input_precision: 'float'  # C evaluator; TF path can use ap_fixed<14,3>
-  clip_output: true  # June 2025 behavior: keep normalized motor command in [-1, 1]
+  input_precision: 'float'
+  clip_output: true  # keep normalized motor command in [-1, 1]
   controller_logging: True
-  nn_evaluator_mode: 'C'  # generated C of Exp-29; same weights as Firmware/Src/General/NC_C
+  nn_evaluator_mode: 'normal'  # TF; the L4DC GRU has no generated C evaluator
 secloc:
   secloc_config: default  # gate profile (config_secloc.yml)
   controller_logging: false

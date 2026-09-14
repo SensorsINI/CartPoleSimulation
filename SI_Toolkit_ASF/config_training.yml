@@ -4,7 +4,7 @@ modeling:
 #  NET_NAME: 'Custom-PredictorTrainer'
 paths:
   # PATH HAS TO END WITH A SOLIDUS ("/") CHARACTER
-  path_to_experiment: 'Experiment_3_04_2025'
+  path_to_experiment: 'Experiment_16_11_2024_pole_L_and_m_informed'
   PATH_TO_EXPERIMENT_FOLDERS: './SI_Toolkit_ASF/Experiments/'  # Path where the experiments data is stored
   DATA_FOLDER:                    'Recordings'
 training_default:
@@ -20,19 +20,19 @@ training_default:
 #   For training of a network imitating MPC:
   control_inputs: []
   state_inputs: ['Q_applied_-1', 'position', 'positionD', 'angle_cos', 'angle_sin', 'angleD', 'target_equilibrium', 'target_position']
-  outputs:  ['Q_calculated']
+  outputs:  ['Q_calculated_informed']  # Informed RPGD relabel (true L and m_pole)
   EPOCHS: 100
-  BATCH_SIZE: 64
+  BATCH_SIZE: 256
   SEED: 1873
   LR:
-    INITIAL: 2.0e-3
+    INITIAL: 1.0e-3
     REDUCE_LR_ON_PLATEAU: True
     MINIMAL: 1.0e-7
     PATIENCE: 2
     DECREASE_FACTOR: 0.5 # sqrt(0.1)
     MIN_DELTA: 1.0e-6
   LOSS_MODE: 'squared'  # 'squared', 'squared_with_clipping', 'absolute', 'absolute_with_clipping'
-  WASH_OUT_LEN: 50
+  WASH_OUT_LEN: 15
   POST_WASH_OUT_LEN: 10
   ON_FLY_DATA_GENERATION: False
   NORMALIZE: True
@@ -43,9 +43,9 @@ training_default:
   PLOT_WEIGHTS_DISTRIBUTION: false # CalculTFate histograms of weights and biases and activations, take long time
 
 CONFIG_SERIES_MODIFICATION:
-  MODE: 'train_for_random_vertical_angle_shift' # 'None' 'train_for_random_vertical_angle_shift'
+  MODE: None  # pole L&m A-NC: no angle-offset augmentation
   NOISE_LEVEL:
-    FEATURES: 0.1
+    FEATURES: 0.0
 
 REGULARIZATION:   # Implemented only for TF, no regularization for Pytorch
   ACTIVATED: false

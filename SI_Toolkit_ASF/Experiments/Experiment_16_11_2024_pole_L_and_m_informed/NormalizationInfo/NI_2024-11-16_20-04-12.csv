@@ -1,0 +1,191 @@
+# This is normalization information calculated 2024-11-16 at time 20-04-12
+# Done with git-revision: 5c94adde7a71ad9001523cbcb93d8c732b623d64
+# Data files used to calculate normalization information:
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-011.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-012.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-013.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-014.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-015.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-016.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-017.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-018.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-019.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-020.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-021.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-022.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-023.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-024.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-025.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-026.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-027.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-028.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-029.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-030.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-031.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-032.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-033.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-034.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-035.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-036.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-037.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-038.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-039.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-040.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-041.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-042.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-043.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-044.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-045.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-046.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-047.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-048.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-049.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-050.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-051.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-052.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-053.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-054.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-055.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-056.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-057.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-058.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-059.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-060.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-061.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-062.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-063.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-064.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-065.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-066.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-067.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-068.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-069.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-070.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-071.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-072.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-073.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-074.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-075.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-076.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-077.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-078.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-079.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-080.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-081.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-082.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-083.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-084.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-085.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-086.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-087.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-088.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-089.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-090.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-091.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-092.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-093.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-094.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-095.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-096.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-097.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-098.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-099.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-100.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-101.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-102.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-103.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-104.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-105.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-106.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-107.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-108.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-109.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-110.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-111.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-112.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-113.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-114.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-115.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-116.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-117.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-118.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-119.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-120.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-121.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-122.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-123.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-124.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-125.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-126.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-127.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-128.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-129.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-130.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-131.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-132.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-133.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-134.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-135.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-136.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-137.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-138.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-139.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-140.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-141.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-142.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-143.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-144.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-145.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-146.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-147.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-148.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-149.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-150.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-151.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-152.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-153.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-154.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-155.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-156.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-157.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-158.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-159.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-160.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-161.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-162.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-163.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-164.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-165.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-166.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-167.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-168.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-169.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-170.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-171.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-172.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-173.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-174.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-175.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-176.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-177.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-178.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-179.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-180.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-181.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train/Experiment-182.csv
+#
+# Original (calculated from data) Normalization Information:
+#,         ,      ,         ,L,         ,Q_applied,         ,Q_applied_-1,         ,Q_calculated,         ,Q_calculated_informed,         ,Q_ccrc,         ,Q_update_time,         ,angle,         ,angleD,         ,angleDD,         ,angle_cos,         ,angle_sin,         ,m_pole,         ,position,         ,positionD,         ,positionDD,         ,target_equilibrium,         ,target_position,         ,u,         ,vertical_angle_offset,         ,vertical_angle_offset_cos,         ,vertical_angle_offset_sin,         
+#,           ,mean,           ,0.43586,           ,6e-05,           ,5e-05,           ,-0.00024,           ,-0.00023,           ,5e-05,           ,0.05202,           ,-0.00081,           ,0.00462,           ,0.00219,           ,0.3628,           ,-5e-05,           ,0.0827,           ,-0.0004,           ,2e-05,           ,0.00014,           ,0.65929,           ,-0.00045,           ,0.00011,           ,0.0,           ,1.0,           ,0.0,           
+#,           ,std,           ,0.21142,           ,0.88277,           ,0.88279,           ,0.72741,           ,0.72768,           ,0.88279,           ,0.00236,           ,1.50499,           ,4.91203,           ,47.65866,           ,0.79825,           ,0.4808,           ,0.03908,           ,0.09597,           ,0.2953,           ,5.39645,           ,0.75189,           ,0.1065,           ,1.56251,           ,0.0,           ,0.0,           ,0.0,           
+#,           ,max,           ,0.7924,           ,3.5799,           ,3.5799,           ,1.0,           ,1.0,           ,3.5799,           ,0.22732,           ,3.14159,           ,40.75788,           ,651.1097,           ,1.0,           ,1.0,           ,0.14999,           ,0.19726,           ,1.95955,           ,36.88708,           ,1.0,           ,0.19799,           ,6.33643,           ,0.0,           ,1.0,           ,0.0,           
+#,           ,min,           ,0.05157,           ,-3.55281,           ,-3.55281,           ,-1.0,           ,-1.0,           ,-3.55281,           ,0.04707,           ,-3.14159,           ,-39.58968,           ,-682.3643,           ,-1.0,           ,-1.0,           ,0.015,           ,-0.198,           ,-2.15897,           ,-53.04516,           ,-1.0,           ,-0.198,           ,-6.28847,           ,0.0,           ,1.0,           ,0.0,           
+#
+# Does user modified normalization info calculated from data?: Yes
+#
+# Normalization Information:
+,D_angle,D_angleD,D_angle_cos,D_angle_sin,D_position,D_positionD,L,Q,Q_applied,Q_applied_-1,Q_calculated,Q_calculated_informed,Q_ccrc,Q_update_time,angle,angleD,angleDD,angle_cos,angle_sin,m_pole,position,positionD,positionDD,target_equilibrium,target_position,u,vertical_angle_offset,vertical_angle_offset_cos,vertical_angle_offset_sin
+mean,0.0,0.0,0.0,0.0,0.0,0.0,0.43586,0.0,6e-05,5e-05,-0.00024,-0.00023,5e-05,0.05202,0.0,0.0,0.0,0.0,0.0,0.0827,0.0,0.0,0.0,0.65929,0.0,0.0,0.0,1.0,0.0
+std,,,,,,,0.21142,,0.88277,0.88279,0.72741,0.72768,0.88279,0.00236,1.50499,4.91203,47.65866,0.79825,0.4808,0.03908,0.09597,0.2953,5.39645,0.75189,0.1065,1.56251,0.0,0.0,0.0
+max,,,,,,,0.7924,1.0,3.5799,3.5799,1.0,1.0,3.5799,0.22732,3.14159,40.75788,682.3643,1.0,1.0,0.14999,0.198,2.15897,53.04516,1.0,0.198,1.77,0.0,1.0,0.0
+min,,,,,,,0.05157,-1.0,-3.55281,-3.55281,-1.0,-1.0,-3.55281,0.04707,-3.14159,-40.75788,-682.3643,-1.0,-1.0,0.015,-0.198,-2.15897,-53.04516,-1.0,-0.198,-1.77,0.0,1.0,0.0

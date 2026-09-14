@@ -1,13 +1,13 @@
 """
-This script calculate the control signal along the prerecorded trajectories.
-There need to be no relationship between the controller with which the trajectories were recorded
-and the controller which is used here to calculate the control signal.
+Replay an informed RPGD along recorded trajectories and write Q_calculated_informed.
 
-In Pycharm to get the progress bars display correctly you need to set
-"Emulate terminal in output console" in the run configuration.
+This is the 16 Nov 2024 pole-length / pole-mass relabel (commit 983a70a): the online
+teacher was only informed 4.5 s / 1.5 s, so uninformed segments are overwritten with
+NMPC that sees the true L and m_pole from the CSV. States are left unchanged.
 
+Cluster: others/EulerClusterScripts/ControllerAlongTrajectories.sh
+  python SI_Toolkit_ASF/Run/PreprocessData_Add_Control_Along_Trajectories.py -i $i
 """
-
 
 from SI_Toolkit.data_preprocessing import transform_dataset
 
@@ -17,11 +17,16 @@ from others.globals_and_utils import MockSpace
 
 import argparse
 
-def args_fun():
-    parser = argparse.ArgumentParser(description='Generate CartPole data.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-i', '--secondary_experiment_index', default=-1, type=int,
-                        help='Additional index to the experiment folder (ML Pipeline mode) or file (otherwise) name. -1 to skip.')
 
+def args_fun():
+    parser = argparse.ArgumentParser(
+        description='Add informed RPGD labels along CartPole trajectories (pole L & m).',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        '-i', '--secondary_experiment_index', default=-1, type=int,
+        help='Experiment file index (1–192). -1 processes the whole folder.',
+    )
 
     args = parser.parse_args()
 
@@ -36,34 +41,38 @@ def args_fun():
 
     return formatted_index
 
+
 formatted_index = args_fun()
 if formatted_index is not None:
-    get_files_from = f'./Experiment_Recordings/Experiment-{formatted_index}.csv'
+    get_files_from = f'Experiment_Recordings/Experiment_16_11_2024_pole_L_and_m/Experiment-{formatted_index}.csv'
 else:
-    get_files_from = 'SI_Toolkit_ASF/Run/df_to_transform/informed_gru_2.csv'
+    get_files_from = 'Experiment_Recordings/Experiment_16_11_2024_pole_L_and_m'
 
-save_files_to = './Experiment_Recordings'
+save_files_to = 'Experiment_Recordings/Experiment_16_11_2024_pole_L_and_m_informed/'
 
 controller = {
     "controller_name": "mpc",
-    "optimizer_name": 'rpgd-tf',
+    "optimizer_name": 'rpgd_c_l4dc',
     "environment_name": "CartPole",
     "action_space": MockSpace(-1.0, 1.0, (1,), np.float32),
     "state_components": STATE_VARIABLES,
-    "environment_attributes_dict": {  # keys are names used by controller, values the csv column names
+    "environment_attributes_dict": {
         "target_position": "target_position",
         "target_equilibrium": "target_equilibrium",
-        # "L": "L_differentiate_",
-        # "m_pole": "m_pole_differentiate_",
-        "Q_ccrc": "Q_applied_-1",
+        "L": "L",
+        "m_pole": "m_pole",
     },
 }
 
-controller_output_variable_name = 'Q_calculated_offline_slow_swing'
+controller_output_variable_name = 'Q_calculated_informed'
 
 if __name__ == '__main__':
-    transform_dataset(get_files_from, save_files_to, transformation='add_control_along_trajectories',
-                      controller_config=controller, controller_output_variable_name=controller_output_variable_name,
-                      integration_num_evals=4,
-                      save_output_only=False,
-                      )
+    transform_dataset(
+        get_files_from,
+        save_files_to,
+        transformation='add_control_along_trajectories',
+        controller_config=controller,
+        controller_output_variable_name=controller_output_variable_name,
+        integration_num_evals=64,
+        save_output_only=False,
+    )

@@ -1050,5 +1050,9 @@ class CartPole(EnvironmentBatched):
     def current_L():
         return L
 
+    @staticmethod
+    def current_m_pole():
+        return m_pole
+
 
 

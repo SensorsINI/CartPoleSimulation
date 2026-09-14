@@ -20,4 +20,14 @@ eggs/
 /Modeling/SI_Toolkit/TF/NNI/NNI_Results
 
 /SI_Toolkit_ASF/Experiments/*
+# L4DC 2025 pole-length / pole-mass A-NC: keep the GRU and NI in git.
+# The 835 MB Recordings/ CSVs are a GitHub Release artifact, not this tree.
+!/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/
+!/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/README.md
+!/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/NormalizationInfo/
+!/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/NormalizationInfo/NI_2024-11-16_20-04-12.csv
+!/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/
+!/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/GRU-8IN-64H1-64H2-1OUT-2/
+!/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/GRU-8IN-64H1-64H2-1OUT-2/**
 others/EulerClusterScripts/EulerTerminalOutput/*
+Experiment_16_11_2024_pole_L_and_m_informed_recordings.tar.*

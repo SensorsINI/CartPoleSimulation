@@ -1,0 +1,62 @@
+CREATED:
+2024-11-16 at time 22:25:07
+
+WITH GIT REVISION:
+5c94adde7a71ad9001523cbcb93d8c732b623d64
+
+LIBRARY:
+TF
+
+NET NAME:
+GRU-64H1-64H2
+
+NET FULL NAME:
+GRU-8IN-64H1-64H2-1OUT-2
+
+INPUTS:
+Q_applied_-1, angleD, angle_cos, angle_sin, position, positionD, target_equilibrium, target_position
+
+OUTPUTS:
+Q_calculated_informed
+
+TRANSLATION INVARIANT VARIABLES:
+
+
+TYPE:
+GRU
+
+NORMALIZATION:
+./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/GRU-8IN-64H1-64H2-1OUT-2/NI_2024-11-16_20-04-12.csv
+
+NORMALIZE:
+True
+
+PARENT NET:
+Network trained from scratch
+
+WASH OUT LENGTH:
+15
+
+POST WASH OUT LENGTH:
+10
+
+SHIFT LABELS:
+0
+
+CONSTRUCT NETWORK:
+with cells
+
+TRAINING_FILES:
+./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Train
+
+VALIDATION_FILES:
+./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Validate
+
+TEST_FILES:
+./SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Recordings/Test
+
+TIMESTEP MEAN [s]:
+0.0
+
+TIMESTEP STD [s]:
+0.0

@@ -111,6 +111,36 @@ rpgd_c:
   warmup_iterations: 250
   num_threads: 0       # 0 = auto, use available CPU threads minus reserve_threads, capped by num_rollouts
   reserve_threads: 1   # Leave this many CPU threads for other computer tasks
+# L4DC 2025 A-NC teacher for pole LENGTH and pole MASS. Same search budget as
+# 16 Nov 2024 rpgd-tf (16 rollouts, 64 outer its, warmup). Cost weights come
+# from quadratic_boundary_grad_l4dc via optimizer_rpgd_c_l4dc._make_config.
+rpgd_c_l4dc:
+  seed: null
+  mpc_horizon: 35
+  mpc_timestep: 0.02
+  SAMPLING_DISTRIBUTION: normal
+  period_interpolation_inducing_points: 4
+  intermediate_steps: 10
+  learning_rate: 0.05
+  adam_beta_1: 0.9
+  adam_beta_2: 0.999
+  adam_epsilon: 1.0e-08
+  gradmax_clip: 5
+  rtol: 1.0e-3
+  num_rollouts: 16
+  opt_keep_k_ratio: 0.75
+  outer_its: 64
+  resamp_per: 10
+  sample_stdev: 0.5
+  sample_mean: 0.0
+  sample_whole_control_space: false
+  uniform_dist_max: 0.8
+  uniform_dist_min: -0.8
+  shift_previous: 1
+  warmup: true
+  warmup_iterations: 250
+  num_threads: 0
+  reserve_threads: 1
 mppi:
   seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
   mpc_horizon: 35                       # steps
