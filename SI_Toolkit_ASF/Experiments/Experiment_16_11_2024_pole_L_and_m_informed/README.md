@@ -43,16 +43,21 @@ to 2024 `rpgd-tf` + Python `quadratic_boundary_grad`; weights are mapped in
 
 ## Retry the published net
 
-From this repository root, Python 3.9 + TensorFlow (`CPS39`):
+Default `cartpole_physical_parameters.yml` is the **clean test plant**
+(paper Fig. 3: `L=0.15`, `m_pole=0.050`, control noise OFF, informer OFF).
+The collection recipe is `cartpole_physical_parameters_l4dc_collect.yml`
+(noise 0.5, random L / m_pole, informer 4.5 s ON / 1.5 s OFF).
+
+From the physical-cartpole repo, Python 3.9 + TensorFlow (`CPS39`):
 
 ```bash
-# cartpole_physical_parameters.yml: informer OFF, L and m_pole constant
-# Example paper Fig. 3: L: 0.15, m_pole: 0.050
-python run_cartpole_gui.py
+python Driver/CartPoleSimulation/run_cartpole_gui.py
 ```
 
-`neural-imitator` already points at `GRU-8IN-64H1-64H2-1OUT-2`.
-Keep `second_derivatives_mode: ODE`. Do not turn the informer ON.
+`neural-imitator` already points at `GRU-8IN-64H1-64H2-1OUT-2`
+(Driver-relative `PATH_TO_MODELS`). Keep `second_derivatives_mode: ODE`.
+Leave the informer OFF so the GRU has to infer L and m. To compare RPGD
+on this same plant, set informer `ON` so the teacher sees the true parameters.
 
 ## Retrain
 
@@ -67,6 +72,12 @@ python SI_Toolkit_ASF/Run/A2_Train_Network.py
 wash 15 + 10, batch 256, seed 1873, no angle-shift aug).
 
 ## Recollect (cluster)
+
+Copy the collection plant over the default yaml first:
+
+```bash
+cp cartpole_physical_parameters_l4dc_collect.yml cartpole_physical_parameters.yml
+```
 
 1. `python run_data_generator.py -i $i` for `i = 1 … 192`
 2. `python SI_Toolkit_ASF/Run/PreprocessData_Add_Control_Along_Trajectories.py -i $i`  

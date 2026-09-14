@@ -31,8 +31,8 @@ cartpole:
   v_max: 0.59  # terminal speed at Q=1 = u_max/M_fric, from step-response saturation velocity # TODO: not implemented in model, but needed for MPC
   cart_length: 4.4e-2  # m, checked by Marcin&Asude
   track_length: 44.0e-2  # m, checked by Marcin&Asude, Total track length, usable track length is track_length-cart_length
-  controlNoise_mode: 'gaussian'  # 'truncnorm' (with mu=Q+controlNoiseBias and scale controlNoiseScale, trunc -1,1), 'gaussian' (old, Q+controlNoiseScale*std_normal+controlNoiseBias), 'OFF'
-  controlNoiseScale: 0.5  # L4DC pole L&m collection (was controlDisturbance: 0.5). Set 0.0 for a clean GUI retry.
+  controlNoise_mode: 'OFF'  # GRU test plant. Collection recipe: cartpole_physical_parameters_l4dc_collect.yml
+  controlNoiseScale: 0.0
   controlNoiseCorrelation: 0.0 #
   controlNoiseBias: 0.0  # bias of control input
   g: 9.81  # absolute value of gravity acceleration, m/s^2
@@ -58,29 +58,28 @@ cartpole:
     increment: 0.05  # increment in radians for random walk and increase
     reset_every_x_seconds: 'inf'  # seconds, or 'inf' for no change
   L:
-    # Full pole length in metres (ODE uses L_half = L/2). Paper range [0.05, 0.8] m.
-    # Collection: one uniform draw per file, then held (mode constant).
-    init_value: 'random'
-    change_every_x_seconds: 3.9
+    # Full pole length in metres (ODE uses L_half = L/2). Paper Fig. 3 test plant.
+    # Collection draws one L per file in [0.05, 0.8]; see cartpole_physical_parameters_l4dc_collect.yml.
+    init_value: 0.15
+    change_every_x_seconds: 'inf'
     mode: 'constant'
     range_random: [0.05, 0.8]
     range_clip: [0.05, 0.8]
     increment: 0.002
     reset_every_x_seconds: 'inf'
   m_pole:
-    # Pole mass in kg. Paper range [0.015, 0.15] kg. Resampled every 2.6 s.
-    init_value: 'random'
-    change_every_x_seconds: 2.6
-    mode: 'random'
+    # Pole mass in kg. Paper Fig. 3 test plant. Fig. 4 is L=0.05, m_pole=0.015.
+    init_value: 0.050
+    change_every_x_seconds: 'inf'
+    mode: 'constant'
     range_random: [0.015, 0.15]
     range_clip: [0.015, 0.15]
     increment: 0.0
     reset_every_x_seconds: 'inf'
 
   inform_controller_about_parameters_change:
-    # Collection: 4.5 s informed / 1.5 s uninformed (paper Sec. 3.1).
-    # Closed-loop A-NC retry: set mode to 'OFF' so the GRU must infer L and m.
-    mode: 'switching_regular'  # 'OFF', 'ON', 'switching_random', 'switching_regular'
+    # GRU must infer L and m. Set ON to give RPGD the true parameters on this plant.
+    mode: 'OFF'  # 'OFF', 'ON', 'switching_random', 'switching_regular'
     change_to_on_after_x_seconds_off: 1.5  # seconds, if mode switching_random this is the upper bound
     change_to_off_after_x_seconds_on: 4.5  # seconds, if mode switching_random this is the upper bound
   num_control_inputs: 1
