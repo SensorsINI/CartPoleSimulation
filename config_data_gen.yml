@@ -1,10 +1,10 @@
 controller: mpc
-# L4DC 2025 A-NC (pole length & mass): 192 x 360 s @ 50 Hz, then informed relabel.
+# Angle-offset A-NC (GRU-8IN-64-0): 192 x 360 s @ 100 Hz, then swing relabel.
 # WARNING: one 360 s rollout with rpgd outer_its=64 is slow. Use -i on a cluster
 # (python run_data_generator.py -i 1 … 192) rather than 192 sequential jobs on a laptop.
 ML_Pipeline_mode: False  # If True a directory structure required by SI_Toolkit will be created, location taken from config_training, not from here.
 split: [0.8, 0.1]  # Train/Val/(Test) split - only matters if you run it in ML Pipeline mode
-PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/Experiment_16_11_2024_pole_L_and_m/'   # Where to save experiment recording per default, can be overwritten in config_training if ML_Pipeline_mode is True
+PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/Experiment_angle_offset_GRU_8IN/'   # Where to save experiment recording per default, can be overwritten in config_training if ML_Pipeline_mode is True
 seed:   # If not assign random seed based on datetime is used
 length_of_experiment: 360  # Length of each experiment in s:
 random_initial_state:
@@ -26,9 +26,9 @@ initial_target_equilibrium: 'random'  # possible 'up', 'down', 'random' = 50/50
 keep_target_equilibrium_x_seconds_up: 12
 keep_target_equilibrium_x_seconds_down: 2.5
 dt:
-  simulation: 0.002  # simulation timestep, s
-  control: 0.02  # control rate, s
-  saving: 0.02  # save datapoints in csv in this interval, s
+  simulation: 0.001  # simulation timestep, s (archived April 2025 CSVs)
+  control: 0.01  # control rate, s
+  saving: 0.01  # save datapoints in csv in this interval, s
 turning_points:
   track_relative_complexity: 1  # Randomly placed target points/s
   interpolation_type: '0-derivative-smooth'  # How to interpolate between turning points of random trace, Possible options: '0-derivative-smooth', 'linear', 'previous'

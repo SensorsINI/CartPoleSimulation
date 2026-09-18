@@ -30,5 +30,15 @@ eggs/
 !/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/
 !/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/GRU-8IN-64H1-64H2-1OUT-2/
 !/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/GRU-8IN-64H1-64H2-1OUT-2/**
+# Angle-offset A-NC: GRU-8IN-64-0 weights in git. Recordings are a Release artifact.
+!/SI_Toolkit_ASF/Experiments/Experiment_angle_offset_GRU_8IN/
+!/SI_Toolkit_ASF/Experiments/Experiment_angle_offset_GRU_8IN/README.md
+!/SI_Toolkit_ASF/Experiments/Experiment_angle_offset_GRU_8IN/CHECKSUMS.sha256
+!/SI_Toolkit_ASF/Experiments/Experiment_angle_offset_GRU_8IN/NormalizationInfo/
+!/SI_Toolkit_ASF/Experiments/Experiment_angle_offset_GRU_8IN/NormalizationInfo/NI_2025-04-04_06-57-28.csv
+!/SI_Toolkit_ASF/Experiments/Experiment_angle_offset_GRU_8IN/Models/
+!/SI_Toolkit_ASF/Experiments/Experiment_angle_offset_GRU_8IN/Models/GRU-8IN-64H1-64H2-1OUT-0/
+!/SI_Toolkit_ASF/Experiments/Experiment_angle_offset_GRU_8IN/Models/GRU-8IN-64H1-64H2-1OUT-0/**
 others/EulerClusterScripts/EulerTerminalOutput/*
 Experiment_16_11_2024_pole_L_and_m_informed_recordings.tar.*
+Experiment_angle_offset_GRU_8IN_recordings.tar.*

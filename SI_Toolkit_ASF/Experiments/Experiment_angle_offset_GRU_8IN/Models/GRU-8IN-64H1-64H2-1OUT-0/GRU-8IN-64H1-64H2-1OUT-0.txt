@@ -1,0 +1,62 @@
+CREATED:
+2025-04-06 at time 23:08:23
+
+WITH GIT REVISION:
+5b47d272415dad9344fa97f6f2373ac31edc99ac
+
+LIBRARY:
+TF
+
+NET NAME:
+GRU-64H1-64H2
+
+NET FULL NAME:
+GRU-8IN-64H1-64H2-1OUT-0
+
+INPUTS:
+Q_applied_-1, angleD, angle_cos, angle_sin, position, positionD, target_equilibrium, target_position
+
+OUTPUTS:
+Q_calculated_offline_slow_swing
+
+TRANSLATION INVARIANT VARIABLES:
+
+
+TYPE:
+GRU
+
+NORMALIZATION:
+./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Models/GRU-8IN-64H1-64H2-1OUT-0/NI_2025-04-04_06-57-28.csv
+
+NORMALIZE:
+True
+
+PARENT NET:
+Network trained from scratch
+
+WASH OUT LENGTH:
+100
+
+POST WASH OUT LENGTH:
+20
+
+SHIFT LABELS:
+1
+
+CONSTRUCT NETWORK:
+with cells
+
+TRAINING_FILES:
+./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train
+
+VALIDATION_FILES:
+./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Validate
+
+TEST_FILES:
+./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Test
+
+TIMESTEP MEAN [s]:
+0.010000103153288364
+
+TIMESTEP STD [s]:
+8.947476999310311e-06

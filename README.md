@@ -189,6 +189,7 @@ MPC can use any optimizer listed in [config_optimizers.yml](Control_Toolkit_ASF/
   See [others/DataViz/README.md](others/DataViz/README.md).
 * [others/L4DC_Plots/](others/L4DC_Plots/) — paper figures (historical).
 * [L4DC 2025 A-NC, pole length & mass](SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/README.md) — GRU-2 in git; Recordings are a GitHub Release artifact. Not the angle-offset experiment.
+* [Angle-offset A-NC, GRU-8IN-64-0](SI_Toolkit_ASF/Experiments/Experiment_angle_offset_GRU_8IN/README.md) — swings up and holds at 90°/180°; Recordings are a Release artifact.
 
 ## Deploying to hardware
 

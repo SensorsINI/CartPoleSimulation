@@ -1,0 +1,191 @@
+# This is normalization information calculated 2025-04-04 at time 06-57-28
+# Done with git-revision: 5b47d272415dad9344fa97f6f2373ac31edc99ac
+# Data files used to calculate normalization information:
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-001.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-003.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-005.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-006.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-007.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-008.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-009.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-010.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-011.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-013.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-014.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-015.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-017.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-019.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-021.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-022.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-023.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-024.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-025.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-026.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-027.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-028.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-029.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-030.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-031.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-032.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-033.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-034.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-035.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-037.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-039.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-040.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-041.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-042.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-043.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-044.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-046.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-047.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-048.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-050.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-051.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-052.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-053.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-054.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-055.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-056.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-057.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-058.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-059.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-060.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-061.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-062.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-063.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-065.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-066.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-067.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-068.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-069.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-070.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-071.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-072.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-073.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-074.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-076.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-077.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-078.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-079.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-080.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-081.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-082.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-083.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-084.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-085.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-087.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-088.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-089.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-090.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-091.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-092.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-093.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-094.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-095.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-096.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-097.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-098.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-099.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-100.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-101.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-102.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-103.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-104.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-105.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-106.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-107.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-108.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-109.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-110.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-112.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-113.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-114.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-115.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-116.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-117.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-118.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-119.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-120.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-121.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-122.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-123.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-124.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-125.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-126.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-128.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-130.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-131.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-132.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-133.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-134.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-135.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-136.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-138.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-139.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-140.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-141.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-142.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-143.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-144.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-145.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-146.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-148.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-149.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-150.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-151.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-152.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-153.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-154.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-155.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-157.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-158.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-159.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-160.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-161.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-162.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-163.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-164.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-165.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-166.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-167.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-168.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-169.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-170.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-171.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-172.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-173.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-174.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-175.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-176.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-177.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-178.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-179.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-180.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-181.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-182.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-184.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-185.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-186.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-187.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-188.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-189.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-190.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-191.csv
+#     ./SI_Toolkit_ASF/Experiments/Experiment_3_04_2025/Recordings/Train/Experiment-192.csv
+#
+# Original (calculated from data) Normalization Information:
+#,         ,      ,         ,L,         ,Q_applied,         ,Q_applied_-1,         ,Q_calculated,         ,Q_calculated_offline_mpc,         ,Q_calculated_offline_slow_swing,         ,Q_ccrc,         ,Q_update_time,         ,angle,         ,angleD,         ,angleDD,         ,angle_cos,         ,angle_sin,         ,cost_component_cc,         ,cost_component_ccrc,         ,cost_component_db,         ,cost_component_dd_liear,         ,cost_component_dd_quadratic,         ,cost_component_ekp,         ,cost_component_ep,         ,cost_component_total_stage_cost,         ,m_pole,         ,position,         ,positionD,         ,positionDD,         ,target_equilibrium,         ,target_position,         ,u,         ,vertical_angle_offset,         ,vertical_angle_offset_cos,         ,vertical_angle_offset_sin,         
+#,           ,mean,           ,0.395,           ,8e-05,           ,8e-05,           ,5e-05,           ,-0.00059,           ,-0.00014,           ,8e-05,           ,0.05662,           ,-5e-05,           ,0.00607,           ,-0.00103,           ,0.11749,           ,1e-04,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.087,           ,-0.00035,           ,4e-05,           ,-4e-05,           ,0.61111,           ,-0.00024,           ,0.00014,           ,-0.00966,           ,0.49649,           ,-0.00584,           
+#,           ,std,           ,0.0,           ,0.75921,           ,0.75922,           ,0.66719,           ,0.70382,           ,0.87414,           ,0.75922,           ,0.0038,           ,1.77639,           ,4.79603,           ,24.27295,           ,0.82144,           ,0.55806,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.09433,           ,0.26984,           ,3.76253,           ,0.79154,           ,0.10611,           ,1.3438,           ,1.28578,           ,0.70648,           ,0.50433,           
+#,           ,max,           ,0.395,           ,3.3459,           ,3.3459,           ,1.0,           ,1.0,           ,1.0,           ,3.3459,           ,2.013,           ,3.14159,           ,23.29414,           ,111.72375,           ,1.0,           ,1.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.087,           ,0.19774,           ,1.37504,           ,28.89927,           ,1.0,           ,0.198,           ,5.92224,           ,3.14128,           ,1.0,           ,1.0,           
+#,           ,min,           ,0.395,           ,-3.5748,           ,-3.5748,           ,-1.0,           ,-1.0,           ,-1.0,           ,-3.5748,           ,0.05009,           ,-3.14159,           ,-22.58186,           ,-114.02985,           ,-1.0,           ,-1.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.0,           ,0.087,           ,-0.19783,           ,-1.41052,           ,-27.76272,           ,-1.0,           ,-0.19799,           ,-6.3274,           ,-3.14088,           ,-1.0,           ,-1.0,           
+#
+# Does user modified normalization info calculated from data?: Yes
+#
+# Normalization Information:
+,D_angle,D_angleD,D_angle_cos,D_angle_sin,D_position,D_positionD,L,Q,Q_applied,Q_applied_-1,Q_calculated,Q_calculated_offline_mpc,Q_calculated_offline_slow_swing,Q_ccrc,Q_update_time,angle,angleD,angleDD,angle_cos,angle_sin,cost_component_cc,cost_component_ccrc,cost_component_db,cost_component_dd_liear,cost_component_dd_quadratic,cost_component_ekp,cost_component_ep,cost_component_total_stage_cost,m_pole,position,positionD,positionDD,target_equilibrium,target_position,u,vertical_angle_offset,vertical_angle_offset_cos,vertical_angle_offset_sin
+mean,0.0,0.0,0.0,0.0,0.0,0.0,0.395,0.0,8e-05,8e-05,5e-05,-0.00059,-0.00014,8e-05,0.05662,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.087,0.0,0.0,0.0,0.61111,0.0,0.0,-0.00966,0.49649,-0.00584
+std,,,,,,,0.0,,0.75921,0.75922,0.66719,0.70382,0.87414,0.75922,0.0038,1.77639,4.79603,24.27295,0.82144,0.55806,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.09433,0.26984,3.76253,0.79154,0.10611,1.3438,1.28578,0.70648,0.50433
+max,,,,,,,0.395,1.0,3.3459,3.3459,1.0,1.0,1.0,3.3459,2.013,3.14159,23.29414,114.02985,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.087,0.198,1.41052,28.89927,1.0,0.198,1.77,3.14128,1.0,1.0
+min,,,,,,,0.395,-1.0,-3.5748,-3.5748,-1.0,-1.0,-1.0,-3.5748,0.05009,-3.14159,-23.29414,-114.02985,-1.0,-1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.087,-0.198,-1.41052,-28.89927,-1.0,-0.198,-1.77,-3.14088,-1.0,-1.0

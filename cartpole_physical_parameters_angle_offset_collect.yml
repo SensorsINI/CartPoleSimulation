@@ -1,0 +1,92 @@
+# Angle-offset A-NC collection plant (GRU-8IN-64-0). Not loaded automatically.
+# To recollect: cp cartpole_physical_parameters_angle_offset_collect.yml cartpole_physical_parameters.yml
+# Default cartpole_physical_parameters.yml on commit 2 is the clean GRU test plant.
+cartpole:
+  next_step_mode: 'Euler'  # 'Euler' or 'NeuralModel'
+  next_step_neural_model_path: 'SI_Toolkit_ASF/Experiments/Experiment_3_04_2025_derivative/Models/Dense-6IN-128H1-128H2-3OUT-0'  # Path to the neural model, if next_step_mode is 'NeuralModel
+  second_derivatives_mode: 'ODE'  # ODE or NeuralModel or ODE_with_NeuralModel_correction
+  second_derivatives_neural_model_path: 'SI_Toolkit_ASF/Experiments/CPP_MPCswingups_before_23_04_2025/Models/Dense-6IN-128H1-128H2-2OUT-5'
+  seed:  # This is a seed for rng for CartPole instance class only. If null random seed based on datetime is used
+  PATH_TO_EXPERIMENT_RECORDINGS_DEFAULT: './Experiment_Recordings/Experiment_angle_offset_GRU_8IN/'   # Angle-offset collect
+  # NOTE: m_cart/u_max/M_fric below are REVERTED to the working hand-tuned set so RPGD runs
+  # on hardware. The honest system-ID story (and why those values broke RPGD) is recorded in
+  # Driver/DataAnalysis/MotorAndCartFriction/motor_force_identification_2026-06/README.md.
+  # HONEST, decorrelated system-ID values (no fudge factors).
+  #  * m_cart = 2.82 kg: effective translational mass (cart body + reflected motor rotor
+  #    inertia through the 19:1 gearbox and ~16 mm pulley); see
+  #    Driver/DataAnalysis/MotorAndCartFriction/README.md (estimate_effective_mass.py).
+  #  * u_max = 13 N: force gain at Q=1 from the decorrelated EMF power sweep
+  #    (estimate_emf.py on a bare-cart, no-pole emf_identification run). The ordinary
+  #    step response held Q constant while v ramped, so Q and v were collinear (corr
+  #    ~0.76) and its joint fit OVER-stated u_max to 25.8 N; the decorrelated shuttle
+  #    (corr ~0.40) recovers the true ~13 N.
+  #  * M_fric / v_max: reconciled with the step-response TERMINAL (saturation) velocity,
+  #    which is the cleanest measurement of the damping ratio -- the cart provably
+  #    reaches steady state at every Q (end-of-step accel ~0), giving k/M_fric =
+  #    9.42e-5 (m/s per PWM count), perfectly linear up to the safe PWM limit. Combined
+  #    with u_max=13 this gives M_fric ~22 N/(m/s) and terminal speed at Q=1 ~0.59 m/s.
+  #    (The EMF shuttle alone under-constrained M_fric at ~16 because it never dwelled
+  #    at steady high speed; the terminal-velocity ratio fixes it.)
+  m_cart: 0.230  # WORKING hand-tuned value (only set confirmed to swing up on hardware); honest effective mass ~2.82 kg, see Driver/DataAnalysis/MotorAndCartFriction/motor_force_identification_2026-06/README.md
+  u_max: 1.77  # WORKING hand-tuned value; honest ID points to ~21.5 N (pulse), see motor_force_identification_2026-06/README.md
+  M_fric: 3.22  # WORKING hand-tuned value; honest ID points to ~36 N/(m/s) (pulse), see motor_force_identification_2026-06/README.md
+  J_fric: 5.0e-5  # friction coefficient on angular velocity in pole joint, Nm/rad/s # Checked by Marcin
+  v_max: 0.59  # terminal speed at Q=1 = u_max/M_fric, from step-response saturation velocity # TODO: not implemented in model, but needed for MPC
+  cart_length: 4.4e-2  # m, checked by Marcin&Asude
+  track_length: 44.0e-2  # m, checked by Marcin&Asude, Total track length, usable track length is track_length-cart_length
+  controlNoise_mode: 'additive'  # As in the archived April 2025 CSVs.
+  controlNoiseScale: 0.5
+  controlNoiseCorrelation: 0.0 #
+  controlNoiseBias: 0.0  # bias of control input
+  g: 9.81  # absolute value of gravity acceleration, m/s^2
+  k: "1.0/3.0"  # Dimensionless factor of moment of inertia of the pole with length 2L: I: (1/3)*m*(L)^2 = (4/3)*m*(L/2)^2
+  latency: 0.0 # s
+  noise:
+    noise_mode: 'OFF'
+    sigma_angle: 0.0  # As measured by Asude
+    sigma_position: 0.0005
+    sigma_angleD: 0.075 # This is much smaller than would result from sigma_angle under assumption of iir filter+derviative calculation; the theoretical value would be 2.28
+    sigma_positionD: 0.005
+  # Quantize simulated measurements to integer ADC / encoder counts (physical cartpole path).
+  # Set enabled: true or pass quantize_sensors=True in secloc sweep tests.
+  sensor_quantization:
+    enabled: false
+    source: physical  # physical -> Driver/globals.py when available, else ZEDBOARD defaults
+  vertical_angle_offset:
+    # Collection: redraw 0-angle every 3 s in ±π (matches archived CSV headers).
+    init_value: 0.0  # deg, number or 'random'
+    change_every_x_seconds: 3.0
+    mode: 'random'  # 'constant', 'random walk', 'increase', 'random', 'random_gaussian', 'bounce'
+    range_random: [-3.141592, 3.141592]  # Range from which to uniformly sample, in radians
+    range_clip:   # range at which to clip, leave empty for no clipping
+    increment: 0.05  # increment in radians for random walk and increase
+    reset_every_x_seconds: 'inf'  # seconds, or 'inf' for no change
+  L:
+    # Long pole (archived April 2025 angle-offset collect).
+    init_value: 0.395
+    change_every_x_seconds: 'inf'
+    mode: 'constant'
+    range_random: [0.05, 0.8]
+    range_clip: [0.05, 0.8]
+    increment: 0.002
+    reset_every_x_seconds: 'inf'
+  m_pole:
+    # Long-pole mass (archived April 2025 angle-offset collect).
+    init_value: 0.087
+    change_every_x_seconds: 'inf'
+    mode: 'constant'
+    range_random: [0.015, 0.15]
+    range_clip: [0.015, 0.15]
+    increment: 0.0
+    reset_every_x_seconds: 'inf'
+
+  inform_controller_about_parameters_change:
+    # Archived CSVs: switching_regular 1.5 s off / 4 s on.
+    mode: 'switching_regular'  # 'OFF', 'ON', 'switching_random', 'switching_regular'
+    change_to_on_after_x_seconds_off: 1.5  # seconds, if mode switching_random this is the upper bound
+    change_to_off_after_x_seconds_on: 4.0  # seconds, if mode switching_random this is the upper bound
+  num_control_inputs: 1
+
+cartpole_predictor:
+  second_derivatives_mode: 'ODE'  # ODE or NeuralModel
+  second_derivatives_neural_model_path: 'SI_Toolkit_ASF/Experiments/CPP_MPCswingups_before_23_04_2025/Models/Dense-6IN-128H1-128H2-2OUT-0'
