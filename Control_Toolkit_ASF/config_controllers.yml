@@ -96,11 +96,11 @@ mpc-opti:
   mpc_horizon: 10                       # steps
   controller_logging: True
 neural-imitator:
-# L4DC 2025 A-NC GRU for pole LENGTH and pole MASS (not the angle-offset net).
+# Angle-offset A-NC: GRU-8IN-64-0 (swings up and holds at 90/180).
 # GUI/control.py chdir to Driver/, so this path is Driver-relative.
 # Standalone CPS checkout: use ./SI_Toolkit_ASF/Experiments/... instead.
-  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/'
-  net_name: 'GRU-8IN-64H1-64H2-1OUT-2'
+  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments/Experiment_angle_offset_GRU_8IN/Models/'
+  net_name: 'GRU-8IN-64H1-64H2-1OUT-0'
 # ALT: IROS short pole Exp-29 Dense-1:
 #  PATH_TO_MODELS: './CartPoleSimulation/SI_Toolkit_ASF/Experiments/Experiment-29-30-quant-10-shiftD-1/Models'
 #  net_name: 'Dense-7IN-32H1-32H2-1OUT-1'

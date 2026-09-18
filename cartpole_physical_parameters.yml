@@ -31,7 +31,7 @@ cartpole:
   v_max: 0.59  # terminal speed at Q=1 = u_max/M_fric, from step-response saturation velocity # TODO: not implemented in model, but needed for MPC
   cart_length: 4.4e-2  # m, checked by Marcin&Asude
   track_length: 44.0e-2  # m, checked by Marcin&Asude, Total track length, usable track length is track_length-cart_length
-  controlNoise_mode: 'OFF'  # GRU test plant. Collection recipe: cartpole_physical_parameters_l4dc_collect.yml
+  controlNoise_mode: 'OFF'  # Angle-offset test plant. Collection: cartpole_physical_parameters_angle_offset_collect.yml
   controlNoiseScale: 0.0
   controlNoiseCorrelation: 0.0 #
   controlNoiseBias: 0.0  # bias of control input
@@ -50,17 +50,17 @@ cartpole:
     enabled: false
     source: physical  # physical -> Driver/globals.py when available, else ZEDBOARD defaults
   vertical_angle_offset:
+    # Test: redraw 0-angle every 4 s in ±π (90° and 180° are in range).
     init_value: 0.0  # deg, number or 'random'
-    change_every_x_seconds: 'inf'
-    mode: 'constant'  # 'constant', 'random walk', 'increase', 'random', 'random_gaussian', 'bounce'
+    change_every_x_seconds: 4
+    mode: 'random'  # 'constant', 'random walk', 'increase', 'random', 'random_gaussian', 'bounce'
     range_random: [-3.141592, 3.141592]  # Range from which to uniformly sample, in radians
     range_clip:   # range at which to clip, leave empty for no clipping
     increment: 0.05  # increment in radians for random walk and increase
     reset_every_x_seconds: 'inf'  # seconds, or 'inf' for no change
   L:
-    # Full pole length in metres (ODE uses L_half = L/2). Paper Fig. 3 test plant.
-    # Collection draws one L per file in [0.05, 0.8]; see cartpole_physical_parameters_l4dc_collect.yml.
-    init_value: 0.15
+    # Long pole — the published angle-offset GRU was tested at L=0.395 m.
+    init_value: 0.395
     change_every_x_seconds: 'inf'
     mode: 'constant'
     range_random: [0.05, 0.8]
@@ -68,8 +68,8 @@ cartpole:
     increment: 0.002
     reset_every_x_seconds: 'inf'
   m_pole:
-    # Pole mass in kg. Paper Fig. 3 test plant. Fig. 4 is L=0.05, m_pole=0.015.
-    init_value: 0.050
+    # Long-pole mass.
+    init_value: 0.087
     change_every_x_seconds: 'inf'
     mode: 'constant'
     range_random: [0.015, 0.15]
@@ -78,7 +78,7 @@ cartpole:
     reset_every_x_seconds: 'inf'
 
   inform_controller_about_parameters_change:
-    # GRU must infer L and m. Set ON to give RPGD the true parameters on this plant.
+    # GRU must infer the 0-angle. Set ON to give RPGD the true angle.
     mode: 'OFF'  # 'OFF', 'ON', 'switching_random', 'switching_regular'
     change_to_on_after_x_seconds_off: 1.5  # seconds, if mode switching_random this is the upper bound
     change_to_off_after_x_seconds_on: 4.5  # seconds, if mode switching_random this is the upper bound
