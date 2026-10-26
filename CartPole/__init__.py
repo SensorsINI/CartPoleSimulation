@@ -82,6 +82,7 @@ class CartPole(EnvironmentBatched):
 
         self.config = config["cartpole"]
         self.rng_CartPole = create_rng(self.__class__.__name__, self.config["seed"])
+        self.rng_Trace = create_rng(f"{self.__class__.__name__}_Trace", self.config["seed"])
 
         self.next_step_mode = self.config["next_step_mode"]
 
@@ -674,7 +675,7 @@ class CartPole(EnvironmentBatched):
         self.random_track_f = Generate_Random_Trace_Function(
 
             length_of_experiment=self.length_of_experiment,
-            rtf_rng=self.rng_CartPole,
+            rtf_rng=self.rng_Trace,
 
             track_relative_complexity=self.track_relative_complexity,
             interpolation_type=self.interpolation_type,

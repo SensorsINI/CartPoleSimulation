@@ -1,87 +1,85 @@
 mpc:
   optimizer: rpgd
-  predictor_specification: "ODE"    # Can be "ODE", "ODE_v0", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
-  cost_function_specification: quadratic_boundary_grad_minimal  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary"
-  computation_library: tensorflow  # One of "numpy", "tensorflow", "pytorch". Defaults to "numpy" if none given.
+  predictor_specification: ODE
+  cost_function_specification: quadratic_boundary_grad_minimal
+  computation_library: tensorflow
   controller_logging: false
   calculate_optimal_trajectory: false
-  device: '/device:CPU:0'
+  device: /device:CPU:0
 mppi-cartpole:
-  seed: null                            # Seed for rng, for MPPI only, put null to set random seed (do it when you generate data for training!)
-  mpc_horizon: 35                       # steps
-  num_rollouts: 3500                    # Number of Monte Carlo samples
-  update_every: 1                       # Cost weighted update of inputs every ... steps
-  predictor_specification: "ODE"    # Can be "ODE", "ODE_v0", network/GP name (possibly with path) e.g. 'GRU-6IN-32H1-32H2-5OUT-0'/'SGP_30' or a name of a custom predictor. For more info see config_predictors in SI_Toolkit_ASF
-  cost_function_specification: default  # One of "default", "quadratic_boundary_grad", "quadratic_boundary_nonconvex", "quadratic_boundary"
+  seed: null
+  mpc_horizon: 35
+  num_rollouts: 3500
+  update_every: 1
+  predictor_specification: ODE
+  cost_function_specification: default
   dd_weight: 120.0
   ep_weight: 50000.0
   ekp_weight: 0.01
   ekc_weight: 5.0
   cc_weight: 1.0
   ccrc_weight: 1.0
-  cost_noise: 0.0                       # Noise on stage cost weights by +/- this value, we usually set 0.5 to explore various controllers while collecting data for training, 0 othewise
-  control_noise:                        # Defined in cartpole config
-  R: 1.0                                # How much to punish Q
-  LBD: 100.0                            # Cost parameter lambda
-  NU: 1000.0                            # Exploration variance
-  SQRTRHOINV: 0.02                      # Sampling variance
-  SAMPLING_TYPE: "interpolated"         # One of ["iid", "random_walk", "uniform", "repeated", "interpolated"]
-  controller_logging: False                        # Collect and show detailed insights into the controller's behavior
-  WASH_OUT_LEN: 100                     # Only matters if RNN used as predictor; For how long MPPI should be desactivated (replaced either with LQR or random input) to give memory units time to settle
+  cost_noise: 0.0
+  control_noise: null
+  R: 1.0
+  LBD: 100.0
+  NU: 1000.0
+  SQRTRHOINV: 0.02
+  SAMPLING_TYPE: interpolated
+  controller_logging: false
+  WASH_OUT_LEN: 100
 custom-mpc-scipy:
-  seed: null                          # If null, random seed based on datetime is used
-  # method: 'L-BFGS-B'
-  method: 'SLSQP'
-  ftol: 1.0e-8
-  mpc_horizon: 10                       # steps
-  # weights
-  wr: 0.001  # rterm
-  l1: 100.0  # angle_cost
-  l1_2: 0.0  # angle_sin_cost
-  l2: 0.0  # angleD_cost
-  l3: 0.0  # position_cost
-  l4: 0.01  # positionD_cost
-  m1: 0.0  # angle_sin_cost
-  m2: 0.0  # angleD_cost
-  m3: 0.0  # position_cost
-  m4: 0.0  # positionD_cost
-  controller_logging: True
+  seed: null
+  method: SLSQP
+  ftol: 1.0e-08
+  mpc_horizon: 10
+  wr: 0.001
+  l1: 100.0
+  l1_2: 0.0
+  l2: 0.0
+  l3: 0.0
+  l4: 0.01
+  m1: 0.0
+  m2: 0.0
+  m3: 0.0
+  m4: 0.0
+  controller_logging: true
 do-mpc-discrete:
-  mpc_horizon: 50                       # steps
+  mpc_horizon: 50
   num_rollouts: 1
-  # Initial positions
   position_init: 0.0
   positionD_init: 0.0
   angle_init: 0.0
   angleD_init: 0.0
-  controller_logging: True
+  controller_logging: true
+  dt: 0.01
 do-mpc:
-  seed: null                          # If null, random seed based on datetime is used
-  mpc_horizon: 50                       # steps
+  seed: 123
+  mpc_horizon: 50
   num_rollouts: 1
-  # Perturbation factors:
-  # Change of output from optimal
-  p_Q: 0.00
-  # Random change of cost function by factor
+  p_Q: 0.0
   p_position: 0.0
   p_positionD: 0.0
   p_angle: 0.0
-  # Cost factor
   l_angle: 0.1
   l_position: 1.0
   l_positionD: 0.1
-  # Initial positions
   position_init: 0.0
   positionD_init: 0.0
   angle_init: 0.0
   angleD_init: 0.0
-  controller_logging: True
+  controller_logging: true
+  dt: 0.1
 lqr:
-  seed: null  # Seed for rng, for lqr only, put null to set random seed (do it when you generate data for training!)
-  Q: [10.0, 1.0, 1.0, 1.0]
-  R: 10.0
-  control_noise:  # Defined in cartpole config
-  controller_logging: True
+  seed: 123
+  Q:
+  - 20000.0
+  - 1.0
+  - 1.0
+  - 1.0
+  R: 2000.0
+  control_noise: null
+  controller_logging: true
 pid:
   computation_library: numpy
   P_angle: 18.0
@@ -90,44 +88,78 @@ pid:
   P_position: 22.0
   I_position: 1.0
   D_position: 12.0
-  controller_logging: False
+  controller_logging: false
 mpc-opti:
-  mpc_horizon: 10                       # steps
-  controller_logging: True
+  mpc_horizon: 10
+  controller_logging: true
 neural-imitator:
-#  seed: null                            # If null, random seed based on datetime is used
-#  PATH_TO_MODELS: './SI_Toolkit_ASF/Experiments/Experiment_16_11_2024_pole_L_and_m_informed/Models/'
-#  net_name: 'GRU-8IN-64H1-64H2-1OUT-2'  # TF
-  PATH_TO_MODELS: './Control_Toolkit_ASF/Controllers/difflg_controller'
-  net_name: 'Dense-7IN-32H1-32H2-1OUT-0'  # TF
-#  net_name: 'GRU-6IN-32H1-32H2-1OUT-0'  # Pytorch
-  input_at_input: False
-  input_precision: 'float'  #'ap_fixed<20,6>'   # Can be 'float' - currently do nothing, or 'ap_fixed<total number of bits, integer bits + 1 sign bit>' - adjusting the number precision of the input
-  controller_logging: True
-  nn_evaluator_mode: 'normal'  # 'normal', 'numpy', 'C'
+  PATH_TO_MODELS: ./Control_Toolkit_ASF/Controllers/difflg_controller
+  net_name: Dense-7IN-32H1-32H2-1OUT-0
+  input_at_input: false
+  input_precision: float
+  controller_logging: true
+  nn_evaluator_mode: normal
 secloc:
   log_base: 1.05
   ref_period: 1
-  dead_band: 0.0025  # Radians
+  dead_band: 0.0025
   pid_Kp: 15.0
   pid_Kd: 0.0
   pid_Ki: 1.0
-  #secloc_motor_map: 128
-  controller_logging: True
+  controller_logging: true
 fpga:
-  seed: null                            # If null, random seed based on datetime is used
-  controller_logging: True
-  SERIAL_PORT: 1
+  seed: null
+  controller_logging: true
+  SERIAL_PORT: 0
   SERIAL_BAUD: 230400
 remote:
-  remote_endpoint: "tcp://localhost:5555"
-  controller_logging: False
-  fallback_controller_name: "neural-imitator"
+  remote_endpoint: tcp://localhost:5555
+  controller_logging: false
+  fallback_controller_name: neural-imitator
 difflg:
-  controller_logging: False
-  input_at_input: False
+  controller_logging: false
+  input_at_input: false
 c:
-  controller_file: "lqr.c"  # Default to LQR, user can change this
-  ops_name: "LQR_Ops"       # Name of the ControllerOps structure in the C file
-  firmware_path: "../Firmware/Src/General"
-  controller_logging: True
+  controller_file: secloc_lqr.c
+  ops_name: SECLOC_LQR_Ops
+  firmware_path: ../../Firmware/Src/General
+  controller_logging: true
+secloc-do-mpc-discrete:
+  mpc_horizon: 50
+  num_rollouts: 1
+  position_init: 0.0
+  positionD_init: 0.0
+  angle_init: 0.0
+  angleD_init: 0.0
+  log_base: 1.05
+  ref_period: 1
+  dead_ang: 0.0025
+  dead_pos: 0.0025
+  controller_logging: true
+secloc-lqr:
+  seed: 123
+  log_base: 1.05
+  ref_period: 1.0
+  dead_ang: 0.0025
+  dead_pos: 0.0025
+  Q:
+  - 20000.0
+  - 1.0
+  - 1.0
+  - 1.0
+  R: 2000.0
+  control_noise: null
+  controller_logging: true
+secloc-pid:
+  computation_library: numpy
+  P_angle: 18.0
+  I_angle: 38.0
+  D_angle: 4.0
+  P_position: 22.0
+  I_position: 1.0
+  D_position: 12.0
+  controller_logging: false
+  log_base: 1.05
+  ref_period: 1
+  dead_ang: 0.0025
+  dead_pos: 0.0025
