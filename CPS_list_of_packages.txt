@@ -2,11 +2,9 @@ gym
 imageio
 engineering_notation
 gpflow
-gym
 pygame
 numba
 pip
-pygame
 scikit-learn
 scipy
 setuptools
