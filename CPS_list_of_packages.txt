@@ -2,11 +2,9 @@ gym
 imageio
 engineering_notation
 gpflow
-gym
 pygame
 numba
 pip
-pygame
 scikit-learn
 scipy
 setuptools
@@ -17,6 +15,7 @@ tensorflow-probability
 Pillow
 gymnasium
 pyserial
+pyqt6
 
 do-mpc==4.1.1
 casadi
