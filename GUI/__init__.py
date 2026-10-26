@@ -51,8 +51,12 @@ def run_gui():
     window = MainWindow()
     window.show()
     # Next line hands the control over to Python GUI
-    app.exec()
-
+    exit_code = app.exec()
+    window.deleteLater()
+    app.processEvents()
+    del window
+    app.processEvents()
+    sys.exit(exit_code)
 
 # Run only if this file is run as a main file, that is not as an imported module
 if __name__ == "__main__":
