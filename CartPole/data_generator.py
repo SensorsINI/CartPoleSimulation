@@ -177,7 +177,7 @@ class random_experiment_setter:
         elif self.initial_target_equilibrium == 'down' or self.initial_target_equilibrium == -1:
             target_equilibrium = -1
         elif self.initial_target_equilibrium == 'random':
-            target_equilibrium = int(2 * np.random.binomial(1, 0.5) - 1)
+            target_equilibrium = int(self.rng.choice([-1, 1]))
         else:
             Exception('{} is not a valid specification for target equilibrium'.format(self.initial_target_equilibrium))
 
