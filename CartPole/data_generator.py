@@ -187,12 +187,14 @@ class random_experiment_setter:
         else:
             interpolation_type = self.interpolation_type
 
+        controller = self.controller if CartPoleInstance.controller_name == "manual-stabilization" else None
+
         CartPoleInstance.setup_cartpole_random_experiment(
             # Initial state
             s0=initial_state,
 
             # controller to be used in performed experiment
-            controller=self.controller,
+            controller=controller,
 
             # Timescales
             dt_simulation=self.dt_simulation,
@@ -296,6 +298,7 @@ def run_data_generator(path_to_experiment_recordings=None):
 
     ############ END OF PARAMETERS SECTION ############
     csvfile_basename = 'Experiment'
+    CartPoleInstance = CartPole()
     for i in range(number_of_experiments):
 
         if run_for_ML_Pipeline:
@@ -325,7 +328,6 @@ def run_data_generator(path_to_experiment_recordings=None):
 
         print('{}/{}'.format(i + 1, number_of_experiments))
         sleep(0.1)
-        CartPoleInstance = CartPole()
 
         CartPoleInstance = RES.set(CartPoleInstance)
 
