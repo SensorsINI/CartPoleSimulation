@@ -3,7 +3,7 @@ Main window of CartPole GUI
 """
 
 # Import functions from PyQt6 module (creating GUI)
-from PyQt6.QtWidgets import QMainWindow, QApplication, QWidget
+from PyQt6.QtWidgets import QMainWindow, QWidget
 
 # This import mus go before pyplot so also before our scripts
 from matplotlib import use, get_backend
@@ -37,9 +37,8 @@ class MainWindow(QMainWindow):
         self.GuiActions.finish_initialization()
 
     def quit_application(self):
-        self.GuiActions.quit_application()
         self.close()
-        # The standard command
-        # It seems however not to be working by its own
-        # I don't know how it works
-        QApplication.quit()
+
+    def closeEvent(self, event):
+        self.GuiActions.quit_application()
+        event.accept()
