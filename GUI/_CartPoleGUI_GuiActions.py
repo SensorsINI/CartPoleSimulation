@@ -639,9 +639,6 @@ class CartPole_GuiActions:
         self.threadpool.clear()
         self.threadpool.waitForDone()
 
-    def closeEvent(self, event):
-        self.quit_application()
-
     # endregion
 
     # region Mouse interaction
